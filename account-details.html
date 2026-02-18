@@ -1,0 +1,538 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Account Details - Zorexium Labs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
+    .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+    .profile-section { background-color: #20232a; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .section-title { color: #22d3ee; font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Top Navigation -->
+<header class="bg-[#181b21] border-b border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <div class="flex items-center">
+        <a href="index (1).html" class="flex-shrink-0 flex items-center gap-2">
+          <div class="text-cyan-400 text-3xl"><i class="fas fa-microchip"></i></div>
+          <div class="flex flex-col">
+            <span class="text-cyan-400 font-bold text-xl tracking-wide leading-none">ZOREXIUM</span>
+            <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+          </div>
+        </a>
+      </div>
+      <nav class="hidden md:flex space-x-8">
+        <a href="marketplace.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Marketplace</a>
+        <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Community</a>
+        <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Sell</a>
+      </nav>
+      <div class="flex items-center space-x-4">
+        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-lg"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
+        <a href="account-details.html" class="text-cyan-400 hover:text-white"><i class="fas fa-user-circle text-lg"></i></a>
+        <div class="h-8 w-8 rounded-full overflow-hidden border border-gray-600"><img src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+  <div class="mb-8">
+    <div class="flex items-start justify-between">
+      <div>
+        <h1 class="text-4xl font-bold text-white mb-2">Account Details</h1>
+        <p class="text-gray-400">Manage your profile and preferences</p>
+      </div>
+      <div class="ml-4">
+        <a id="myDashboardBtn" href="seller-dashboard.html" class="hidden inline-block px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold">My Dashboard</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Check -->
+  <div id="notLoggedIn" class="text-center py-12 hidden">
+    <i class="fas fa-user-lock text-5xl text-gray-600 mb-4 block"></i>
+    <p class="text-gray-400 mb-4 text-lg">Please log in to view your account</p>
+    <a href="signup-login.html" class="inline-block px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold">Log In</a>
+  </div>
+
+  <div id="loggedInContent" class="hidden">
+    <!-- Profile Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Sidebar Profile -->
+      <div class="lg:col-span-1">
+        <div class="profile-section">
+          <div class="text-center">
+            <div class="h-24 w-24 mx-auto rounded-full overflow-hidden border-2 border-cyan-400 mb-4">
+              <img id="profileImage" src="https://placehold.co/200x200/333/fff?text=Profile" alt="Profile" class="h-full w-full object-cover">
+              </div>
+              <div class="mt-2">
+                <input id="profileImageFile" type="file" accept="image/*" class="hidden" onchange="handleProfileImageUpload(event)">
+                <button onclick="document.getElementById('profileImageFile').click()" class="px-3 py-1 bg-gray-700 text-sm rounded text-white">Upload Photo</button>
+              </div>
+              <div id="accountFilesList" class="mt-3 text-left text-xs text-gray-300"></div>
+              </div>
+            </div>
+            <h2 id="profileUsername" class="text-xl font-bold text-white mb-1">Username</h2>
+            <p id="profileEmail" class="text-gray-400 text-sm mb-4">email@example.com</p>
+            <div id="sellerBadge" class="hidden">
+              <span class="inline-block px-3 py-1 bg-green-900 text-green-300 rounded-full text-sm font-semibold">
+                <i class="fas fa-check-circle"></i> Verified Seller
+              </span>
+            </div>
+            <div id="notSellerNotice" class="mt-4">
+              <a href="seller-signup.html" class="inline-block px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold">
+                <i class="fas fa-store"></i> Become a Seller
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="profile-section">
+          <h3 class="section-title">Account Stats</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Member Since</span>
+              <span id="memberSince" class="text-white font-semibold">--</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-400">Total Orders</span>
+              <span id="totalOrders" class="text-cyan-400 font-semibold">0</span>
+            </div>
+            <div class="flex justify-between items-center" id="sellerStats" class="hidden">
+              <span class="text-gray-400">Products Listed</span>
+              <span id="productsListed" class="text-cyan-400 font-semibold">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="lg:col-span-2">
+        <!-- Tabs -->
+        <div class="flex gap-4 mb-6 border-b border-gray-700">
+          <button onclick="switchTab('profile')" class="tab-btn active px-4 py-2 text-white font-semibold border-b-2 border-cyan-400">
+            <i class="fas fa-user"></i> Profile
+          </button>
+          <button onclick="switchTab('purchases')" class="tab-btn px-4 py-2 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600">
+            <i class="fas fa-shopping-bag"></i> Purchases
+          </button>
+          <button onclick="switchTab('seller')" id="sellerTab" class="tab-btn px-4 py-2 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 hidden">
+            <i class="fas fa-store"></i> Seller
+          </button>
+          <button onclick="switchTab('settings')" class="tab-btn px-4 py-2 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600">
+            <i class="fas fa-cog"></i> Settings
+          </button>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profile" class="tab-content active">
+          <div class="profile-section">
+            <h3 class="section-title">Personal Information</h3>
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-gray-400 text-sm">Username</label>
+                  <input type="text" id="editUsername" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1">
+                </div>
+                <div>
+                  <label class="text-gray-400 text-sm">Email Address</label>
+                  <input type="email" id="editEmail" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1">
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label class="text-gray-400 text-sm">Phone</label>
+                  <input type="text" id="editPhone" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1" placeholder="Optional">
+                </div>
+                <div>
+                  <label class="text-gray-400 text-sm">Account Type</label>
+                  <input type="text" id="editAccountType" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1" readonly>
+                </div>
+              </div>
+              <div class="mt-4">
+                <button onclick="saveProfile()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-semibold">Save Profile</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-section">
+            <h3 class="section-title">Change Password</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="text-gray-400 text-sm">Current Password</label>
+                <input type="password" id="currentPassword" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1" placeholder="••••••••">
+              </div>
+              <div>
+                <label class="text-gray-400 text-sm">New Password</label>
+                <input type="password" id="newPassword" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1" placeholder="••••••••">
+              </div>
+              <div>
+                <label class="text-gray-400 text-sm">Confirm Password</label>
+                <input type="password" id="confirmPassword" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1" placeholder="••••••••">
+              </div>
+              <button onclick="changePassword()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-semibold">
+                Update Password
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Purchases Tab -->
+        <div id="purchases" class="tab-content">
+          <div class="profile-section">
+            <h3 class="section-title">Order History</h3>
+            <div id="orderHistory" class="space-y-4">
+              <div class="text-center py-8">
+                <i class="fas fa-inbox text-4xl text-gray-600 mb-3 block"></i>
+                <p class="text-gray-400">No purchase history yet</p>
+              </div>
+            </div>
+                <div class="mt-4">
+                  <label class="text-gray-400 text-sm">Upload Purchase File / Receipt</label>
+                  <input type="file" id="purchaseFileInput" class="w-full mt-2" onchange="uploadPurchaseFile(event)">
+                  <div id="purchaseFilesList" class="mt-3 text-xs text-gray-300"></div>
+                </div>
+          </div>
+        </div>
+
+        <!-- Seller Tab (Hidden by default) -->
+        <div id="seller" class="tab-content hidden">
+          <div class="profile-section">
+            <h3 class="section-title">Shop Information</h3>
+            <div id="shopInfo" class="space-y-4">
+              <div>
+                <label class="text-gray-400 text-sm">Shop Name</label>
+                <input type="text" id="shopName" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1">
+              </div>
+              <div>
+                <label class="text-gray-400 text-sm">Shop Description</label>
+                <textarea id="shopDescription" class="w-full bg-gray-700 text-white rounded px-3 py-2 mt-1 h-24"></textarea>
+              </div>
+              <button onclick="updateShopInfo()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-semibold">
+                Update Shop Info
+              </button>
+              <div class="mt-4">
+                <label class="text-gray-400 text-sm">Upload Shop Image / Files</label>
+                <input type="file" id="shopFileInput" class="w-full mt-2" onchange="uploadShopFile(event)">
+                <div id="shopFilesList" class="mt-3 text-xs text-gray-300"></div>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-gray-700">
+              <h3 class="section-title">Sales Stats</h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-800 rounded px-4 py-3">
+                  <p class="text-gray-400 text-sm">Total Sales</p>
+                  <p id="totalSales" class="text-2xl font-bold text-cyan-400">$0.00</p>
+                </div>
+                <div class="bg-gray-800 rounded px-4 py-3">
+                  <p class="text-gray-400 text-sm">Avg Rating</p>
+                  <p id="avgRating" class="text-2xl font-bold text-cyan-400">N/A</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content hidden">
+          <div class="profile-section">
+            <h3 class="section-title">Notification Preferences</h3>
+            <div class="space-y-4">
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="emailNotifications" class="w-4 h-4 rounded" checked>
+                <span class="ml-3 text-gray-300">Email notifications for new messages</span>
+              </label>
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="orderUpdates" class="w-4 h-4 rounded" checked>
+                <span class="ml-3 text-gray-300">Order status updates</span>
+              </label>
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" id="promotions" class="w-4 h-4 rounded">
+                <span class="ml-3 text-gray-300">Promotional emails</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="profile-section">
+            <h3 class="section-title">Danger Zone</h3>
+            <button onclick="logout()" class="px-4 py-2 bg-red-900 hover:bg-red-800 text-red-300 rounded font-semibold">
+              <i class="fas fa-sign-out-alt"></i> Log Out
+            </button>
+            <button onclick="deactivateAccount()" class="ml-3 px-4 py-2 bg-yellow-800 hover:bg-yellow-700 text-yellow-100 rounded font-semibold">
+              <i class="fas fa-user-slash"></i> Deactivate Account
+            </button>
+            <button onclick="deleteAccount()" class="ml-3 px-4 py-2 bg-red-950 hover:bg-red-900 text-red-200 rounded font-semibold">
+              <i class="fas fa-trash"></i> Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="bg-[#131620] border-t border-gray-800 mt-12">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-lg"></i><span class="text-white font-semibold text-sm">ZOREXIUM LABS</span></div>
+      <p class="text-gray-500 text-xs text-center md:text-right">&copy; 2026 Zorexium Labs. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function checkAuth() {
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+      document.getElementById('notLoggedIn').classList.remove('hidden');
+      document.getElementById('loggedInContent').classList.add('hidden');
+      return false;
+    }
+    loadAccountData();
+    return true;
+  }
+
+  function loadAccountData() {
+    const currentUser = localStorage.getItem('currentUser');
+    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+    const user = users[currentUser];
+
+    if (!user) return;
+
+    document.getElementById('profileUsername').textContent = currentUser;
+    document.getElementById('editUsername').value = currentUser;
+    document.getElementById('profileEmail').textContent = user.email;
+    document.getElementById('editEmail').value = user.email;
+    // profile image
+    const profileImg = localStorage.getItem('profileImage_' + currentUser);
+    if (profileImg) document.getElementById('profileImage').src = profileImg;
+    // account files list
+    const accFiles = JSON.parse(localStorage.getItem('accountFiles_' + currentUser) || '[]');
+    const accFilesEl = document.getElementById('accountFilesList');
+    if (accFilesEl) accFilesEl.innerHTML = accFiles.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a></div>`).join('') || '';
+
+    // Member since
+    const joinDate = new Date(user.joinDate || Date.now()).toLocaleDateString();
+    document.getElementById('memberSince').textContent = joinDate;
+
+    // Cart badge
+    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+    const badge = document.getElementById('cartBadge');
+    if (cart.length > 0) {
+      badge.textContent = cart.length;
+      badge.classList.remove('hidden');
+    }
+
+    // Check if seller
+    if (sellers[currentUser]) {
+      const seller = sellers[currentUser];
+      document.getElementById('sellerBadge').classList.remove('hidden');
+      document.getElementById('notSellerNotice').classList.add('hidden');
+      document.getElementById('sellerTab').classList.remove('hidden');
+      document.getElementById('sellerStats').classList.remove('hidden');
+
+      // Load seller data
+      document.getElementById('shopName').value = seller.shopName || '';
+      document.getElementById('shopDescription').value = seller.description || '';
+      document.getElementById('productsListed').textContent = (seller.products || []).length;
+      document.getElementById('totalSales').textContent = '$' + (seller.totalSales || 0).toFixed(2);
+      document.getElementById('avgRating').textContent = seller.rating ? seller.rating.toFixed(1) + '★' : 'N/A';
+      // render shop files
+      const shopFilesEl = document.getElementById('shopFilesList');
+      if (shopFilesEl) {
+        const files = seller.files || [];
+        shopFilesEl.innerHTML = files.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a></div>`).join('') || '';
+      }
+      // show My Dashboard button
+      const dashBtn = document.getElementById('myDashboardBtn');
+      if (dashBtn) dashBtn.classList.remove('hidden');
+    }
+  }
+
+  function handleProfileImageUpload(e){
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){ localStorage.setItem('profileImage_'+localStorage.getItem('currentUser'), ev.target.result); document.getElementById('profileImage').src = ev.target.result; };
+    reader.readAsDataURL(file);
+  }
+
+  function uploadPurchaseFile(e){
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    const user = localStorage.getItem('currentUser'); if(!user) return alert('Log in first');
+    reader.onload = function(ev){
+      const list = JSON.parse(localStorage.getItem('purchaseFiles_'+user) || '[]');
+      list.unshift({ name: file.name, data: ev.target.result, added: new Date().toLocaleString() });
+      localStorage.setItem('purchaseFiles_'+user, JSON.stringify(list)); renderPurchaseFiles();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function renderPurchaseFiles(){
+    const user = localStorage.getItem('currentUser'); if(!user) return;
+    const list = JSON.parse(localStorage.getItem('purchaseFiles_'+user) || '[]');
+    const el = document.getElementById('purchaseFilesList'); if(!el) return;
+    el.innerHTML = list.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a> <span class="text-xs text-gray-500">${f.added}</span></div>`).join('') || '<div class="text-gray-500">No files</div>';
+  }
+
+  function uploadShopFile(e){
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    const user = localStorage.getItem('currentUser'); if(!user) return alert('Log in first');
+    reader.onload = function(ev){
+      let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+      if(!sellers[user]) sellers[user] = { files: [] };
+      sellers[user].files = sellers[user].files || [];
+      sellers[user].files.unshift({ name: file.name, data: ev.target.result, added: new Date().toLocaleString() });
+      localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
+      // update UI
+      const shopFilesEl = document.getElementById('shopFilesList');
+      shopFilesEl.innerHTML = sellers[user].files.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a></div>`).join('');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('border-cyan-400', 'text-white'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.add('border-transparent', 'text-gray-400'));
+
+    document.getElementById(tab).classList.add('active');
+    event.target.closest('button').classList.remove('border-transparent', 'text-gray-400');
+    event.target.closest('button').classList.add('border-cyan-400', 'text-white');
+  }
+
+  function changePassword() {
+    const currentUser = localStorage.getItem('currentUser');
+    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+    const user = users[currentUser];
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    if (currentPassword !== user.password) {
+      alert('Current password is incorrect');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert('New passwords do not match');
+      return;
+    }
+
+    user.password = newPassword;
+    users[currentUser] = user;
+    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+
+    document.getElementById('currentPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+
+    alert('Password updated successfully!');
+  }
+
+  function updateShopInfo() {
+    const currentUser = localStorage.getItem('currentUser');
+    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+
+    if (!sellers[currentUser]) {
+      alert('You are not a seller');
+      return;
+    }
+
+    sellers[currentUser].shopName = document.getElementById('shopName').value;
+    sellers[currentUser].description = document.getElementById('shopDescription').value;
+    localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
+
+    alert('Shop information updated!');
+  }
+
+  function logout() {
+    localStorage.removeItem('currentUser');
+    window.location.href = 'signup-login.html';
+  }
+
+  function deleteAccount() {
+    if (!confirm('Are you sure? This action cannot be undone.')) return;
+
+    const currentUser = localStorage.getItem('currentUser');
+    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+
+    delete users[currentUser];
+    delete sellers[currentUser];
+
+    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+    localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
+    localStorage.removeItem('currentUser');
+
+    alert('Account deleted');
+    window.location.href = 'index (1).html';
+  }
+
+  function saveProfile(){
+    const currentUser = localStorage.getItem('currentUser');
+    if(!currentUser) return alert('Not logged in');
+    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+    const user = users[currentUser] || {};
+    const newUsername = document.getElementById('editUsername').value.trim();
+    const newEmail = document.getElementById('editEmail').value.trim();
+    const phone = document.getElementById('editPhone').value.trim();
+    if(!newUsername || !newEmail) return alert('Username and email required');
+    // update user object
+    user.email = newEmail;
+    user.phone = phone;
+    users[currentUser] = user;
+    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+    document.getElementById('profileUsername').textContent = newUsername;
+    document.getElementById('profileEmail').textContent = newEmail;
+    alert('Profile saved');
+  }
+
+  function deactivateAccount(){
+    if(!confirm('Deactivate your account? You can reactivate by contacting support.')) return;
+    const currentUser = localStorage.getItem('currentUser');
+    if(!currentUser) return;
+    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+    const user = users[currentUser];
+    if(!user) return;
+    user.active = false;
+    users[currentUser] = user;
+    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+    localStorage.removeItem('currentUser');
+    alert('Account deactivated');
+    window.location.href = 'index (1).html';
+  }
+
+  window.addEventListener('load', checkAuth);
+</script>
+
+<script>
+  // initialize purchase files rendering on load
+  window.addEventListener('load', function(){ renderPurchaseFiles(); });
+</script>
+
+</body>
+</html>

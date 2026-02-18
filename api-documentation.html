@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>API Documentation - Zorexium Labs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+        .code-block { background-color: #0f172a; border-left: 3px solid #65a30d; padding: 12px 16px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 13px; overflow-x: auto; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <header class="bg-[#181b21] border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="index (1).html" class="flex-shrink-0 flex items-center gap-2">
+                    <div class="text-cyan-400 text-3xl"><i class="fas fa-microchip"></i></div>
+                    <div class="flex flex-col">
+                        <span class="text-cyan-400 font-bold text-xl tracking-wide leading-none">ZOREXIUM</span>
+                        <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h1 class="text-4xl font-bold text-white mb-2">API Documentation</h1>
+        <p class="text-gray-400 mb-8">Build with the Zorexium Labs API</p>
+
+        <div class="space-y-8 text-gray-300">
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Introduction</h2>
+                <p>The Zorexium Labs API allows developers to programmatically access marketplace data, manage listings, and build integrations. Our REST API provides endpoints for products, sellers, orders, and more.</p>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Authentication</h2>
+                <p>All API requests require authentication using an API key. Include your key in the Authorization header:</p>
+                <div class="code-block">Authorization: Bearer YOUR_API_KEY</div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Base URL</h2>
+                <div class="code-block">https://api.zorexium.labs/v1</div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Endpoints</h2>
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Products</h3>
+                        <div class="code-block mt-2">GET /products - List all products
+GET /products/{id} - Get product details
+POST /products - Create new listing
+PUT /products/{id} - Update listing
+DELETE /products/{id} - Remove listing</div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Sellers</h3>
+                        <div class="code-block mt-2">GET /sellers/{username} - Get seller profile
+GET /sellers/{username}/products - List seller products
+GET /sellers/{username}/stats - Get seller statistics</div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Orders</h3>
+                        <div class="code-block mt-2">GET /orders - List user orders
+GET /orders/{id} - Get order details
+POST /orders - Create new order
+PUT /orders/{id} - Update order status</div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Rate Limiting</h2>
+                <p>API requests are limited to 1000 requests per hour per API key. Rate limit headers are included in all responses.</p>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Pagination</h2>
+                <p>List endpoints support pagination with limit and offset parameters:</p>
+                <div class="code-block">GET /products?limit=20&offset=0</div>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Error Handling</h2>
+                <p>Errors return appropriate HTTP status codes with error messages:</p>
+                <ul class="list-disc list-inside space-y-2 mt-2">
+                    <li>400: Bad Request</li>
+                    <li>401: Unauthorized</li>
+                    <li>404: Not Found</li>
+                    <li>429: Too Many Requests (rate limit exceeded)</li>
+                    <li>500: Internal Server Error</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Get Your API Key</h2>
+                <p>Visit your account settings to generate an API key. Keep it secret and never share it publicly.</p>
+            </section>
+
+            <section>
+                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Support</h2>
+                <p>For API support and questions, contact developers@zorexium.labs</p>
+            </section>
+        </div>
+    </main>
+
+    <footer class="bg-[#131620] border-t border-gray-800 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-lg"></i><span class="text-white font-semibold text-sm">ZOREXIUM LABS</span></div>
+                <p class="text-gray-500 text-xs text-center md:text-right">&copy; 2026 Zorexium Labs. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
