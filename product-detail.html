@@ -155,27 +155,51 @@
   }
 
   function loadProduct() {
-    // Load from backend or use mock data
-    const mockProducts = {
-      'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1', image: 'https://via.placeholder.com/400x300?text=RTX+4090', description: 'High-end RTX 4090 graphics card. Excellent condition.' },
-      'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2', image: 'https://via.placeholder.com/400x300?text=Ryzen+9', description: '16-core Ryzen 9 processor. Perfect for gaming and streaming.' },
-      'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3', image: 'https://via.placeholder.com/400x300?text=DDR5+RAM', description: '32GB DDR5 RAM module. High performance memory.' },
-    };
-
-    currentProduct = mockProducts[currentProductId];
-    if (!currentProduct) {
-      alert('Product not found');
-      window.location.href = 'marketplace.html';
-      return;
+    // Load from sellers data in localStorage
+    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+    
+    // Search through all sellers' products
+    let foundProduct = null;
+    let foundSeller = null;
+    
+    for (const [sellerUsername, sellerData] of Object.entries(sellers)) {
+      if (sellerData.products) {
+        const product = sellerData.products.find(p => p.id === currentProductId);
+        if (product) {
+          foundProduct = product;
+          foundSeller = { username: sellerUsername, ...sellerData };
+          break;
+        }
+      }
     }
+
+    // Fallback to mock products if not found
+    if (!foundProduct) {
+      const mockProducts = {
+        'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1', image: 'https://via.placeholder.com/400x300?text=RTX+4090', description: 'High-end RTX 4090 graphics card. Excellent condition.' },
+        'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2', image: 'https://via.placeholder.com/400x300?text=Ryzen+9', description: '16-core Ryzen 9 processor. Perfect for gaming and streaming.' },
+        'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3', image: 'https://via.placeholder.com/400x300?text=DDR5+RAM', description: '32GB DDR5 RAM module. High performance memory.' },
+      };
+      
+      foundProduct = mockProducts[currentProductId];
+      if (!foundProduct) {
+        alert('Product not found');
+        window.location.href = 'marketplace.html';
+        return;
+      }
+      foundSeller = { username: 'seller', shopName: foundProduct.sellerId };
+    }
+
+    currentProduct = foundProduct;
+    const sellerUsername = foundSeller.username;
 
     document.getElementById('productName').innerText = currentProduct.name;
     document.getElementById('productPrice').innerText = '$' + currentProduct.price.toFixed(2);
-    document.getElementById('productDescription').innerText = currentProduct.description;
-    document.getElementById('productImage').src = currentProduct.image;
+    document.getElementById('productDescription').innerText = currentProduct.description || 'No description available';
+    document.getElementById('productImage').src = currentProduct.image || 'https://via.placeholder.com/400x300?text=Product';
     document.getElementById('productId').innerText = currentProductId;
-    document.getElementById('sellerName').innerText = currentProduct.sellerId;
-    document.getElementById('sellerLink').href = 'seller-profile.html?seller=' + currentProduct.sellerId;
+    document.getElementById('sellerName').innerText = foundSeller.shopName || sellerUsername;
+    document.getElementById('sellerLink').href = 'seller-profile.html?seller=' + sellerUsername;
   }
 
   function increaseQty() {
@@ -199,6 +223,11 @@
     let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
     const quantity = parseInt(document.getElementById('quantity').value);
 
+    // Get seller info from the current product
+    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+    let sellerUsername = document.getElementById('sellerLink').href.split('seller=')[1];
+    let sellerData = sellers[sellerUsername] || {};
+
     const existingItem = cart.find(item => item.id === currentProductId);
     if (existingItem) {
       existingItem.quantity += quantity;
@@ -208,7 +237,9 @@
         name: currentProduct.name,
         price: currentProduct.price,
         quantity: quantity,
-        image: currentProduct.image,
+        image: currentProduct.image || 'https://via.placeholder.com/400x300?text=Product',
+        sellerUsername: sellerUsername,
+        sellerName: sellerData.shopName || sellerUsername,
       });
     }
 
