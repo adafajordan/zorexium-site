@@ -36,6 +36,7 @@
       <nav class="hidden md:flex space-x-8">
         <a href="marketplace.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Marketplace</a>
         <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Community</a>
+        <a href="messages.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Messages</a>
         <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Sell</a>
       </nav>
       <div class="flex items-center space-x-4">
@@ -309,6 +310,16 @@
         badge.classList.add('hidden');
       }
     }
+  }
+
+  function handleMessaging() {
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+      alert('Please log in to message sellers');
+      window.location.href = 'signup-login.html';
+      return;
+    }
+    window.location.href = 'messages.html';
   }
 
   window.addEventListener('load', init);
