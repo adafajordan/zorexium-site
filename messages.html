@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Messages | Zorexium Labs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+        .message-bubble { word-wrap: break-word; }
+    </style>
+    <script src="open-links-new-tab.js"></script>
+    <script src="cookie-consent.js"></script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Header -->
+<header class="bg-[#181b21] border-b border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <a href="index.html" class="flex-shrink-0 flex items-center gap-2">
+        <div class="text-cyan-400 text-3xl"><i class="fas fa-microchip"></i></div>
+        <div class="flex flex-col">
+          <span class="text-cyan-400 font-bold text-xl tracking-wide leading-none">ZOREXIUM</span>
+          <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+        </div>
+      </a>
+      <div class="flex items-center space-x-4">
+        <a href="shopping-cart.html" class="text-gray-300 hover:text-white"><i class="fas fa-shopping-cart text-lg"></i></a>
+        <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-lg"></i></a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+  <h1 class="text-4xl font-bold text-white mb-8">Messages</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <!-- Conversations List -->
+    <div class="bg-[#20232a] border border-gray-700 rounded-lg overflow-hidden h-96 md:h-screen md:sticky md:top-8">
+      <div class="bg-[#181b21] border-b border-gray-700 p-4">
+        <h2 class="text-lg font-bold text-white">Conversations</h2>
+      </div>
+      <div id="conversationsList" class="overflow-y-auto p-4 space-y-2 h-full"></div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="md:col-span-3 bg-[#20232a] border border-gray-700 rounded-lg flex flex-col h-96 md:h-screen">
+      <!-- Chat Header -->
+      <div class="bg-[#181b21] border-b border-gray-700 p-4 flex items-center justify-between">
+        <div>
+          <h2 id="chatHeader" class="text-lg font-bold text-white">Select a conversation</h2>
+          <p id="chatSubheader" class="text-gray-400 text-sm">Messages will appear here</p>
+        </div>
+        <i class="fas fa-envelope text-cyan-400 text-2xl"></i>
+      </div>
+
+      <!-- Messages -->
+      <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-[#181b21]">
+        <p class="text-gray-400 text-center text-sm">Select a conversation to view messages</p>
+      </div>
+
+      <!-- Message Input -->
+      <div class="bg-[#181b21] border-t border-gray-700 p-4 space-y-3">
+        <div>
+          <label class="block text-white text-sm font-semibold mb-2">Subject</label>
+          <input type="text" id="msgSubject" placeholder="Message subject" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
+        </div>
+        <div>
+          <label class="block text-white text-sm font-semibold mb-2">Message</label>
+          <div class="flex gap-2">
+            <textarea id="msgBody" placeholder="Type your message..." rows="2" class="flex-1 bg-[#2a2e38] border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
+            <button onclick="sendCurrentMessage()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg self-end">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let currentUser = null;
+  let selectedContact = null;
+  let allMessages = {};
+
+  function init() {
+    currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+      alert('Please log in');
+      window.location.href = 'signup-login.html';
+      return;
+    }
+
+    loadConversations();
+  }
+
+  function loadConversations() {
+    fetch(`/get-conversations/${currentUser}`)
+      .then(res => res.json())
+      .then(data => {
+        renderConversations(data.conversations);
+      })
+      .catch(err => console.error('Error:', err));
+  }
+
+  function renderConversations(conversations) {
+    const list = document.getElementById('conversationsList');
+    list.innerHTML = '';
+
+    if (Object.keys(conversations).length === 0) {
+      list.innerHTML = '<p class="text-gray-400 text-sm">No conversations yet</p>';
+      return;
+    }
+
+    Object.keys(conversations).forEach(contact => {
+      const button = document.createElement('button');
+      button.className = 'w-full text-left px-3 py-2 hover:bg-[#2a2e38] rounded transition-colors text-white';
+      button.innerHTML = `<i class="fas fa-user text-cyan-400 mr-2"></i>${contact}`;
+      button.onclick = () => selectContact(contact);
+      list.appendChild(button);
+    });
+  }
+
+  function selectContact(contact) {
+    selectedContact = contact;
+    document.getElementById('chatHeader').innerText = contact;
+    document.getElementById('chatSubheader').innerText = 'Conversation with ' + contact;
+
+    fetch(`/get-messages/${currentUser}/${contact}`)
+      .then(res => res.json())
+      .then(data => {
+        renderMessages(data.messages);
+      })
+      .catch(err => console.error('Error:', err));
+  }
+
+  function renderMessages(msgs) {
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = '';
+
+    if (msgs.length === 0) {
+      container.innerHTML = '<p class="text-gray-400 text-center">No messages yet. Start the conversation!</p>';
+      return;
+    }
+
+    msgs.forEach(msg => {
+      const isOwn = msg.from === currentUser;
+      const div = document.createElement('div');
+      div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'}`;
+      div.innerHTML = `
+        <div class="max-w-xs message-bubble ${isOwn ? 'bg-cyan-600' : 'bg-gray-700'} text-white rounded-lg p-3">
+          <p class="text-xs opacity-75 mb-1">${msg.subject}</p>
+          <p class="break-words">${msg.body}</p>
+          <p class="text-xs opacity-50 mt-2">${new Date(msg.timestamp).toLocaleString()}</p>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function sendCurrentMessage() {
+    if (!selectedContact) {
+      alert('Select a conversation first');
+      return;
+    }
+
+    const subject = document.getElementById('msgSubject').value.trim();
+    const body = document.getElementById('msgBody').value.trim();
+
+    if (!subject || !body) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    fetch('/send-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: currentUser,
+        to: selectedContact,
+        subject: subject,
+        body: body,
+      }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('msgSubject').value = '';
+        document.getElementById('msgBody').value = '';
+        selectContact(selectedContact);
+      }
+    })
+    .catch(err => console.error('Error:', err));
+  }
+
+  init();
+</script>
+
+</body>
+</html>

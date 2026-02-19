@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Product Details | Zorexium Labs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+    </style>
+    <script src="open-links-new-tab.js"></script>
+    <script src="cookie-consent.js"></script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Header -->
+<header class="bg-[#181b21] border-b border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-16">
+      <a href="index.html" class="flex-shrink-0 flex items-center gap-2">
+        <div class="text-cyan-400 text-3xl"><i class="fas fa-microchip"></i></div>
+        <div class="flex flex-col">
+          <span class="text-cyan-400 font-bold text-xl tracking-wide leading-none">ZOREXIUM</span>
+          <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+        </div>
+      </a>
+      <div class="flex items-center space-x-4">
+        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-lg"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
+        <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-lg"></i></a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Product Image -->
+    <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6 flex items-center justify-center min-h-96">
+      <img id="productImage" src="" alt="Product" class="w-full h-auto rounded-lg">
+    </div>
+
+    <!-- Product Info -->
+    <div class="flex flex-col gap-6">
+      <!-- Title & Price -->
+      <div>
+        <h1 id="productName" class="text-4xl font-bold text-white mb-2">Loading...</h1>
+        <p id="productPrice" class="text-3xl font-bold text-cyan-400 mb-4">$0.00</p>
+        <p id="productDescription" class="text-gray-400 text-lg">Loading product details...</p>
+      </div>
+
+      <!-- Seller Info -->
+      <div class="bg-[#20232a] border border-gray-700 rounded-lg p-4">
+        <p class="text-gray-500 text-sm mb-2">Sold by</p>
+        <div class="flex items-center justify-between">
+          <a id="sellerLink" href="#" class="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-2">
+            <i class="fas fa-store"></i>
+            <span id="sellerName">Unknown Seller</span>
+          </a>
+          <button onclick="contactSeller()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">
+            <i class="fas fa-envelope"></i> Contact Seller
+          </button>
+        </div>
+      </div>
+
+      <!-- Quantity & Actions -->
+      <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6">
+        <div class="mb-6">
+          <label class="block text-white text-sm font-semibold mb-2">Quantity</label>
+          <div class="flex items-center gap-4">
+            <button onclick="decreaseQty()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">−</button>
+            <input type="number" id="quantity" value="1" min="1" class="w-16 bg-gray-800 text-white text-center px-2 py-2 rounded border border-gray-700" onchange="validateQty()">
+            <button onclick="increaseQty()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded">+</button>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="space-y-3">
+          <button onclick="addToCart()" class="w-full px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2">
+            <i class="fas fa-shopping-cart"></i> Add to Cart
+          </button>
+          <button onclick="goToCheckout()" class="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+            Buy Now
+          </button>
+        </div>
+      </div>
+
+      <!-- Product Details -->
+      <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-white mb-4">Product Details</h3>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <span class="text-gray-400">Product ID:</span>
+            <span id="productId" class="text-white font-mono">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">Condition:</span>
+            <span class="text-white">New</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-400">In Stock:</span>
+            <span class="text-green-400 font-semibold">Yes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Contact Seller Modal -->
+<div id="contactModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+  <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6 max-w-md w-full">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold text-white">Contact Seller</h2>
+      <button onclick="closeContactModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="block text-white text-sm font-semibold mb-2">Subject</label>
+        <input type="text" id="messageSubject" placeholder="Question about this product" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
+      </div>
+
+      <div>
+        <label class="block text-white text-sm font-semibold mb-2">Message</label>
+        <textarea id="messageBody" placeholder="Type your message..." rows="5" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
+      </div>
+
+      <div class="flex gap-3">
+        <button onclick="sendMessage()" class="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg">Send</button>
+        <button onclick="closeContactModal()" class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentProduct = null;
+  let currentProductId = null;
+
+  function init() {
+    const params = new URLSearchParams(window.location.search);
+    currentProductId = params.get('id');
+
+    if (!currentProductId) {
+      alert('Product not found');
+      window.location.href = 'marketplace.html';
+      return;
+    }
+
+    loadProduct();
+    updateCartBadge();
+  }
+
+  function loadProduct() {
+    // Load from backend or use mock data
+    const mockProducts = {
+      'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1', image: 'https://via.placeholder.com/400x300?text=RTX+4090', description: 'High-end RTX 4090 graphics card. Excellent condition.' },
+      'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2', image: 'https://via.placeholder.com/400x300?text=Ryzen+9', description: '16-core Ryzen 9 processor. Perfect for gaming and streaming.' },
+      'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3', image: 'https://via.placeholder.com/400x300?text=DDR5+RAM', description: '32GB DDR5 RAM module. High performance memory.' },
+    };
+
+    currentProduct = mockProducts[currentProductId];
+    if (!currentProduct) {
+      alert('Product not found');
+      window.location.href = 'marketplace.html';
+      return;
+    }
+
+    document.getElementById('productName').innerText = currentProduct.name;
+    document.getElementById('productPrice').innerText = '$' + currentProduct.price.toFixed(2);
+    document.getElementById('productDescription').innerText = currentProduct.description;
+    document.getElementById('productImage').src = currentProduct.image;
+    document.getElementById('productId').innerText = currentProductId;
+    document.getElementById('sellerName').innerText = currentProduct.sellerId;
+    document.getElementById('sellerLink').href = 'seller-profile.html?seller=' + currentProduct.sellerId;
+  }
+
+  function increaseQty() {
+    const qty = document.getElementById('quantity');
+    qty.value = parseInt(qty.value) + 1;
+  }
+
+  function decreaseQty() {
+    const qty = document.getElementById('quantity');
+    if (parseInt(qty.value) > 1) {
+      qty.value = parseInt(qty.value) - 1;
+    }
+  }
+
+  function validateQty() {
+    const qty = document.getElementById('quantity');
+    if (parseInt(qty.value) < 1) qty.value = 1;
+  }
+
+  function addToCart() {
+    let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+    const quantity = parseInt(document.getElementById('quantity').value);
+
+    const existingItem = cart.find(item => item.id === currentProductId);
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      cart.push({
+        id: currentProductId,
+        name: currentProduct.name,
+        price: currentProduct.price,
+        quantity: quantity,
+        image: currentProduct.image,
+      });
+    }
+
+    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
+    updateCartBadge();
+    alert(quantity + ' item(s) added to cart!');
+  }
+
+  function goToCheckout() {
+    addToCart();
+    window.location.href = 'shopping-cart.html';
+  }
+
+  function contactSeller() {
+    document.getElementById('contactModal').classList.remove('hidden');
+  }
+
+  function closeContactModal() {
+    document.getElementById('contactModal').classList.add('hidden');
+    document.getElementById('messageSubject').value = '';
+    document.getElementById('messageBody').value = '';
+  }
+
+  function sendMessage() {
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+      alert('Please log in to send a message');
+      return;
+    }
+
+    const subject = document.getElementById('messageSubject').value.trim();
+    const body = document.getElementById('messageBody').value.trim();
+
+    if (!subject || !body) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    // Send message via backend
+    fetch('/send-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: currentUser,
+        to: currentProduct.sellerId,
+        subject: subject,
+        body: body,
+      }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert('Message sent to ' + currentProduct.sellerId + '!');
+        closeContactModal();
+      } else {
+        alert('Failed to send message');
+      }
+    })
+    .catch(err => {
+      console.error('Error:', err);
+      alert('Error sending message');
+    });
+  }
+
+  function updateCartBadge() {
+    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+    const badge = document.getElementById('cartBadge');
+    if (cart.length > 0) {
+      badge.textContent = cart.length;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+
+  // Initialize on page load
+  init();
+</script>
+
+</body>
+</html>

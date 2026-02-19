@@ -8,10 +8,13 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
 
 // Mock product database (replace with real database)
 const products = {
-  'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1' },
-  'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2' },
-  'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3' },
+  'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1', image: 'https://via.placeholder.com/400x300?text=RTX+4090', description: 'High-end RTX 4090 graphics card. Excellent condition.' },
+  'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2', image: 'https://via.placeholder.com/400x300?text=Ryzen+9', description: '16-core Ryzen 9 processor. Perfect for gaming and streaming.' },
+  'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3', image: 'https://via.placeholder.com/400x300?text=DDR5+RAM', description: '32GB DDR5 RAM module. High performance memory.' },
 };
+
+// In-memory message storage (replace with database)
+const messages = {};
 
 // Middleware
 app.use(cors());
@@ -169,6 +172,82 @@ app.get('/product/:productId', (req, res) => {
     return res.status(404).json({ error: 'Product not found' });
   }
   res.json(product);
+});
+
+// ===== MESSAGING SYSTEM =====
+
+// Send a message to a seller
+app.post('/send-message', (req, res) => {
+  try {
+    const { from, to, subject, body } = req.body;
+
+    if (!from || !to || !subject || !body) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const messageId = `msg_${Date.now()}`;
+    const conversationKey = [from, to].sort().join('_');
+
+    if (!messages[conversationKey]) {
+      messages[conversationKey] = [];
+    }
+
+    const message = {
+      id: messageId,
+      from,
+      to,
+      subject,
+      body,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+
+    messages[conversationKey].push(message);
+
+    res.json({
+      success: true,
+      messageId: messageId,
+      message: message,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get messages between two users
+app.get('/get-messages/:user1/:user2', (req, res) => {
+  try {
+    const { user1, user2 } = req.params;
+    const conversationKey = [user1, user2].sort().join('_');
+
+    const conversationMessages = messages[conversationKey] || [];
+
+    res.json({
+      messages: conversationMessages,
+      conversationKey: conversationKey,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all conversations for a user
+app.get('/get-conversations/:userId', (req, res) => {
+  try {
+    const { userId } = req.params;
+    const userConversations = {};
+
+    Object.keys(messages).forEach((key) => {
+      if (key.includes(userId)) {
+        const otherUser = key.replace(userId + '_', '').replace('_' + userId, '');
+        userConversations[otherUser] = messages[key];
+      }
+    });
+
+    res.json({ conversations: userConversations });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Start server

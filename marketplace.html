@@ -231,10 +231,15 @@
 
           <div class="flex justify-between items-center">
             <p class="text-cyan-400 text-2xl font-bold">$${product.price}</p>
-            <button onclick="addToCart('${product.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded text-sm font-semibold">
-              <i class="fas fa-shopping-cart"></i>
-            </button>
-            <button onclick="promptReview('${product.id}')" title="Write a review" class="ml-2 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"><i class="fas fa-star"></i></button>
+            <div class="flex gap-2">
+              <a href="product-detail.html?id=${product.id}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm font-semibold" title="View Details">
+                <i class="fas fa-info-circle"></i>
+              </a>
+              <button onclick="addToCart('${product.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded text-sm font-semibold">
+                <i class="fas fa-shopping-cart"></i>
+              </button>
+              <button onclick="promptReview('${product.id}')" title="Write a review" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"><i class="fas fa-star"></i></button>
+            </div>
           </div>
         </div>
       </div>
