@@ -177,8 +177,7 @@
       }
     }
 
-    const currentUser = localStorage.getItem('currentUser');
-    renderProducts(currentUser ? allProducts : allProducts.slice(0, 1));
+    renderProducts(allProducts);
   }
 
   function renderProducts(products) {
