@@ -176,7 +176,7 @@
     
     for (const [sellerUsername, sellerData] of Object.entries(sellers)) {
       if (sellerData.products && Array.isArray(sellerData.products)) {
-        const product = sellerData.products.find(p => p.id === currentProductId);
+        const product = sellerData.products.find(p => String(p.id) === String(currentProductId));
         if (product) {
           foundProduct = product;
           foundSeller = { username: sellerUsername, ...sellerData };
