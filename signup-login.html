@@ -256,14 +256,14 @@
     const confirm = document.getElementById('signupConfirm').value;
 
     if (password !== confirm) {
-      alert('Passwords do not match!');
+      ZrxNotify.showNotification('Passwords do not match!', 'error');
       return;
     }
 
     // Store user data in localStorage
     const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
     if (users[username]) {
-      alert('Username already taken!');
+      ZrxNotify.showNotification('Username already taken!', 'error');
       return;
     }
 
@@ -271,7 +271,7 @@
     localStorage.setItem('zorexiumUsers', JSON.stringify(users));
     localStorage.setItem('currentUser', username);
 
-    alert('Account created successfully! Welcome to Zorexium Labs!');
+    ZrxNotify.showNotification('Account created successfully! Welcome to Zorexium Labs!', 'success');
     window.location.href = 'community-hub.html';
   }
 
@@ -285,15 +285,17 @@
     const user = users[username];
 
     if (!user || user.password !== password) {
-      alert('Invalid username or password!');
+      ZrxNotify.showNotification('Invalid username or password!', 'error');
       return;
     }
 
     localStorage.setItem('currentUser', username);
-    alert('Logged in successfully!');
+    ZrxNotify.showNotification('Logged in successfully!', 'success');
     window.location.href = 'community-hub.html';
   }
 </script>
+
+<script src="notifications.js"></script>
 
 </body>
 </html>

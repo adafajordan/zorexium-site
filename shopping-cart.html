@@ -113,6 +113,8 @@
 </footer>
 
 <script>
+
+<script src="notifications.js"></script>
   let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
 
   function loadCart() {
@@ -198,10 +200,10 @@
 
   function proceedToCheckout() {
     if (cart.length === 0) {
-      alert('Your cart is empty');
+      ZrxNotify.showNotification('Your cart is empty', 'info');
       return;
     }
-    alert('Checkout functionality coming soon! Order summary:\n\n' + cart.map(item => `${item.name} x${item.quantity} = $${(item.price * item.quantity).toFixed(2)}`).join('\n'));
+    ZrxNotify.showNotification('Checkout functionality coming soon! Check your cart for order summary.', 'info');
   }
 
   window.addEventListener('load', loadCart);

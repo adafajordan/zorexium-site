@@ -298,9 +298,9 @@
     currentUser = localStorage.getItem('currentUser');
 
     if (!currentUser) {
-      if (confirm('You need to create an account first. Would you like to sign up?')) {
+      ZrxNotify.showConfirm('You need to create an account first. Would you like to sign up?', function() {
         window.location.href = 'signup-login.html';
-      }
+      });
       return;
     }
 

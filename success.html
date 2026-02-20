@@ -97,7 +97,9 @@
                         localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
                     }
                 } catch (e) {
-                    console.log('Could not update localStorage');
+                        if (window.ZrxNotify && ZrxNotify.showNotification) {
+                            ZrxNotify.showNotification('Could not update localStorage', 'error');
+                        }
                 }
             } else {
                 document.getElementById('status-msg').innerText = "Verifying your account...";
@@ -106,6 +108,8 @@
 
         // Check status on page load
         checkStatus();
+        </script>
+        <script src="notifications.js"></script>
     </script>
 </body>
 </html>

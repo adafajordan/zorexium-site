@@ -219,10 +219,10 @@
   }
 
   function logout() {
-    if (confirm('Are you sure you want to log out?')) {
+    ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
       localStorage.removeItem('currentUser');
       window.location.reload();
-    }
+    });
   }
 
   function publishPost() {
@@ -230,7 +230,7 @@
     const title = document.getElementById('postTitle').value.trim();
     const content = document.getElementById('postContent').value.trim();
     if (!title || !content) {
-      alert('Please fill in both title and content!');
+      ZrxNotify.showNotification('Please fill in both title and content!', 'error');
       return;
     }
     const post = {
@@ -384,6 +384,7 @@
   window.addEventListener('load', init);
 </script>
 
+<script src="notifications.js"></script>
 </body>
 </html>
 

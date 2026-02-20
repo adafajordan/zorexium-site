@@ -259,16 +259,20 @@
 
   function promptReview(productId) {
     const currentUser = localStorage.getItem('currentUser') || 'guest';
-    const rating = parseInt(prompt('Please rate this product (1-5 stars):'));
-    if (!rating || rating < 1 || rating > 5) return alert('Invalid rating');
-    const reviewText = prompt('Optional: write a short review (max 300 chars):') || '';
-    const reviews = JSON.parse(localStorage.getItem('productReviews') || '{}');
-    reviews[productId] = reviews[productId] || [];
-    reviews[productId].push({ user: currentUser, rating, review: reviewText.substring(0,300), date: new Date().toISOString() });
-    localStorage.setItem('productReviews', JSON.stringify(reviews));
-    // refresh product list to update rating
-    loadAllProducts();
-    alert('Thanks for your review!');
+    ZrxNotify.showPrompt('Write a Review', [
+      { id: 'rating', label: 'Rating (1-5)', type: 'number', placeholder: '5' },
+      { id: 'review', label: 'Review', type: 'text', placeholder: 'Optional review (max 300 chars)' }
+    ], (vals)=>{
+      const rating = parseInt(vals.rating);
+      if (!rating || rating < 1 || rating > 5) { ZrxNotify.showNotification('Invalid rating', 'error'); return; }
+      const reviewText = (vals.review || '').substring(0,300);
+      const reviews = JSON.parse(localStorage.getItem('productReviews') || '{}');
+      reviews[productId] = reviews[productId] || [];
+      reviews[productId].push({ user: currentUser, rating, review: reviewText, date: new Date().toISOString() });
+      localStorage.setItem('productReviews', JSON.stringify(reviews));
+      loadAllProducts();
+      ZrxNotify.showNotification('Thanks for your review!', 'success');
+    });
   }
 
   function filterProducts() {
@@ -325,7 +329,7 @@
 
     localStorage.setItem('zorexiumCart', JSON.stringify(cart));
     updateCartBadge();
-    alert('Added to cart!');
+    ZrxNotify.showNotification('Added to cart!', 'success');
   }
 
   function checkSellerAndRedirect() {
@@ -388,6 +392,8 @@
 
   window.addEventListener('load', init);
 </script>
+
+<script src="notifications.js"></script>
 
 </body>
 </html>

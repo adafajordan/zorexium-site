@@ -297,6 +297,8 @@
 </footer>
 
 <script>
+
+<script src="notifications.js"></script>
   function checkAuth() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
@@ -376,7 +378,7 @@
   function uploadPurchaseFile(e){
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
-    const user = localStorage.getItem('currentUser'); if(!user) return alert('Log in first');
+    const user = localStorage.getItem('currentUser'); if(!user) { ZrxNotify.showNotification('Log in first', 'info'); return; }
     reader.onload = function(ev){
       const list = JSON.parse(localStorage.getItem('purchaseFiles_'+user) || '[]');
       list.unshift({ name: file.name, data: ev.target.result, added: new Date().toLocaleString() });
@@ -395,7 +397,7 @@
   function uploadShopFile(e){
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
-    const user = localStorage.getItem('currentUser'); if(!user) return alert('Log in first');
+    const user = localStorage.getItem('currentUser'); if(!user) { ZrxNotify.showNotification('Log in first', 'info'); return; }
     reader.onload = function(ev){
       let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
       if(!sellers[user]) sellers[user] = { files: [] };
@@ -429,17 +431,17 @@
     const confirmPassword = document.getElementById('confirmPassword').value;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      alert('Please fill in all fields');
+      ZrxNotify.showNotification('Please fill in all fields', 'error');
       return;
     }
 
     if (currentPassword !== user.password) {
-      alert('Current password is incorrect');
+      ZrxNotify.showNotification('Current password is incorrect', 'error');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert('New passwords do not match');
+      ZrxNotify.showNotification('New passwords do not match', 'error');
       return;
     }
 
@@ -451,7 +453,7 @@
     document.getElementById('newPassword').value = '';
     document.getElementById('confirmPassword').value = '';
 
-    alert('Password updated successfully!');
+    ZrxNotify.showNotification('Password updated successfully!', 'success');
   }
 
   function updateShopInfo() {
@@ -459,7 +461,7 @@
     const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
 
     if (!sellers[currentUser]) {
-      alert('You are not a seller');
+      ZrxNotify.showNotification('You are not a seller', 'error');
       return;
     }
 
@@ -467,7 +469,7 @@
     sellers[currentUser].description = document.getElementById('shopDescription').value;
     localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
 
-    alert('Shop information updated!');
+    ZrxNotify.showNotification('Shop information updated!', 'success');
   }
 
   function logout() {
@@ -476,32 +478,32 @@
   }
 
   function deleteAccount() {
-    if (!confirm('Are you sure? This action cannot be undone.')) return;
+    ZrxNotify.showConfirm('Are you sure? This action cannot be undone.', function() {
+      const currentUser = localStorage.getItem('currentUser');
+      const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+      const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
 
-    const currentUser = localStorage.getItem('currentUser');
-    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+      delete users[currentUser];
+      delete sellers[currentUser];
 
-    delete users[currentUser];
-    delete sellers[currentUser];
+      localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+      localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
+      localStorage.removeItem('currentUser');
 
-    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
-    localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-    localStorage.removeItem('currentUser');
-
-    alert('Account deleted');
-    window.location.href = 'index.html';
+      ZrxNotify.showNotification('Account deleted', 'success');
+      window.location.href = 'index.html';
+    });
   }
 
   function saveProfile(){
     const currentUser = localStorage.getItem('currentUser');
-    if(!currentUser) return alert('Not logged in');
+    if(!currentUser) { ZrxNotify.showNotification('Not logged in', 'info'); return; }
     const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
     const user = users[currentUser] || {};
     const newUsername = document.getElementById('editUsername').value.trim();
     const newEmail = document.getElementById('editEmail').value.trim();
     const phone = document.getElementById('editPhone').value.trim();
-    if(!newUsername || !newEmail) return alert('Username and email required');
+    if(!newUsername || !newEmail) { ZrxNotify.showNotification('Username and email required', 'error'); return; }
     // update user object
     user.email = newEmail;
     user.phone = phone;
@@ -509,22 +511,23 @@
     localStorage.setItem('zorexiumUsers', JSON.stringify(users));
     document.getElementById('profileUsername').textContent = newUsername;
     document.getElementById('profileEmail').textContent = newEmail;
-    alert('Profile saved');
+    ZrxNotify.showNotification('Profile saved', 'success');
   }
 
   function deactivateAccount(){
-    if(!confirm('Deactivate your account? You can reactivate by contacting support.')) return;
-    const currentUser = localStorage.getItem('currentUser');
-    if(!currentUser) return;
-    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    const user = users[currentUser];
-    if(!user) return;
-    user.active = false;
-    users[currentUser] = user;
-    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
-    localStorage.removeItem('currentUser');
-    alert('Account deactivated');
-    window.location.href = 'index.html';
+    ZrxNotify.showConfirm('Deactivate your account? You can reactivate by contacting support.', function(){
+      const currentUser = localStorage.getItem('currentUser');
+      if(!currentUser) return;
+      const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+      const user = users[currentUser];
+      if(!user) return;
+      user.active = false;
+      users[currentUser] = user;
+      localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+      localStorage.removeItem('currentUser');
+      ZrxNotify.showNotification('Account deactivated', 'success');
+      window.location.href = 'index.html';
+    });
   }
 
   window.addEventListener('load', checkAuth);

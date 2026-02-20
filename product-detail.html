@@ -159,16 +159,13 @@
   }
 
   function loadProduct() {
-    console.log('Loading product with ID:', currentProductId);
-    
+    // load product silently (no console output)
     if (!currentProductId) {
-      console.error('No product ID found');
       return;
     }
 
     // Load from sellers data in localStorage
     const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    console.log('Available sellers:', Object.keys(sellers));
     
     // Search through all sellers' products
     let foundProduct = null;
@@ -180,7 +177,7 @@
         if (product) {
           foundProduct = product;
           foundSeller = { username: sellerUsername, ...sellerData };
-          console.log('Found product in seller:', sellerUsername);
+          // found product
           break;
         }
       }
@@ -188,7 +185,7 @@
 
     // Fallback to mock products if not found in sellers
     if (!foundProduct) {
-      console.log('Product not found in sellers, using mock data');
+      // Product not found in sellers, will try mock data
       const mockProducts = {
         'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1', image: 'https://via.placeholder.com/400x300?text=RTX+4090', description: 'High-end RTX 4090 graphics card. Excellent condition.' },
         'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2', image: 'https://via.placeholder.com/400x300?text=Ryzen+9', description: '16-core Ryzen 9 processor. Perfect for gaming and streaming.' },
@@ -196,11 +193,9 @@
       };
       
       foundProduct = mockProducts[currentProductId];
-      if (foundProduct) {
+        if (foundProduct) {
         foundSeller = { username: 'seller', shopName: foundProduct.sellerId };
-        console.log('Using mock product');
       } else {
-        console.error('Product not found in mock products either');
         // Display error message without redirecting - show a user-friendly message
         document.getElementById('productName').innerText = 'Product Not Found';
         document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or has been removed. Please return to the marketplace to view available products.';
@@ -211,6 +206,8 @@
 
     currentProduct = foundProduct;
     const sellerUsername = foundSeller.username;
+    // ensure product has seller reference for messaging
+    try { currentProduct.sellerId = sellerUsername; } catch(e) {}
 
     document.getElementById('productName').innerText = currentProduct.name;
     document.getElementById('productPrice').innerText = '$' + currentProduct.price.toFixed(2);
@@ -264,7 +261,7 @@
 
     localStorage.setItem('zorexiumCart', JSON.stringify(cart));
     updateCartBadge();
-    alert(quantity + ' item(s) added to cart!');
+    ZrxNotify.showNotification(quantity + ' item(s) added to cart!', 'success');
   }
 
   function goToCheckout() {
@@ -285,7 +282,7 @@
   function sendMessage() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
-      alert('Please log in to send a message');
+      ZrxNotify.showNotification('Please log in to send a message', 'info');
       return;
     }
 
@@ -293,7 +290,7 @@
     const body = document.getElementById('messageBody').value.trim();
 
     if (!subject || !body) {
-      alert('Please fill in all fields');
+      ZrxNotify.showNotification('Please fill in all fields', 'error');
       return;
     }
 
@@ -311,15 +308,14 @@
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        alert('Message sent to ' + currentProduct.sellerId + '!');
+        ZrxNotify.showNotification('Message sent to ' + currentProduct.sellerId + '!', 'success');
         closeContactModal();
       } else {
-        alert('Failed to send message');
+        ZrxNotify.showNotification('Failed to send message', 'error');
       }
     })
     .catch(err => {
-      console.error('Error:', err);
-      alert('Error sending message');
+      ZrxNotify.showNotification('Error sending message', 'error');
     });
   }
 
@@ -337,6 +333,7 @@
   // Initialize on page load
   window.addEventListener('load', init);
 </script>
+<script src="notifications.js"></script>
 
 </body>
 </html>

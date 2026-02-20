@@ -124,6 +124,8 @@
 </footer>
 
 <script>
+
+<script src="notifications.js"></script>
   let currentUser = localStorage.getItem('currentUser');
   let sellerData = {};
 
@@ -202,13 +204,13 @@
   }
 
   function deleteProduct(productId) {
-    if (confirm('Are you sure you want to delete this product?')) {
+    ZrxNotify.showConfirm('Are you sure you want to delete this product?', function() {
       sellerData.products = sellerData.products.filter(p => p.id !== productId);
       let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
       sellers[currentUser] = sellerData;
       localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
       loadProducts();
-    }
+    });
   }
 
   function viewPublicProfile(e) {
@@ -217,10 +219,10 @@
   }
 
   function logout() {
-    if (confirm('Are you sure you want to log out?')) {
+    ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
       localStorage.removeItem('currentUser');
       window.location.href = 'index.html';
-    }
+    });
   }
 
   function updateCartBadge() {

@@ -92,7 +92,7 @@
   function init() {
     currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
-      alert('Please log in');
+      ZrxNotify.showNotification('Please log in', 'info');
       window.location.href = 'signup-login.html';
       return;
     }
@@ -106,7 +106,7 @@
       .then(data => {
         renderConversations(data.conversations);
       })
-      .catch(err => console.error('Error:', err));
+      .catch(err => { ZrxNotify.showNotification('Failed to load conversations', 'error'); });
   }
 
   function renderConversations(conversations) {
@@ -137,7 +137,7 @@
       .then(data => {
         renderMessages(data.messages);
       })
-      .catch(err => console.error('Error:', err));
+      .catch(err => { ZrxNotify.showNotification('Failed to load messages', 'error'); });
   }
 
   function renderMessages(msgs) {
@@ -168,7 +168,7 @@
 
   function sendCurrentMessage() {
     if (!selectedContact) {
-      alert('Select a conversation first');
+      ZrxNotify.showNotification('Select a conversation first', 'info');
       return;
     }
 
@@ -176,7 +176,7 @@
     const body = document.getElementById('msgBody').value.trim();
 
     if (!subject || !body) {
-      alert('Please fill in all fields');
+      ZrxNotify.showNotification('Please fill in all fields', 'error');
       return;
     }
 
@@ -198,11 +198,13 @@
         selectContact(selectedContact);
       }
     })
-    .catch(err => console.error('Error:', err));
+    .catch(err => { ZrxNotify.showNotification('Error sending message', 'error'); });
   }
 
   init();
 </script>
+
+<script src="notifications.js"></script>
 
 </body>
 </html>
