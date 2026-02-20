@@ -297,7 +297,8 @@
   }
 
   function viewProduct(productId, sellerUsername) {
-    window.location.href = 'product-detail.html?id=' + productId;
+    try { sessionStorage.setItem('viewingProductId', productId); } catch(e) {}
+    window.location.href = 'product-detail.html?id=' + encodeURIComponent(productId);
   }
 
   function addToCart(productId) {

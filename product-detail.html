@@ -142,11 +142,15 @@
 
   function init() {
     const params = new URLSearchParams(window.location.search);
-    currentProductId = params.get('id');
+    currentProductId = params.get('id') || sessionStorage.getItem('viewingProductId');
+
+    try { sessionStorage.removeItem('viewingProductId'); } catch(e) {}
 
     if (!currentProductId) {
-      alert('Product not found');
-      window.location.href = 'marketplace.html';
+      document.getElementById('productName').innerText = 'Product Not Found';
+      document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or may have been removed. Return to the marketplace to view available products.';
+      document.getElementById('productPrice').innerText = 'N/A';
+      updateCartBadge();
       return;
     }
 
@@ -155,26 +159,36 @@
   }
 
   function loadProduct() {
+    console.log('Loading product with ID:', currentProductId);
+    
+    if (!currentProductId) {
+      console.error('No product ID found');
+      return;
+    }
+
     // Load from sellers data in localStorage
     const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+    console.log('Available sellers:', Object.keys(sellers));
     
     // Search through all sellers' products
     let foundProduct = null;
     let foundSeller = null;
     
     for (const [sellerUsername, sellerData] of Object.entries(sellers)) {
-      if (sellerData.products) {
+      if (sellerData.products && Array.isArray(sellerData.products)) {
         const product = sellerData.products.find(p => p.id === currentProductId);
         if (product) {
           foundProduct = product;
           foundSeller = { username: sellerUsername, ...sellerData };
+          console.log('Found product in seller:', sellerUsername);
           break;
         }
       }
     }
 
-    // Fallback to mock products if not found
+    // Fallback to mock products if not found in sellers
     if (!foundProduct) {
+      console.log('Product not found in sellers, using mock data');
       const mockProducts = {
         'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1', image: 'https://via.placeholder.com/400x300?text=RTX+4090', description: 'High-end RTX 4090 graphics card. Excellent condition.' },
         'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2', image: 'https://via.placeholder.com/400x300?text=Ryzen+9', description: '16-core Ryzen 9 processor. Perfect for gaming and streaming.' },
@@ -182,12 +196,17 @@
       };
       
       foundProduct = mockProducts[currentProductId];
-      if (!foundProduct) {
-        alert('Product not found');
-        window.location.href = 'marketplace.html';
+      if (foundProduct) {
+        foundSeller = { username: 'seller', shopName: foundProduct.sellerId };
+        console.log('Using mock product');
+      } else {
+        console.error('Product not found in mock products either');
+        // Display error message without redirecting - show a user-friendly message
+        document.getElementById('productName').innerText = 'Product Not Found';
+        document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or has been removed. Please return to the marketplace to view available products.';
+        document.getElementById('productPrice').innerText = 'N/A';
         return;
       }
-      foundSeller = { username: 'seller', shopName: foundProduct.sellerId };
     }
 
     currentProduct = foundProduct;
