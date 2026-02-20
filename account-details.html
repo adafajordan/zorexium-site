@@ -412,13 +412,29 @@
   }
 
   function switchTab(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('border-cyan-400', 'text-white'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.add('border-transparent', 'text-gray-400'));
-
-    document.getElementById(tab).classList.add('active');
-    event.target.closest('button').classList.remove('border-transparent', 'text-gray-400');
-    event.target.closest('button').classList.add('border-cyan-400', 'text-white');
+    // Remove active from all tab contents
+    document.querySelectorAll('.tab-content').forEach(el => {
+      el.classList.remove('active');
+      el.classList.add('hidden');
+    });
+    // Remove active styling from all tab buttons
+    document.querySelectorAll('.tab-btn').forEach(el => {
+      el.classList.remove('border-cyan-400', 'text-white');
+      el.classList.add('border-transparent', 'text-gray-400');
+    });
+    // Show the selected tab content
+    var tabContent = document.getElementById(tab);
+    tabContent.classList.add('active');
+    tabContent.classList.remove('hidden');
+    // Style the clicked button
+    var buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(function(btn) {
+      if (btn.getAttribute('onclick').includes("'"+tab+"'")) {
+        btn.classList.remove('border-transparent', 'text-gray-400');
+        btn.classList.add('border-cyan-400', 'text-white');
+      }
+    });
+  }
   }
 
   function changePassword() {
