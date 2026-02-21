@@ -158,26 +158,37 @@
   }
 
   function loadAllProducts() {
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    allProducts = [];
-
-    for (const [sellerUsername, sellerData] of Object.entries(sellers)) {
-      if (sellerData.products && Array.isArray(sellerData.products)) {
-        sellerData.products.forEach(product => {
-          // compute product average rating from stored reviews
+    // Fetch from server for cross-browser persistence; fall back to localStorage
+    fetch('/api/listings')
+      .then(res => res.json())
+      .then(data => {
+        allProducts = (data.listings || []).map(product => {
           const reviews = JSON.parse(localStorage.getItem('productReviews') || '{}')[product.id] || [];
-          const avg = reviews.length ? reviews.reduce((s,r)=>s+r.rating,0)/reviews.length : (product.rating || sellerData.rating || 5.0);
-          allProducts.push({
-            ...product,
-            sellerUsername: sellerUsername,
-            shopName: sellerData.shopName,
-            sellerRating: avg
-          });
+          const avg = reviews.length ? reviews.reduce((s,r)=>s+r.rating,0)/reviews.length : (product.rating || 5.0);
+          return { ...product, sellerRating: avg };
         });
-      }
-    }
-
-    renderProducts(allProducts);
+        renderProducts(allProducts);
+      })
+      .catch(() => {
+        // Fall back to localStorage if server is unavailable
+        const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+        allProducts = [];
+        for (const [sellerUsername, sellerData] of Object.entries(sellers)) {
+          if (sellerData.products && Array.isArray(sellerData.products)) {
+            sellerData.products.forEach(product => {
+              const reviews = JSON.parse(localStorage.getItem('productReviews') || '{}')[product.id] || [];
+              const avg = reviews.length ? reviews.reduce((s,r)=>s+r.rating,0)/reviews.length : (product.rating || sellerData.rating || 5.0);
+              allProducts.push({
+                ...product,
+                sellerUsername: sellerUsername,
+                shopName: sellerData.shopName,
+                sellerRating: avg
+              });
+            });
+          }
+        }
+        renderProducts(allProducts);
+      });
   }
 
   function renderProducts(products) {

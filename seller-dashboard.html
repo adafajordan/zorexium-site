@@ -261,6 +261,9 @@
       let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
       sellers[currentUser] = sellerData;
       localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
+      // Remove from server so marketplace updates for all browsers
+      fetch('/api/listings/' + encodeURIComponent(productId), { method: 'DELETE' })
+        .catch(err => console.error('Failed to delete listing from server:', err));
       loadProducts();
     });
   }
