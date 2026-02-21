@@ -201,7 +201,6 @@
   function checkAuth() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
-      alert('You must log in first to become a seller. Redirecting to login...');
       window.location.href = 'signup-login.html';
       return false;
     }
@@ -540,7 +539,6 @@
   function checkAuth() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
-      alert('You must log in first to become a seller. Redirecting to login...');
       window.location.href = 'signup-login.html';
       return false;
     }
