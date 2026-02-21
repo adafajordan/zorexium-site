@@ -306,13 +306,13 @@
   }
 
   function addToCart(productId) {
-    const product = allProducts.find(p => p.id === productId);
+    const product = allProducts.find(p => String(p.id) === String(productId));
     if (!product) return;
 
     let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
     
     // Check if product already in cart
-    const existingItem = cart.find(item => item.id === productId);
+    const existingItem = cart.find(item => String(item.id) === String(productId));
     if (existingItem) {
       existingItem.quantity += 1;
     } else {
