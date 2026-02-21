@@ -296,7 +296,7 @@
   }
 
   function handleMessaging() {
-    alert('Messaging system coming soon! You can contact ' + sellerUsername);
+    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerUsername);
   }
 
   function updateCartBadge() {
