@@ -194,17 +194,6 @@
     <p id="userStatus" class="text-cyan-400 mt-6 text-sm hidden"></p>
   </div>
 
-  <!-- Inline seller type chooser (hidden by default) -->
-  <div id="sellerTypeChooser" class="max-w-2xl mx-auto mt-6 hidden">
-    <div class="bg-[#0f172a] border border-gray-700 rounded-lg p-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
-      <div class="text-gray-300">How would you like to sell?</div>
-      <div class="flex gap-3">
-        <a id="chooseBusiness" href="#" class="bg-cyan-600 px-4 py-2 rounded text-white">Sell as Business</a>
-        <a id="chooseIndividual" href="#" class="bg-gray-700 px-4 py-2 rounded text-white">Sell as Individual</a>
-      </div>
-    </div>
-  </div>
-
   <!-- How It Works -->
   <div class="mb-16">
     <h2 class="text-3xl font-bold text-white mb-8 text-center">How It Works</h2>
@@ -298,9 +287,7 @@
     currentUser = localStorage.getItem('currentUser');
 
     if (!currentUser) {
-      ZrxNotify.showConfirm('You need to create an account first. Would you like to sign up?', function() {
-        window.location.href = 'signup-login.html';
-      });
+      window.location.href = 'signup-login.html';
       return;
     }
 
@@ -312,9 +299,8 @@
       return;
     }
 
-    // Not a seller yet: show inline chooser so user picks Business or Individual
-    const chooser = document.getElementById('sellerTypeChooser');
-    if (chooser) chooser.classList.remove('hidden');
+    // Logged in but not a seller yet — go to seller sign-up
+    window.location.href = 'seller-signup.html';
   }
 
   function checkUserStatus() {
@@ -388,14 +374,6 @@
     document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
       if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
     });
-  });
-
-  // Wire the inline seller type chooser links
-  document.addEventListener('DOMContentLoaded', () => {
-    const b = document.getElementById('chooseBusiness');
-    const i = document.getElementById('chooseIndividual');
-    if (b) b.addEventListener('click', (e) => { e.preventDefault(); window.open('seller-signup.html?type=business', '_blank'); });
-    if (i) i.addEventListener('click', (e) => { e.preventDefault(); window.open('seller-signup.html?type=individual', '_blank'); });
   });
 
   window.addEventListener('load', checkUserStatus);
