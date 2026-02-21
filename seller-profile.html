@@ -295,10 +295,6 @@
     alert('Product detail view coming soon! Product ID: ' + productId);
   }
 
-  function handleMessaging() {
-    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerUsername);
-  }
-
   function updateCartBadge() {
     const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
     const badge = document.getElementById('cartBadge');
@@ -319,7 +315,7 @@
       window.location.href = 'signup-login.html';
       return;
     }
-    window.location.href = 'messages.html';
+    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerUsername);
   }
 
   window.addEventListener('load', init);
