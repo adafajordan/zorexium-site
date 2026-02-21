@@ -207,7 +207,7 @@
     return true;
   }
 
-  function handleSellerSignup(e) {
+  async function handleSellerSignup(e) {
     e.preventDefault();
 
     if (!checkAuth()) return;
@@ -245,7 +245,7 @@
     } else {
       if (!personalName || !personalEmail) {
         errorAlert.textContent = 'Name and email are required for individual sellers!';
-      errorAlert.classList.remove('hidden');
+        errorAlert.classList.remove('hidden');
         return;
       }
     }
@@ -308,12 +308,20 @@
       localStorage.setItem('zorexiumUsers', JSON.stringify(users));
     }
 
-    successAlert.textContent = 'Welcome to Zorexium Sellers! Redirecting to your seller dashboard...';
+    successAlert.textContent = 'Welcome to Zorexium Sellers! Starting Stripe setup...';
     successAlert.classList.remove('hidden');
 
-    setTimeout(() => {
+    try {
+      const res = await fetch('/onboard-seller', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        window.location.href = 'seller-dashboard.html';
+      }
+    } catch (e) {
       window.location.href = 'seller-dashboard.html';
-    }, 1500);
+    }
   }
 
   function toggleDropdown(id) {
@@ -545,7 +553,7 @@
     return true;
   }
 
-  function handleSellerSignup(e) {
+  async function handleSellerSignup(e) {
     e.preventDefault();
 
     if (!checkAuth()) return;
@@ -616,12 +624,20 @@
       localStorage.setItem('zorexiumUsers', JSON.stringify(users));
     }
 
-    successAlert.textContent = 'Welcome to Zorexium Sellers! Redirecting to your seller dashboard...';
+    successAlert.textContent = 'Welcome to Zorexium Sellers! Starting Stripe setup...';
     successAlert.classList.remove('hidden');
 
-    setTimeout(() => {
+    try {
+      const res = await fetch('/onboard-seller', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        window.location.href = 'seller-dashboard.html';
+      }
+    } catch (e) {
       window.location.href = 'seller-dashboard.html';
-    }, 1500);
+    }
   }
 
   function toggleDropdown(id) {
