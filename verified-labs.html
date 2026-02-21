@@ -161,7 +161,7 @@
 
     Promise.all(files.map(readFile)).then(fileObjs => {
       const labs = JSON.parse(localStorage.getItem('local_verifiedLabs_v1') || '[]');
-      labs.unshift({ id: Date.now(), name, location: document.getElementById('labLocation').value.trim(), description: document.getElementById('labDescription').value.trim(), files: fileObjs, created: new Date().toLocaleString() });
+      labs.unshift({ id: Date.now(), name, location: document.getElementById('labLocation').value.trim(), description: document.getElementById('labDescription').value.trim(), files: fileObjs, created: new Date().toLocaleString(), addedBy: localStorage.getItem('currentUser') || null });
       localStorage.setItem('local_verifiedLabs_v1', JSON.stringify(labs));
       // clear inputs
       document.getElementById('labName').value=''; document.getElementById('labLocation').value=''; document.getElementById('labDescription').value=''; filesInput.value=''; document.getElementById('labFilesPreview').innerHTML='';
