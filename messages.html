@@ -97,14 +97,19 @@
       return;
     }
 
-    loadConversations();
+    const params = new URLSearchParams(window.location.search);
+    const directContact = params.get('with');
+    loadConversations(directContact);
   }
 
-  function loadConversations() {
+  function loadConversations(directContact) {
     fetch(`/get-conversations/${currentUser}`)
       .then(res => res.json())
       .then(data => {
         renderConversations(data.conversations);
+        if (directContact) {
+          selectContact(directContact);
+        }
       })
       .catch(err => { ZrxNotify.showNotification('Failed to load conversations', 'error'); });
   }
