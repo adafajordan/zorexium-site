@@ -1,6 +1,8 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,8 +15,39 @@ const products = {
   'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3', image: 'https://via.placeholder.com/400x300?text=DDR5+RAM', description: '32GB DDR5 RAM module. High performance memory.' },
 };
 
-// In-memory message storage (replace with database)
-const messages = {};
+// File-based message storage for persistence across restarts
+const MESSAGES_FILE = path.join(__dirname, 'messages_data.json');
+const MAX_MESSAGES_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
+
+function loadMessages() {
+  try {
+    if (fs.existsSync(MESSAGES_FILE)) {
+      const stat = fs.statSync(MESSAGES_FILE);
+      if (stat.size > MAX_MESSAGES_FILE_SIZE) {
+        console.error('Messages file exceeds size limit; starting with empty storage.');
+        return {};
+      }
+      const parsed = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+        console.error('Messages file has unexpected structure; starting with empty storage.');
+        return {};
+      }
+      return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to load messages from file:', e.message);
+  }
+  return {};
+}
+
+function saveMessages(data) {
+  fs.writeFile(MESSAGES_FILE, JSON.stringify(data, null, 2), 'utf8', (err) => {
+    if (err) console.error('Failed to save messages to file:', err.message);
+  });
+}
+
+// Load persisted messages on startup
+const messages = loadMessages();
 
 // Middleware
 app.use(cors());
@@ -203,6 +236,7 @@ app.post('/send-message', (req, res) => {
     };
 
     messages[conversationKey].push(message);
+    saveMessages(messages);
 
     res.json({
       success: true,
