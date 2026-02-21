@@ -186,6 +186,21 @@
     }
   }
 
+  function syncProductsToServer() {
+    if (!sellerData.products || sellerData.products.length === 0) return;
+    sellerData.products.forEach(function(product) {
+      const serverListing = Object.assign({}, product, {
+        sellerUsername: currentUser,
+        shopName: sellerData.shopName
+      });
+      fetch('/api/listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serverListing)
+      }).catch(err => console.error('Failed to sync product "' + product.name + '" (id: ' + product.id + ') to server:', err));
+    });
+  }
+
   function loadDashboard() {
     // Update shop info
     document.getElementById('shopNameDisplay').textContent = sellerData.shopName;
@@ -202,6 +217,9 @@
     document.getElementById('totalSales').textContent = sellerData.totalSales || 0;
     document.getElementById('sellerRating').textContent = (sellerData.rating || 5).toFixed(1);
     document.getElementById('pendingOrders').textContent = '0';
+
+    // Push all locally-stored products to server for cross-browser persistence
+    syncProductsToServer();
 
     // Load products
     loadProducts();
