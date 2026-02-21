@@ -119,8 +119,6 @@
   function closeAddLab(){ document.getElementById('addLabModal').classList.add('hidden'); document.getElementById('addLabModal').classList.remove('flex'); }
   document.getElementById('addLabBtn').addEventListener('click', openAddLab);
 
-  console.log('Verified Labs loaded — build: 2026-02-14 21:33');
-
   // preview selected files in modal
   document.getElementById('labFilesInput').addEventListener('change', function(){
     const preview = document.getElementById('labFilesPreview'); preview.innerHTML = '';
