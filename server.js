@@ -73,11 +73,14 @@ app.post('/onboard-seller', async (req, res) => {
       return_url: `${BASE_URL}/success.html?account_id=${account.id}`,
     });
 
+    console.log('accountLink:', accountLink);
+
     res.json({
       accountId: account.id,
       url: accountLink.url,
     });
   } catch (error) {
+    console.error('Stripe error in /onboard-seller:', error);
     res.status(500).json({ error: error.message });
   }
 });
