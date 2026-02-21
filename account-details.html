@@ -296,9 +296,8 @@
   </div>
 </footer>
 
-<script>
-
 <script src="notifications.js"></script>
+<script>
   function checkAuth() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
@@ -306,6 +305,7 @@
       document.getElementById('loggedInContent').classList.add('hidden');
       return false;
     }
+    document.getElementById('loggedInContent').classList.remove('hidden');
     loadAccountData();
     return true;
   }
@@ -322,6 +322,8 @@
     document.getElementById('editUsername').value = currentUser;
     document.getElementById('profileEmail').textContent = user.email;
     document.getElementById('editEmail').value = user.email;
+    document.getElementById('editPhone').value = user.phone || '';
+    document.getElementById('editAccountType').value = user.accountType || 'Buyer';
     // profile image
     const profileImg = localStorage.getItem('profileImage_' + currentUser);
     if (profileImg) document.getElementById('profileImage').src = profileImg;
@@ -434,7 +436,6 @@
         btn.classList.add('border-cyan-400', 'text-white');
       }
     });
-  }
   }
 
   function changePassword() {
