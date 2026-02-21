@@ -103,15 +103,24 @@
   }
 
   function loadConversations(directContact) {
-    fetch(`/get-conversations/${currentUser}`)
-      .then(res => res.json())
-      .then(data => {
-        renderConversations(data.conversations);
-        if (directContact) {
-          selectContact(directContact);
-        }
-      })
-      .catch(err => { ZrxNotify.showNotification('Failed to load conversations', 'error'); });
+    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
+    const conversations = {};
+    Object.keys(msgs).forEach(key => {
+      let otherUser = null;
+      if (key.startsWith(currentUser + '_')) {
+        otherUser = key.slice(currentUser.length + 1);
+      } else if (key.endsWith('_' + currentUser)) {
+        otherUser = key.slice(0, key.length - currentUser.length - 1);
+      }
+      if (otherUser !== null) {
+        conversations[otherUser] = msgs[key];
+      }
+    });
+    if (directContact && !conversations[directContact]) {
+      conversations[directContact] = [];
+    }
+    renderConversations(conversations);
+    if (directContact) selectContact(directContact);
   }
 
   function renderConversations(conversations) {
@@ -137,12 +146,9 @@
     document.getElementById('chatHeader').innerText = contact;
     document.getElementById('chatSubheader').innerText = 'Conversation with ' + contact;
 
-    fetch(`/get-messages/${currentUser}/${contact}`)
-      .then(res => res.json())
-      .then(data => {
-        renderMessages(data.messages);
-      })
-      .catch(err => { ZrxNotify.showNotification('Failed to load messages', 'error'); });
+    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
+    const conversationKey = [currentUser, contact].sort().join('_');
+    renderMessages(msgs[conversationKey] || []);
   }
 
   function renderMessages(msgs) {
@@ -185,6 +191,23 @@
       return;
     }
 
+    const conversationKey = [currentUser, selectedContact].sort().join('_');
+    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
+    if (!msgs[conversationKey]) msgs[conversationKey] = [];
+    msgs[conversationKey].push({
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      from: currentUser,
+      to: selectedContact,
+      subject: subject,
+      body: body,
+      timestamp: new Date().toISOString(),
+      read: false,
+    });
+    localStorage.setItem('zorexiumMessages', JSON.stringify(msgs));
+    document.getElementById('msgSubject').value = '';
+    document.getElementById('msgBody').value = '';
+    selectContact(selectedContact);
+
     fetch('/send-message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -194,16 +217,7 @@
         subject: subject,
         body: body,
       }),
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        document.getElementById('msgSubject').value = '';
-        document.getElementById('msgBody').value = '';
-        selectContact(selectedContact);
-      }
-    })
-    .catch(err => { ZrxNotify.showNotification('Error sending message', 'error'); });
+    }).catch(() => {});
   }
 
   init();
