@@ -61,6 +61,27 @@ app.get('/health', (req, res) => {
 
 // ===== STRIPE CONNECT ONBOARDING =====
 
+// Onboard a new seller: create Express account and return onboarding URL
+app.post('/onboard-seller', async (req, res) => {
+  try {
+    const account = await stripe.accounts.create({ type: 'express' });
+
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      type: 'account_onboarding',
+      refresh_url: `${BASE_URL}/sell-on-zorexium.html`,
+      return_url: `${BASE_URL}/success.html?account_id=${account.id}`,
+    });
+
+    res.json({
+      accountId: account.id,
+      url: accountLink.url,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Step 1: Create a Stripe Connect Account
 app.post('/create-stripe-account', async (req, res) => {
   try {
