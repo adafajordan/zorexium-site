@@ -5,3 +5,4 @@ node_modules/
 *.log
 .vscode/
 .idea/
+messages_data.json
