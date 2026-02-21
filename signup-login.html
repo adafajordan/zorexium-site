@@ -266,6 +266,11 @@
       ZrxNotify.showNotification('Username already taken!', 'error');
       return;
     }
+    const emailTaken = Object.values(users).some(u => u?.email?.toLowerCase() === email.toLowerCase());
+    if (emailTaken) {
+      ZrxNotify.showNotification('An account with that email already exists!', 'error');
+      return;
+    }
 
     users[username] = { email, password, joinedDate: new Date().toLocaleDateString() };
     localStorage.setItem('zorexiumUsers', JSON.stringify(users));
@@ -282,14 +287,20 @@
     const password = document.getElementById('loginPassword').value;
 
     const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    const user = users[username];
+    // Support login by username or email
+    let resolvedUsername = username;
+    let user = users[username];
+    if (!user) {
+      const entry = Object.entries(users).find(([, u]) => u?.email?.toLowerCase() === username.toLowerCase());
+      if (entry) { resolvedUsername = entry[0]; user = entry[1]; }
+    }
 
     if (!user || user.password !== password) {
       ZrxNotify.showNotification('Invalid username or password!', 'error');
       return;
     }
 
-    localStorage.setItem('currentUser', username);
+    localStorage.setItem('currentUser', resolvedUsername);
     ZrxNotify.showNotification('Logged in successfully!', 'success');
     window.location.href = 'community-hub.html';
   }
