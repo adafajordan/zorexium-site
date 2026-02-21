@@ -78,15 +78,6 @@
       </div>
     </div>
   </div>
-  <!-- Business-only notice modal -->
-  <div id="businessOnlyModal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50">
-    <div class="bg-[#0b1220] border border-gray-700 rounded-lg w-full max-w-md p-6 text-center">
-      <div class="text-4xl text-cyan-400 mb-4"><i class="fas fa-lock"></i></div>
-      <h2 class="text-lg font-semibold mb-2">Business Sellers Only</h2>
-      <p class="text-gray-400 mb-6">Only business sellers can add labs. Please <a href="seller-signup.html" class="text-cyan-400 hover:underline">sign up as a business seller</a> to access this feature.</p>
-      <button onclick="closeBusinessOnlyModal()" class="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded">OK</button>
-    </div>
-  </div>
 </main>
 
 <!-- Footer: forum categories then full bottom bar -->
@@ -126,15 +117,7 @@
 <script>
   function openAddLab(){ document.getElementById('addLabModal').classList.remove('hidden'); document.getElementById('addLabModal').classList.add('flex'); }
   function closeAddLab(){ document.getElementById('addLabModal').classList.add('hidden'); document.getElementById('addLabModal').classList.remove('flex'); }
-  function closeBusinessOnlyModal(){ document.getElementById('businessOnlyModal').classList.add('hidden'); document.getElementById('businessOnlyModal').classList.remove('flex'); }
   document.getElementById('addLabBtn').addEventListener('click', function(){
-    var currentUser = localStorage.getItem('currentUser');
-    var sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (!currentUser || !sellers[currentUser] || sellers[currentUser].accountType !== 'business') {
-      document.getElementById('businessOnlyModal').classList.remove('hidden');
-      document.getElementById('businessOnlyModal').classList.add('flex');
-      return;
-    }
     openAddLab();
   });
 
