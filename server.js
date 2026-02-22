@@ -3,6 +3,17 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK using environment variable
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
+  } catch (e) {
+    console.error('Failed to initialize Firebase Admin SDK. Check that FIREBASE_SERVICE_ACCOUNT contains valid JSON:', e.message);
+  }
+}
+const db = admin.apps.length ? admin.firestore() : null;
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -400,6 +411,42 @@ app.delete('/api/listings/:id', (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== FIRESTORE PRODUCT ENDPOINTS =====
+
+// Add a product to Firestore
+app.post('/add-product', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ error: 'Firestore not configured' });
+    }
+    const product = req.body;
+    if (!product || !product.name) {
+      return res.status(400).json({ error: 'Missing required product fields' });
+    }
+    const docRef = await db.collection('products').add({ ...product, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    res.json({ success: true, id: docRef.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all products from Firestore
+app.get('/products', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ error: 'Firestore not configured' });
+    }
+    const snapshot = await db.collection('products').orderBy('createdAt', 'desc').get();
+    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json({ products });
+  } catch (error) {
+    const msg = error.code === 9 || (error.message && error.message.includes('index'))
+      ? 'Firestore query failed. Ensure a composite index on "createdAt" exists, or visit the Firestore console to create it. Details: ' + error.message
+      : error.message;
+    res.status(500).json({ error: msg });
   }
 });
 
