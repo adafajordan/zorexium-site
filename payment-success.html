@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Order Confirmed - Zorexium Labs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+
+  <div class="bg-[#20232a] border border-gray-700 rounded-xl p-8 max-w-lg w-full">
+
+    <!-- Success icon -->
+    <div class="flex justify-center mb-6">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-green-600 rounded-full shadow-lg">
+        <i class="fas fa-check text-white text-3xl"></i>
+      </div>
+    </div>
+
+    <!-- Headline -->
+    <h1 class="text-3xl font-bold text-white text-center mb-1">Order Confirmed!</h1>
+    <p class="text-gray-400 text-center mb-6">Thank you for your purchase from Zorexium Labs.</p>
+
+    <!-- Order details -->
+    <div class="bg-[#181b21] rounded-lg border border-gray-700 divide-y divide-gray-700 mb-6">
+      <div class="flex justify-between items-center px-4 py-3">
+        <span class="text-gray-400 text-sm">Order ID</span>
+        <span id="orderId" class="text-white font-mono text-sm break-all text-right ml-4">—</span>
+      </div>
+      <div class="flex justify-between items-center px-4 py-3">
+        <span class="text-gray-400 text-sm">Date</span>
+        <span id="orderDate" class="text-white text-sm">—</span>
+      </div>
+      <div class="flex justify-between items-center px-4 py-3">
+        <span class="text-gray-400 text-sm">Items</span>
+        <span id="orderItems" class="text-white text-sm text-right ml-4">—</span>
+      </div>
+      <div class="flex justify-between items-center px-4 py-3">
+        <span class="text-gray-400 text-sm">Total Charged</span>
+        <span id="orderTotal" class="text-cyan-400 font-bold">—</span>
+      </div>
+      <div class="flex justify-between items-center px-4 py-3">
+        <span class="text-gray-400 text-sm">Shipping Method</span>
+        <span id="orderShipping" class="text-white text-sm capitalize">—</span>
+      </div>
+      <div class="flex justify-between items-start px-4 py-3">
+        <span class="text-gray-400 text-sm whitespace-nowrap">Ship To</span>
+        <span id="orderAddress" class="text-white text-sm text-right ml-4">—</span>
+      </div>
+    </div>
+
+    <!-- What's next -->
+    <div class="bg-[#181b21] rounded-lg border border-gray-700 p-4 mb-6">
+      <p class="text-gray-300 text-sm font-semibold mb-3">What happens next?</p>
+      <ul class="space-y-2 text-sm text-gray-400">
+        <li class="flex items-center gap-2"><i class="fas fa-envelope text-cyan-400 w-4 text-center"></i> A confirmation email will be sent to your PayPal address.</li>
+        <li class="flex items-center gap-2"><i class="fas fa-box text-cyan-400 w-4 text-center"></i> Your order will be packed and dispatched by the seller.</li>
+        <li class="flex items-center gap-2"><i class="fas fa-truck text-cyan-400 w-4 text-center"></i> Track your shipment from <a href="track-your-order.html" class="text-cyan-400 hover:underline">Track My Order</a>.</li>
+      </ul>
+    </div>
+
+    <!-- Actions -->
+    <div class="space-y-3">
+      <a href="marketplace.html" class="block w-full text-center px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold transition-colors">
+        <i class="fas fa-store mr-2"></i>Continue Shopping
+      </a>
+      <a href="track-your-order.html" class="block w-full text-center px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors">
+        <i class="fas fa-truck mr-2"></i>Track Your Order
+      </a>
+    </div>
+
+    <!-- Support -->
+    <p class="text-center text-gray-500 text-xs mt-6">
+      Questions? <a href="contact-support.html" class="text-cyan-400 hover:underline">Contact support</a>
+    </p>
+  </div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get('orderId');
+
+      // Find the matching order from localStorage
+      const history = JSON.parse(localStorage.getItem('zorexiumOrders') || '[]');
+      const order = (orderId ? history.find(o => o.orderId === orderId) : null) || history[0] || null;
+
+      // Display order ID from URL param or from the found order record
+      const displayId = orderId || (order && order.orderId);
+      if (displayId) {
+        document.getElementById('orderId').textContent = displayId;
+      }
+
+      if (!order) return; // Nothing more to render if no order was found
+
+      // Date
+      const date = new Date(order.placedAt);
+      document.getElementById('orderDate').textContent = date.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      // Items
+      const itemNames = (order.items || []).map(i => `${i.name} ×${i.quantity || 1}`).join(', ');
+      document.getElementById('orderItems').textContent = itemNames || '—';
+
+      // Total
+      if (order.totals) {
+        document.getElementById('orderTotal').textContent = '$' + parseFloat(order.totals.total).toFixed(2);
+      }
+
+      // Shipping method
+      if (order.shipping && order.shipping.method) {
+        document.getElementById('orderShipping').textContent = order.shipping.method.charAt(0).toUpperCase() + order.shipping.method.slice(1);
+      }
+
+      // Address
+      if (order.shipping && order.shipping.address) {
+        const a = order.shipping.address;
+        document.getElementById('orderAddress').innerHTML =
+          `${a.name}<br>${a.street}<br>${a.city}, ${a.state} ${a.zip}<br>${a.country}`;
+      }
+    })();
+  </script>
+</body>
+</html>
