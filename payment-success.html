@@ -48,6 +48,10 @@
         <span class="text-gray-400 text-sm">Shipping Method</span>
         <span id="orderShipping" class="text-white text-sm capitalize">—</span>
       </div>
+      <div class="flex justify-between items-center px-4 py-3">
+        <span class="text-gray-400 text-sm">Est. Delivery</span>
+        <span id="orderDelivery" class="text-cyan-400 text-sm text-right ml-4">—</span>
+      </div>
       <div class="flex justify-between items-start px-4 py-3">
         <span class="text-gray-400 text-sm whitespace-nowrap">Ship To</span>
         <span id="orderAddress" class="text-white text-sm text-right ml-4">—</span>
@@ -115,6 +119,11 @@
       // Shipping method
       if (order.shipping && order.shipping.method) {
         document.getElementById('orderShipping').textContent = order.shipping.method.charAt(0).toUpperCase() + order.shipping.method.slice(1);
+      }
+
+      // Estimated delivery
+      if (order.shipping && order.shipping.estimatedDelivery) {
+        document.getElementById('orderDelivery').textContent = order.shipping.estimatedDelivery;
       }
 
       // Address

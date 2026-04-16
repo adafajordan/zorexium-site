@@ -167,26 +167,26 @@
         </h2>
         <div class="space-y-3" id="shippingOptions">
           <label class="shipping-option selected" id="opt-standard">
-            <input type="radio" name="shipping" value="standard" data-cost="9.99" checked>
+            <input type="radio" name="shipping" value="standard" data-cost="9.99" data-days="8" checked>
             <div class="flex-1">
               <p class="text-white font-semibold text-sm">Standard Shipping</p>
-              <p class="text-gray-400 text-xs">5–8 business days</p>
+              <p class="text-gray-400 text-xs" id="delivery-standard">5–8 business days</p>
             </div>
             <span class="text-cyan-400 font-bold text-sm">$9.99</span>
           </label>
           <label class="shipping-option" id="opt-expedited">
-            <input type="radio" name="shipping" value="expedited" data-cost="19.99">
+            <input type="radio" name="shipping" value="expedited" data-cost="19.99" data-days="3">
             <div class="flex-1">
               <p class="text-white font-semibold text-sm">Expedited Shipping</p>
-              <p class="text-gray-400 text-xs">2–3 business days</p>
+              <p class="text-gray-400 text-xs" id="delivery-expedited">2–3 business days</p>
             </div>
             <span class="text-cyan-400 font-bold text-sm">$19.99</span>
           </label>
           <label class="shipping-option" id="opt-overnight">
-            <input type="radio" name="shipping" value="overnight" data-cost="39.99">
+            <input type="radio" name="shipping" value="overnight" data-cost="39.99" data-days="1">
             <div class="flex-1">
               <p class="text-white font-semibold text-sm">Overnight Shipping</p>
-              <p class="text-gray-400 text-xs">Next business day</p>
+              <p class="text-gray-400 text-xs" id="delivery-overnight">Next business day</p>
             </div>
             <span class="text-cyan-400 font-bold text-sm">$39.99</span>
           </label>
@@ -231,6 +231,12 @@
               <span id="summaryTotal">$0.00</span>
             </div>
           </div>
+          <div class="border-t border-gray-700 pt-3 mt-1">
+            <div class="flex items-start gap-2 text-xs">
+              <i class="fas fa-truck text-cyan-400 mt-0.5 flex-shrink-0"></i>
+              <span id="summaryDelivery" class="text-cyan-400">Calculating delivery date…</span>
+            </div>
+          </div>
         </div>
 
         <div class="mt-5 pt-5 border-t border-gray-700">
@@ -261,6 +267,42 @@
 
 <script src="notifications.js"></script>
 <script>
+  // ── Delivery Date Calculation ─────────────────────────────────────────────
+  const SHIPPING_DAYS = { standard: 8, expedited: 3, overnight: 1 };
+  const DELIVERY_PREFIX = 'Estimated delivery: ';
+
+  function addBusinessDays(startDate, days) {
+    const date = new Date(startDate);
+    let added = 0;
+    while (added < days) {
+      date.setDate(date.getDate() + 1);
+      const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+      if (day !== 0 && day !== 6) added++;
+    }
+    return date;
+  }
+
+  function formatDeliveryDate(date) {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  function getSelectedDeliveryDate() {
+    const checked = document.querySelector('input[name="shipping"]:checked');
+    const days = checked ? (parseInt(checked.dataset.days, 10) || 8) : 8;
+    return addBusinessDays(new Date(), days);
+  }
+
+  function updateDeliveryDates() {
+    const now = new Date();
+    Object.entries(SHIPPING_DAYS).forEach(function([method, days]) {
+      const date = addBusinessDays(now, days);
+      const el = document.getElementById('delivery-' + method);
+      if (el) el.textContent = DELIVERY_PREFIX + formatDeliveryDate(date);
+    });
+  }
+
   // ── Cart ──────────────────────────────────────────────────────────────────
   let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
 
@@ -292,6 +334,10 @@
     document.getElementById('summaryShipping').textContent = '$' + shipping.toFixed(2);
     document.getElementById('summaryTax').textContent = '$' + tax.toFixed(2);
     document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
+
+    const deliveryDate = getSelectedDeliveryDate();
+    document.getElementById('summaryDelivery').textContent =
+      DELIVERY_PREFIX + formatDeliveryDate(deliveryDate);
 
     const container = document.getElementById('summaryItems');
     container.innerHTML = cart.map(item => `
@@ -326,6 +372,7 @@
       document.querySelectorAll('.shipping-option').forEach(el => el.classList.remove('selected'));
       radio.closest('.shipping-option').classList.add('selected');
       renderSummary();
+      updateDeliveryDates();
     });
   });
 
@@ -482,6 +529,13 @@
       return actions.order.capture().then(function(details) {
         const commissions = calculateCommissions(cart);
 
+        // Calculate estimated delivery date at time of order placement
+        const checkedShipping = document.querySelector('input[name="shipping"]:checked');
+        const shippingMethod = checkedShipping ? checkedShipping.value : 'standard';
+        const deliveryDays = SHIPPING_DAYS[shippingMethod] || 8;
+        const estimatedDeliveryDate = addBusinessDays(new Date(), deliveryDays);
+        const estimatedDelivery = DELIVERY_PREFIX + formatDeliveryDate(estimatedDeliveryDate);
+
         // Save order record to localStorage
         const order = {
           orderId:     details.id,
@@ -492,7 +546,9 @@
           commissions: commissions,
           orderStatus: 'pending_delivery',
           shipping:  {
-            method:   document.querySelector('input[name="shipping"]:checked').value,
+            method:            shippingMethod,
+            cost:              getShippingCost(),
+            estimatedDelivery: estimatedDelivery,
             address: {
               name:    getFullName(),
               street:  document.getElementById('address').value + (document.getElementById('address2').value ? ', ' + document.getElementById('address2').value : ''),
@@ -554,6 +610,7 @@
       document.getElementById('checkoutContent').classList.add('hidden');
       document.getElementById('emptyCartMsg').classList.remove('hidden');
     } else {
+      updateDeliveryDates();
       renderSummary();
       updateCartBadge();
       updatePaypalState();
