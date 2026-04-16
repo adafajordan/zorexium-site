@@ -1,6 +1,7 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const cors = require('cors');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const admin = require('firebase-admin');
@@ -18,6 +19,45 @@ const db = admin.apps.length ? admin.firestore() : null;
 const app = express();
 const PORT = process.env.PORT || 5000;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
+
+// PayPal configuration
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
+const PAYPAL_SECRET = process.env.PAYPAL_SECRET || '';
+const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox';
+const PAYPAL_BASE_URL = PAYPAL_MODE === 'live'
+  ? 'https://api-m.paypal.com'
+  : 'https://api-m.sandbox.paypal.com';
+
+// Retrieve a short-lived PayPal access token using client credentials
+async function getPayPalAccessToken() {
+  if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+    throw new Error('PayPal credentials are not configured. Set PAYPAL_CLIENT_ID and PAYPAL_SECRET in your environment.');
+  }
+  const credentials = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+  const response = await fetch(`${PAYPAL_BASE_URL}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: 'grant_type=client_credentials',
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error_description || 'Failed to obtain PayPal access token');
+  }
+  return data.access_token;
+}
+
+// ── Order / commission business-logic constants ───────────────────────────────
+// 10% of item subtotal charged as a shipping fee (minimum base of $0.99)
+const SHIPPING_RATE        = 0.10;
+const SHIPPING_BASE_FEE    = 0.99;
+// Sales tax rate applied to item subtotal (flat rate; production should calculate per-jurisdiction)
+const TAX_RATE             = 0.08;
+// Revenue split: 90% goes to the seller, 10% is retained as the platform fee
+const SELLER_COMMISSION_RATE = 0.90;
+const PLATFORM_FEE_RATE      = 0.10;
 
 // Mock product database (replace with real database)
 const products = {
@@ -447,6 +487,339 @@ app.get('/products', async (req, res) => {
       ? 'Firestore query failed. Ensure a composite index on "createdAt" exists, or visit the Firestore console to create it. Details: ' + error.message
       : error.message;
     res.status(500).json({ error: msg });
+  }
+});
+
+// ===== PAYPAL ORDER PROCESSING =====
+
+// POST /api/orders – Create a PayPal order with server-side price verification.
+// The frontend sends only item IDs and quantities; prices are looked up server-side.
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { items, buyer, shippingMethod } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Cart items are required' });
+    }
+
+    // Verify prices server-side from the authoritative listings store
+    const verifiedItems = [];
+    for (const item of items) {
+      const listing = listings.find(l => String(l.id) === String(item.id));
+      if (!listing) {
+        return res.status(400).json({ error: `Item not found: ${item.id}` });
+      }
+      const price = parseFloat(listing.price);
+      if (!price || price <= 0) {
+        return res.status(400).json({ error: `Invalid price for item: ${item.id}` });
+      }
+      verifiedItems.push({
+        id:             listing.id,
+        name:           listing.name,
+        price:          price,
+        sellerUsername: listing.sellerUsername || 'unknown',
+        sellerName:     listing.sellerName || listing.sellerUsername || 'unknown',
+        quantity:       Math.max(1, parseInt(item.quantity, 10) || 1),
+      });
+    }
+
+    // Calculate totals server-side (never trust frontend values)
+    const subtotal = verifiedItems.reduce((s, i) => s + i.price * i.quantity, 0);
+    const shipping  = Math.max(0, Math.round(subtotal * SHIPPING_RATE - SHIPPING_BASE_FEE)) + SHIPPING_BASE_FEE;
+    const tax       = subtotal * TAX_RATE;
+    const total     = subtotal + shipping + tax;
+
+    // Calculate per-seller commissions server-side
+    const commissionMap = {};
+    for (const item of verifiedItems) {
+      const itemSubtotal   = item.price * item.quantity;
+      const sellerEarnings = itemSubtotal * SELLER_COMMISSION_RATE;
+      const platformFee    = itemSubtotal * PLATFORM_FEE_RATE;
+      const seller = item.sellerUsername;
+      if (!commissionMap[seller]) {
+        commissionMap[seller] = {
+          sellerUsername: seller,
+          sellerName:     item.sellerName,
+          subtotal:       0,
+          sellerEarnings: 0,
+          platformFee:    0,
+          items:          [],
+        };
+      }
+      commissionMap[seller].subtotal       += itemSubtotal;
+      commissionMap[seller].sellerEarnings += sellerEarnings;
+      commissionMap[seller].platformFee    += platformFee;
+      commissionMap[seller].items.push({
+        id:       item.id,
+        name:     item.name,
+        price:    item.price,
+        quantity: item.quantity,
+        subtotal: itemSubtotal,
+      });
+    }
+    const commissions = Object.values(commissionMap);
+
+    // Create the order in PayPal
+    const accessToken = await getPayPalAccessToken();
+    const ppResponse = await fetch(`${PAYPAL_BASE_URL}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        Authorization:   `Bearer ${accessToken}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [{
+          description: 'Zorexium Labs Order',
+          amount: {
+            currency_code: 'USD',
+            value: total.toFixed(2),
+            breakdown: {
+              item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
+              shipping:   { currency_code: 'USD', value: shipping.toFixed(2) },
+              tax_total:  { currency_code: 'USD', value: tax.toFixed(2) },
+            },
+          },
+          items: verifiedItems.map(item => ({
+            name:        item.name.substring(0, 127),
+            unit_amount: { currency_code: 'USD', value: item.price.toFixed(2) },
+            quantity:    String(item.quantity),
+            category:    'PHYSICAL_GOODS',
+          })),
+        }],
+      }),
+    });
+    const ppOrder = await ppResponse.json();
+    if (!ppResponse.ok) {
+      console.error('PayPal order creation failed:', ppOrder);
+      return res.status(502).json({ error: 'Failed to create PayPal order', details: ppOrder });
+    }
+
+    // Generate a unique internal order ID (crypto.randomUUID() is available in Node 18+)
+    const internalOrderId = 'zrx_' + crypto.randomUUID().replace(/-/g, '');
+    const orderData = {
+      orderId:       internalOrderId,
+      paypalOrderId: ppOrder.id,
+      payerId:       null,
+      status:        'pending',
+      items:         verifiedItems,
+      buyer:         buyer || {},
+      totals:        { subtotal, shipping, tax, total },
+      commissions,
+      shippingMethod: shippingMethod || 'standard',
+      createdAt:     admin.firestore.FieldValue.serverTimestamp(),
+      capturedAt:    null,
+      deliveredAt:   null,
+    };
+
+    if (!db) {
+      return res.status(503).json({ error: 'Database not configured. Orders cannot be persisted or verified.' });
+    }
+    await db.collection('orders').doc(internalOrderId).set(orderData);
+
+    res.json({ orderId: internalOrderId, paypalOrderId: ppOrder.id });
+  } catch (error) {
+    console.error('Error in POST /api/orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/orders/:orderId/capture – Verify and capture the PayPal payment on the backend.
+// Called by the frontend after the buyer approves the payment in the PayPal popup.
+app.post('/api/orders/:orderId/capture', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!db) {
+      return res.status(503).json({ error: 'Database not configured. Cannot verify order.' });
+    }
+
+    // Retrieve the pending order – never trust the frontend for order details
+    const doc = await db.collection('orders').doc(orderId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    const orderData = doc.data();
+
+    if (orderData.status !== 'pending') {
+      return res.status(400).json({ error: 'Order has already been processed' });
+    }
+
+    // Capture the payment via PayPal – this is the authoritative verification step
+    const accessToken = await getPayPalAccessToken();
+    const captureResponse = await fetch(
+      `${PAYPAL_BASE_URL}/v2/checkout/orders/${orderData.paypalOrderId}/capture`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization:  `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    const captureData = await captureResponse.json();
+
+    if (!captureResponse.ok || captureData.status !== 'COMPLETED') {
+      console.error('PayPal capture failed:', captureData);
+      return res.status(400).json({ error: 'Payment capture failed', details: captureData });
+    }
+
+    const payerId       = captureData.payer?.payer_id || null;
+    const captureId     = captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id || null;
+    const capturedAtTs  = admin.firestore.FieldValue.serverTimestamp();
+
+    // Mark order as completed in Firestore
+    await db.collection('orders').doc(orderId).update({
+      status:          'completed',
+      payerId,
+      paypalCaptureId: captureId,
+      capturedAt:      capturedAtTs,
+    });
+
+    // Create payout records for each seller
+    const batch = db.batch();
+    (orderData.commissions || []).forEach((commission, idx) => {
+      const payoutId  = `payout_${orderId}_${commission.sellerUsername}_${idx}`;
+      const payoutRef = db.collection('payouts').doc(payoutId);
+      batch.set(payoutRef, {
+        payoutId,
+        orderId,
+        sellerUsername: commission.sellerUsername,
+        sellerName:     commission.sellerName,
+        amount:         commission.sellerEarnings,
+        platformFee:    commission.platformFee,
+        status:         'pending_delivery',
+        createdAt:      capturedAtTs,
+        paidAt:         null,
+      });
+    });
+    await batch.commit();
+
+    res.json({ success: true, orderId, status: 'completed' });
+  } catch (error) {
+    console.error('Error in POST /api/orders/:orderId/capture:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/orders/:orderId – Retrieve order details (shipping, totals, commission breakdown).
+app.get('/api/orders/:orderId', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+    const doc = await db.collection('orders').doc(req.params.orderId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    res.json({ order: doc.data() });
+  } catch (error) {
+    console.error('Error in GET /api/orders/:orderId:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /webhook/paypal – Handle PayPal IPN/webhook events to keep order status in sync.
+// To enable signature verification, set PAYPAL_WEBHOOK_ID in your environment.
+// NOTE: Full cryptographic webhook verification requires access to the raw request body.
+// This endpoint uses the JSON-parsed body (suitable for most integrations); if you need
+// strict signature verification, configure a dedicated raw-body parser for this route.
+app.post('/webhook/paypal', async (req, res) => {
+  try {
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    const event     = req.body;
+
+    if (!event || !event.event_type) {
+      return res.status(400).json({ error: 'Invalid webhook payload' });
+    }
+
+    // Optional: verify the webhook signature with PayPal when PAYPAL_WEBHOOK_ID is set
+    if (webhookId && PAYPAL_CLIENT_ID && PAYPAL_SECRET) {
+      const requiredHeaders = [
+        'paypal-auth-algo', 'paypal-cert-url',
+        'paypal-transmission-id', 'paypal-transmission-sig', 'paypal-transmission-time',
+      ];
+      const missingHeaders = requiredHeaders.filter(h => !req.headers[h]);
+      if (missingHeaders.length > 0) {
+        return res.status(400).json({ error: `Missing required webhook headers: ${missingHeaders.join(', ')}` });
+      }
+
+      const accessToken = await getPayPalAccessToken();
+      const verifyResponse = await fetch(
+        `${PAYPAL_BASE_URL}/v1/notifications/verify-webhook-signature`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization:  `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            auth_algo:         req.headers['paypal-auth-algo'],
+            cert_url:          req.headers['paypal-cert-url'],
+            transmission_id:   req.headers['paypal-transmission-id'],
+            transmission_sig:  req.headers['paypal-transmission-sig'],
+            transmission_time: req.headers['paypal-transmission-time'],
+            webhook_id:        webhookId,
+            webhook_event:     event,
+          }),
+        }
+      );
+      const verification = await verifyResponse.json();
+      if (verification.verification_status !== 'SUCCESS') {
+        console.warn('PayPal webhook signature verification failed:', verification);
+        return res.status(400).json({ error: 'Webhook signature verification failed' });
+      }
+    }
+
+    const eventType = event.event_type;
+    console.log('PayPal webhook received:', eventType);
+
+    if (db) {
+      if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
+        // Sync completed status if not already captured via /capture endpoint
+        const paypalOrderId = event.resource?.supplementary_data?.related_ids?.order_id;
+        if (paypalOrderId) {
+          const snapshot = await db.collection('orders')
+            .where('paypalOrderId', '==', paypalOrderId)
+            .limit(1)
+            .get();
+          if (!snapshot.empty) {
+            const orderDoc = snapshot.docs[0];
+            if (orderDoc.data().status === 'pending') {
+              await orderDoc.ref.update({
+                status:             'completed',
+                webhookLastEvent:   eventType,
+                updatedAt:          admin.firestore.FieldValue.serverTimestamp(),
+              });
+            }
+          }
+        }
+      } else if (
+        eventType === 'PAYMENT.CAPTURE.DENIED' ||
+        eventType === 'PAYMENT.CAPTURE.REVERSED' ||
+        eventType === 'PAYMENT.CAPTURE.REFUNDED'
+      ) {
+        const paypalOrderId = event.resource?.supplementary_data?.related_ids?.order_id;
+        if (paypalOrderId) {
+          const snapshot = await db.collection('orders')
+            .where('paypalOrderId', '==', paypalOrderId)
+            .limit(1)
+            .get();
+          if (!snapshot.empty) {
+            await snapshot.docs[0].ref.update({
+              status:           'failed',
+              webhookLastEvent: eventType,
+              updatedAt:        admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      }
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('Error in POST /webhook/paypal:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
