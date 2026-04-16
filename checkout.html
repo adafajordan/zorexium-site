@@ -259,12 +259,14 @@
       script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(config.paypalClientId) + '&currency=USD';
       script.onload = function() { initPayPalButtons(); };
       script.onerror = function() {
-        document.getElementById('paypal-button-container').textContent = 'PayPal is currently unavailable. Please try again later.';
+        console.error('Failed to load PayPal SDK script.');
+        document.getElementById('paypal-button-container').textContent = 'Failed to load PayPal. Please check your connection and try again.';
       };
       document.head.appendChild(script);
     })
-    .catch(function() {
-      document.getElementById('paypal-button-container').textContent = 'PayPal is currently unavailable. Please try again later.';
+    .catch(function(err) {
+      console.error('Failed to load PayPal config:', err);
+      document.getElementById('paypal-button-container').textContent = 'Failed to load PayPal. Please check your connection and try again.';
     });
 
   // ── Delivery Date Calculation ─────────────────────────────────────────────
