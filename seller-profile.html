@@ -82,7 +82,12 @@
           </div>
         </div>
       </div>
-      <div class="ml-auto">
+      <div class="ml-auto flex items-center gap-3">
+        <div id="stripeOnboardSection" class="hidden">
+          <button onclick="startStripeOnboarding()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition flex items-center gap-2">
+            <i class="fab fa-stripe-s"></i> Complete Stripe Setup
+          </button>
+        </div>
         <button onclick="handleMessaging()" class="bg-white text-cyan-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center gap-2">
           <i class="fas fa-paper-plane"></i> Contact Seller
         </button>
@@ -222,6 +227,12 @@
       document.getElementById('verifiedBadge').classList.remove('hidden');
     }
 
+    // Show Stripe onboarding button if current user owns this profile and isn't verified
+    const currentUser = localStorage.getItem('currentUser');
+    if (currentUser === sellerUsername && !seller.stripeVerified) {
+      document.getElementById('stripeOnboardSection').classList.remove('hidden');
+    }
+
     // Load products
     loadProducts(seller.products || []);
   }
@@ -295,10 +306,6 @@
     alert('Product detail view coming soon! Product ID: ' + productId);
   }
 
-  function handleMessaging() {
-    alert('Messaging system coming soon! You can contact ' + sellerUsername);
-  }
-
   function updateCartBadge() {
     const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
     const badge = document.getElementById('cartBadge');
@@ -312,6 +319,20 @@
     }
   }
 
+  async function startStripeOnboarding() {
+    try {
+      const res = await fetch('/onboard-seller', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to start Stripe onboarding: ' + (data.error || 'Unknown error'));
+      }
+    } catch (e) {
+      alert('Failed to start Stripe onboarding. Please try again.');
+    }
+  }
+
   function handleMessaging() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
@@ -319,7 +340,7 @@
       window.location.href = 'signup-login.html';
       return;
     }
-    window.location.href = 'messages.html';
+    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerUsername);
   }
 
   window.addEventListener('load', init);

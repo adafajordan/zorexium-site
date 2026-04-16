@@ -244,7 +244,7 @@
     let sellerUsername = document.getElementById('sellerLink').href.split('seller=')[1];
     let sellerData = sellers[sellerUsername] || {};
 
-    const existingItem = cart.find(item => item.id === currentProductId);
+    const existingItem = cart.find(item => String(item.id) === String(currentProductId));
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
@@ -270,7 +270,17 @@
   }
 
   function contactSeller() {
-    document.getElementById('contactModal').classList.remove('hidden');
+    const currentUser = localStorage.getItem('currentUser');
+    if (!currentUser) {
+      ZrxNotify.showNotification('Please log in to contact the seller', 'info');
+      window.location.href = 'signup-login.html';
+      return;
+    }
+    if (!currentProduct || !currentProduct.sellerId) {
+      ZrxNotify.showNotification('Seller information not available', 'error');
+      return;
+    }
+    window.location.href = 'messages.html?with=' + encodeURIComponent(currentProduct.sellerId);
   }
 
   function closeContactModal() {
@@ -294,29 +304,30 @@
       return;
     }
 
-    // Send message via backend
+    const sellerId = currentProduct.sellerId;
+    const conversationKey = [currentUser, sellerId].sort().join('_');
+    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
+    if (!msgs[conversationKey]) msgs[conversationKey] = [];
+    msgs[conversationKey].push({
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      from: currentUser,
+      to: sellerId,
+      subject: subject,
+      body: body,
+      timestamp: new Date().toISOString(),
+      read: false,
+    });
+    localStorage.setItem('zorexiumMessages', JSON.stringify(msgs));
+
+    ZrxNotify.showNotification('Message sent to ' + sellerId + '!', 'success');
+    closeContactModal();
+    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerId);
+
     fetch('/send-message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: currentUser,
-        to: currentProduct.sellerId,
-        subject: subject,
-        body: body,
-      }),
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        ZrxNotify.showNotification('Message sent to ' + currentProduct.sellerId + '!', 'success');
-        closeContactModal();
-      } else {
-        ZrxNotify.showNotification('Failed to send message', 'error');
-      }
-    })
-    .catch(err => {
-      ZrxNotify.showNotification('Error sending message', 'error');
-    });
+      body: JSON.stringify({ from: currentUser, to: sellerId, subject, body }),
+    }).catch(() => {});
   }
 
   function updateCartBadge() {

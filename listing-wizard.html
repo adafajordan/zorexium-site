@@ -244,6 +244,7 @@
   let currentUser = localStorage.getItem('currentUser');
   let currentStep = 1;
   let imageData = null;
+  let editingProductId = null;
 
   function init() {
     if (!currentUser) {
@@ -264,6 +265,13 @@
       return;
     }
 
+    // Sellers must complete Stripe onboarding before listing products
+    if (!sellers[currentUser].stripeVerified) {
+      alert('You need to complete Stripe onboarding before you can list products. Please complete your Stripe setup from your seller dashboard.');
+      window.location.href = 'seller-dashboard.html';
+      return;
+    }
+
     updateCartBadge();
 
     // Check if editing existing product
@@ -278,6 +286,8 @@
     let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
     const product = sellers[currentUser].products.find(p => p.id == productId);
     if (!product) return;
+
+    editingProductId = product.id;
 
     document.getElementById('productName').value = product.name;
     document.getElementById('productDescription').value = product.description;
@@ -363,8 +373,16 @@
   function publishListing() {
     if (!validateStep1()) return;
 
+    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+    if (!sellers[currentUser] || !sellers[currentUser].stripeVerified) {
+      alert('You need to complete Stripe onboarding before you can list products.');
+      window.location.href = 'seller-dashboard.html';
+      return;
+    }
+
+    const productId = editingProductId || Date.now();
     const product = {
-      id: Date.now(),
+      id: productId,
       name: document.getElementById('productName').value.trim(),
       description: document.getElementById('productDescription').value.trim(),
       price: parseFloat(document.getElementById('productPrice').value),
@@ -386,17 +404,26 @@
       createdDate: new Date().toLocaleDateString()
     };
 
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    
-    // Check if editing or creating
-    const existingIndex = sellers[currentUser].products.findIndex(p => p.id == product.id);
+    // Save to localStorage (seller-specific)
+    const existingIndex = sellers[currentUser].products.findIndex(p => p.id == productId);
     if (existingIndex >= 0) {
       sellers[currentUser].products[existingIndex] = product;
     } else {
       sellers[currentUser].products.push(product);
     }
-
     localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
+
+    // Save to server for cross-browser persistence
+    const serverListing = {
+      ...product,
+      sellerUsername: currentUser,
+      shopName: sellers[currentUser].shopName
+    };
+    fetch('/api/listings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(serverListing)
+    }).catch(err => console.error('Failed to save listing to server:', err));
 
     alert('Product listing published successfully!');
     window.location.href = 'seller-dashboard.html';

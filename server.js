@@ -1,6 +1,19 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_your_key_here');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK using environment variable
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
+  } catch (e) {
+    console.error('Failed to initialize Firebase Admin SDK. Check that FIREBASE_SERVICE_ACCOUNT contains valid JSON:', e.message);
+  }
+}
+const db = admin.apps.length ? admin.firestore() : null;
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,8 +26,73 @@ const products = {
   'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3', image: 'https://via.placeholder.com/400x300?text=DDR5+RAM', description: '32GB DDR5 RAM module. High performance memory.' },
 };
 
-// In-memory message storage (replace with database)
-const messages = {};
+// File-based message storage for persistence across restarts
+const MESSAGES_FILE = path.join(__dirname, 'messages_data.json');
+const MAX_MESSAGES_FILE_SIZE = 10 * 1024 * 1024; // 10 MB limit
+
+// File-based listings storage for persistence across restarts
+const LISTINGS_FILE = path.join(__dirname, 'listings_data.json');
+const MAX_LISTINGS_FILE_SIZE = 50 * 1024 * 1024; // 50 MB limit
+
+function loadListings() {
+  try {
+    if (fs.existsSync(LISTINGS_FILE)) {
+      const stat = fs.statSync(LISTINGS_FILE);
+      if (stat.size > MAX_LISTINGS_FILE_SIZE) {
+        console.error('Listings file exceeds size limit; starting with empty storage.');
+        return [];
+      }
+      const parsed = JSON.parse(fs.readFileSync(LISTINGS_FILE, 'utf8'));
+      if (!Array.isArray(parsed)) {
+        console.error('Listings file has unexpected structure; starting with empty storage.');
+        return [];
+      }
+      return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to load listings from file:', e.message);
+  }
+  return [];
+}
+
+function saveListings(data) {
+  fs.writeFile(LISTINGS_FILE, JSON.stringify(data, null, 2), 'utf8', (err) => {
+    if (err) console.error('Failed to save listings to file:', err.message);
+  });
+}
+
+// Load persisted listings on startup
+let listings = loadListings();
+
+function loadMessages() {
+  try {
+    if (fs.existsSync(MESSAGES_FILE)) {
+      const stat = fs.statSync(MESSAGES_FILE);
+      if (stat.size > MAX_MESSAGES_FILE_SIZE) {
+        console.error('Messages file exceeds size limit; starting with empty storage.');
+        return {};
+      }
+      const parsed = JSON.parse(fs.readFileSync(MESSAGES_FILE, 'utf8'));
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+        console.error('Messages file has unexpected structure; starting with empty storage.');
+        return {};
+      }
+      return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to load messages from file:', e.message);
+  }
+  return {};
+}
+
+function saveMessages(data) {
+  fs.writeFile(MESSAGES_FILE, JSON.stringify(data, null, 2), 'utf8', (err) => {
+    if (err) console.error('Failed to save messages to file:', err.message);
+  });
+}
+
+// Load persisted messages on startup
+const messages = loadMessages();
 
 // Middleware
 app.use(cors());
@@ -27,6 +105,30 @@ app.get('/health', (req, res) => {
 });
 
 // ===== STRIPE CONNECT ONBOARDING =====
+
+// Onboard a new seller: create Express account and return onboarding URL
+app.post('/onboard-seller', async (req, res) => {
+  try {
+    const account = await stripe.accounts.create({ type: 'express' });
+
+    const accountLink = await stripe.accountLinks.create({
+      account: account.id,
+      type: 'account_onboarding',
+      refresh_url: `${BASE_URL}/sell-on-zorexium.html`,
+      return_url: `${BASE_URL}/success.html?account_id=${account.id}`,
+    });
+
+    console.log('accountLink:', accountLink);
+
+    res.json({
+      accountId: account.id,
+      url: accountLink.url,
+    });
+  } catch (error) {
+    console.error('Stripe error in /onboard-seller:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Step 1: Create a Stripe Connect Account
 app.post('/create-stripe-account', async (req, res) => {
@@ -203,6 +305,7 @@ app.post('/send-message', (req, res) => {
     };
 
     messages[conversationKey].push(message);
+    saveMessages(messages);
 
     res.json({
       success: true,
@@ -247,6 +350,103 @@ app.get('/get-conversations/:userId', (req, res) => {
     res.json({ conversations: userConversations });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== MARKETPLACE LISTINGS =====
+
+// Get all listings
+app.get('/api/listings', (req, res) => {
+  res.json({ listings });
+});
+
+// Create a new listing
+app.post('/api/listings', (req, res) => {
+  try {
+    const listing = req.body;
+    if (!listing || !listing.id || !listing.name || !listing.sellerUsername) {
+      return res.status(400).json({ error: 'Missing required listing fields' });
+    }
+    // Remove any existing listing with same id (upsert)
+    const idx = listings.findIndex(l => String(l.id) === String(listing.id));
+    if (idx >= 0) {
+      listings[idx] = listing;
+    } else {
+      listings.push(listing);
+    }
+    saveListings(listings);
+    res.json({ success: true, listing });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update an existing listing
+app.put('/api/listings/:id', (req, res) => {
+  try {
+    const id = req.params.id;
+    const updates = req.body;
+    const idx = listings.findIndex(l => String(l.id) === String(id));
+    if (idx < 0) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+    listings[idx] = { ...listings[idx], ...updates, id: listings[idx].id };
+    saveListings(listings);
+    res.json({ success: true, listing: listings[idx] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a listing
+app.delete('/api/listings/:id', (req, res) => {
+  try {
+    const id = req.params.id;
+    const before = listings.length;
+    listings = listings.filter(l => String(l.id) !== String(id));
+    if (listings.length === before) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+    saveListings(listings);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== FIRESTORE PRODUCT ENDPOINTS =====
+
+// Add a product to Firestore
+app.post('/add-product', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ error: 'Firestore not configured' });
+    }
+    const product = req.body;
+    if (!product || !product.name) {
+      return res.status(400).json({ error: 'Missing required product fields' });
+    }
+    const docRef = await db.collection('products').add({ ...product, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+    res.json({ success: true, id: docRef.id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all products from Firestore
+app.get('/products', async (req, res) => {
+  try {
+    if (!db) {
+      return res.status(503).json({ error: 'Firestore not configured' });
+    }
+    const snapshot = await db.collection('products').orderBy('createdAt', 'desc').get();
+    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.json({ products });
+  } catch (error) {
+    const msg = error.code === 9 || (error.message && error.message.includes('index'))
+      ? 'Firestore query failed. Ensure a composite index on "createdAt" exists, or visit the Firestore console to create it. Details: ' + error.message
+      : error.message;
+    res.status(500).json({ error: msg });
   }
 });
 
