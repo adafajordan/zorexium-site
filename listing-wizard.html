@@ -265,13 +265,6 @@
       return;
     }
 
-    // Sellers must complete Stripe onboarding before listing products
-    if (!sellers[currentUser].stripeVerified) {
-      alert('You need to complete Stripe onboarding before you can list products. Please complete your Stripe setup from your seller dashboard.');
-      window.location.href = 'seller-dashboard.html';
-      return;
-    }
-
     updateCartBadge();
 
     // Check if editing existing product
@@ -374,8 +367,7 @@
     if (!validateStep1()) return;
 
     let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (!sellers[currentUser] || !sellers[currentUser].stripeVerified) {
-      alert('You need to complete Stripe onboarding before you can list products.');
+    if (!sellers[currentUser]) {
       window.location.href = 'seller-dashboard.html';
       return;
     }

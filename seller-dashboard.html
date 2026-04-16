@@ -63,19 +63,6 @@
 <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
   <!-- Header -->
   <div class="mb-8">
-    <!-- Stripe Onboarding Banner -->
-    <div id="stripeOnboardingBanner" class="hidden bg-purple-900 bg-opacity-50 border border-purple-600 rounded-lg p-4 mb-6">
-      <div class="flex items-start gap-3">
-        <i class="fas fa-exclamation-triangle text-purple-400 mt-1"></i>
-        <div class="flex-1">
-          <p class="text-purple-300 font-semibold">Complete Stripe Onboarding to List Products</p>
-          <p class="text-purple-200 text-sm mt-1">You need to connect your Stripe account before you can list products for sale.</p>
-        </div>
-        <button onclick="startStripeOnboarding()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-semibold whitespace-nowrap flex items-center gap-2">
-          <i class="fab fa-stripe-s"></i> Connect with Stripe
-        </button>
-      </div>
-    </div>
 
     <div class="flex justify-between items-start mb-6">
       <div>
@@ -206,11 +193,6 @@
     document.getElementById('shopNameDisplay').textContent = sellerData.shopName;
     document.getElementById('shopDescDisplay').textContent = sellerData.shopDescription;
     document.getElementById('viewProfileLink').href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser);
-
-    // Show Stripe onboarding banner if not yet verified
-    if (!sellerData.stripeVerified) {
-      document.getElementById('stripeOnboardingBanner').classList.remove('hidden');
-    }
 
     // Update stats
     document.getElementById('totalProducts').textContent = sellerData.products.length;
