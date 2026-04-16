@@ -202,7 +202,7 @@
       ZrxNotify.showNotification('Your cart is empty', 'info');
       return;
     }
-    ZrxNotify.showNotification('Checkout functionality coming soon! Check your cart for order summary.', 'info');
+    window.location.href = 'checkout.html';
   }
 
   window.addEventListener('load', loadCart);
