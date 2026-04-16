@@ -87,39 +87,41 @@
 
       // Find the matching order from localStorage
       const history = JSON.parse(localStorage.getItem('zorexiumOrders') || '[]');
-      const order = orderId ? history.find(o => o.orderId === orderId) : history[0];
+      const order = (orderId ? history.find(o => o.orderId === orderId) : null) || history[0] || null;
 
-      if (orderId) {
-        document.getElementById('orderId').textContent = orderId;
+      // Display order ID from URL param or from the found order record
+      const displayId = orderId || (order && order.orderId);
+      if (displayId) {
+        document.getElementById('orderId').textContent = displayId;
       }
 
-      if (order) {
-        // Date
-        const date = new Date(order.placedAt);
-        document.getElementById('orderDate').textContent = date.toLocaleDateString('en-US', {
-          year: 'numeric', month: 'long', day: 'numeric'
-        });
+      if (!order) return; // Nothing more to render if no order was found
 
-        // Items
-        const itemNames = (order.items || []).map(i => `${i.name} ×${i.quantity || 1}`).join(', ');
-        document.getElementById('orderItems').textContent = itemNames || '—';
+      // Date
+      const date = new Date(order.placedAt);
+      document.getElementById('orderDate').textContent = date.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
 
-        // Total
-        if (order.totals) {
-          document.getElementById('orderTotal').textContent = '$' + parseFloat(order.totals.total).toFixed(2);
-        }
+      // Items
+      const itemNames = (order.items || []).map(i => `${i.name} ×${i.quantity || 1}`).join(', ');
+      document.getElementById('orderItems').textContent = itemNames || '—';
 
-        // Shipping method
-        if (order.shipping && order.shipping.method) {
-          document.getElementById('orderShipping').textContent = order.shipping.method.charAt(0).toUpperCase() + order.shipping.method.slice(1);
-        }
+      // Total
+      if (order.totals) {
+        document.getElementById('orderTotal').textContent = '$' + parseFloat(order.totals.total).toFixed(2);
+      }
 
-        // Address
-        if (order.shipping && order.shipping.address) {
-          const a = order.shipping.address;
-          document.getElementById('orderAddress').innerHTML =
-            `${a.name}<br>${a.street}<br>${a.city}, ${a.state} ${a.zip}<br>${a.country}`;
-        }
+      // Shipping method
+      if (order.shipping && order.shipping.method) {
+        document.getElementById('orderShipping').textContent = order.shipping.method.charAt(0).toUpperCase() + order.shipping.method.slice(1);
+      }
+
+      // Address
+      if (order.shipping && order.shipping.address) {
+        const a = order.shipping.address;
+        document.getElementById('orderAddress').innerHTML =
+          `${a.name}<br>${a.street}<br>${a.city}, ${a.state} ${a.zip}<br>${a.country}`;
       }
     })();
   </script>

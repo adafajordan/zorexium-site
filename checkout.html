@@ -270,12 +270,20 @@
     return checked ? parseFloat(checked.dataset.cost) : 9.99;
   }
 
+  function getSubtotal() {
+    return cart.reduce((s, item) => s + (parseFloat(item.price) * (item.quantity || 1)), 0);
+  }
+
   function calcTotals() {
-    const subtotal = cart.reduce((s, item) => s + (parseFloat(item.price) * (item.quantity || 1)), 0);
+    const subtotal = getSubtotal();
     const shipping = getShippingCost();
     const tax = subtotal * 0.08;
     const total = subtotal + shipping + tax;
     return { subtotal, shipping, tax, total };
+  }
+
+  function getFullName() {
+    return (document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value).trim();
   }
 
   function renderSummary() {
@@ -322,6 +330,8 @@
   });
 
   // ── Validation ────────────────────────────────────────────────────────────
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const required = [
     { id: 'firstName', errId: 'firstNameErr' },
     { id: 'lastName',  errId: 'lastNameErr' },
@@ -332,15 +342,19 @@
     { id: 'zip',       errId: 'zipErr' },
   ];
 
+  function isFieldValid({ id, type }) {
+    const val = document.getElementById(id).value.trim();
+    if (!val) return false;
+    if (type === 'email') return EMAIL_REGEX.test(val);
+    return true;
+  }
+
   function validateForm() {
     let valid = true;
-    required.forEach(({ id, errId, type }) => {
-      const el = document.getElementById(id);
-      const errEl = document.getElementById(errId);
-      let ok = el.value.trim() !== '';
-      if (ok && type === 'email') {
-        ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
-      }
+    required.forEach(field => {
+      const el = document.getElementById(field.id);
+      const errEl = document.getElementById(field.errId);
+      const ok = isFieldValid(field);
       if (!ok) {
         el.classList.add('error');
         errEl.classList.add('visible');
@@ -354,27 +368,18 @@
   }
 
   // Re-validate on input to give real-time feedback
-  required.forEach(({ id, errId, type }) => {
-    document.getElementById(id).addEventListener('input', () => {
-      const el = document.getElementById(id);
-      const errEl = document.getElementById(errId);
-      let ok = el.value.trim() !== '';
-      if (ok && type === 'email') ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
-      if (ok) {
-        el.classList.remove('error');
-        errEl.classList.remove('visible');
+  required.forEach(field => {
+    document.getElementById(field.id).addEventListener('input', () => {
+      if (isFieldValid(field)) {
+        document.getElementById(field.id).classList.remove('error');
+        document.getElementById(field.errId).classList.remove('visible');
       }
       updatePaypalState();
     });
   });
 
   function isFormReady() {
-    return required.every(({ id, type }) => {
-      const val = document.getElementById(id).value.trim();
-      if (!val) return false;
-      if (type === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-      return true;
-    });
+    return required.every(isFieldValid);
   }
 
   function updatePaypalState() {
@@ -404,6 +409,7 @@
         return Promise.reject(new Error('Form incomplete'));
       }
       const { total } = calcTotals();
+      const subtotal = getSubtotal();
       return actions.order.create({
         purchase_units: [{
           description: 'Zorexium Labs Order',
@@ -411,19 +417,19 @@
             value: total.toFixed(2),
             currency_code: 'USD',
             breakdown: {
-              item_total: { value: cart.reduce((s, i) => s + parseFloat(i.price) * (i.quantity || 1), 0).toFixed(2), currency_code: 'USD' },
+              item_total: { value: subtotal.toFixed(2), currency_code: 'USD' },
               shipping:   { value: getShippingCost().toFixed(2), currency_code: 'USD' },
-              tax_total:  { value: (cart.reduce((s, i) => s + parseFloat(i.price) * (i.quantity || 1), 0) * 0.08).toFixed(2), currency_code: 'USD' },
+              tax_total:  { value: (subtotal * 0.08).toFixed(2), currency_code: 'USD' },
             }
           },
           items: cart.map(item => ({
-            name:       item.name.substring(0, 127),
+            name:       item.name.substring(0, 127), // PayPal's max item name length is 127 chars
             unit_amount:{ value: parseFloat(item.price).toFixed(2), currency_code: 'USD' },
             quantity:   String(item.quantity || 1),
             category:   'PHYSICAL_GOODS',
           })),
           shipping: {
-            name: { full_name: (document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value).trim() },
+            name: { full_name: getFullName() },
             address: {
               address_line_1: document.getElementById('address').value,
               address_line_2: document.getElementById('address2').value || '',
@@ -449,7 +455,7 @@
           shipping:  {
             method:   document.querySelector('input[name="shipping"]:checked').value,
             address: {
-              name:    document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value,
+              name:    getFullName(),
               street:  document.getElementById('address').value + (document.getElementById('address2').value ? ', ' + document.getElementById('address2').value : ''),
               city:    document.getElementById('city').value,
               state:   document.getElementById('state').value,
