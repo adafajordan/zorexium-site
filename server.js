@@ -4,6 +4,7 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
+const crypto  = require('crypto');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +41,11 @@ function readListings() {
 function writeListings(listings) {
   fs.writeFileSync(LISTINGS_FILE, JSON.stringify({ listings }, null, 2));
 }
+
+// ── Order cost constants ──────────────────────────────────────────────────────
+const SHIPPING_RATE = 0.10;  // 10% of subtotal
+const MIN_SHIPPING  = 0.99;  // minimum shipping charge
+const TAX_RATE      = 0.08;  // 8% sales tax
 
 // ── PayPal helpers ────────────────────────────────────────────────────────────
 const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox';
@@ -144,8 +150,8 @@ app.post('/api/orders', async (req, res) => {
       resolvedItems.push({ ...listing, quantity: qty });
     }
 
-    const shipping = Math.max(0, Math.round(subtotal * 0.10 - 0.99)) + 0.99;
-    const tax      = subtotal * 0.08;
+    const shipping = Math.max(0, Math.round(subtotal * SHIPPING_RATE - MIN_SHIPPING)) + MIN_SHIPPING;
+    const tax      = subtotal * TAX_RATE;
     const total    = subtotal + shipping + tax;
 
     // Create the PayPal order
@@ -281,6 +287,15 @@ app.post('/send-message', async (req, res) => {
 });
 
 // ── Static file serving ───────────────────────────────────────────────────────
+// Block access to sensitive server-side files that must not be served publicly.
+const BLOCKED_FILES = new Set([
+  '/server.js', '/package.json', '/package-lock.json',
+  '/.env', '/listings_data.json',
+]);
+app.use((req, res, next) => {
+  if (BLOCKED_FILES.has(req.path)) return res.status(403).json({ error: 'Forbidden' });
+  next();
+});
 app.use(express.static(__dirname));
 
 // Always return JSON for unmatched /api/* routes so clients never get an HTML 404
