@@ -394,6 +394,41 @@
     }
   }
 
+  // ── Commission Calculation ────────────────────────────────────────────────
+  function calculateCommissions(cartItems) {
+    const commissionMap = {};
+    cartItems.forEach(function(item) {
+      const itemSubtotal  = parseFloat(item.price) * (item.quantity || 1);
+      const sellerEarnings = itemSubtotal * 0.90;
+      const platformFee    = itemSubtotal * 0.10;
+      const seller = item.sellerUsername || 'unknown';
+      if (!commissionMap[seller]) {
+        commissionMap[seller] = {
+          sellerUsername:  seller,
+          sellerName:      item.sellerName || seller,
+          itemCount:       0,
+          subtotal:        0,
+          sellerEarnings:  0,
+          platformFee:     0,
+          items:           [],
+        };
+      }
+      commissionMap[seller].itemCount     += item.quantity || 1;
+      commissionMap[seller].subtotal      += itemSubtotal;
+      commissionMap[seller].sellerEarnings += sellerEarnings;
+      commissionMap[seller].platformFee   += platformFee;
+      commissionMap[seller].items.push({
+        id:           item.id,
+        name:         item.name,
+        price:        item.price,
+        quantity:     item.quantity || 1,
+        subtotal:     itemSubtotal,
+        sellerAmount: sellerEarnings,
+      });
+    });
+    return Object.values(commissionMap);
+  }
+
   // ── PayPal ────────────────────────────────────────────────────────────────
   paypal.Buttons({
     style: {
@@ -445,13 +480,17 @@
 
     onApprove: function(data, actions) {
       return actions.order.capture().then(function(details) {
+        const commissions = calculateCommissions(cart);
+
         // Save order record to localStorage
         const order = {
-          orderId:   details.id,
-          status:    details.status,
-          payer:     details.payer,
-          items:     cart,
-          totals:    calcTotals(),
+          orderId:     details.id,
+          status:      details.status,
+          payer:       details.payer,
+          items:       cart,
+          totals:      calcTotals(),
+          commissions: commissions,
+          orderStatus: 'pending_delivery',
           shipping:  {
             method:   document.querySelector('input[name="shipping"]:checked').value,
             address: {
@@ -463,13 +502,33 @@
               country: document.getElementById('country').value,
             }
           },
-          placedAt: new Date().toISOString(),
+          placedAt:    new Date().toISOString(),
+          deliveredAt: null,
+          paidAt:      null,
         };
 
         // Store order history
         const history = JSON.parse(localStorage.getItem('zorexiumOrders') || '[]');
         history.unshift(order);
         localStorage.setItem('zorexiumOrders', JSON.stringify(history));
+
+        // Track pending payouts per seller
+        const pendingPayouts = JSON.parse(localStorage.getItem('zorexiumPendingPayouts') || '[]');
+        commissions.forEach(function(commission, idx) {
+          pendingPayouts.push({
+            id:              'payout_' + details.id + '_' + commission.sellerUsername + '_' + idx,
+            orderId:         details.id,
+            sellerUsername:  commission.sellerUsername,
+            sellerName:      commission.sellerName,
+            amount:          commission.sellerEarnings,
+            platformFee:     commission.platformFee,
+            status:          'pending_delivery',
+            createdAt:       new Date().toISOString(),
+            deliveredAt:     null,
+            paidAt:          null,
+          });
+        });
+        localStorage.setItem('zorexiumPendingPayouts', JSON.stringify(pendingPayouts));
 
         // Clear cart
         localStorage.removeItem('zorexiumCart');
