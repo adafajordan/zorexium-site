@@ -167,28 +167,12 @@
         </h2>
         <div class="space-y-3" id="shippingOptions">
           <label class="shipping-option selected" id="opt-standard">
-            <input type="radio" name="shipping" value="standard" data-cost="9.99" data-days="8" checked>
+            <input type="radio" name="shipping" value="standard" data-days="8" checked>
             <div class="flex-1">
               <p class="text-white font-semibold text-sm">Standard Shipping</p>
               <p class="text-gray-400 text-xs" id="delivery-standard">5–8 business days</p>
             </div>
-            <span class="text-cyan-400 font-bold text-sm">$9.99</span>
-          </label>
-          <label class="shipping-option" id="opt-expedited">
-            <input type="radio" name="shipping" value="expedited" data-cost="19.99" data-days="3">
-            <div class="flex-1">
-              <p class="text-white font-semibold text-sm">Expedited Shipping</p>
-              <p class="text-gray-400 text-xs" id="delivery-expedited">2–3 business days</p>
-            </div>
-            <span class="text-cyan-400 font-bold text-sm">$19.99</span>
-          </label>
-          <label class="shipping-option" id="opt-overnight">
-            <input type="radio" name="shipping" value="overnight" data-cost="39.99" data-days="1">
-            <div class="flex-1">
-              <p class="text-white font-semibold text-sm">Overnight Shipping</p>
-              <p class="text-gray-400 text-xs" id="delivery-overnight">Next business day</p>
-            </div>
-            <span class="text-cyan-400 font-bold text-sm">$39.99</span>
+            <span class="text-cyan-400 font-bold text-sm" id="standardShippingCost"></span>
           </label>
         </div>
       </div>
@@ -268,7 +252,7 @@
 <script src="notifications.js"></script>
 <script>
   // ── Delivery Date Calculation ─────────────────────────────────────────────
-  const SHIPPING_DAYS = { standard: 8, expedited: 3, overnight: 1 };
+  const SHIPPING_DAYS = { standard: 8 };
   const DELIVERY_PREFIX = 'Estimated delivery: ';
 
   function addBusinessDays(startDate, days) {
@@ -308,8 +292,8 @@
 
   // ── Totals ────────────────────────────────────────────────────────────────
   function getShippingCost() {
-    const checked = document.querySelector('input[name="shipping"]:checked');
-    return checked ? parseFloat(checked.dataset.cost) : 9.99;
+    const subtotal = getSubtotal();
+    return Math.max(0, Math.round(subtotal * 0.10 - 0.99)) + 0.99;
   }
 
   function getSubtotal() {
@@ -334,6 +318,9 @@
     document.getElementById('summaryShipping').textContent = '$' + shipping.toFixed(2);
     document.getElementById('summaryTax').textContent = '$' + tax.toFixed(2);
     document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
+
+    const shippingCostLabel = document.getElementById('standardShippingCost');
+    if (shippingCostLabel) shippingCostLabel.textContent = '$' + shipping.toFixed(2);
 
     const deliveryDate = getSelectedDeliveryDate();
     document.getElementById('summaryDelivery').textContent =
