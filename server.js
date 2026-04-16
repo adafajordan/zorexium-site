@@ -21,9 +21,9 @@ const PORT = process.env.PORT || 5000;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
 
 // PayPal configuration
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
-const PAYPAL_SECRET = process.env.PAYPAL_SECRET || '';
-const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox';
+const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'Af1A_XMOneJYaO9IJ0XtyQFwr8Bjrsgwg8tiSR2L-gv4DAsN7Y-KAxrKJCVQ8srs2tnh-vfyxQ24Bi7G';
+const PAYPAL_SECRET = process.env.PAYPAL_SECRET || 'EA4TXBW1OKmFqyIjoRTiu-ufFNCRsny299SIXe_ncvHtUKjCxuL9f9-vQnQq-_6xqIzoBPnFfLCukZaO';
+const PAYPAL_MODE = process.env.PAYPAL_MODE || 'live';
 const PAYPAL_BASE_URL = PAYPAL_MODE === 'live'
   ? 'https://api-m.paypal.com'
   : 'https://api-m.sandbox.paypal.com';
