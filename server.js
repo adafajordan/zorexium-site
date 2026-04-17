@@ -49,6 +49,14 @@ const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 let orders = {};
 
 // ── Create Order endpoint ──────────────────────────────────────────────────────
+app.post('/api/orders', async function(req, res) {
+  try {
+    const { items, buyer, shippingMethod } = req.body;
+    
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: 'No items in order' });
+    }
+    
     // Calculate totals using prices from request
     let subtotal = 0;
     const orderItems = items.map(item => {
@@ -60,18 +68,6 @@ let orders = {};
         unit_amount: {
           currency_code: 'USD',
           value: parseFloat(item.price).toFixed(2)
-        }
-      };
-    });
-      const price = mockPrices[item.id] || 50.00;
-      const itemTotal = price * item.quantity;
-      subtotal += itemTotal;
-      return {
-        name: `Product ${item.id}`,
-        quantity: String(item.quantity),
-        unit_amount: {
-          currency_code: 'USD',
-          value: price.toFixed(2)
         }
       };
     });
@@ -205,7 +201,7 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
   }
 });
 
-// ── Error handler ───────────────────────────────���──────────────────────────────
+// ── Error handler ──────────────────────────────────────────────────────────────
 app.use(function(err, req, res, next) {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
