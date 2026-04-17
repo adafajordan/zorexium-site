@@ -11,7 +11,12 @@ if (!globalThis.fetch) {
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// ── Config endpoint ───────────────────────────────────────────────────────────
+// ── Health check endpoint (REQUIRED for Render) ──────────────────────────────
+app.get('/health', function(req, res) {
+  res.status(200).json({ status: 'ok' });
+});
+
+// ── Config endpoint ────────────────────────────────────────────────────────────
 // Returns public configuration values that the frontend needs at runtime.
 // Sensitive credentials (e.g. PayPal secret) are never exposed here.
 app.get('/api/config', function(req, res) {
@@ -22,7 +27,22 @@ app.get('/api/config', function(req, res) {
   res.json({ paypalClientId: clientId });
 });
 
+// ── Orders endpoint stubs (placeholder for future implementation) ──────────────
+app.post('/api/orders', function(req, res) {
+  res.status(501).json({ error: 'Not implemented' });
+});
+
+app.post('/api/orders/:orderId/capture', function(req, res) {
+  res.status(501).json({ error: 'Not implemented' });
+});
+
+// ── Error handler ──────────────────────────────────────────────────────────────
+app.use(function(err, req, res, next) {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, function() {
+app.listen(PORT, '0.0.0.0', function() {
   console.log('Server running on port ' + PORT);
 });
