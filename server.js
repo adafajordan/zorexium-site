@@ -22,22 +22,27 @@ let mongoConnected = false;
 
 async function connectDB() {
   if (!MONGO_URI) {
-    console.warn('MONGO_URI not set - database features will not work');
-    return;
+    console.error('❌ MONGO_URI not set');
+    return false;
   }
   
   try {
     const client = new MongoClient(MONGO_URI, { 
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000 
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 15000,
+      retryWrites: true
     });
     await client.connect();
     db = client.db('zorexium');
     mongoConnected = true;
     console.log('✅ Connected to MongoDB');
+    return true;
   } catch (error) {
-    console.error('⚠️ MongoDB connection failed:', error.message);
+    console.error('❌ MongoDB connection failed:', error.message);
     mongoConnected = false;
+    // Retry in 5 seconds
+    setTimeout(connectDB, 5000);
+    return false;
   }
 }
 
@@ -244,11 +249,13 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 
-// ── CREATE ORDER ────────────────────────────────────────────────────────────────
+// ── CREATE ORDER (No auth required - guest checkout) ────────────────────────────────────────
 app.post('/api/orders', async function(req, res) {
-  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  
   try {
+    if (!mongoConnected) {
+      return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
+    }
+
     const { items, buyer, shippingMethod } = req.body;
     
     if (!items || items.length === 0) {
@@ -311,6 +318,7 @@ app.post('/api/orders', async function(req, res) {
     const paypalOrder = await paypalResponse.json();
     
     if (!paypalResponse.ok) {
+      console.error('PayPal error:', paypalOrder);
       throw new Error(paypalOrder.message || 'PayPal order creation failed');
     }
     
@@ -336,11 +344,13 @@ app.post('/api/orders', async function(req, res) {
   }
 });
 
-// ── CAPTURE ORDER ────────────────────────────────────────────────────────────────
+// ── CAPTURE ORDER (No auth required - guest checkout) ────────────────────────────────────────
 app.post('/api/orders/:orderId/capture', async function(req, res) {
-  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  
   try {
+    if (!mongoConnected) {
+      return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
+    }
+
     const { orderId } = req.params;
     const order = await db.collection('orders').findOne({ id: orderId });
     
@@ -360,6 +370,7 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
     const captureData = await captureResponse.json();
     
     if (!captureResponse.ok) {
+      console.error('Capture error:', captureData);
       throw new Error(captureData.message || 'Payment capture failed');
     }
     
@@ -386,14 +397,14 @@ app.get('/api/orders', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
-    const orders = await db.collection('orders').find({ userId: req.userId }).toArray();
+    const orders = await db.collection('orders').find({ }).toArray();
     res.json(orders);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// ── Error handler ──────────────────────────────────────────────────────────────
+// ── Error handler ─────────────────────────────────────────────────────────────��
 app.use(function(err, req, res, next) {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
@@ -401,8 +412,14 @@ app.use(function(err, req, res, next) {
 
 const PORT = process.env.PORT || 5000;
 
-// Start server without waiting for MongoDB
-app.listen(PORT, '0.0.0.0', function() {
-  console.log(`🚀 Server running on port ${PORT}`);
-  connectDB();
+// Start server and connect to MongoDB
+connectDB().then(() => {
+  app.listen(PORT, '0.0.0.0', function() {
+    console.log(`🚀 Server running on port ${PORT}`);
+    if (mongoConnected) {
+      console.log('📦 MongoDB is connected');
+    } else {
+      console.log('⚠️ MongoDB is not connected yet, will retry...');
+    }
+  });
 });
