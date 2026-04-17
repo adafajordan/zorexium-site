@@ -142,13 +142,13 @@
 </footer>
 
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let allProducts = [];
   let viewMode = 'grid';
 
   function init() {
     loadAllProducts();
     updateCartBadge();
-    // Read search query from URL params and populate search field
     const params = new URLSearchParams(window.location.search);
     const searchQuery = params.get('search');
     if (searchQuery) {
@@ -158,36 +158,15 @@
   }
 
   function loadAllProducts() {
-    // Fetch from server for cross-browser persistence; fall back to localStorage
-    fetch('/api/listings')
+    fetch(BACKEND_URL + '/api/products')
       .then(res => res.json())
       .then(data => {
-        allProducts = (data.listings || []).map(product => {
-          const reviews = JSON.parse(localStorage.getItem('productReviews') || '{}')[product.id] || [];
-          const avg = reviews.length ? reviews.reduce((s,r)=>s+r.rating,0)/reviews.length : (product.rating || 5.0);
-          return { ...product, sellerRating: avg };
-        });
+        allProducts = Array.isArray(data) ? data : [];
         renderProducts(allProducts);
       })
-      .catch(() => {
-        // Fall back to localStorage if server is unavailable
-        const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-        allProducts = [];
-        for (const [sellerUsername, sellerData] of Object.entries(sellers)) {
-          if (sellerData.products && Array.isArray(sellerData.products)) {
-            sellerData.products.forEach(product => {
-              const reviews = JSON.parse(localStorage.getItem('productReviews') || '{}')[product.id] || [];
-              const avg = reviews.length ? reviews.reduce((s,r)=>s+r.rating,0)/reviews.length : (product.rating || sellerData.rating || 5.0);
-              allProducts.push({
-                ...product,
-                sellerUsername: sellerUsername,
-                shopName: sellerData.shopName,
-                sellerRating: avg
-              });
-            });
-          }
-        }
-        renderProducts(allProducts);
+      .catch(err => {
+        console.error('Error loading products:', err);
+        document.getElementById('productsGrid').innerHTML = '<div class="col-span-3 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-600 mb-4 block"></i><p class="text-gray-400">Failed to load products.</p></div>';
       });
   }
 
@@ -208,82 +187,37 @@
 
     grid.innerHTML = products.map(product => `
       <div class="product-card">
-        <img src="${product.image || 'https://placehold.co/300x200/333/fff?text=Product'}" alt="${product.name}" class="product-image" onclick="viewProduct('${product.id}', '${product.sellerUsername}')">
+        <img src="${product.image || 'https://placehold.co/300x200/333/fff?text=Product'}" alt="${product.name}" class="product-image" onclick="viewProduct('${product._id}')">
         <div class="p-4">
-          <div class="mb-2 flex justify-between items-start gap-2">
-            <h3 class="text-white font-semibold flex-1 line-clamp-2">${product.name}</h3>
-          </div>
-          
+          <h3 class="text-white font-semibold flex-1 line-clamp-2 mb-2">${product.name}</h3>
           <div class="mb-3">
-            <a href="seller-profile.html?seller=${product.sellerUsername}" class="seller-badge">
-              <i class="fas fa-store"></i> ${product.shopName}
-            </a>
+            <span class="seller-badge"><i class="fas fa-store"></i> ${product.sellerName || 'Zorexium'}</span>
           </div>
-
-          <p class="text-gray-400 text-sm mb-3 line-clamp-2">${product.description}</p>
-          
-          ${product.specs && Object.keys(product.specs).length > 0 ? `
-            <div class="mb-3">
-              ${Object.entries(product.specs).filter(([k,v]) => v).slice(0, 2).map(([k,v]) => `
-                <span class="spec-badge">${k}: ${v}</span>
-              `).join('')}
-            </div>
-          ` : ''}
-          
+          <p class="text-gray-400 text-sm mb-3 line-clamp-2">${product.description || ''}</p>
           <div class="flex justify-between items-center mb-3">
             <div>
               <p class="text-gray-500 text-xs">Condition</p>
-              <p class="text-white font-semibold text-sm">${product.condition}</p>
+              <p class="text-white font-semibold text-sm">${product.condition || 'New'}</p>
             </div>
             <div class="flex items-center gap-2 text-sm">
-                <div class="text-yellow-400">${renderStarsInline(product.sellerRating)}</div>
-                <div class="text-gray-400 text-xs ml-2">${product.sellerRating.toFixed(1)}</div>
-              </div>
+              <div class="text-yellow-400"><i class="fas fa-star"></i></div>
+              <div class="text-gray-400 text-xs">5.0</div>
+            </div>
           </div>
-
           <div class="flex justify-between items-center">
-            <p class="text-cyan-400 text-2xl font-bold">$${product.price}</p>
+            <p class="text-cyan-400 text-2xl font-bold">$${parseFloat(product.price).toFixed(2)}</p>
             <div class="flex gap-2">
-              <a href="product-detail.html?id=${product.id}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm font-semibold" title="View Details">
+              <a href="product-detail.html?id=${product._id}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm font-semibold">
                 <i class="fas fa-info-circle"></i>
               </a>
-              <button onclick="addToCart('${product.id}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded text-sm font-semibold">
+              <button onclick="addToCart('${product._id}', '${product.name}', ${product.price}, '${product.image}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded text-sm font-semibold">
                 <i class="fas fa-shopping-cart"></i>
               </button>
-              <button onclick="promptReview('${product.id}')" title="Write a review" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm"><i class="fas fa-star"></i></button>
             </div>
           </div>
         </div>
       </div>
     `).join('');
-  }
-
-  function renderStarsInline(rating) {
-    const full = Math.floor(rating);
-    const half = rating - full >= 0.5;
-    let out = '';
-    for (let i=0;i<full;i++) out += '<i class="fas fa-star"></i>';
-    if (half) out += '<i class="fas fa-star-half-alt"></i>';
-    for (let i=full + (half?1:0); i<5; i++) out += '<i class="far fa-star"></i>';
-    return out;
-  }
-
-  function promptReview(productId) {
-    const currentUser = localStorage.getItem('currentUser') || 'guest';
-    ZrxNotify.showPrompt('Write a Review', [
-      { id: 'rating', label: 'Rating (1-5)', type: 'number', placeholder: '5' },
-      { id: 'review', label: 'Review', type: 'text', placeholder: 'Optional review (max 300 chars)' }
-    ], (vals)=>{
-      const rating = parseInt(vals.rating);
-      if (!rating || rating < 1 || rating > 5) { ZrxNotify.showNotification('Invalid rating', 'error'); return; }
-      const reviewText = (vals.review || '').substring(0,300);
-      const reviews = JSON.parse(localStorage.getItem('productReviews') || '{}');
-      reviews[productId] = reviews[productId] || [];
-      reviews[productId].push({ user: currentUser, rating, review: reviewText, date: new Date().toISOString() });
-      localStorage.setItem('productReviews', JSON.stringify(reviews));
-      loadAllProducts();
-      ZrxNotify.showNotification('Thanks for your review!', 'success');
-    });
   }
 
   function filterProducts() {
@@ -293,70 +227,39 @@
 
     let filtered = allProducts.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm) || 
-                            product.description.toLowerCase().includes(searchTerm) ||
-                            product.shopName.toLowerCase().includes(searchTerm);
+                            (product.description || '').toLowerCase().includes(searchTerm);
       const matchesCondition = !condition || product.condition === condition;
       return matchesSearch && matchesCondition;
     });
 
-    // Sort
     if (sortBy === 'price-low') {
       filtered.sort((a, b) => a.price - b.price);
     } else if (sortBy === 'price-high') {
       filtered.sort((a, b) => b.price - a.price);
-    } else if (sortBy === 'rating') {
-      filtered.sort((a, b) => b.sellerRating - a.sellerRating);
     }
 
     renderProducts(filtered);
   }
 
-  function viewProduct(productId, sellerUsername) {
-    try { sessionStorage.setItem('viewingProductId', productId); } catch(e) {}
+  function viewProduct(productId) {
     window.location.href = 'product-detail.html?id=' + encodeURIComponent(productId);
   }
 
-  function addToCart(productId) {
-    const product = allProducts.find(p => String(p.id) === String(productId));
-    if (!product) return;
-
+  function addToCart(productId, name, price, image) {
     let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-    
-    // Check if product already in cart
-    const existingItem = cart.find(item => String(item.id) === String(productId));
+    const existingItem = cart.find(item => item.id === productId);
     if (existingItem) {
       existingItem.quantity += 1;
     } else {
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: 1,
-        image: product.image,
-        sellerName: product.shopName,
-        sellerUsername: product.sellerUsername
-      });
+      cart.push({ id: productId, name, price, quantity: 1, image });
     }
-
     localStorage.setItem('zorexiumCart', JSON.stringify(cart));
     updateCartBadge();
-    ZrxNotify.showNotification('Added to cart!', 'success');
+    alert('Added to cart!');
   }
 
   function checkSellerAndRedirect() {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-      window.location.href = 'seller-signup.html';
-      return;
-    }
-
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (!sellers[currentUser]) {
-      window.location.href = 'seller-signup.html';
-      return;
-    }
-
-    window.location.href = 'listing-wizard.html';
+    window.location.href = 'seller-signup.html';
   }
 
   function updateCartBadge() {
@@ -368,10 +271,6 @@
     } else {
       badge.classList.add('hidden');
     }
-  }
-
-  function toggleCart() {
-    window.location.href = 'shopping-cart.html';
   }
 
   function setViewMode(mode) {
@@ -403,7 +302,6 @@
 
   window.addEventListener('load', init);
 </script>
-
 <script src="notifications.js"></script>
 
 </body>
