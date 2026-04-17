@@ -241,6 +241,7 @@
 </footer>
 
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let currentUser = localStorage.getItem('currentUser');
   let currentStep = 1;
   let imageData = null;
@@ -406,19 +407,41 @@
     localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
 
     // Save to server for cross-browser persistence
-    const serverListing = {
-      ...product,
-      sellerUsername: currentUser,
-      shopName: sellers[currentUser].shopName
-    };
-    fetch('/api/listings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(serverListing)
-    }).catch(err => console.error('Failed to save listing to server:', err));
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      alert('You must be logged in to create listings');
+      return;
+    }
 
-    alert('Product listing published successfully!');
-    window.location.href = 'seller-dashboard.html';
+    fetch(BACKEND_URL + '/api/products', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
+      body: JSON.stringify({
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        description: product.description,
+        condition: product.condition,
+        image: imageData,
+        specifications: product.specs
+      })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error(res.statusText);
+      return res.json();
+    })
+    .then(data => {
+      if (data.error) {
+        alert('Error saving product: ' + data.error);
+      } else {
+        alert('Product listing published successfully!');
+        window.location.href = 'marketplace.html';
+      }
+    })
+    .catch(err => alert('Failed to publish listing: ' + err.message));
   }
 
   function updateCartBadge() {
