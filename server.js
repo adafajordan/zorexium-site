@@ -245,7 +245,7 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 
 // ── CREATE ORDER ────────────────────────────────────────────────────────────────
-app.post('/api/orders', verifyToken, async function(req, res) {
+app.post('/api/orders', async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
@@ -317,7 +317,6 @@ app.post('/api/orders', verifyToken, async function(req, res) {
     const orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     await db.collection('orders').insertOne({
       id: orderId,
-      userId: req.userId,
       paypalOrderId: paypalOrder.id,
       items,
       buyer,
@@ -338,7 +337,7 @@ app.post('/api/orders', verifyToken, async function(req, res) {
 });
 
 // ── CAPTURE ORDER ────────────────────────────────────────────────────────────────
-app.post('/api/orders/:orderId/capture', verifyToken, async function(req, res) {
+app.post('/api/orders/:orderId/capture', async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
@@ -347,10 +346,6 @@ app.post('/api/orders/:orderId/capture', verifyToken, async function(req, res) {
     
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
-    }
-    
-    if (order.userId !== req.userId) {
-      return res.status(403).json({ error: 'Unauthorized' });
     }
     
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
