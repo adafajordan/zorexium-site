@@ -245,7 +245,9 @@
     document.getElementById('loginForm').classList.toggle('hidden');
   }
 
-  function handleSignup(e) {
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
+  async function handleSignup(e) {
     e.preventDefault();
     const username = document.getElementById('signupUsername').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
@@ -265,60 +267,49 @@
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    if (users[username]) {
-      alert('Username already taken. Please choose another.');
-      return;
-    }
-    for (const key in users) {
-      if (users[key].email === email) {
-        alert('An account with this email already exists.');
+    try {
+      const res = await fetch(BACKEND_URL + '/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, firstName: username })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Registration failed. Please try again.');
         return;
       }
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('currentUser', email);
+      window.location.href = 'marketplace.html';
+    } catch (err) {
+      console.error(err);
+      alert('Registration failed. Please check your connection and try again.');
     }
-
-    users[username] = {
-      email: email,
-      password: password,
-      joinDate: Date.now(),
-      accountType: 'Buyer'
-    };
-    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
-    localStorage.setItem('currentUser', username);
-
-    alert('Account created! Welcome to Zorexium Labs.');
-    window.location.href = 'account-details.html';
   }
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
-    const input = document.getElementById('loginUsername').value.trim();
+    const email = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
 
-    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-
-    // Support login by username or email
-    let username = null;
-    if (users[input]) {
-      username = input;
-    } else {
-      // Search by email
-      for (const key in users) {
-        if (users[key].email === input) {
-          username = key;
-          break;
-        }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Invalid email or password.');
+        return;
       }
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('currentUser', email);
+      window.location.href = 'marketplace.html';
+    } catch (err) {
+      console.error(err);
+      alert('Login failed. Please check your connection and try again.');
     }
-
-    if (!username || users[username].password !== password) {
-      alert('Invalid username/email or password.');
-      return;
-    }
-
-    localStorage.setItem('currentUser', username);
-    alert('Logged in successfully!');
-    window.location.href = 'marketplace.html';
   }
 </script>
 
