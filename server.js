@@ -126,8 +126,14 @@ app.post('/api/auth/register', async function(req, res) {
       lastName: lastName || '',
       createdAt: new Date()
     });
-    
-    res.json({ message: 'User created successfully', userId: result.insertedId });
+
+    const token = jwt.sign(
+      { userId: result.insertedId.toString(), email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ message: 'User created successfully', userId: result.insertedId, token });
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: error.message });
