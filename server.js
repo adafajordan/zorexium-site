@@ -49,24 +49,20 @@ const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 let orders = {};
 
 // ── Create Order endpoint ──────────────────────────────────────────────────────
-app.post('/api/orders', async function(req, res) {
-  try {
-    const { items, buyer, shippingMethod } = req.body;
-    
-    if (!items || items.length === 0) {
-      return res.status(400).json({ error: 'No items in order' });
-    }
-    
-    // Mock item prices for testing (in production, look up from database)
-    const mockPrices = {
-      'gpu-1': 299.99,
-      'cpu-1': 199.99,
-      'ram-1': 99.99
-    };
-    
-    // Calculate totals
+    // Calculate totals using prices from request
     let subtotal = 0;
     const orderItems = items.map(item => {
+      const itemTotal = item.price * item.quantity;
+      subtotal += itemTotal;
+      return {
+        name: item.name || `Product ${item.id}`,
+        quantity: String(item.quantity),
+        unit_amount: {
+          currency_code: 'USD',
+          value: parseFloat(item.price).toFixed(2)
+        }
+      };
+    });
       const price = mockPrices[item.id] || 50.00;
       const itemTotal = price * item.quantity;
       subtotal += itemTotal;
