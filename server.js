@@ -16,32 +16,37 @@ app.use(express.static(path.join(__dirname)));
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
+console.log('🔍 MONGO_URI exists:', !!MONGO_URI);
+
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 let db;
+let mongoClient;
 let mongoConnected = false;
 
 async function connectDB() {
   if (!MONGO_URI) {
-    console.error('❌ MONGO_URI not set');
+    console.error('❌ MONGO_URI environment variable is NOT SET');
     return false;
   }
   
   try {
-    const client = new MongoClient(MONGO_URI, { 
+    console.log('📡 Attempting to connect to MongoDB...');
+    mongoClient = new MongoClient(MONGO_URI, { 
       serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 15000,
-      retryWrites: true
+      connectTimeoutMS: 15000
     });
-    await client.connect();
-    db = client.db('zorexium');
+    await mongoClient.connect();
+    db = mongoClient.db('zorexium');
+    
+    // Test the connection
+    await db.admin().ping();
+    
     mongoConnected = true;
-    console.log('✅ Connected to MongoDB');
+    console.log('✅ MongoDB connected successfully');
     return true;
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
     mongoConnected = false;
-    // Retry in 5 seconds
-    setTimeout(connectDB, 5000);
     return false;
   }
 }
@@ -76,7 +81,7 @@ function verifyToken(req, res, next) {
 
 // ── Health check endpoint ────────────────────────────────────────────────────────
 app.get('/health', function(req, res) {
-  res.status(200).json({ status: 'ok', mongoConnected });
+  res.status(200).json({ status: 'ok', mongoConnected, mongoUri: MONGO_URI ? 'set' : 'NOT SET' });
 });
 
 // ── Config endpoint ────────────────────────────────────────────────────────────
@@ -90,7 +95,6 @@ app.get('/api/config', function(req, res) {
 
 // ── USER AUTHENTICATION ────────────────────────────────────────────────────────
 
-// Register endpoint
 app.post('/api/auth/register', async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
@@ -123,7 +127,6 @@ app.post('/api/auth/register', async function(req, res) {
   }
 });
 
-// Login endpoint
 app.post('/api/auth/login', async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
@@ -397,14 +400,14 @@ app.get('/api/orders', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
-    const orders = await db.collection('orders').find({ }).toArray();
+    const orders = await db.collection('orders').find({}).toArray();
     res.json(orders);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// ── Error handler ─────────────────────────────────────────────────────────────��
+// ── Error handler ──────────────────────────────────────────────────────────────
 app.use(function(err, req, res, next) {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
@@ -413,13 +416,14 @@ app.use(function(err, req, res, next) {
 const PORT = process.env.PORT || 5000;
 
 // Start server and connect to MongoDB
-connectDB().then(() => {
+async function start() {
+  console.log('🚀 Starting server...');
+  const connected = await connectDB();
+  
   app.listen(PORT, '0.0.0.0', function() {
-    console.log(`🚀 Server running on port ${PORT}`);
-    if (mongoConnected) {
-      console.log('📦 MongoDB is connected');
-    } else {
-      console.log('⚠️ MongoDB is not connected yet, will retry...');
-    }
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`📦 MongoDB connected: ${mongoConnected}`);
   });
-});
+}
+
+start();
