@@ -189,6 +189,63 @@ app.get('/api/products', async function(req, res) {
   }
 });
 
+// ── POST /api/products – create a product (auth required) ─────────────────────
+app.post('/api/products', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const { name, price, category, description, image, condition, specifications } = req.body;
+
+    if (!name || price === undefined || price === null || !category) {
+      return res.status(400).json({ error: 'name, price, and category are required' });
+    }
+
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({ error: 'price must be a non-negative number' });
+    }
+
+    const product = {
+      name,
+      price: parsedPrice,
+      category,
+      description: description || '',
+      image: image || '',
+      condition: condition || 'used',
+      specifications: specifications || {},
+      sellerId: req.userId,
+      status: 'pending',
+      createdAt: new Date()
+    };
+
+    const result = await db.collection('products').insertOne(product);
+    res.status(201).json({ ...product, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error creating product:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── GET /api/products/seller/:sellerId – products by seller (public) ───────────
+app.get('/api/products/seller/:sellerId', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { sellerId } = req.params;
+  if (!sellerId || sellerId.length > 128) {
+    return res.status(400).json({ error: 'Invalid sellerId' });
+  }
+
+  try {
+    const products = await db.collection('products')
+      .find({ sellerId })
+      .toArray();
+    res.json(products);
+  } catch (error) {
+    console.error('Error fetching seller products:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/products/:id', async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
@@ -201,6 +258,61 @@ app.get('/api/products/:id', async function(req, res) {
     }
     res.json(product);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── PUT /api/products/:id – update a product (auth required, owner only) ───────
+app.put('/api/products/:id', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    let objectId;
+    try {
+      objectId = new ObjectId(req.params.id);
+    } catch {
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    const product = await db.collection('products').findOne({ _id: objectId });
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    if (product.sellerId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden: you do not own this product' });
+    }
+
+    const { name, price, category, description, image, condition, specifications, status } = req.body;
+
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (price !== undefined) {
+      const parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({ error: 'price must be a non-negative number' });
+      }
+      updates.price = parsedPrice;
+    }
+    if (category !== undefined) updates.category = category;
+    if (description !== undefined) updates.description = description;
+    if (image !== undefined) updates.image = image;
+    if (condition !== undefined) updates.condition = condition;
+    if (specifications !== undefined) updates.specifications = specifications;
+    if (status !== undefined) {
+      const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
+      }
+      updates.status = status;
+    }
+    updates.updatedAt = new Date();
+
+    await db.collection('products').updateOne({ _id: objectId }, { $set: updates });
+    const updated = await db.collection('products').findOne({ _id: objectId });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating product:', error);
     res.status(500).json({ error: error.message });
   }
 });
