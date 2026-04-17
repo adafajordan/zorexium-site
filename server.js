@@ -18,16 +18,26 @@ app.use(express.static(path.join(__dirname)));
 const MONGO_URI = process.env.MONGO_URI;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 let db;
+let mongoConnected = false;
 
 async function connectDB() {
+  if (!MONGO_URI) {
+    console.warn('MONGO_URI not set - database features will not work');
+    return;
+  }
+  
   try {
-    const client = new MongoClient(MONGO_URI);
+    const client = new MongoClient(MONGO_URI, { 
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000 
+    });
     await client.connect();
     db = client.db('zorexium');
-    console.log('Connected to MongoDB');
+    mongoConnected = true;
+    console.log('✅ Connected to MongoDB');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+    console.error('⚠️ MongoDB connection failed:', error.message);
+    mongoConnected = false;
   }
 }
 
@@ -61,7 +71,7 @@ function verifyToken(req, res, next) {
 
 // ── Health check endpoint ────────────────────────────────────────────────────────
 app.get('/health', function(req, res) {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({ status: 'ok', mongoConnected });
 });
 
 // ── Config endpoint ────────────────────────────────────────────────────────────
@@ -77,6 +87,8 @@ app.get('/api/config', function(req, res) {
 
 // Register endpoint
 app.post('/api/auth/register', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const { email, password, firstName, lastName } = req.body;
     
@@ -84,16 +96,13 @@ app.post('/api/auth/register', async function(req, res) {
       return res.status(400).json({ error: 'Email and password required' });
     }
     
-    // Check if user exists
     const existingUser = await db.collection('users').findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
     }
     
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create user
     const result = await db.collection('users').insertOne({
       email,
       password: hashedPassword,
@@ -111,6 +120,8 @@ app.post('/api/auth/register', async function(req, res) {
 
 // Login endpoint
 app.post('/api/auth/login', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const { email, password } = req.body;
     
@@ -118,19 +129,16 @@ app.post('/api/auth/login', async function(req, res) {
       return res.status(400).json({ error: 'Email and password required' });
     }
     
-    // Find user
     const user = await db.collection('users').findOne({ email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
     
-    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
     
-    // Create JWT token
     const token = jwt.sign(
       { userId: user._id.toString(), email: user.email },
       JWT_SECRET,
@@ -154,8 +162,9 @@ app.post('/api/auth/login', async function(req, res) {
 
 // ── PRODUCTS ────────────────────────────────────────────────────────────────────
 
-// Get all products
 app.get('/api/products', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const products = await db.collection('products').find().toArray();
     res.json(products);
@@ -165,8 +174,9 @@ app.get('/api/products', async function(req, res) {
   }
 });
 
-// Get single product
 app.get('/api/products/:id', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const product = await db.collection('products').findOne({ 
       _id: new ObjectId(req.params.id) 
@@ -180,10 +190,11 @@ app.get('/api/products/:id', async function(req, res) {
   }
 });
 
-// ── CART (User-specific) ────────────────────────────────────────────────────────
+// ── CART ────────────────────────────────────────────────────────────────────────
 
-// Get user cart
 app.get('/api/cart', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     let cart = await db.collection('carts').findOne({ userId: req.userId });
     if (!cart) {
@@ -195,12 +206,13 @@ app.get('/api/cart', verifyToken, async function(req, res) {
   }
 });
 
-// Update cart
 app.post('/api/cart', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const { items } = req.body;
     
-    const result = await db.collection('carts').updateOne(
+    await db.collection('carts').updateOne(
       { userId: req.userId },
       { $set: { userId: req.userId, items, updatedAt: new Date() } },
       { upsert: true }
@@ -212,8 +224,9 @@ app.post('/api/cart', verifyToken, async function(req, res) {
   }
 });
 
-// Clear cart
 app.delete('/api/cart', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     await db.collection('carts').deleteOne({ userId: req.userId });
     res.json({ message: 'Cart cleared' });
@@ -233,6 +246,8 @@ const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 
 // ── CREATE ORDER ────────────────────────────────────────────────────────────────
 app.post('/api/orders', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const { items, buyer, shippingMethod } = req.body;
     
@@ -240,7 +255,6 @@ app.post('/api/orders', verifyToken, async function(req, res) {
       return res.status(400).json({ error: 'No items in order' });
     }
     
-    // Calculate totals
     let subtotal = 0;
     const orderItems = items.map(item => {
       const itemTotal = item.price * item.quantity;
@@ -259,7 +273,6 @@ app.post('/api/orders', verifyToken, async function(req, res) {
     const tax = subtotal * 0.08;
     const total = (subtotal + shipping + tax).toFixed(2);
     
-    // Create PayPal order
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
     const paypalResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
       method: 'POST',
@@ -274,25 +287,14 @@ app.post('/api/orders', verifyToken, async function(req, res) {
             currency_code: 'USD',
             value: total,
             breakdown: {
-              item_total: {
-                currency_code: 'USD',
-                value: subtotal.toFixed(2)
-              },
-              shipping: {
-                currency_code: 'USD',
-                value: shipping.toFixed(2)
-              },
-              tax_total: {
-                currency_code: 'USD',
-                value: tax.toFixed(2)
-              }
+              item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
+              shipping: { currency_code: 'USD', value: shipping.toFixed(2) },
+              tax_total: { currency_code: 'USD', value: tax.toFixed(2) }
             }
           },
           items: orderItems,
           shipping: {
-            name: {
-              full_name: `${buyer.firstName} ${buyer.lastName}`
-            },
+            name: { full_name: `${buyer.firstName} ${buyer.lastName}` },
             address: {
               address_line_1: buyer.address.line1,
               address_line_2: buyer.address.line2 || '',
@@ -309,13 +311,11 @@ app.post('/api/orders', verifyToken, async function(req, res) {
     const paypalOrder = await paypalResponse.json();
     
     if (!paypalResponse.ok) {
-      console.error('PayPal error:', paypalOrder);
       throw new Error(paypalOrder.message || 'PayPal order creation failed');
     }
     
-    // Store order in MongoDB
     const orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    const orderData = {
+    await db.collection('orders').insertOne({
       id: orderId,
       userId: req.userId,
       paypalOrderId: paypalOrder.id,
@@ -328,14 +328,9 @@ app.post('/api/orders', verifyToken, async function(req, res) {
       total,
       status: 'pending',
       createdAt: new Date()
-    };
-    
-    await db.collection('orders').insertOne(orderData);
-    
-    res.json({
-      orderId,
-      paypalOrderId: paypalOrder.id
     });
+    
+    res.json({ orderId, paypalOrderId: paypalOrder.id });
   } catch (error) {
     console.error('Order creation error:', error);
     res.status(500).json({ error: error.message });
@@ -344,26 +339,22 @@ app.post('/api/orders', verifyToken, async function(req, res) {
 
 // ── CAPTURE ORDER ────────────────────────────────────────────────────────────────
 app.post('/api/orders/:orderId/capture', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const { orderId } = req.params;
-    
-    // Find order
     const order = await db.collection('orders').findOne({ id: orderId });
     
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
     
-    // Verify order belongs to user
     if (order.userId !== req.userId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     
-    const paypalOrderId = order.paypalOrderId;
-    
-    // Capture payment on PayPal
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
-    const captureResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders/${paypalOrderId}/capture`, {
+    const captureResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders/${order.paypalOrderId}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -374,11 +365,9 @@ app.post('/api/orders/:orderId/capture', verifyToken, async function(req, res) {
     const captureData = await captureResponse.json();
     
     if (!captureResponse.ok) {
-      console.error('Capture error:', captureData);
       throw new Error(captureData.message || 'Payment capture failed');
     }
     
-    // Update order status
     await db.collection('orders').updateOne(
       { id: orderId },
       {
@@ -390,11 +379,7 @@ app.post('/api/orders/:orderId/capture', verifyToken, async function(req, res) {
       }
     );
     
-    res.json({
-      orderId,
-      paypalCaptureId: captureData.id,
-      status: 'completed'
-    });
+    res.json({ orderId, paypalCaptureId: captureData.id, status: 'completed' });
   } catch (error) {
     console.error('Capture error:', error);
     res.status(500).json({ error: error.message });
@@ -403,6 +388,8 @@ app.post('/api/orders/:orderId/capture', verifyToken, async function(req, res) {
 
 // ── GET USER ORDERS ────────────────────────────────────────────────────────────
 app.get('/api/orders', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  
   try {
     const orders = await db.collection('orders').find({ userId: req.userId }).toArray();
     res.json(orders);
@@ -419,9 +406,8 @@ app.use(function(err, req, res, next) {
 
 const PORT = process.env.PORT || 5000;
 
-// Start server
-connectDB().then(() => {
-  app.listen(PORT, '0.0.0.0', function() {
-    console.log('Server running on port ' + PORT);
-  });
+// Start server without waiting for MongoDB
+app.listen(PORT, '0.0.0.0', function() {
+  console.log(`🚀 Server running on port ${PORT}`);
+  connectDB();
 });
