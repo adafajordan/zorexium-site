@@ -218,8 +218,6 @@
 </div>
 
 <script>
-  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-
   function toggleDropdown(id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -249,56 +247,78 @@
 
   function handleSignup(e) {
     e.preventDefault();
-    const firstName = document.getElementById('signupUsername').value;
-    const email = document.getElementById('signupEmail').value;
+    const username = document.getElementById('signupUsername').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value;
     const confirm = document.getElementById('signupConfirm').value;
 
+    if (!username) {
+      alert('Please enter a username.');
+      return;
+    }
     if (password !== confirm) {
       alert('Passwords do not match!');
       return;
     }
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters.');
+      return;
+    }
 
-    fetch(BACKEND_URL + '/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, firstName })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.message) {
-        alert('Account created! Please login.');
-        toggleForms({preventDefault: () => {}});
-        document.getElementById('signupForm').reset();
-      } else {
-        alert(data.error || 'Registration failed');
+    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+    if (users[username]) {
+      alert('Username already taken. Please choose another.');
+      return;
+    }
+    for (const key in users) {
+      if (users[key].email === email) {
+        alert('An account with this email already exists.');
+        return;
       }
-    })
-    .catch(err => alert('Error: ' + err.message));
+    }
+
+    users[username] = {
+      email: email,
+      password: password,
+      joinDate: Date.now(),
+      accountType: 'Buyer'
+    };
+    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+    localStorage.setItem('currentUser', username);
+
+    alert('Account created! Welcome to Zorexium Labs.');
+    window.location.href = 'account-details.html';
   }
 
   function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('loginUsername').value;
+    const input = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
 
-    fetch(BACKEND_URL + '/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('currentUser', data.user.email);
-        alert('Logged in successfully!');
-        window.location.href = 'marketplace.html';
-      } else {
-        alert(data.error || 'Login failed');
+    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+
+    // Support login by username or email
+    let username = null;
+    if (users[input]) {
+      username = input;
+    } else {
+      // Search by email
+      for (const key in users) {
+        if (users[key].email === input) {
+          username = key;
+          break;
+        }
       }
-    })
-    .catch(err => alert('Error: ' + err.message));
+    }
+
+    if (!username || users[username].password !== password) {
+      alert('Invalid username/email or password.');
+      return;
+    }
+
+    localStorage.setItem('currentUser', username);
+    alert('Logged in successfully!');
+    window.location.href = 'marketplace.html';
   }
 </script>
 
