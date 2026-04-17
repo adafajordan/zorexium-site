@@ -24,28 +24,35 @@ let mongoClient;
 let mongoConnected = false;
 
 async function connectDB() {
+  console.log('🔍 MONGO_URI is', MONGO_URI ? 'SET' : 'NOT SET');
   if (!MONGO_URI) {
     console.error('❌ MONGO_URI environment variable is NOT SET');
     return false;
   }
-  
+
   try {
     console.log('📡 Attempting to connect to MongoDB...');
-    mongoClient = new MongoClient(MONGO_URI, { 
+    mongoClient = new MongoClient(MONGO_URI, {
       serverSelectionTimeoutMS: 10000,
       connectTimeoutMS: 15000
     });
     await mongoClient.connect();
     db = mongoClient.db('zorexium');
-    
-    // Test the connection
+
+    // Ping to verify connection
+    console.log('🏓 Running ping test...');
     await db.admin().ping();
-    
+
     mongoConnected = true;
-    console.log('✅ MongoDB connected successfully');
+    console.log('✅ MongoDB connected and ping successful');
     return true;
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
+    console.error('❌ MongoDB connection failed:');
+    console.error('   name   :', error.name);
+    console.error('   message:', error.message);
+    if (error.code !== undefined) console.error('   code   :', error.code);
+    if (error.errorLabels) console.error('   labels :', error.errorLabels);
+    if (error.errInfo) console.error('   details:', JSON.stringify(error.errInfo));
     mongoConnected = false;
     return false;
   }
@@ -418,12 +425,25 @@ const PORT = process.env.PORT || 5000;
 // Start server and connect to MongoDB
 async function start() {
   console.log('🚀 Starting server...');
-  const connected = await connectDB();
-  
+  try {
+    const connected = await connectDB();
+    if (connected) {
+      console.log('✅ Database connected — starting HTTP server');
+    } else {
+      console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
+    }
+  } catch (err) {
+    console.error('❌ Unexpected error during DB connection:', err);
+  }
+
   app.listen(PORT, '0.0.0.0', function() {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`📦 MongoDB connected: ${mongoConnected}`);
+    console.log(`🔍 MONGO_URI set: ${!!MONGO_URI}`);
   });
 }
 
-start();
+start().catch(function(err) {
+  console.error('❌ Fatal startup error:', err);
+  process.exit(1);
+});
