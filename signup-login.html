@@ -270,6 +270,12 @@
       alert('Username already taken. Please choose another.');
       return;
     }
+    for (const key in users) {
+      if (users[key].email === email) {
+        alert('An account with this email already exists.');
+        return;
+      }
+    }
 
     users[username] = {
       email: email,
