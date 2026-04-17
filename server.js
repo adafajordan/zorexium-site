@@ -11,7 +11,18 @@ if (!globalThis.fetch) {
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
-// ── Health check endpoint (REQUIRED for Render) ──────────────────────────────
+// ── CORS Middleware ────────────────────────────────────────────────────────────
+app.use(function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// ── Health check endpoint (REQUIRED for Render) ────────────────────────────────
 app.get('/health', function(req, res) {
   res.status(200).json({ status: 'ok' });
 });
