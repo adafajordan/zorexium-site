@@ -251,7 +251,9 @@
 <script src="notifications.js"></script>
 <script>
   // ── PayPal SDK – loaded dynamically from backend config ─────────────────────
-  fetch('/api/config')
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
+fetch(BACKEND_URL + '/api/config')
     .then(function(res) { return res.json(); })
     .then(function(config) {
       if (!config.paypalClientId) throw new Error('Missing PayPal client ID in config');
@@ -520,7 +522,7 @@
         },
       };
 
-      return fetch('/api/orders', {
+      return fetch(BACKEND_URL + '/api/orders', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
@@ -555,7 +557,7 @@
         return Promise.reject(new Error('Order reference lost. Please refresh and try again.'));
       }
 
-      return fetch('/api/orders/' + pendingOrderId + '/capture', {
+      return fetch(BACKEND_URL + '/api/orders/' + pendingOrderId + '/capture', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
       })
