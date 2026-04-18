@@ -280,6 +280,7 @@
       }
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('currentUser', email);
+      localStorage.setItem('currentUsername', username);
       window.location.href = 'marketplace.html';
     } catch (err) {
       console.error(err);
@@ -305,6 +306,7 @@
       }
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('currentUser', email);
+      localStorage.setItem('currentUsername', (data.user && data.user.firstName) || email);
       window.location.href = 'marketplace.html';
     } catch (err) {
       console.error(err);
