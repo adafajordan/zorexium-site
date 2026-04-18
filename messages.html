@@ -52,7 +52,7 @@
     <div class="md:col-span-3 bg-[#20232a] border border-gray-700 rounded-lg flex flex-col h-96 md:h-screen">
       <!-- Chat Header -->
       <div class="bg-[#181b21] border-b border-gray-700 p-4 flex items-center justify-between">
-        <div>
+      <div id="chatHeaderLeft">
           <h2 id="chatHeader" class="text-lg font-bold text-white">Select a conversation</h2>
           <p id="chatSubheader" class="text-gray-400 text-sm">Messages will appear here</p>
         </div>
@@ -85,10 +85,55 @@
 </main>
 
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const PLACEHOLDER_IMG = 'https://placehold.co/40x40/333/fff?text=U';
+
   let currentUser = null;
   let currentUsername = null;
   let selectedContact = null;
   let allMessages = {};
+  const userInfoCache = {};
+
+  async function fetchUserInfo(email) {
+    if (userInfoCache[email]) return userInfoCache[email];
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      userInfoCache[email] = { displayName: email, profileImage: null };
+      return userInfoCache[email];
+    }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/user/info?email=' + encodeURIComponent(email), {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = res.ok ? await res.json() : null;
+      userInfoCache[email] = {
+        displayName: (data && data.displayName) || email,
+        profileImage: (data && data.profileImage) || null
+      };
+    } catch (_) {
+      userInfoCache[email] = { displayName: email, profileImage: null };
+    }
+    return userInfoCache[email];
+  }
+
+  function avatarHtml(profileImage, displayName, size) {
+    const s = size || 40;
+    const safeName = escapeHtml(displayName);
+    // Only allow specific safe image types (exclude SVG which can contain scripts)
+    const safeSrc = (profileImage && typeof profileImage === 'string' &&
+      /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(profileImage))
+      ? profileImage : PLACEHOLDER_IMG;
+    return `<img src="${safeSrc}" alt="${safeName}" class="rounded-full object-cover flex-shrink-0" style="width:${s}px;height:${s}px;">`;
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   function init() {
     currentUser = localStorage.getItem('currentUser');
@@ -125,7 +170,7 @@
     if (directContact) selectContact(directContact);
   }
 
-  function renderConversations(conversations) {
+  async function renderConversations(conversations) {
     const list = document.getElementById('conversationsList');
     list.innerHTML = '';
 
@@ -134,26 +179,39 @@
       return;
     }
 
-    Object.keys(conversations).forEach(contact => {
+    for (const contact of Object.keys(conversations)) {
+      const info = await fetchUserInfo(contact);
       const button = document.createElement('button');
-      button.className = 'w-full text-left px-3 py-2 hover:bg-[#2a2e38] rounded transition-colors text-white';
-      button.innerHTML = `<i class="fas fa-user text-cyan-400 mr-2"></i>${contact}`;
+      button.className = 'w-full text-left px-3 py-2 hover:bg-[#2a2e38] rounded transition-colors text-white flex items-center gap-2';
+      button.innerHTML = `${avatarHtml(info.profileImage, info.displayName, 32)}<span class="truncate">${escapeHtml(info.displayName)}</span>`;
       button.onclick = () => selectContact(contact);
       list.appendChild(button);
-    });
+    }
   }
 
-  function selectContact(contact) {
+  async function selectContact(contact) {
     selectedContact = contact;
-    document.getElementById('chatHeader').innerText = contact;
-    document.getElementById('chatSubheader').innerText = 'Conversation with ' + contact;
+
+    const info = await fetchUserInfo(contact);
+    const headerLeft = document.getElementById('chatHeaderLeft');
+
+    // Replace static text with avatar + display name
+    headerLeft.innerHTML = `
+      <div class="flex items-center gap-3">
+        ${avatarHtml(info.profileImage, info.displayName, 40)}
+        <div>
+          <h2 class="text-lg font-bold text-white">${escapeHtml(info.displayName)}</h2>
+          <p class="text-gray-400 text-sm">Conversation with ${escapeHtml(info.displayName)}</p>
+        </div>
+      </div>
+    `;
 
     const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
     const conversationKey = [currentUser, contact].sort().join('_');
-    renderMessages(msgs[conversationKey] || []);
+    renderMessages(msgs[conversationKey] || [], info);
   }
 
-  function renderMessages(msgs) {
+  function renderMessages(msgs, contactInfo) {
     const container = document.getElementById('messagesContainer');
     container.innerHTML = '';
 
@@ -165,14 +223,27 @@
     msgs.forEach(msg => {
       const isOwn = msg.from === currentUsername || msg.from === currentUser;
       const div = document.createElement('div');
-      div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'}`;
-      div.innerHTML = `
-        <div class="max-w-xs message-bubble ${isOwn ? 'bg-cyan-600' : 'bg-gray-700'} text-white rounded-lg p-3">
-          <p class="text-xs opacity-75 mb-1">${msg.subject}</p>
-          <p class="break-words">${msg.body}</p>
-          <p class="text-xs opacity-50 mt-2">${new Date(msg.timestamp).toLocaleString()}</p>
-        </div>
-      `;
+      div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'} items-end gap-2`;
+      if (isOwn) {
+        div.innerHTML = `
+          <div class="max-w-xs message-bubble bg-cyan-600 text-white rounded-lg p-3">
+            <p class="text-xs opacity-75 mb-1">${escapeHtml(msg.subject)}</p>
+            <p class="break-words">${escapeHtml(msg.body)}</p>
+            <p class="text-xs opacity-50 mt-2">${new Date(msg.timestamp).toLocaleString()}</p>
+          </div>
+        `;
+      } else {
+        const info = contactInfo || { displayName: msg.from, profileImage: null };
+        div.innerHTML = `
+          ${avatarHtml(info.profileImage, info.displayName, 32)}
+          <div class="max-w-xs message-bubble bg-gray-700 text-white rounded-lg p-3">
+            <p class="text-xs font-semibold text-cyan-400 mb-1">${escapeHtml(info.displayName)}</p>
+            <p class="text-xs opacity-75 mb-1">${escapeHtml(msg.subject)}</p>
+            <p class="break-words">${escapeHtml(msg.body)}</p>
+            <p class="text-xs opacity-50 mt-2">${new Date(msg.timestamp).toLocaleString()}</p>
+          </div>
+        `;
+      }
       container.appendChild(div);
     });
 
