@@ -199,7 +199,7 @@
 
   function populateSellerFields(seller) {
     document.getElementById('shopName').textContent = seller.shopName || sellerUsername || 'Community User';
-    document.getElementById('shopDescription').textContent = seller.shopDescription || 'Community member';
+    document.getElementById('shopDescription').textContent = seller.shopDescription || seller.description || 'Community member';
     document.getElementById('ratingDisplay').textContent = (seller.rating || 5.0).toFixed(1);
     document.getElementById('productCount').textContent = (seller.products || []).length;
     document.getElementById('sellerUsername').textContent = '@' + (sellerUsername || 'N/A');
@@ -270,6 +270,38 @@
             }
           })
           .catch(() => {});
+      }
+
+      // Also fetch backend products and merge with localStorage products
+      const sellerEmail = seller.businessEmail || seller.personalEmail ||
+        (function() {
+          try {
+            const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
+            return (users[sellerUsername] && users[sellerUsername].email) || null;
+          } catch (e) { return null; }
+        })();
+      if (sellerEmail) {
+        fetch(BACKEND_URL + '/api/user/public-info?email=' + encodeURIComponent(sellerEmail))
+          .then(r => r.ok ? r.json() : null)
+          .then(function(data) {
+            const userId = data && data.userId;
+            if (!userId) return;
+            return fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId))
+              .then(r => r.ok ? r.json() : [])
+              .then(function(backendProducts) {
+                if (!backendProducts || backendProducts.length === 0) return;
+                const localProducts = seller.products || [];
+                const localIds = new Set(localProducts.map(function(p) { return p.id || p.name; }));
+                const mapped = mapBackendProducts(backendProducts);
+                const newProducts = mapped.filter(function(p) {
+                  return !localIds.has(p.id) && !localIds.has(p.name);
+                });
+                const merged = localProducts.concat(newProducts);
+                document.getElementById('productCount').textContent = merged.length;
+                loadProducts(merged);
+              });
+          })
+          .catch(function() {});
       }
       return;
     }
