@@ -97,24 +97,24 @@
   <!-- Seller Info Tabs -->
   <div class="bg-[#20232a] border border-gray-700 rounded-lg mb-8">
     <div class="flex border-b border-gray-700">
-      <button onclick="switchTab('about')" class="tab-btn flex-1 px-6 py-4 text-white font-semibold border-b-2 border-cyan-400 hover:bg-[#2a2e38] transition">About</button>
-      <button onclick="switchTab('products')" class="tab-btn flex-1 px-6 py-4 text-gray-400 font-semibold border-b-2 border-transparent hover:bg-[#2a2e38] transition">Products</button>
+      <button onclick="switchTab('products')" class="tab-btn flex-1 px-6 py-4 text-white font-semibold border-b-2 border-cyan-400 hover:bg-[#2a2e38] transition">Products</button>
+      <button onclick="switchTab('about')" class="tab-btn flex-1 px-6 py-4 text-gray-400 font-semibold border-b-2 border-transparent hover:bg-[#2a2e38] transition">About</button>
       <button onclick="switchTab('reviews')" class="tab-btn flex-1 px-6 py-4 text-gray-400 font-semibold border-b-2 border-transparent hover:bg-[#2a2e38] transition">Reviews</button>
     </div>
 
     <!-- About Tab -->
-    <div id="about-tab" class="tab-content p-8">
+    <div id="about-tab" class="tab-content hidden p-8">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h3 class="text-white font-semibold text-lg mb-4">Seller Information</h3>
           <div class="space-y-4">
             <div>
-              <p class="text-gray-500 text-sm">Business Email</p>
-              <p class="text-white" id="businessEmail">email@example.com</p>
+              <p class="text-gray-500 text-sm">Username</p>
+              <p class="text-white" id="sellerUsername">@username</p>
             </div>
             <div>
-              <p class="text-gray-500 text-sm">Phone Number</p>
-              <p class="text-white" id="phoneNumber">+1 (555) 000-0000</p>
+              <p class="text-gray-500 text-sm">Shop Name</p>
+              <p class="text-white" id="sellerShopName">Shop Name</p>
             </div>
             <div>
               <p class="text-gray-500 text-sm">Location</p>
@@ -148,7 +148,7 @@
     </div>
 
     <!-- Products Tab -->
-    <div id="products-tab" class="tab-content hidden p-8">
+    <div id="products-tab" class="tab-content p-8">
       <div id="productsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Products loaded here -->
       </div>
@@ -179,7 +179,7 @@
 
 <script>
   let sellerUsername = null;
-  let currentTab = 'about';
+  let currentTab = 'products';
 
   function init() {
     const params = new URLSearchParams(window.location.search);
@@ -211,8 +211,8 @@
     document.getElementById('shopDescription').textContent = seller.shopDescription || 'No description available';
     document.getElementById('ratingDisplay').textContent = (seller.rating || 5.0).toFixed(1);
     document.getElementById('productCount').textContent = (seller.products || []).length;
-    document.getElementById('businessEmail').textContent = seller.businessEmail || 'N/A';
-    document.getElementById('phoneNumber').textContent = seller.phoneNumber || 'N/A';
+    document.getElementById('sellerUsername').textContent = '@' + (sellerUsername || 'N/A');
+    document.getElementById('sellerShopName').textContent = seller.shopName || 'N/A';
     document.getElementById('businessLocation').textContent = `${seller.businessCity}, ${seller.businessState}` || 'N/A';
     document.getElementById('memberSince').textContent = formatDate(seller.joinDate);
     document.getElementById('joinDate').textContent = new Date(seller.joinDate).getFullYear();
