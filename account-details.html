@@ -41,7 +41,7 @@
       <div class="flex items-center space-x-4">
         <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-lg"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
         <a href="account-details.html" class="text-cyan-400 hover:text-white"><i class="fas fa-user-circle text-lg"></i></a>
-        <a href="account-details.html" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block"><img src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></a>
+        <a href="account-details.html" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block"><img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></a>
       </div>
     </div>
   </div>
@@ -324,9 +324,18 @@
     document.getElementById('editEmail').value = user.email;
     document.getElementById('editPhone').value = user.phone || '';
     document.getElementById('editAccountType').value = user.accountType || 'Buyer';
-    // profile image
-    const profileImg = localStorage.getItem('profileImage_' + currentUser);
-    if (profileImg) document.getElementById('profileImage').src = profileImg;
+    // profile image – load from backend if authenticated
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      fetch('https://zorexium-backend.onrender.com/api/user/profile-picture', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      }).then(r => r.ok ? r.json() : null).then(data => {
+        if (data && data.profileImage) document.getElementById('profileImage').src = data.profileImage;
+      }).catch(() => {});
+    } else {
+      const profileImg = localStorage.getItem('profileImage_' + currentUser);
+      if (profileImg) document.getElementById('profileImage').src = profileImg;
+    }
     // account files list
     const accFiles = JSON.parse(localStorage.getItem('accountFiles_' + currentUser) || '[]');
     const accFilesEl = document.getElementById('accountFilesList');
@@ -370,10 +379,32 @@
     }
   }
 
-  function handleProfileImageUpload(e){
+  async function handleProfileImageUpload(e){
     const file = e.target.files[0]; if(!file) return;
     const reader = new FileReader();
-    reader.onload = function(ev){ localStorage.setItem('profileImage_'+localStorage.getItem('currentUser'), ev.target.result); document.getElementById('profileImage').src = ev.target.result; };
+    reader.onload = async function(ev){
+      const dataUrl = ev.target.result;
+      document.getElementById('profileImage').src = dataUrl;
+      const token = localStorage.getItem('authToken');
+      if(token){
+        try{
+          const res = await fetch('https://zorexium-backend.onrender.com/api/user/profile-picture',{
+            method:'PUT',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+            body:JSON.stringify({profileImage:dataUrl})
+          });
+          if(res.ok){
+            ZrxNotify.showNotification('Profile picture updated!','success');
+            if(window.ZrxProfilePicture) window.ZrxProfilePicture.update(dataUrl);
+          } else {
+            const err = await res.json();
+            ZrxNotify.showNotification('Upload failed: '+(err.error||'Unknown error'),'error');
+          }
+        } catch(err){
+          ZrxNotify.showNotification('Upload failed: network error','error');
+        }
+      }
+    };
     reader.readAsDataURL(file);
   }
 
@@ -554,6 +585,7 @@
   // initialize purchase files rendering on load
   window.addEventListener('load', function(){ renderPurchaseFiles(); });
 </script>
+<script src="profile-picture.js"></script>
 
 </body>
 </html>

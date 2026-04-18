@@ -763,6 +763,56 @@ app.post('/api/posts/:postId/like', verifyToken, async function(req, res) {
   }
 });
 
+// ── PROFILE PICTURE ────────────────────────────────────────────────────────────
+
+// PUT /api/user/profile-picture – save profile picture (auth required)
+app.put('/api/user/profile-picture', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { profileImage } = req.body;
+
+  if (!profileImage || typeof profileImage !== 'string') {
+    return res.status(400).json({ error: 'profileImage is required' });
+  }
+
+  // Accept only data URLs (base64-encoded images)
+  if (!profileImage.startsWith('data:image/')) {
+    return res.status(400).json({ error: 'profileImage must be a base64 data URL (data:image/...)' });
+  }
+
+  // Limit to ~5 MB (base64 ~6.7 MB raw limit)
+  if (profileImage.length > 7 * 1024 * 1024) {
+    return res.status(400).json({ error: 'Profile image is too large (max ~5 MB)' });
+  }
+
+  try {
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(req.userId) },
+      { $set: { profileImage, updatedAt: new Date() } }
+    );
+    res.json({ message: 'Profile picture updated', profileImage });
+  } catch (error) {
+    console.error('Error saving profile picture:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/user/profile-picture – retrieve profile picture (auth required)
+app.get('/api/user/profile-picture', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const user = await db.collection('users').findOne(
+      { _id: new ObjectId(req.userId) },
+      { projection: { profileImage: 1 } }
+    );
+    res.json({ profileImage: (user && user.profileImage) || null });
+  } catch (error) {
+    console.error('Error fetching profile picture:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Error handler ──────────────────────────────────────────────────────────────
 app.use(function(err, req, res, next) {
   console.error(err);
