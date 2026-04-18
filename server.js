@@ -542,10 +542,10 @@ app.post('/api/posts', verifyToken, async function(req, res) {
   if (!title || !content || !boardType) {
     return res.status(400).json({ error: 'title, content, and boardType are required' });
   }
-  if (typeof title !== 'string' || title.length > 200) {
+  if (typeof title !== 'string' || title.length < 1 || title.length > 200) {
     return res.status(400).json({ error: 'Invalid title' });
   }
-  if (typeof content !== 'string' || content.length > 5000) {
+  if (typeof content !== 'string' || content.length < 1 || content.length > 5000) {
     return res.status(400).json({ error: 'Invalid content' });
   }
   if (typeof boardType !== 'string' || boardType.length > 64) {
@@ -598,7 +598,7 @@ app.post('/api/posts/:postId/replies', verifyToken, async function(req, res) {
   const { postId } = req.params;
   const { content } = req.body;
 
-  if (!content || typeof content !== 'string' || content.length > 2000) {
+  if (!content || typeof content !== 'string' || content.length < 1 || content.length > 2000) {
     return res.status(400).json({ error: 'Valid content is required' });
   }
 
