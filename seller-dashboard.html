@@ -167,10 +167,10 @@
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert('Failed to start Stripe onboarding: ' + (data.error || 'Unknown error'));
+        ZrxNotify.showNotification('Failed to start Stripe onboarding: ' + (data.error || 'Unknown error'), 'error');
       }
     } catch (e) {
-      alert('Failed to start Stripe onboarding. Please try again.');
+      ZrxNotify.showNotification('Failed to start Stripe onboarding. Please try again.', 'error');
     }
   }
 

@@ -656,9 +656,9 @@
                 acctIcon.addEventListener('click', (e)=>{ e.preventDefault(); acctDrop.classList.toggle('hidden'); });
             }
             const signOut = document.getElementById('signOutHeader');
-            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); localStorage.removeItem('currentUser'); alert('Signed out'); window.location.href='index.html'; });
+            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); localStorage.removeItem('currentUser'); ZrxNotify.showNotification('Signed out', 'success'); window.location.href='index.html'; });
             const deactivate = document.getElementById('deactivateHeader');
-            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); if(confirm('Deactivate account?')){ localStorage.removeItem('currentUser'); alert('Account deactivated'); window.location.href='index.html'; }});
+            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ localStorage.removeItem('currentUser'); ZrxNotify.showNotification('Account deactivated', 'success'); window.location.href='index.html'; }); });
 
             // Sweep any visible 'dokan' occurrences on page
             document.body.innerHTML = document.body.innerHTML.replace(/dokan/gi, '');
@@ -673,6 +673,7 @@
         }
         </script>
 
+<script src="notifications.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>
