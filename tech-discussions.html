@@ -321,16 +321,22 @@
       return `
         <div class="post-card">
           <div class="flex justify-between items-start mb-3">
-            <div class="flex-1">
-              <h3 class="text-white font-semibold text-lg">${escapeHtml(post.title)}</h3>
-              <p class="text-gray-400 text-xs">by <span class="text-cyan-400">${escapeHtml(post.username || post.email)}</span> • ${new Date(post.createdAt).toLocaleString()}</p>
+            <div class="flex items-center gap-2 flex-1">
+              <img src="${post.profileImage || 'https://placehold.co/40x40/333/fff?text=U'}" class="w-10 h-10 rounded-full border border-gray-600 object-cover flex-shrink-0">
+              <div>
+                <h3 class="text-white font-semibold text-lg">${escapeHtml(post.title)}</h3>
+                <p class="text-gray-400 text-xs"><span class="text-cyan-400">${escapeHtml(post.username || post.email)}</span> • ${new Date(post.createdAt).toLocaleString()}</p>
+              </div>
             </div>
           </div>
           <p class="text-gray-300 mb-4">${escapeHtml(post.content)}</p>
           ${renderPostMedia(post)}
           ${firstReply ? `
           <div class="bg-[#2a2e38] rounded p-3 mb-3 text-sm border-l-2 border-cyan-600">
-            <p class="text-cyan-400 font-semibold">${escapeHtml(firstReply.username || firstReply.email)}</p>
+            <div class="flex items-center gap-2 mb-1">
+              <img src="${firstReply.profileImage || 'https://placehold.co/40x40/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover">
+              <p class="text-cyan-400 font-semibold">${escapeHtml(firstReply.username || firstReply.email)}</p>
+            </div>
             <p class="text-gray-300">${escapeHtml(firstReply.content)}</p>
           </div>
           ` : ''}
@@ -348,7 +354,10 @@
             <div class="mb-4">
               ${replies.map(reply => `
                 <div class="bg-[#2a2e38] rounded p-3 mb-2 text-sm">
-                  <p class="text-cyan-400 font-semibold">${escapeHtml(reply.username || reply.email)}</p>
+                  <div class="flex items-center gap-2 mb-1">
+                    <img src="${reply.profileImage || 'https://placehold.co/40x40/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover">
+                    <p class="text-cyan-400 font-semibold">${escapeHtml(reply.username || reply.email)}</p>
+                  </div>
                   <p class="text-gray-300">${escapeHtml(reply.content)}</p>
                 </div>
               `).join('')}
