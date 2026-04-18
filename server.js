@@ -323,6 +323,36 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
   }
 });
 
+// ── DELETE /api/products/:id – delete a product (auth required, owner only) ─────
+app.delete('/api/products/:id', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    let objectId;
+    try {
+      objectId = new ObjectId(req.params.id);
+    } catch (parseErr) {
+      console.error('Invalid product ID format:', req.params.id, parseErr.message);
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    const product = await db.collection('products').findOne({ _id: objectId });
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    if (product.sellerId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden: you do not own this product' });
+    }
+
+    await db.collection('products').deleteOne({ _id: objectId });
+    res.json({ message: 'Product deleted' });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── CART ────────────────────────────────────────────────────────────────────────
 
 app.get('/api/cart', verifyToken, async function(req, res) {
