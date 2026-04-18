@@ -221,12 +221,27 @@
     loadProducts(seller.products || []);
   }
 
-  function loadCommunityUserProfile(displayName, profileImage) {
+  function mapBackendProducts(products) {
+    return (products || []).map(function(p) {
+      return {
+        id: p._id ? String(p._id) : (p.id || ''),
+        name: p.name || '',
+        description: p.description || '',
+        price: p.price || 0,
+        condition: p.condition || 'used',
+        image: p.image || '',
+        specs: p.specifications || p.specs || {},
+        quantity: p.quantity || 1
+      };
+    });
+  }
+
+  function loadCommunityUserProfile(displayName, profileImage, products) {
     const seller = {
       shopName: displayName || sellerUsername,
       shopDescription: 'Community member',
       rating: 5.0,
-      products: [],
+      products: mapBackendProducts(products),
       totalSales: 0,
       isVerified: false,
       joinDate: null,
@@ -259,7 +274,7 @@
       return;
     }
 
-    // Not a registered seller — try to look up community user info by email
+    // Not a registered seller in localStorage — look up community user info by email
     const params = new URLSearchParams(window.location.search);
     const email = params.get('email');
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerUsername);
@@ -268,17 +283,31 @@
     if (lookupEmail) {
       fetch(BACKEND_URL + '/api/user/public-info?email=' + encodeURIComponent(lookupEmail))
         .then(r => r.ok ? r.json() : null)
-        .then(data => {
+        .then(function(data) {
           const displayName = (data && data.displayName) || sellerUsername;
           const profileImage = (data && data.profileImage) || null;
-          loadCommunityUserProfile(displayName, profileImage);
+          const userId = (data && data.userId) || null;
+
+          if (userId) {
+            // Fetch the user's products from the backend
+            return fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId))
+              .then(r => r.ok ? r.json() : [])
+              .then(function(products) {
+                loadCommunityUserProfile(displayName, profileImage, products || []);
+              })
+              .catch(function() {
+                loadCommunityUserProfile(displayName, profileImage, []);
+              });
+          } else {
+            loadCommunityUserProfile(displayName, profileImage, []);
+          }
         })
-        .catch(() => {
-          loadCommunityUserProfile(sellerUsername, null);
+        .catch(function() {
+          loadCommunityUserProfile(sellerUsername, null, []);
         });
     } else {
       // No email available — show a basic profile using the display name
-      loadCommunityUserProfile(sellerUsername, null);
+      loadCommunityUserProfile(sellerUsername, null, []);
     }
   }
 
