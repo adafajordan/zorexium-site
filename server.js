@@ -621,26 +621,31 @@ app.get('/api/posts', async function(req, res) {
       }
     }
 
-    // Batch-fetch user documents and build a userId -> displayName map
+    // Batch-fetch user documents and build userId -> displayName and profileImage maps
     const usernameMap = {};
+    const profileImageMap = {};
     if (userIdSet.size > 0) {
       const userIds = Array.from(userIdSet).map(id => { try { return new ObjectId(id); } catch (_) { return null; } }).filter(Boolean);
       const users = await db.collection('users').find({ _id: { $in: userIds } }).toArray();
       for (const user of users) {
         const fullName = ((user.firstName || '') + ' ' + (user.lastName || '')).trim();
         usernameMap[user._id.toString()] = fullName || user.email;
+        if (user.profileImage) profileImageMap[user._id.toString()] = user.profileImage;
       }
     }
 
-    // Enrich posts with current display name
+    // Enrich posts with current display name and profile image
     const enriched = posts.map(post => {
       const displayName = (post.userId && usernameMap[post.userId]) || post.username || post.email;
+      const profileImage = (post.userId && profileImageMap[post.userId]) || null;
       return {
         ...post,
         username: displayName,
+        profileImage,
         replies: (post.replies || []).map(reply => ({
           ...reply,
-          username: (reply.userId && usernameMap[reply.userId]) || reply.username || reply.email
+          username: (reply.userId && usernameMap[reply.userId]) || reply.username || reply.email,
+          profileImage: (reply.userId && profileImageMap[reply.userId]) || null
         }))
       };
     });
