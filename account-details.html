@@ -381,6 +381,7 @@
 
   async function handleProfileImageUpload(e){
     const file = e.target.files[0]; if(!file) return;
+    const fileInput = e.target;
     const reader = new FileReader();
     reader.onload = async function(ev){
       const dataUrl = ev.target.result;
@@ -395,7 +396,11 @@
           });
           if(res.ok){
             ZrxNotify.showNotification('Profile picture updated!','success');
-            if(window.ZrxProfilePicture) window.ZrxProfilePicture.update(dataUrl);
+            // Update the header profile image directly without delegating to an external module
+            const headerImg = document.getElementById('userProfileImage');
+            if(headerImg) headerImg.src = dataUrl;
+            // Reset the file input after a successful upload
+            fileInput.value = '';
           } else {
             const err = await res.json();
             ZrxNotify.showNotification('Upload failed: '+(err.error||'Unknown error'),'error');
