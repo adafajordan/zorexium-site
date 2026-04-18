@@ -143,7 +143,14 @@
   let currentUser = localStorage.getItem('currentUser');
   let sellerData = {};
 
-  function init() {
+  function getUserIdFromToken(token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId || null;
+    } catch (e) { return null; }
+  }
+
+  async function init() {
     if (!currentUser) {
       window.location.href = 'seller-signup.html';
       return;
@@ -157,7 +164,35 @@
 
     updateCartBadge();
     sellerData = sellers[currentUser];
-    loadDashboard();
+
+    // Fetch products from MongoDB (source of truth) and replace localStorage cache
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      try {
+        const userId = getUserIdFromToken(authToken);
+        if (userId) {
+          const res = await fetch('/api/products/seller/' + encodeURIComponent(userId));
+          if (res.ok) {
+            const backendProducts = await res.json();
+            if (Array.isArray(backendProducts)) {
+              sellerData.products = backendProducts.map(function(p) {
+                return {
+                  id: p._id ? String(p._id) : (p.id || ''),
+                  name: p.name || '',
+                  description: p.description || '',
+                  price: p.price || 0,
+                  category: p.category || '',
+                  condition: p.condition || 'used',
+                  image: p.image || '',
+                  specs: p.specifications || p.specs || {}
+                };
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch products from backend:', e);
+      }
   }
 
   async function startStripeOnboarding() {
@@ -242,8 +277,8 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button onclick="editProduct(${product.id})" class="btn-secondary flex-1 text-sm py-2">Edit</button>
-            <button onclick="deleteProduct(${product.id})" class="bg-red-900 hover:bg-red-800 text-red-300 px-4 py-2 rounded text-sm font-medium">Delete</button>
+            <button onclick="editProduct('${product.id}')" class="btn-secondary flex-1 text-sm py-2">Edit</button>
+            <button onclick="deleteProduct('${product.id}')" class="bg-red-900 hover:bg-red-800 text-red-300 px-4 py-2 rounded text-sm font-medium">Delete</button>
           </div>
         </div>
       </div>
@@ -262,9 +297,12 @@
       let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
       sellers[currentUser] = sellerData;
       localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-      // Remove from server so marketplace updates for all browsers
-      fetch('/api/listings/' + encodeURIComponent(productId), { method: 'DELETE' })
-        .catch(err => console.error('Failed to delete listing from server:', err));
+      // Remove from MongoDB so marketplace updates for all browsers
+      const authToken = localStorage.getItem('authToken');
+      fetch('/api/products/' + encodeURIComponent(productId), {
+        method: 'DELETE',
+        headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
+      }).catch(err => console.error('Failed to delete product from server:', err));
       loadProducts();
     });
   }

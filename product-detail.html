@@ -158,13 +158,40 @@
     updateCartBadge();
   }
 
-  function loadProduct() {
+  async function loadProduct() {
     // load product silently (no console output)
     if (!currentProductId) {
       return;
     }
 
-    // Load from sellers data in localStorage
+    // Try backend API first (source of truth for MongoDB products)
+    try {
+      const res = await fetch('/api/products/' + encodeURIComponent(currentProductId));
+      if (res.ok) {
+        const product = await res.json();
+        if (product && (product._id || product.id)) {
+          currentProduct = {
+            id: product._id ? String(product._id) : String(product.id),
+            name: product.name || '',
+            price: product.price || 0,
+            description: product.description || '',
+            image: product.image || '',
+            condition: product.condition || 'used',
+            sellerId: product.sellerId || ''
+          };
+          document.getElementById('productName').innerText = currentProduct.name;
+          document.getElementById('productPrice').innerText = '$' + parseFloat(currentProduct.price).toFixed(2);
+          document.getElementById('productDescription').innerText = currentProduct.description || 'No description available';
+          document.getElementById('productImage').src = currentProduct.image || 'https://via.placeholder.com/400x300?text=Product';
+          document.getElementById('productId').innerText = currentProductId;
+          document.getElementById('sellerName').innerText = product.sellerName || product.sellerId || 'Zorexium Seller';
+          document.getElementById('sellerLink').href = 'seller-profile.html?seller=' + encodeURIComponent(product.sellerId || '');
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch product from backend:', e);
+    }
     const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
     
     // Search through all sellers' products
