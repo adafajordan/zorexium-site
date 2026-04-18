@@ -595,7 +595,41 @@ app.get('/api/posts', async function(req, res) {
       .find({ boardType })
       .sort({ createdAt: -1 })
       .toArray();
-    res.json(posts);
+
+    // Collect all unique userIds from posts and their replies
+    const userIdSet = new Set();
+    for (const post of posts) {
+      if (post.userId) userIdSet.add(post.userId);
+      for (const reply of (post.replies || [])) {
+        if (reply.userId) userIdSet.add(reply.userId);
+      }
+    }
+
+    // Batch-fetch user documents and build a userId -> displayName map
+    const usernameMap = {};
+    if (userIdSet.size > 0) {
+      const userIds = Array.from(userIdSet).map(id => { try { return new ObjectId(id); } catch (_) { return null; } }).filter(Boolean);
+      const users = await db.collection('users').find({ _id: { $in: userIds } }).toArray();
+      for (const user of users) {
+        const fullName = ((user.firstName || '') + ' ' + (user.lastName || '')).trim();
+        usernameMap[user._id.toString()] = fullName || user.email;
+      }
+    }
+
+    // Enrich posts with current display name
+    const enriched = posts.map(post => {
+      const displayName = (post.userId && usernameMap[post.userId]) || post.username || post.email;
+      return {
+        ...post,
+        username: displayName,
+        replies: (post.replies || []).map(reply => ({
+          ...reply,
+          username: (reply.userId && usernameMap[reply.userId]) || reply.username || reply.email
+        }))
+      };
+    });
+
+    res.json(enriched);
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ error: error.message });
