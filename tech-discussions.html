@@ -106,6 +106,7 @@
           <label class="text-sm text-gray-300">Attach files / photos</label>
           <input id="postFilesInput" type="file" accept="*/*" multiple class="w-full mt-2">
           <div id="postFilesPreview" class="mt-3 flex flex-wrap gap-2 text-xs text-gray-300"></div>
+          <input type="url" id="postImageUrl" class="form-input mt-3" placeholder="Photo or link URL (optional)..." maxlength="2000">
         </div>
       </div>
       <div class="flex gap-2">
@@ -248,6 +249,7 @@
     if (!token) { window.location.href = 'signup-login.html'; return; }
     const title = document.getElementById('postTitle').value.trim();
     const content = document.getElementById('postContent').value.trim();
+    const imageUrl = document.getElementById('postImageUrl').value.trim();
     if (!title || !content) {
       alert('Please fill in both title and content!');
       return;
@@ -256,7 +258,7 @@
       const res = await fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({ title, content, boardType })
+        body: JSON.stringify({ title, content, boardType, ...(imageUrl ? { imageUrl } : {}) })
       });
       if (!res.ok) {
         const err = await res.json();
@@ -265,6 +267,8 @@
       }
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
+      const imageUrlInput = document.getElementById('postImageUrl');
+      if (imageUrlInput) { imageUrlInput.value = ''; }
       const filesInput = document.getElementById('postFilesInput');
       if (filesInput) { filesInput.value = ''; }
       const preview = document.getElementById('postFilesPreview');
@@ -323,6 +327,7 @@
             </div>
           </div>
           <p class="text-gray-300 mb-4">${escapeHtml(post.content)}</p>
+          ${renderPostMedia(post)}
           ${firstReply ? `
           <div class="bg-[#2a2e38] rounded p-3 mb-3 text-sm border-l-2 border-cyan-600">
             <p class="text-cyan-400 font-semibold">${escapeHtml(firstReply.username || firstReply.email)}</p>
@@ -431,6 +436,15 @@
     const div = document.createElement('div');
     div.textContent = text || '';
     return div.innerHTML;
+  }
+
+  function renderPostMedia(post) {
+    if (!post.imageUrl || !/^https?:\/\//i.test(post.imageUrl)) return '';
+    const escaped = escapeHtml(post.imageUrl);
+    if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(post.imageUrl)) {
+      return '<div class="mb-4"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-lg max-h-96 object-contain"></div>';
+    }
+    return '<div class="mb-4"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-cyan-400 underline break-all text-sm"><i class="fas fa-link mr-1"></i>' + escaped + '</a></div>';
   }
 
   function toggleDropdown(id) {

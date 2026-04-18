@@ -538,7 +538,7 @@ app.get('/api/orders', verifyToken, async function(req, res) {
 app.post('/api/posts', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
-  const { title, content, boardType } = req.body;
+  const { title, content, boardType, imageUrl } = req.body;
   if (!title || !content || !boardType) {
     return res.status(400).json({ error: 'title, content, and boardType are required' });
   }
@@ -550,6 +550,19 @@ app.post('/api/posts', verifyToken, async function(req, res) {
   }
   if (typeof boardType !== 'string' || boardType.length > 64) {
     return res.status(400).json({ error: 'Invalid boardType' });
+  }
+  if (imageUrl !== undefined && imageUrl !== null && imageUrl !== '') {
+    if (typeof imageUrl !== 'string' || imageUrl.length > 2000) {
+      return res.status(400).json({ error: 'Invalid imageUrl' });
+    }
+    try {
+      const parsed = new URL(imageUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return res.status(400).json({ error: 'imageUrl must use http or https protocol' });
+      }
+    } catch (_) {
+      return res.status(400).json({ error: 'imageUrl is not a valid URL' });
+    }
   }
 
   try {
@@ -573,6 +586,9 @@ app.post('/api/posts', verifyToken, async function(req, res) {
       replies: [],
       likes: []
     };
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.length > 0) {
+      post.imageUrl = imageUrl;
+    }
     const result = await db.collection('posts').insertOne(post);
     res.status(201).json({ ...post, _id: result.insertedId });
   } catch (error) {
