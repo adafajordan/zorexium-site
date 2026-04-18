@@ -295,6 +295,7 @@
       ZrxNotify.showNotification('Please log in to send a message', 'info');
       return;
     }
+    const currentUsername = localStorage.getItem('currentUsername') || currentUser;
 
     const subject = document.getElementById('messageSubject').value.trim();
     const body = document.getElementById('messageBody').value.trim();
@@ -310,7 +311,7 @@
     if (!msgs[conversationKey]) msgs[conversationKey] = [];
     msgs[conversationKey].push({
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      from: currentUser,
+      from: currentUsername,
       to: sellerId,
       subject: subject,
       body: body,
@@ -326,7 +327,7 @@
     fetch('/send-message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: currentUser, to: sellerId, subject, body }),
+      body: JSON.stringify({ from: currentUsername, to: sellerId, subject, body }),
     }).catch(() => {});
   }
 
