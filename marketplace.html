@@ -255,7 +255,7 @@
     }
     localStorage.setItem('zorexiumCart', JSON.stringify(cart));
     updateCartBadge();
-    alert('Added to cart!');
+    ZrxNotify.showNotification('Added to cart!', 'success');
   }
 
   function checkSellerAndRedirect() {

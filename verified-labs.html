@@ -135,7 +135,7 @@
 
   function saveLab(){
     const name = document.getElementById('labName').value.trim();
-    if(!name){ alert('Enter a lab name'); return; }
+    if(!name){ ZrxNotify.showNotification('Enter a lab name', 'error'); return; }
     const filesInput = document.getElementById('labFilesInput');
     const files = Array.from(filesInput.files || []);
     const readFile = (file) => new Promise((res,reject)=>{
@@ -149,7 +149,7 @@
       // clear inputs
       document.getElementById('labName').value=''; document.getElementById('labLocation').value=''; document.getElementById('labDescription').value=''; filesInput.value=''; document.getElementById('labFilesPreview').innerHTML='';
       closeAddLab(); renderLabs();
-    }).catch(err=>{ console.error(err); alert('Error reading files'); });
+    }).catch(err=>{ console.error(err); ZrxNotify.showNotification('Error reading files', 'error'); });
   }
 
   function renderLabs(){
@@ -180,6 +180,7 @@
   window.addEventListener('load', renderLabs);
 </script>
 
+<script src="notifications.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

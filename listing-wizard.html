@@ -261,7 +261,7 @@
 
     // Only business account sellers can create listings
     if (sellers[currentUser].accountType && sellers[currentUser].accountType !== 'business') {
-      alert('Only business account sellers can create product listings. Please upgrade to a business account to add products.');
+      ZrxNotify.showNotification('Only business account sellers can create product listings. Please upgrade to a business account to add products.', 'error');
       window.location.href = 'seller-dashboard.html';
       return;
     }
@@ -330,7 +330,7 @@
     const category = document.getElementById('productCategory').value.trim();
 
     if (!name || !description || !price || !condition || !category) {
-      alert('Please fill in all required fields on this step');
+      ZrxNotify.showNotification('Please fill in all required fields on this step', 'error');
       return false;
     }
     return true;
@@ -345,7 +345,7 @@
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('File is too large. Maximum 10MB.');
+      ZrxNotify.showNotification('File is too large. Maximum 10MB.', 'error');
       return;
     }
 
@@ -409,7 +409,7 @@
     // Save to server for cross-browser persistence
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
-      alert('You must be logged in to create listings');
+      ZrxNotify.showNotification('You must be logged in to create listings', 'error');
       return;
     }
 
@@ -435,13 +435,13 @@
     })
     .then(data => {
       if (data.error) {
-        alert('Error saving product: ' + data.error);
+        ZrxNotify.showNotification('Error saving product: ' + data.error, 'error');
       } else {
-        alert('Product listing published successfully!');
+        ZrxNotify.showNotification('Product listing published successfully!', 'success');
         window.location.href = 'marketplace.html';
       }
     })
-    .catch(err => alert('Failed to publish listing: ' + err.message));
+    .catch(err => ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'));
   }
 
   function updateCartBadge() {
@@ -475,6 +475,7 @@
   window.addEventListener('load', init);
 </script>
 
+<script src="notifications.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

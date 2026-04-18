@@ -245,7 +245,7 @@
           <button onclick="updateOrderStatus('${order.id}', 'next')" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-sm font-semibold">
             Mark ${getNextStatus(order.status)}
           </button>
-          <button onclick="alert('Contact feature coming soon!')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-semibold">
+          <button onclick="ZrxNotify.showNotification('Contact feature coming soon!', 'info')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-semibold">
             Contact Buyer
           </button>
         </div>
@@ -281,10 +281,10 @@
   }
 
   function logout() {
-    if (confirm('Are you sure you want to log out?')) {
+    ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
       localStorage.removeItem('currentUser');
       window.location.href = 'index.html';
-    }
+    });
   }
 
   function updateCartBadge() {
@@ -318,6 +318,7 @@
   window.addEventListener('load', init);
 </script>
 
+<script src="notifications.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

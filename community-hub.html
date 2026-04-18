@@ -237,11 +237,11 @@
   }
 
   function logout() {
-    if (confirm('Are you sure you want to log out?')) {
+    ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
       localStorage.removeItem('authToken');
       localStorage.removeItem('currentUser');
       window.location.reload();
-    }
+    });
   }
 
   async function publishPost() {
@@ -251,7 +251,7 @@
     const content = document.getElementById('postContent').value.trim();
     const imageUrl = document.getElementById('postImageUrl').value.trim();
     if (!title || !content) {
-      alert('Please fill in both title and content!');
+      ZrxNotify.showNotification('Please fill in both title and content!', 'error');
       return;
     }
     try {
@@ -262,7 +262,7 @@
       });
       if (!res.ok) {
         const err = await res.json();
-        alert('Error: ' + (err.error || 'Failed to publish post'));
+        ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to publish post'), 'error');
         return;
       }
       document.getElementById('postTitle').value = '';
@@ -277,7 +277,7 @@
       await loadPosts();
     } catch (err) {
       console.error(err);
-      alert('Error publishing post. Please try again.');
+      ZrxNotify.showNotification('Error publishing post. Please try again.', 'error');
     }
   }
 
@@ -424,13 +424,13 @@
       });
       if (!res.ok) {
         const err = await res.json();
-        alert('Error: ' + (err.error || 'Failed to submit reply'));
+        ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to submit reply'), 'error');
         return;
       }
       await loadPosts();
     } catch (err) {
       console.error(err);
-      alert('Error submitting reply. Please try again.');
+      ZrxNotify.showNotification('Error submitting reply. Please try again.', 'error');
     }
   }
 
@@ -480,6 +480,7 @@
   window.addEventListener('load', init);
 </script>
 
+<script src="notifications.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

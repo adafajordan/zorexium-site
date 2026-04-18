@@ -188,7 +188,7 @@
     updateCartBadge();
 
     if (!sellerUsername) {
-      alert('Seller not found');
+      ZrxNotify.showNotification('Seller not found', 'error');
       window.location.href = 'marketplace.html';
       return;
     }
@@ -201,7 +201,7 @@
     const seller = sellers[sellerUsername];
 
     if (!seller) {
-      alert('Seller profile not found');
+      ZrxNotify.showNotification('Seller profile not found', 'error');
       window.location.href = 'marketplace.html';
       return;
     }
@@ -309,7 +309,7 @@
 
   function viewProduct(productId) {
     // Placeholder for product detail view
-    alert('Product detail view coming soon! Product ID: ' + productId);
+    ZrxNotify.showNotification('Product detail view coming soon! Product ID: ' + productId, 'info');
   }
 
   function updateCartBadge() {
@@ -328,7 +328,7 @@
   function handleMessaging() {
     const currentUser = localStorage.getItem('currentUser');
     if (!currentUser) {
-      alert('Please log in to message sellers');
+      ZrxNotify.showNotification('Please log in to message sellers', 'error');
       window.location.href = 'signup-login.html';
       return;
     }
@@ -338,6 +338,7 @@
   window.addEventListener('load', init);
 </script>
 
+<script src="notifications.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>
