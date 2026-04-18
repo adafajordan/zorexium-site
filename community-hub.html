@@ -441,7 +441,7 @@
   function renderPostMedia(post) {
     if (!post.imageUrl || !/^https?:\/\//i.test(post.imageUrl)) return '';
     const escaped = escapeHtml(post.imageUrl);
-    if (/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(post.imageUrl)) {
+    if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(post.imageUrl)) {
       return '<div class="mb-4"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-lg max-h-96 object-contain"></div>';
     }
     return '<div class="mb-4"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-cyan-400 underline break-all text-sm"><i class="fas fa-link mr-1"></i>' + escaped + '</a></div>';

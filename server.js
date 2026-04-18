@@ -555,8 +555,13 @@ app.post('/api/posts', verifyToken, async function(req, res) {
     if (typeof imageUrl !== 'string' || imageUrl.length > 2000) {
       return res.status(400).json({ error: 'Invalid imageUrl' });
     }
-    if (!/^https?:\/\//i.test(imageUrl)) {
-      return res.status(400).json({ error: 'imageUrl must start with http:// or https://' });
+    try {
+      const parsed = new URL(imageUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return res.status(400).json({ error: 'imageUrl must use http or https protocol' });
+      }
+    } catch (_) {
+      return res.status(400).json({ error: 'imageUrl is not a valid URL' });
     }
   }
 
