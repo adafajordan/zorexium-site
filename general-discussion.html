@@ -289,48 +289,105 @@
     renderPosts(posts, feed);
   }
 
+  function getCurrentUserId() {
+    const token = localStorage.getItem('authToken');
+    if (!token) return null;
+    try { return JSON.parse(atob(token.split('.')[1])).userId; } catch (e) { return null; }
+  }
+
   function renderPosts(postsToRender, feed) {
     if (postsToRender.length === 0) {
       feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">No posts yet. Be the first to post!</p></div>';
       return;
     }
-    feed.innerHTML = postsToRender.map(post => `
-      <div class="post-card">
-        <div class="flex justify-between items-start mb-3">
-          <div class="flex-1">
-            <h3 class="text-white font-semibold text-lg">${escapeHtml(post.title)}</h3>
-            <p class="text-gray-400 text-xs">by <span class="text-cyan-400">${escapeHtml(post.email)}</span> • ${new Date(post.createdAt).toLocaleString()}</p>
+    const currentUserId = getCurrentUserId();
+    feed.innerHTML = postsToRender.map(post => {
+      const replies = post.replies || [];
+      const likes = post.likes || [];
+      const likeCount = likes.length;
+      const liked = !!(currentUserId && likes.includes(currentUserId));
+      const firstReply = replies[0];
+      return `
+        <div class="post-card">
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex-1">
+              <h3 class="text-white font-semibold text-lg">${escapeHtml(post.title)}</h3>
+              <p class="text-gray-400 text-xs">by <span class="text-cyan-400">${escapeHtml(post.username || post.email)}</span> • ${new Date(post.createdAt).toLocaleString()}</p>
+            </div>
+          </div>
+          <p class="text-gray-300 mb-4">${escapeHtml(post.content)}</p>
+          ${firstReply ? `
+          <div class="bg-[#2a2e38] rounded p-3 mb-3 text-sm border-l-2 border-cyan-600">
+            <p class="text-cyan-400 font-semibold">${escapeHtml(firstReply.username || firstReply.email)}</p>
+            <p class="text-gray-300">${escapeHtml(firstReply.content)}</p>
+          </div>
+          ` : ''}
+          <div class="flex items-center gap-4 text-sm mt-2">
+            <button onclick="toggleReplies('${post._id}')" class="flex items-center gap-1 text-gray-400 hover:text-cyan-400 transition-colors">
+              <i class="fas fa-chevron-down" id="replies-arrow-${post._id}"></i>
+              <span>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</span>
+            </button>
+            <button onclick="toggleLike('${post._id}')" id="like-btn-${post._id}" class="flex items-center gap-1 ${liked ? 'text-red-400' : 'text-gray-400'} hover:text-red-400 transition-colors">
+              <i id="like-icon-${post._id}" class="${liked ? 'fas fa-heart' : 'far fa-heart'}"></i>
+              <span id="like-count-${post._id}">${likeCount}</span>
+            </button>
+          </div>
+          <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-700">
+            <div class="mb-4">
+              ${replies.map(reply => `
+                <div class="bg-[#2a2e38] rounded p-3 mb-2 text-sm">
+                  <p class="text-cyan-400 font-semibold">${escapeHtml(reply.username || reply.email)}</p>
+                  <p class="text-gray-300">${escapeHtml(reply.content)}</p>
+                </div>
+              `).join('')}
+            </div>
+            <div class="flex gap-2">
+              <input type="text" id="replyText-${post._id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
+              <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
+            </div>
           </div>
         </div>
-        <p class="text-gray-300 mb-4">${escapeHtml(post.content)}</p>
-        <div class="flex items-center justify-between">
-          <div class="flex gap-4 text-gray-400 text-sm">
-            <span><i class="fas fa-reply"></i> ${(post.replies || []).length} replies</span>
-            <span><i class="fas fa-heart"></i> 0 likes</span>
-          </div>
-          <button onclick="toggleReplies('${post._id}')" class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">Reply</button>
-        </div>
-        <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-700">
-          <div id="repliesList-${post._id}" class="mb-4">
-            ${(post.replies || []).map(reply => `
-              <div class="bg-[#2a2e38] rounded p-3 mb-2 text-sm">
-                <p class="text-cyan-400 font-semibold">${escapeHtml(reply.email)}</p>
-                <p class="text-gray-300">${escapeHtml(reply.content)}</p>
-              </div>
-            `).join('')}
-          </div>
-          <div class="flex gap-2">
-            <input type="text" id="replyText-${post._id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
-            <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
-          </div>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   function toggleReplies(postId) {
-    if (!checkAuth()) return;
-    document.getElementById('replies-' + postId).classList.toggle('hidden');
+    const section = document.getElementById('replies-' + postId);
+    const arrow = document.getElementById('replies-arrow-' + postId);
+    section.classList.toggle('hidden');
+    if (arrow) arrow.className = section.classList.contains('hidden') ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+  }
+
+  async function toggleLike(postId) {
+    const token = localStorage.getItem('authToken');
+    if (!token) { window.location.href = 'signup-login.html'; return; }
+    const btn = document.getElementById('like-btn-' + postId);
+    const icon = document.getElementById('like-icon-' + postId);
+    const countEl = document.getElementById('like-count-' + postId);
+    if (!btn) return;
+    try {
+      const res = await fetch(BACKEND_URL + '/api/posts/' + postId + '/like', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!res.ok) {
+        if (res.status === 401) { window.location.href = 'signup-login.html'; return; }
+        return;
+      }
+      const data = await res.json();
+      countEl.textContent = data.likeCount;
+      if (data.liked) {
+        icon.className = 'fas fa-heart';
+        btn.classList.remove('text-gray-400');
+        btn.classList.add('text-red-400');
+      } else {
+        icon.className = 'far fa-heart';
+        btn.classList.remove('text-red-400');
+        btn.classList.add('text-gray-400');
+      }
+    } catch (err) {
+      console.error('Error toggling like:', err);
+    }
   }
 
   async function submitReply(postId) {

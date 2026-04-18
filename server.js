@@ -553,14 +553,25 @@ app.post('/api/posts', verifyToken, async function(req, res) {
   }
 
   try {
+    let username = req.userEmail;
+    try {
+      const userDoc = await db.collection('users').findOne({ _id: new ObjectId(req.userId) });
+      if (userDoc) {
+        const fullName = ((userDoc.firstName || '') + ' ' + (userDoc.lastName || '')).trim();
+        username = fullName || userDoc.email || req.userEmail;
+      }
+    } catch (_) {}
+
     const post = {
       userId: req.userId,
       email: req.userEmail,
+      username,
       title,
       content,
       boardType,
       createdAt: new Date(),
-      replies: []
+      replies: [],
+      likes: []
     };
     const result = await db.collection('posts').insertOne(post);
     res.status(201).json({ ...post, _id: result.insertedId });
@@ -610,9 +621,19 @@ app.post('/api/posts/:postId/replies', verifyToken, async function(req, res) {
   }
 
   try {
+    let username = req.userEmail;
+    try {
+      const userDoc = await db.collection('users').findOne({ _id: new ObjectId(req.userId) });
+      if (userDoc) {
+        const fullName = ((userDoc.firstName || '') + ' ' + (userDoc.lastName || '')).trim();
+        username = fullName || userDoc.email || req.userEmail;
+      }
+    } catch (_) {}
+
     const reply = {
       userId: req.userId,
       email: req.userEmail,
+      username,
       content,
       createdAt: new Date()
     };
@@ -655,6 +676,39 @@ app.delete('/api/posts/:postId', verifyToken, async function(req, res) {
     res.json({ message: 'Post deleted' });
   } catch (error) {
     console.error('Error deleting post:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/posts/:postId/like – toggle like on a post (auth required)
+app.post('/api/posts/:postId/like', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { postId } = req.params;
+
+  let objectId;
+  try {
+    objectId = new ObjectId(postId);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid postId' });
+  }
+
+  try {
+    const post = await db.collection('posts').findOne({ _id: objectId }, { projection: { likes: 1 } });
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    const likes = post.likes || [];
+    const hasLiked = likes.includes(req.userId);
+    if (hasLiked) {
+      await db.collection('posts').updateOne({ _id: objectId }, { $pull: { likes: req.userId } });
+      return res.json({ likeCount: likes.length - 1, liked: false });
+    } else {
+      await db.collection('posts').updateOne({ _id: objectId }, { $push: { likes: req.userId } });
+      return res.json({ likeCount: likes.length + 1, liked: true });
+    }
+  } catch (error) {
+    console.error('Error toggling like:', error);
     res.status(500).json({ error: error.message });
   }
 });
