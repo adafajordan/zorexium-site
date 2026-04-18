@@ -222,22 +222,21 @@
       document.getElementById('verifiedBadge').classList.remove('hidden');
     }
 
-    // Load seller's profile picture into the avatar
-    const savedPic = localStorage.getItem('profileImage_' + sellerUsername);
-    if (savedPic && (savedPic.startsWith('https://') || savedPic.startsWith('http://') || savedPic.startsWith('data:image/'))) {
-      document.getElementById('shopAvatar').src = savedPic;
-    } else {
-      const currentUser = localStorage.getItem('currentUser');
-      const authToken = localStorage.getItem('authToken');
-      if (authToken && currentUser === sellerUsername) {
-        fetch('https://zorexium-backend.onrender.com/api/user/profile-picture', {
-          headers: { 'Authorization': 'Bearer ' + authToken }
-        }).then(r => r.ok ? r.json() : null).then(data => {
+    // Load seller's profile picture from MongoDB backend
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      fetch('https://zorexium-backend.onrender.com/api/user/profile-picture', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
           if (data && data.profileImage && (data.profileImage.startsWith('https://') || data.profileImage.startsWith('http://') || data.profileImage.startsWith('data:image/'))) {
             document.getElementById('shopAvatar').src = data.profileImage;
           }
-        }).catch(() => {});
-      }
+        })
+        .catch(() => {
+          // Fall back to placeholder on error
+        });
     }
 
     // Load products
