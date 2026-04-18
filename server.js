@@ -866,10 +866,10 @@ app.get('/api/user/public-info', async function(req, res) {
       { projection: { firstName: 1, lastName: 1, profileImage: 1 } }
     );
     if (!user) {
-      return res.json({ displayName: null, profileImage: null });
+      return res.json({ displayName: null, profileImage: null, userId: null });
     }
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
-    res.json({ displayName: fullName || email, profileImage: user.profileImage || null });
+    res.json({ displayName: fullName || email, profileImage: user.profileImage || null, userId: user._id ? user._id.toString() : null });
   } catch (error) {
     console.error('Error fetching public user info:', error);
     res.status(500).json({ error: error.message });
