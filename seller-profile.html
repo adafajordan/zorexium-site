@@ -294,7 +294,7 @@
                 const localIds = new Set(localProducts.map(function(p) { return p.id || p.name; }));
                 const mapped = mapBackendProducts(backendProducts);
                 const newProducts = mapped.filter(function(p) {
-                  return !localIds.has(p.id) && !localIds.has(p.name);
+                  return !localIds.has(p.id || p.name);
                 });
                 const merged = localProducts.concat(newProducts);
                 document.getElementById('productCount').textContent = merged.length;
