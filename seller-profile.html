@@ -178,6 +178,7 @@
 </footer>
 
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let sellerUsername = null;
   let currentTab = 'products';
 
@@ -196,51 +197,89 @@
     loadSellerProfile();
   }
 
-  function loadSellerProfile() {
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    const seller = sellers[sellerUsername];
-
-    if (!seller) {
-      ZrxNotify.showNotification('Seller profile not found', 'error');
-      window.location.href = 'marketplace.html';
-      return;
-    }
-
-    // Populate About tab
-    document.getElementById('shopName').textContent = seller.shopName || 'Shop Name';
-    document.getElementById('shopDescription').textContent = seller.shopDescription || 'No description available';
+  function populateSellerFields(seller) {
+    document.getElementById('shopName').textContent = seller.shopName || sellerUsername || 'Community User';
+    document.getElementById('shopDescription').textContent = seller.shopDescription || 'Community member';
     document.getElementById('ratingDisplay').textContent = (seller.rating || 5.0).toFixed(1);
     document.getElementById('productCount').textContent = (seller.products || []).length;
     document.getElementById('sellerUsername').textContent = '@' + (sellerUsername || 'N/A');
-    document.getElementById('sellerShopName').textContent = seller.shopName || 'N/A';
-    document.getElementById('businessLocation').textContent = `${seller.businessCity}, ${seller.businessState}` || 'N/A';
-    document.getElementById('memberSince').textContent = formatDate(seller.joinDate);
-    document.getElementById('joinDate').textContent = new Date(seller.joinDate).getFullYear();
+    document.getElementById('sellerShopName').textContent = seller.shopName || sellerUsername || 'N/A';
+    const location = (seller.businessCity && seller.businessState) ? `${seller.businessCity}, ${seller.businessState}` : 'N/A';
+    document.getElementById('businessLocation').textContent = location;
+    document.getElementById('memberSince').textContent = seller.joinDate ? formatDate(seller.joinDate) : 'N/A';
+    document.getElementById('joinDate').textContent = seller.joinDate ? new Date(seller.joinDate).getFullYear() : 'N/A';
     document.getElementById('totalSales').textContent = '$' + (seller.totalSales || 0);
 
     if (seller.isVerified) {
       document.getElementById('verifiedBadge').classList.remove('hidden');
     }
 
-    // Load seller's profile picture from MongoDB backend
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      fetch('https://zorexium-backend.onrender.com/api/user/profile-picture', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
-      })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data && data.profileImage && (data.profileImage.startsWith('https://') || data.profileImage.startsWith('http://') || data.profileImage.startsWith('data:image/'))) {
-            document.getElementById('shopAvatar').src = data.profileImage;
-          }
-        })
-        .catch(() => {
-          // Fall back to placeholder on error
-        });
+    if (seller.profileImage && (seller.profileImage.startsWith('https://') || seller.profileImage.startsWith('http://') || seller.profileImage.startsWith('data:image/'))) {
+      document.getElementById('shopAvatar').src = seller.profileImage;
     }
 
-    // Load products
     loadProducts(seller.products || []);
+  }
+
+  function loadCommunityUserProfile(displayName, profileImage) {
+    const seller = {
+      shopName: displayName || sellerUsername,
+      shopDescription: 'Community member',
+      rating: 5.0,
+      products: [],
+      totalSales: 0,
+      isVerified: false,
+      joinDate: null,
+      profileImage: profileImage
+    };
+    populateSellerFields(seller);
+  }
+
+  function loadSellerProfile() {
+    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
+    const seller = sellers[sellerUsername];
+
+    if (seller) {
+      populateSellerFields(seller);
+
+      // Load seller's profile picture from MongoDB backend
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        fetch(BACKEND_URL + '/api/user/profile-picture', {
+          headers: { 'Authorization': 'Bearer ' + authToken }
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && data.profileImage && (data.profileImage.startsWith('https://') || data.profileImage.startsWith('http://') || data.profileImage.startsWith('data:image/'))) {
+              document.getElementById('shopAvatar').src = data.profileImage;
+            }
+          })
+          .catch(() => {});
+      }
+      return;
+    }
+
+    // Not a registered seller — try to look up community user info by email
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get('email');
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerUsername);
+    const lookupEmail = email || (isEmail ? sellerUsername : null);
+
+    if (lookupEmail) {
+      fetch(BACKEND_URL + '/api/user/public-info?email=' + encodeURIComponent(lookupEmail))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          const displayName = (data && data.displayName) || sellerUsername;
+          const profileImage = (data && data.profileImage) || null;
+          loadCommunityUserProfile(displayName, profileImage);
+        })
+        .catch(() => {
+          loadCommunityUserProfile(sellerUsername, null);
+        });
+    } else {
+      // No email available — show a basic profile using the display name
+      loadCommunityUserProfile(sellerUsername, null);
+    }
   }
 
   function loadProducts(products) {

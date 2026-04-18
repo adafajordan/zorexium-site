@@ -847,6 +847,35 @@ app.get('/api/user/info', verifyToken, async function(req, res) {
   }
 });
 
+// GET /api/user/public-info – retrieve display name and profile picture for a user by email (no auth required)
+app.get('/api/user/public-info', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { email } = req.query;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'email query parameter is required' });
+  }
+  // Basic email format validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  try {
+    const user = await db.collection('users').findOne(
+      { email },
+      { projection: { firstName: 1, lastName: 1, profileImage: 1 } }
+    );
+    if (!user) {
+      return res.json({ displayName: null, profileImage: null });
+    }
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+    res.json({ displayName: fullName || email, profileImage: user.profileImage || null });
+  } catch (error) {
+    console.error('Error fetching public user info:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Error handler ──────────────────────────────────────────────────────────────
 app.use(function(err, req, res, next) {
   console.error(err);
