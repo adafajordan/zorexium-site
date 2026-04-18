@@ -532,6 +532,133 @@ app.get('/api/orders', verifyToken, async function(req, res) {
   }
 });
 
+// ── COMMUNITY POSTS ────────────────────────────────────────────────────────────
+
+// POST /api/posts – create a post (auth required)
+app.post('/api/posts', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { title, content, boardType } = req.body;
+  if (!title || !content || !boardType) {
+    return res.status(400).json({ error: 'title, content, and boardType are required' });
+  }
+  if (typeof title !== 'string' || title.length > 200) {
+    return res.status(400).json({ error: 'Invalid title' });
+  }
+  if (typeof content !== 'string' || content.length > 5000) {
+    return res.status(400).json({ error: 'Invalid content' });
+  }
+  if (typeof boardType !== 'string' || boardType.length > 64) {
+    return res.status(400).json({ error: 'Invalid boardType' });
+  }
+
+  try {
+    const post = {
+      userId: req.userId,
+      email: req.userEmail,
+      title,
+      content,
+      boardType,
+      createdAt: new Date(),
+      replies: []
+    };
+    const result = await db.collection('posts').insertOne(post);
+    res.status(201).json({ ...post, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/posts – fetch posts by boardType (public)
+app.get('/api/posts', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { boardType } = req.query;
+  if (!boardType || typeof boardType !== 'string' || boardType.length > 64) {
+    return res.status(400).json({ error: 'boardType query parameter is required' });
+  }
+
+  try {
+    const posts = await db.collection('posts')
+      .find({ boardType })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.json(posts);
+  } catch (error) {
+    console.error('Error fetching posts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/posts/:postId/replies – add a reply to a post (auth required)
+app.post('/api/posts/:postId/replies', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { postId } = req.params;
+  const { content } = req.body;
+
+  if (!content || typeof content !== 'string' || content.length > 2000) {
+    return res.status(400).json({ error: 'Valid content is required' });
+  }
+
+  let objectId;
+  try {
+    objectId = new ObjectId(postId);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid postId' });
+  }
+
+  try {
+    const reply = {
+      userId: req.userId,
+      email: req.userEmail,
+      content,
+      createdAt: new Date()
+    };
+    const result = await db.collection('posts').updateOne(
+      { _id: objectId },
+      { $push: { replies: reply } }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    res.status(201).json(reply);
+  } catch (error) {
+    console.error('Error adding reply:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/posts/:postId – delete a post (auth required, owner only)
+app.delete('/api/posts/:postId', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { postId } = req.params;
+
+  let objectId;
+  try {
+    objectId = new ObjectId(postId);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid postId' });
+  }
+
+  try {
+    const post = await db.collection('posts').findOne({ _id: objectId });
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    if (post.userId !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this post' });
+    }
+    await db.collection('posts').deleteOne({ _id: objectId });
+    res.json({ message: 'Post deleted' });
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Error handler ──────────────────────────────────────────────────────────────
 app.use(function(err, req, res, next) {
   console.error(err);
