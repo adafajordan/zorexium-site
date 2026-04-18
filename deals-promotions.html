@@ -15,6 +15,10 @@
     .verified-badge { color: #4ade80; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+    .post-card { background-color: #20232a; border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 12px; transition: all 0.2s; }
+    .post-card:hover { border-color: #65a30d; box-shadow: 0 0 12px rgba(101, 163, 13, 0.1); }
+    .form-input { background-color: #2a2e38; border: 1px solid #333; color: #e2e8f0; padding: 10px 12px; border-radius: 6px; width: 100%; }
+    .form-input:focus { outline: none; border-color: #65a30d; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -88,16 +92,36 @@
     <div class="flex items-center gap-3">
       <a href="verified-labs.html" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded text-sm font-medium">Verified Labs</a>
       <a href="trusted-seller.html" class="bg-amber-500 hover:bg-amber-600 text-black px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2"><i class="fas fa-shopping-bag"></i> Trusted Seller</a>
-      <button class="text-gray-400 hover:text-white"><i class="fas fa-plus text-lg"></i></button>
+      <button onclick="handleNewPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2"><i class="fas fa-plus"></i> New Post</button>
+      <button onclick="logout()" id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded text-sm font-medium hidden">Log Out</button>
     </div>
   </div>
 </div>
 
 <!-- Main Content -->
 <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
-  <div class="text-center py-12">
-    <h1 class="text-4xl font-bold text-white mb-4">Deals & Promotions</h1>
-    <p class="text-gray-400 text-lg">Discover exclusive deals and special promotions from Zorexium Labs.</p>
+  <div class="mb-8">
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-white mb-2">Deals & Promotions</h1>
+      <p class="text-gray-400">Discover exclusive deals and special promotions from Zorexium Labs.</p>
+    </div>
+    <div id="notLoggedIn" class="bg-blue-900 border border-blue-700 rounded-lg p-4 mb-6 hidden">
+      <p class="text-blue-100"><i class="fas fa-info-circle mr-2"></i> <a href="signup-login.html" class="underline font-semibold">Sign up or log in</a> to create posts and participate in discussions.</p>
+    </div>
+    <!-- New Post Form -->
+    <div id="newPostForm" class="post-card hidden mb-6">
+      <h3 class="text-white font-semibold mb-4">Create New Post</h3>
+      <div class="mb-4">
+        <input type="text" id="postTitle" class="form-input mb-3" placeholder="Post title..." maxlength="100">
+        <textarea id="postContent" class="form-input" placeholder="Share a deal or promotion..." rows="4" maxlength="1000"></textarea>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="publishPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-4 py-2 rounded text-sm font-medium">Publish</button>
+        <button onclick="cancelPost()" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm font-medium">Cancel</button>
+      </div>
+    </div>
+    <!-- Posts Feed -->
+    <div id="postsFeed"></div>
   </div>
 </main>
 
@@ -171,6 +195,173 @@
 </div>
 
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const boardType = 'deals';
+  let posts = [];
+
+  function init() {
+    updateUI();
+    loadPosts();
+  }
+
+  function checkAuth(redirect = null) {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      window.location.href = 'signup-login.html';
+      return false;
+    }
+    if (redirect) window.location.href = redirect;
+    return true;
+  }
+
+  function updateUI() {
+    const token = localStorage.getItem('authToken');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const notLoggedIn = document.getElementById('notLoggedIn');
+    if (token) {
+      if (logoutBtn) logoutBtn.classList.remove('hidden');
+      if (notLoggedIn) notLoggedIn.classList.add('hidden');
+    } else {
+      if (logoutBtn) logoutBtn.classList.add('hidden');
+      if (notLoggedIn) notLoggedIn.classList.remove('hidden');
+    }
+  }
+
+  function handleNewPost() {
+    if (!checkAuth()) return;
+    document.getElementById('newPostForm').classList.toggle('hidden');
+  }
+
+  function logout() {
+    if (confirm('Are you sure you want to log out?')) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      window.location.reload();
+    }
+  }
+
+  async function publishPost() {
+    const token = localStorage.getItem('authToken');
+    if (!token) { window.location.href = 'signup-login.html'; return; }
+    const title = document.getElementById('postTitle').value.trim();
+    const content = document.getElementById('postContent').value.trim();
+    if (!title || !content) {
+      alert('Please fill in both title and content!');
+      return;
+    }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ title, content, boardType })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'Failed to publish post'));
+        return;
+      }
+      document.getElementById('postTitle').value = '';
+      document.getElementById('postContent').value = '';
+      document.getElementById('newPostForm').classList.add('hidden');
+      await loadPosts();
+    } catch (err) {
+      console.error(err);
+      alert('Error publishing post. Please try again.');
+    }
+  }
+
+  function cancelPost() {
+    document.getElementById('newPostForm').classList.add('hidden');
+  }
+
+  async function loadPosts() {
+    const feed = document.getElementById('postsFeed');
+    feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Loading posts...</p></div>';
+    try {
+      const res = await fetch(BACKEND_URL + '/api/posts?boardType=' + encodeURIComponent(boardType));
+      if (!res.ok) throw new Error('Failed to fetch posts');
+      posts = await res.json();
+    } catch (err) {
+      console.error(err);
+      feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Failed to load posts. Please try again.</p></div>';
+      return;
+    }
+    renderPosts(posts, feed);
+  }
+
+  function renderPosts(postsToRender, feed) {
+    if (postsToRender.length === 0) {
+      feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">No posts yet. Be the first to post!</p></div>';
+      return;
+    }
+    feed.innerHTML = postsToRender.map(post => `
+      <div class="post-card">
+        <div class="flex justify-between items-start mb-3">
+          <div class="flex-1">
+            <h3 class="text-white font-semibold text-lg">${escapeHtml(post.title)}</h3>
+            <p class="text-gray-400 text-xs">by <span class="text-cyan-400">${escapeHtml(post.email)}</span> • ${new Date(post.createdAt).toLocaleString()}</p>
+          </div>
+        </div>
+        <p class="text-gray-300 mb-4">${escapeHtml(post.content)}</p>
+        <div class="flex items-center justify-between">
+          <div class="flex gap-4 text-gray-400 text-sm">
+            <span><i class="fas fa-reply"></i> ${(post.replies || []).length} replies</span>
+            <span><i class="fas fa-heart"></i> 0 likes</span>
+          </div>
+          <button onclick="toggleReplies('${post._id}')" class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">Reply</button>
+        </div>
+        <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-700">
+          <div id="repliesList-${post._id}" class="mb-4">
+            ${(post.replies || []).map(reply => `
+              <div class="bg-[#2a2e38] rounded p-3 mb-2 text-sm">
+                <p class="text-cyan-400 font-semibold">${escapeHtml(reply.email)}</p>
+                <p class="text-gray-300">${escapeHtml(reply.content)}</p>
+              </div>
+            `).join('')}
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="replyText-${post._id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
+            <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleReplies(postId) {
+    if (!checkAuth()) return;
+    document.getElementById('replies-' + postId).classList.toggle('hidden');
+  }
+
+  async function submitReply(postId) {
+    const token = localStorage.getItem('authToken');
+    if (!token) { window.location.href = 'signup-login.html'; return; }
+    const replyText = document.getElementById('replyText-' + postId).value.trim();
+    if (!replyText) return;
+    try {
+      const res = await fetch(BACKEND_URL + '/api/posts/' + postId + '/replies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ content: replyText })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'Failed to submit reply'));
+        return;
+      }
+      await loadPosts();
+    } catch (err) {
+      console.error(err);
+      alert('Error submitting reply. Please try again.');
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
   function toggleDropdown(id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -189,6 +380,8 @@
       document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
     }
   });
+
+  window.addEventListener('load', init);
 </script>
 
 </body>

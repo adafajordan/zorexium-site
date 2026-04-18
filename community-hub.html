@@ -185,14 +185,13 @@
 </div>
 
 <script>
-  let posts = JSON.parse(localStorage.getItem('forumPosts') || '[]');
-  const currentUser = localStorage.getItem('currentUser');
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   const boardType = 'tech';
+  let posts = [];
 
   function init() {
     updateUI();
     loadPosts();
-    // bind post files preview
     const filesInput = document.getElementById('postFilesInput');
     if (filesInput) {
       filesInput.addEventListener('change', function(){
@@ -209,8 +208,8 @@
   }
 
   function checkAuth(redirect = null) {
-    const user = localStorage.getItem('currentUser');
-    if (!user) {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
       window.location.href = 'signup-login.html';
       return false;
     }
@@ -219,10 +218,10 @@
   }
 
   function updateUI() {
-    const user = localStorage.getItem('currentUser');
+    const token = localStorage.getItem('authToken');
     const logoutBtn = document.getElementById('logoutBtn');
     const notLoggedIn = document.getElementById('notLoggedIn');
-    if (user) {
+    if (token) {
       if (logoutBtn) logoutBtn.classList.remove('hidden');
       if (notLoggedIn) notLoggedIn.classList.add('hidden');
     } else {
@@ -238,90 +237,98 @@
 
   function logout() {
     if (confirm('Are you sure you want to log out?')) {
+      localStorage.removeItem('authToken');
       localStorage.removeItem('currentUser');
       window.location.reload();
     }
   }
 
-  function publishPost() {
-    if (!checkAuth()) return;
+  async function publishPost() {
+    const token = localStorage.getItem('authToken');
+    if (!token) { window.location.href = 'signup-login.html'; return; }
     const title = document.getElementById('postTitle').value.trim();
     const content = document.getElementById('postContent').value.trim();
     if (!title || !content) {
       alert('Please fill in both title and content!');
       return;
     }
-    const filesInput = document.getElementById('postFilesInput');
-    const files = Array.from(filesInput.files || []);
-
-    const readFile = (file) => new Promise((res, rej) => {
-      const r = new FileReader(); r.onload = e => res({ name: file.name, data: e.target.result, type: file.type, size: file.size }); r.onerror = rej; r.readAsDataURL(file);
-    });
-
-    Promise.all(files.map(readFile)).then(fileObjs => {
-      const post = {
-        id: Date.now(),
-        author: currentUser,
-        title,
-        content,
-        board: boardType,
-        timestamp: new Date().toLocaleString(),
-        replies: [],
-        files: fileObjs
-      };
-      posts.unshift(post);
-      localStorage.setItem('forumPosts', JSON.stringify(posts));
+    try {
+      const res = await fetch(BACKEND_URL + '/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ title, content, boardType })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'Failed to publish post'));
+        return;
+      }
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
-      filesInput.value = '';
-      document.getElementById('postFilesPreview').innerHTML = '';
+      const filesInput = document.getElementById('postFilesInput');
+      if (filesInput) { filesInput.value = ''; }
+      const preview = document.getElementById('postFilesPreview');
+      if (preview) { preview.innerHTML = ''; }
       document.getElementById('newPostForm').classList.add('hidden');
-      loadPosts();
-    }).catch(err => { console.error(err); alert('Error reading attached files'); });
+      await loadPosts();
+    } catch (err) {
+      console.error(err);
+      alert('Error publishing post. Please try again.');
+    }
   }
 
   function cancelPost() {
     document.getElementById('newPostForm').classList.add('hidden');
   }
 
-  function loadPosts() {
+  async function loadPosts() {
     const feed = document.getElementById('postsFeed');
-    const filtered = posts.filter(p => p.board === boardType);
-    if (filtered.length === 0) {
+    feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Loading posts...</p></div>';
+    try {
+      const res = await fetch(BACKEND_URL + '/api/posts?boardType=' + encodeURIComponent(boardType));
+      if (!res.ok) throw new Error('Failed to fetch posts');
+      posts = await res.json();
+    } catch (err) {
+      console.error(err);
+      feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Failed to load posts. Please try again.</p></div>';
+      return;
+    }
+    renderPosts(posts, feed);
+  }
+
+  function renderPosts(postsToRender, feed) {
+    if (postsToRender.length === 0) {
       feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">No posts yet. Be the first to post!</p></div>';
       return;
     }
-    feed.innerHTML = filtered.map(post => `
+    feed.innerHTML = postsToRender.map(post => `
       <div class="post-card">
         <div class="flex justify-between items-start mb-3">
           <div class="flex-1">
             <h3 class="text-white font-semibold text-lg">${escapeHtml(post.title)}</h3>
-            <p class="text-gray-400 text-xs">by <span class="text-cyan-400">${escapeHtml(post.author)}</span> • ${post.timestamp}</p>
+            <p class="text-gray-400 text-xs">by <span class="text-cyan-400">${escapeHtml(post.email)}</span> • ${new Date(post.createdAt).toLocaleString()}</p>
           </div>
         </div>
         <p class="text-gray-300 mb-4">${escapeHtml(post.content)}</p>
-        ${post.files && post.files.length ? '<div class="mb-3 flex flex-wrap gap-2">' + post.files.map(f => {
-          return (f.type && f.type.startsWith('image/')) ? `<a href="${f.data}" target="_blank"><img src="${f.data}" class="w-32 h-20 object-cover rounded"/></a>` : `<div class="px-2 py-1 bg-[#2a2e38] rounded"><a href="${f.data}" download="${escapeHtml(f.name)}" class="underline text-gray-300">${escapeHtml(f.name)}</a></div>`;
-        }).join('') + '</div>' : ''}
         <div class="flex items-center justify-between">
           <div class="flex gap-4 text-gray-400 text-sm">
-            <span><i class="fas fa-reply"></i> ${post.replies.length} replies</span>
+            <span><i class="fas fa-reply"></i> ${(post.replies || []).length} replies</span>
             <span><i class="fas fa-heart"></i> 0 likes</span>
           </div>
-          <button onclick="toggleReplies(${post.id})" class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">Reply</button>
+          <button onclick="toggleReplies('${post._id}')" class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">Reply</button>
         </div>
-        <div id="replies-${post.id}" class="hidden mt-4 pt-4 border-t border-gray-700">
-          <div id="repliesList-${post.id}" class="mb-4">
-            ${post.replies.map(reply => `
+        <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-700">
+          <div id="repliesList-${post._id}" class="mb-4">
+            ${(post.replies || []).map(reply => `
               <div class="bg-[#2a2e38] rounded p-3 mb-2 text-sm">
-                <p class="text-cyan-400 font-semibold">${escapeHtml(reply.author)}</p>
+                <p class="text-cyan-400 font-semibold">${escapeHtml(reply.email)}</p>
                 <p class="text-gray-300">${escapeHtml(reply.content)}</p>
               </div>
             `).join('')}
           </div>
           <div class="flex gap-2">
-            <input type="text" id="replyText-${post.id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
-            <button onclick="submitReply(${post.id})" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
+            <input type="text" id="replyText-${post._id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
+            <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
           </div>
         </div>
       </div>
@@ -333,63 +340,39 @@
     document.getElementById('replies-' + postId).classList.toggle('hidden');
   }
 
-  function submitReply(postId) {
+  async function submitReply(postId) {
+    const token = localStorage.getItem('authToken');
+    if (!token) { window.location.href = 'signup-login.html'; return; }
     const replyText = document.getElementById('replyText-' + postId).value.trim();
     if (!replyText) return;
-    const post = posts.find(p => p.id === postId);
-    if (post) {
-      post.replies.push({ author: currentUser, content: replyText });
-      localStorage.setItem('forumPosts', JSON.stringify(posts));
-      document.getElementById('replyText-' + postId).value = '';
-      loadPosts();
+    try {
+      const res = await fetch(BACKEND_URL + '/api/posts/' + postId + '/replies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ content: replyText })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Error: ' + (err.error || 'Failed to submit reply'));
+        return;
+      }
+      await loadPosts();
+    } catch (err) {
+      console.error(err);
+      alert('Error submitting reply. Please try again.');
     }
   }
 
   function filterPosts() {
     const search = document.getElementById('forumSearch').value.toLowerCase();
     const feed = document.getElementById('postsFeed');
-    const filtered = posts.filter(p => p.board === boardType && (p.title.toLowerCase().includes(search) || p.content.toLowerCase().includes(search)));
-    if (filtered.length === 0) {
-      feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">No posts found matching your search.</p></div>';
-      return;
-    }
-    feed.innerHTML = filtered.map(post => `
-      <div class="post-card">
-        <div class="flex justify-between items-start mb-3">
-          <div class="flex-1">
-            <h3 class="text-white font-semibold text-lg">${escapeHtml(post.title)}</h3>
-            <p class="text-gray-400 text-xs">by <span class="text-cyan-400">${escapeHtml(post.author)}</span> • ${post.timestamp}</p>
-          </div>
-        </div>
-        <p class="text-gray-300 mb-4">${escapeHtml(post.content)}</p>
-        <div class="flex items-center justify-between">
-          <div class="flex gap-4 text-gray-400 text-sm">
-            <span><i class="fas fa-reply"></i> ${post.replies.length} replies</span>
-            <span><i class="fas fa-heart"></i> 0 likes</span>
-          </div>
-          <button onclick="toggleReplies(${post.id})" class="text-cyan-400 hover:text-cyan-300 text-sm font-medium">Reply</button>
-        </div>
-        <div id="replies-${post.id}" class="hidden mt-4 pt-4 border-t border-gray-700">
-          <div id="repliesList-${post.id}" class="mb-4">
-            ${post.replies.map(reply => `
-              <div class="bg-[#2a2e38] rounded p-3 mb-2 text-sm">
-                <p class="text-cyan-400 font-semibold">${escapeHtml(reply.author)}</p>
-                <p class="text-gray-300">${escapeHtml(reply.content)}</p>
-              </div>
-            `).join('')}
-          </div>
-          <div class="flex gap-2">
-            <input type="text" id="replyText-${post.id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
-            <button onclick="submitReply(${post.id})" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
-          </div>
-        </div>
-      </div>
-    `).join('');
+    const filtered = posts.filter(p => p.title.toLowerCase().includes(search) || p.content.toLowerCase().includes(search));
+    renderPosts(filtered, feed);
   }
 
   function escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = text || '';
     return div.innerHTML;
   }
 
