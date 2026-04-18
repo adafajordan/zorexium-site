@@ -363,7 +363,7 @@
 
       // Load seller data
       document.getElementById('shopName').value = seller.shopName || '';
-      document.getElementById('shopDescription').value = seller.description || '';
+      document.getElementById('shopDescription').value = seller.shopDescription || seller.description || '';
       document.getElementById('productsListed').textContent = (seller.products || []).length;
       document.getElementById('totalSales').textContent = '$' + (seller.totalSales || 0).toFixed(2);
       document.getElementById('avgRating').textContent = seller.rating ? seller.rating.toFixed(1) + '★' : 'N/A';
@@ -519,7 +519,7 @@
     }
 
     sellers[currentUser].shopName = document.getElementById('shopName').value;
-    sellers[currentUser].description = document.getElementById('shopDescription').value;
+    sellers[currentUser].shopDescription = document.getElementById('shopDescription').value;
     localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
 
     ZrxNotify.showNotification('Shop information updated!', 'success');
