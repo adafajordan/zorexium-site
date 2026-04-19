@@ -140,7 +140,9 @@
 
 <script src="notifications.js"></script>
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let currentUser = localStorage.getItem('currentUser');
+  let authToken = localStorage.getItem('authToken');
   let sellerData = {};
 
   function getUserIdFromToken(token) {
@@ -151,48 +153,53 @@
   }
 
   async function init() {
-    if (!currentUser) {
+    if (!authToken) {
       window.location.href = 'seller-signup.html';
       return;
     }
 
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (!sellers[currentUser]) {
-      window.location.href = 'seller-signup.html';
+    try {
+      // Fetch seller profile from backend
+      const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (!sellerRes.ok) {
+        window.location.href = 'seller-signup.html';
+        return;
+      }
+      sellerData = await sellerRes.json();
+      sellerData.products = [];
+
+      // Fetch products from backend
+      const userId = getUserIdFromToken(authToken);
+      if (userId) {
+        const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId));
+        if (prodRes.ok) {
+          const backendProducts = await prodRes.json();
+          if (Array.isArray(backendProducts)) {
+            sellerData.products = backendProducts.map(function(p) {
+              return {
+                id: p._id ? String(p._id) : (p.id || ''),
+                name: p.name || '',
+                description: p.description || '',
+                price: p.price || 0,
+                category: p.category || '',
+                condition: p.condition || 'used',
+                image: p.image || '',
+                specs: p.specifications || p.specs || {}
+              };
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load seller dashboard:', e);
+      ZrxNotify.showNotification('Failed to load dashboard. Please try again.', 'error');
       return;
     }
 
     updateCartBadge();
-    sellerData = sellers[currentUser];
-
-    // Fetch products from MongoDB (source of truth) and replace localStorage cache
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      try {
-        const userId = getUserIdFromToken(authToken);
-        if (userId) {
-          const res = await fetch('/api/products/seller/' + encodeURIComponent(userId));
-          if (res.ok) {
-            const backendProducts = await res.json();
-            if (Array.isArray(backendProducts)) {
-              sellerData.products = backendProducts.map(function(p) {
-                return {
-                  id: p._id ? String(p._id) : (p.id || ''),
-                  name: p.name || '',
-                  description: p.description || '',
-                  price: p.price || 0,
-                  category: p.category || '',
-                  condition: p.condition || 'used',
-                  image: p.image || '',
-                  specs: p.specifications || p.specs || {}
-                };
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch products from backend:', e);
-      }
+    loadDashboard();
   }
 
   async function startStripeOnboarding() {
@@ -209,35 +216,17 @@
     }
   }
 
-  function syncProductsToServer() {
-    if (!sellerData.products || sellerData.products.length === 0) return;
-    sellerData.products.forEach(function(product) {
-      const serverListing = Object.assign({}, product, {
-        sellerUsername: currentUser,
-        shopName: sellerData.shopName
-      });
-      fetch('/api/listings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serverListing)
-      }).catch(err => console.error('Failed to sync product "' + product.name + '" (id: ' + product.id + ') to server:', err));
-    });
-  }
-
   function loadDashboard() {
     // Update shop info
     document.getElementById('shopNameDisplay').textContent = sellerData.shopName;
     document.getElementById('shopDescDisplay').textContent = sellerData.shopDescription;
-    document.getElementById('viewProfileLink').href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser);
+    document.getElementById('viewProfileLink').href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser || '');
 
     // Update stats
     document.getElementById('totalProducts').textContent = sellerData.products.length;
     document.getElementById('totalSales').textContent = sellerData.totalSales || 0;
     document.getElementById('sellerRating').textContent = (sellerData.rating || 5).toFixed(1);
     document.getElementById('pendingOrders').textContent = '0';
-
-    // Push all locally-stored products to server for cross-browser persistence
-    syncProductsToServer();
 
     // Load products
     loadProducts();
@@ -294,16 +283,12 @@
   function deleteProduct(productId) {
     ZrxNotify.showConfirm('Are you sure you want to delete this product?', function() {
       sellerData.products = sellerData.products.filter(p => p.id !== productId);
-      let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-      sellers[currentUser] = sellerData;
-      localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-      // Remove from MongoDB so marketplace updates for all browsers
-      const authToken = localStorage.getItem('authToken');
-      fetch('/api/products/' + encodeURIComponent(productId), {
+      fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId), {
         method: 'DELETE',
         headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
       }).catch(err => console.error('Failed to delete product from server:', err));
       loadProducts();
+      document.getElementById('totalProducts').textContent = sellerData.products.length;
     });
   }
 
@@ -349,27 +334,36 @@
 
   function viewPublicProfile(e) {
     e.preventDefault();
-    window.location.href = 'seller-profile.html?seller=' + currentUser;
+    window.location.href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser || '');
   }
 
   function logout() {
     ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUsername');
       window.location.href = 'index.html';
     });
   }
 
-  function updateCartBadge() {
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
-    if (badge) {
-      if (cart.length > 0) {
-        badge.textContent = cart.length;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
+    if (!badge) return;
+    if (!authToken) {
+      const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+      badge.textContent = cart.length;
+      badge.classList.toggle('hidden', cart.length === 0);
+      return;
     }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (res.ok) {
+        const data = await res.json();
+        const count = (data.items || []).length;
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    } catch (_) {}
   }
 
   function toggleDropdown(id) {

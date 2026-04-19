@@ -298,9 +298,13 @@
 
 <script src="notifications.js"></script>
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  let _authToken = localStorage.getItem('authToken');
+  let _profileData = null;
+  let _sellerData = null;
+
   function checkAuth() {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
+    if (!_authToken) {
       document.getElementById('notLoggedIn').classList.remove('hidden');
       document.getElementById('loggedInContent').classList.add('hidden');
       return false;
@@ -310,175 +314,162 @@
     return true;
   }
 
-  function loadAccountData() {
-    const currentUser = localStorage.getItem('currentUser');
-    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    const user = users[currentUser];
+  async function loadAccountData() {
+    try {
+      // Fetch user profile from backend
+      const profileRes = await fetch(BACKEND_URL + '/api/user/profile', {
+        headers: { 'Authorization': 'Bearer ' + _authToken }
+      });
+      if (!profileRes.ok) {
+        document.getElementById('notLoggedIn').classList.remove('hidden');
+        document.getElementById('loggedInContent').classList.add('hidden');
+        return;
+      }
+      _profileData = await profileRes.json();
 
-    if (!user) return;
+      const firstName = _profileData.firstName || '';
+      const lastName = _profileData.lastName || '';
+      const fullName = (firstName + ' ' + lastName).trim() || _profileData.email;
 
-    document.getElementById('profileUsername').textContent = currentUser;
-    document.getElementById('editUsername').value = currentUser;
-    document.getElementById('profileEmail').textContent = user.email;
-    document.getElementById('editEmail').value = user.email;
-    document.getElementById('editPhone').value = user.phone || '';
-    document.getElementById('editAccountType').value = user.accountType || 'Buyer';
-    // profile image – load from backend if authenticated
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      fetch('https://zorexium-backend.onrender.com/api/user/profile-picture', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
-      }).then(r => r.ok ? r.json() : null).then(data => {
-        if (data && data.profileImage) document.getElementById('profileImage').src = data.profileImage;
-      }).catch(() => {});
-    } else {
-      const profileImg = localStorage.getItem('profileImage_' + currentUser);
-      if (profileImg) document.getElementById('profileImage').src = profileImg;
+      document.getElementById('profileUsername').textContent = fullName;
+      document.getElementById('editUsername').value = fullName;
+      document.getElementById('editEmail').value = _profileData.email || '';
+      document.getElementById('editPhone').value = _profileData.phone || '';
+      document.getElementById('editAccountType').value = _profileData.isSeller ? 'Seller' : 'Buyer';
+
+      const joinDate = _profileData.createdAt ? new Date(_profileData.createdAt).toLocaleDateString() : '--';
+      document.getElementById('memberSince').textContent = joinDate;
+      document.getElementById('profileEmail').textContent = _profileData.email || '';
+    } catch (e) {
+      console.error('Failed to load profile:', e);
     }
-    // account files list
-    const accFiles = JSON.parse(localStorage.getItem('accountFiles_' + currentUser) || '[]');
-    const accFilesEl = document.getElementById('accountFilesList');
-    if (accFilesEl) accFilesEl.innerHTML = accFiles.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a></div>`).join('') || '';
 
-    // Member since
-    const joinDate = new Date(user.joinDate || Date.now()).toLocaleDateString();
-    document.getElementById('memberSince').textContent = joinDate;
-
-    // Cart badge
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-    const badge = document.getElementById('cartBadge');
-    if (cart.length > 0) {
-      badge.textContent = cart.length;
-      badge.classList.remove('hidden');
-    }
+    // Cart badge from backend
+    try {
+      const cartRes = await fetch(BACKEND_URL + '/api/cart', {
+        headers: { 'Authorization': 'Bearer ' + _authToken }
+      });
+      if (cartRes.ok) {
+        const cartData = await cartRes.json();
+        const count = (cartData.items || []).length;
+        const badge = document.getElementById('cartBadge');
+        if (badge && count > 0) {
+          badge.textContent = count;
+          badge.classList.remove('hidden');
+        }
+      }
+    } catch (_) {}
 
     // Check if seller
-    if (sellers[currentUser]) {
-      const seller = sellers[currentUser];
-      document.getElementById('sellerBadge').classList.remove('hidden');
-      document.getElementById('notSellerNotice').classList.add('hidden');
-      document.getElementById('sellerTab').classList.remove('hidden');
-      document.getElementById('sellerStats').classList.remove('hidden');
+    try {
+      const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
+        headers: { 'Authorization': 'Bearer ' + _authToken }
+      });
+      if (sellerRes.ok) {
+        _sellerData = await sellerRes.json();
+        document.getElementById('sellerBadge').classList.remove('hidden');
+        document.getElementById('notSellerNotice').classList.add('hidden');
+        document.getElementById('sellerTab').classList.remove('hidden');
+        document.getElementById('sellerStats').classList.remove('hidden');
 
-      // Load seller data
-      document.getElementById('shopName').value = seller.shopName || '';
-      document.getElementById('shopDescription').value = seller.shopDescription || seller.description || '';
-      document.getElementById('productsListed').textContent = (seller.products || []).length;
-      document.getElementById('totalSales').textContent = '$' + (seller.totalSales || 0).toFixed(2);
-      document.getElementById('avgRating').textContent = seller.rating ? seller.rating.toFixed(1) + '★' : 'N/A';
-      // render shop files
-      const shopFilesEl = document.getElementById('shopFilesList');
-      if (shopFilesEl) {
-        const files = seller.files || [];
-        shopFilesEl.innerHTML = files.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a></div>`).join('') || '';
+        document.getElementById('shopName').value = _sellerData.shopName || '';
+        document.getElementById('shopDescription').value = _sellerData.shopDescription || '';
+        document.getElementById('totalSales').textContent = '$' + (_sellerData.totalSales || 0).toFixed(2);
+        document.getElementById('avgRating').textContent = _sellerData.rating ? _sellerData.rating.toFixed(1) + '★' : 'N/A';
+
+        // Fetch product count
+        try {
+          const token = _authToken;
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const userId = payload.userId;
+          if (userId) {
+            const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId));
+            if (prodRes.ok) {
+              const products = await prodRes.json();
+              document.getElementById('productsListed').textContent = (products || []).length;
+            }
+          }
+        } catch (_) {}
+
+        // show My Dashboard button
+        const dashBtn = document.getElementById('myDashboardBtn');
+        if (dashBtn) dashBtn.classList.remove('hidden');
       }
-      // show My Dashboard button
-      const dashBtn = document.getElementById('myDashboardBtn');
-      if (dashBtn) dashBtn.classList.remove('hidden');
-    }
+    } catch (_) {}
   }
 
-  async function handleProfileImageUpload(e){
-    const file = e.target.files[0]; if(!file) return;
+  async function handleProfileImageUpload(e) {
+    const file = e.target.files[0]; if (!file) return;
     const fileInput = e.target;
     const reader = new FileReader();
-    reader.onload = async function(ev){
+    reader.onload = async function(ev) {
       const dataUrl = ev.target.result;
       document.getElementById('profileImage').src = dataUrl;
-      const token = localStorage.getItem('authToken');
-      if(token){
-        try{
-          const res = await fetch('https://zorexium-backend.onrender.com/api/user/profile-picture',{
-            method:'PUT',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-            body:JSON.stringify({profileImage:dataUrl})
+      if (_authToken) {
+        try {
+          const res = await fetch(BACKEND_URL + '/api/user/profile-picture', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+            body: JSON.stringify({ profileImage: dataUrl })
           });
-          if(res.ok){
-            ZrxNotify.showNotification('Profile picture updated!','success');
-            // Update the header profile image directly without delegating to an external module
+          if (res.ok) {
+            ZrxNotify.showNotification('Profile picture updated!', 'success');
             const headerImg = document.getElementById('userProfileImage');
-            if(headerImg) headerImg.src = dataUrl;
-            // Reset the file input after a successful upload
+            if (headerImg) headerImg.src = dataUrl;
             fileInput.value = '';
           } else {
             const err = await res.json();
-            ZrxNotify.showNotification('Upload failed: '+(err.error||'Unknown error'),'error');
+            ZrxNotify.showNotification('Upload failed: ' + (err.error || 'Unknown error'), 'error');
           }
-        } catch(err){
-          ZrxNotify.showNotification('Upload failed: network error','error');
+        } catch (err) {
+          ZrxNotify.showNotification('Upload failed: network error', 'error');
         }
       }
     };
     reader.readAsDataURL(file);
   }
 
-  function uploadPurchaseFile(e){
-    const file = e.target.files[0]; if(!file) return;
+  function uploadPurchaseFile(e) {
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    const user = localStorage.getItem('currentUser'); if(!user) { ZrxNotify.showNotification('Log in first', 'info'); return; }
-    reader.onload = function(ev){
-      const list = JSON.parse(localStorage.getItem('purchaseFiles_'+user) || '[]');
+    reader.onload = function(ev) {
+      const user = localStorage.getItem('currentUser'); if (!user) { ZrxNotify.showNotification('Log in first', 'info'); return; }
+      const list = JSON.parse(localStorage.getItem('purchaseFiles_' + user) || '[]');
       list.unshift({ name: file.name, data: ev.target.result, added: new Date().toLocaleString() });
-      localStorage.setItem('purchaseFiles_'+user, JSON.stringify(list)); renderPurchaseFiles();
+      localStorage.setItem('purchaseFiles_' + user, JSON.stringify(list)); renderPurchaseFiles();
     };
     reader.readAsDataURL(file);
   }
 
-  function renderPurchaseFiles(){
-    const user = localStorage.getItem('currentUser'); if(!user) return;
-    const list = JSON.parse(localStorage.getItem('purchaseFiles_'+user) || '[]');
-    const el = document.getElementById('purchaseFilesList'); if(!el) return;
-    el.innerHTML = list.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a> <span class="text-xs text-gray-500">${f.added}</span></div>`).join('') || '<div class="text-gray-500">No files</div>';
-  }
-
-  function uploadShopFile(e){
-    const file = e.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    const user = localStorage.getItem('currentUser'); if(!user) { ZrxNotify.showNotification('Log in first', 'info'); return; }
-    reader.onload = function(ev){
-      let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-      if(!sellers[user]) sellers[user] = { files: [] };
-      sellers[user].files = sellers[user].files || [];
-      sellers[user].files.unshift({ name: file.name, data: ev.target.result, added: new Date().toLocaleString() });
-      localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-      // update UI
-      const shopFilesEl = document.getElementById('shopFilesList');
-      shopFilesEl.innerHTML = sellers[user].files.map(f=>`<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a></div>`).join('');
-    };
-    reader.readAsDataURL(file);
+  function renderPurchaseFiles() {
+    const user = localStorage.getItem('currentUser'); if (!user) return;
+    const list = JSON.parse(localStorage.getItem('purchaseFiles_' + user) || '[]');
+    const el = document.getElementById('purchaseFilesList'); if (!el) return;
+    el.innerHTML = list.map(f => `<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a> <span class="text-xs text-gray-500">${f.added}</span></div>`).join('') || '<div class="text-gray-500">No files</div>';
   }
 
   function switchTab(tab) {
-    // Remove active from all tab contents
     document.querySelectorAll('.tab-content').forEach(el => {
       el.classList.remove('active');
       el.classList.add('hidden');
     });
-    // Remove active styling from all tab buttons
     document.querySelectorAll('.tab-btn').forEach(el => {
       el.classList.remove('border-cyan-400', 'text-white');
       el.classList.add('border-transparent', 'text-gray-400');
     });
-    // Show the selected tab content
     var tabContent = document.getElementById(tab);
     tabContent.classList.add('active');
     tabContent.classList.remove('hidden');
-    // Style the clicked button
     var buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(function(btn) {
-      if (btn.getAttribute('onclick').includes("'"+tab+"'")) {
+      if (btn.getAttribute('onclick').includes("'" + tab + "'")) {
         btn.classList.remove('border-transparent', 'text-gray-400');
         btn.classList.add('border-cyan-400', 'text-white');
       }
     });
   }
 
-  function changePassword() {
-    const currentUser = localStorage.getItem('currentUser');
-    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    const user = users[currentUser];
-
+  async function changePassword() {
     const currentPassword = document.getElementById('currentPassword').value;
     const newPassword = document.getElementById('newPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
@@ -488,96 +479,119 @@
       return;
     }
 
-    if (currentPassword !== user.password) {
-      ZrxNotify.showNotification('Current password is incorrect', 'error');
-      return;
-    }
-
     if (newPassword !== confirmPassword) {
       ZrxNotify.showNotification('New passwords do not match', 'error');
       return;
     }
 
-    user.password = newPassword;
-    users[currentUser] = user;
-    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
-
-    document.getElementById('currentPassword').value = '';
-    document.getElementById('newPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
-
-    ZrxNotify.showNotification('Password updated successfully!', 'success');
+    try {
+      const res = await fetch(BACKEND_URL + '/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+        body: JSON.stringify({ currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        ZrxNotify.showNotification('Password updated successfully!', 'success');
+      } else {
+        ZrxNotify.showNotification(data.error || 'Failed to update password', 'error');
+      }
+    } catch (_) {
+      ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
   }
 
-  function updateShopInfo() {
-    const currentUser = localStorage.getItem('currentUser');
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-
-    if (!sellers[currentUser]) {
+  async function updateShopInfo() {
+    if (!_sellerData) {
       ZrxNotify.showNotification('You are not a seller', 'error');
       return;
     }
-
-    sellers[currentUser].shopName = document.getElementById('shopName').value;
-    sellers[currentUser].shopDescription = document.getElementById('shopDescription').value;
-    localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-
-    ZrxNotify.showNotification('Shop information updated!', 'success');
+    const shopName = document.getElementById('shopName').value;
+    const shopDescription = document.getElementById('shopDescription').value;
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+        body: JSON.stringify({ shopName, shopDescription })
+      });
+      if (res.ok) {
+        ZrxNotify.showNotification('Shop information updated!', 'success');
+      } else {
+        const data = await res.json();
+        ZrxNotify.showNotification(data.error || 'Failed to update shop info', 'error');
+      }
+    } catch (_) {
+      ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
   }
 
   function logout() {
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentUsername');
     window.location.href = 'signup-login.html';
   }
 
-  function deleteAccount() {
-    ZrxNotify.showConfirm('Are you sure? This action cannot be undone.', function() {
-      const currentUser = localStorage.getItem('currentUser');
-      const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-      const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-
-      delete users[currentUser];
-      delete sellers[currentUser];
-
-      localStorage.setItem('zorexiumUsers', JSON.stringify(users));
-      localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-      localStorage.removeItem('currentUser');
-
-      ZrxNotify.showNotification('Account deleted', 'success');
-      window.location.href = 'index.html';
+  async function deleteAccount() {
+    ZrxNotify.showConfirm('Are you sure? This action cannot be undone.', async function() {
+      try {
+        const res = await fetch(BACKEND_URL + '/api/user/profile', {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + _authToken }
+        });
+        if (res.ok) {
+          localStorage.removeItem('currentUser');
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('currentUsername');
+          ZrxNotify.showNotification('Account deleted', 'success');
+          window.location.href = 'index.html';
+        } else {
+          const data = await res.json();
+          ZrxNotify.showNotification(data.error || 'Failed to delete account', 'error');
+        }
+      } catch (_) {
+        ZrxNotify.showNotification('Network error. Please try again.', 'error');
+      }
     });
   }
 
-  function saveProfile(){
-    const currentUser = localStorage.getItem('currentUser');
-    if(!currentUser) { ZrxNotify.showNotification('Not logged in', 'info'); return; }
-    const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    const user = users[currentUser] || {};
-    const newUsername = document.getElementById('editUsername').value.trim();
-    const newEmail = document.getElementById('editEmail').value.trim();
+  async function saveProfile() {
+    if (!_authToken) { ZrxNotify.showNotification('Not logged in', 'info'); return; }
+    const nameParts = document.getElementById('editUsername').value.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
     const phone = document.getElementById('editPhone').value.trim();
-    if(!newUsername || !newEmail) { ZrxNotify.showNotification('Username and email required', 'error'); return; }
-    // update user object
-    user.email = newEmail;
-    user.phone = phone;
-    users[currentUser] = user;
-    localStorage.setItem('zorexiumUsers', JSON.stringify(users));
-    document.getElementById('profileUsername').textContent = newUsername;
-    document.getElementById('profileEmail').textContent = newEmail;
-    ZrxNotify.showNotification('Profile saved', 'success');
+
+    try {
+      const res = await fetch(BACKEND_URL + '/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+        body: JSON.stringify({ firstName, lastName, phone })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        const fullName = ((updated.firstName || '') + ' ' + (updated.lastName || '')).trim() || updated.email;
+        document.getElementById('profileUsername').textContent = fullName;
+        document.getElementById('profileEmail').textContent = updated.email || '';
+        ZrxNotify.showNotification('Profile saved', 'success');
+      } else {
+        const data = await res.json();
+        ZrxNotify.showNotification(data.error || 'Failed to save profile', 'error');
+      }
+    } catch (_) {
+      ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
   }
 
-  function deactivateAccount(){
-    ZrxNotify.showConfirm('Deactivate your account? You can reactivate by contacting support.', function(){
-      const currentUser = localStorage.getItem('currentUser');
-      if(!currentUser) return;
-      const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-      const user = users[currentUser];
-      if(!user) return;
-      user.active = false;
-      users[currentUser] = user;
-      localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+  async function deactivateAccount() {
+    ZrxNotify.showConfirm('Deactivate your account? You can reactivate by contacting support.', async function() {
+      // Deactivation is treated same as logout (no dedicated deactivate endpoint needed)
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUsername');
       ZrxNotify.showNotification('Account deactivated', 'success');
       window.location.href = 'index.html';
     });
@@ -587,8 +601,7 @@
 </script>
 
 <script>
-  // initialize purchase files rendering on load
-  window.addEventListener('load', function(){ renderPurchaseFiles(); });
+  window.addEventListener('load', function() { renderPurchaseFiles(); });
 </script>
 <script src="profile-picture.js"></script>
 

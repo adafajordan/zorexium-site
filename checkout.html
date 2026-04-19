@@ -577,8 +577,16 @@ fetch(BACKEND_URL + '/api/config')
         });
       })
       .then(function(result) {
-        // Clear cart and redirect to confirmation
+        // Clear cart (both backend and local)
+        const authToken = localStorage.getItem('authToken');
         localStorage.removeItem('zorexiumCart');
+        if (authToken) {
+          const BACKEND_URL_CART = 'https://zorexium-backend.onrender.com';
+          fetch(BACKEND_URL_CART + '/api/cart', {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + authToken }
+          }).catch(function() {});
+        }
         window.location.href = 'payment-success.html?orderId=' + encodeURIComponent(pendingOrderId);
       })
       .catch(function(err) {

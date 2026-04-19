@@ -868,21 +868,36 @@ app.get('/api/user/profile-picture', verifyToken, async function(req, res) {
   }
 });
 
-// GET /api/user/info – retrieve display name and profile picture for a user by email (auth required)
+// GET /api/user/info – retrieve display name and profile picture for a user by email or userId (auth required)
 app.get('/api/user/info', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
-  const { email } = req.query;
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'email query parameter is required' });
-  }
-  // Basic email format validation
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
-  }
+  const { email, userId } = req.query;
 
   try {
-    const user = await db.collection('users').findOne(
+    let user;
+    if (userId) {
+      // Validate userId is a plausible MongoDB ObjectId (24 hex chars)
+      if (typeof userId !== 'string' || userId.length > 128) {
+        return res.status(400).json({ error: 'Invalid userId' });
+      }
+      let query;
+      try { query = { _id: new ObjectId(userId) }; } catch (_) { return res.json({ displayName: userId, profileImage: null }); }
+      user = await db.collection('users').findOne(query, { projection: { firstName: 1, lastName: 1, profileImage: 1, email: 1 } });
+      if (!user) return res.json({ displayName: userId, profileImage: null });
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+      return res.json({ displayName: fullName || user.email || userId, profileImage: user.profileImage || null });
+    }
+
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ error: 'email or userId query parameter is required' });
+    }
+    // Basic email format validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    user = await db.collection('users').findOne(
       { email },
       { projection: { firstName: 1, lastName: 1, profileImage: 1 } }
     );
@@ -922,6 +937,304 @@ app.get('/api/user/public-info', async function(req, res) {
     res.json({ displayName: fullName || email, profileImage: user.profileImage || null, userId: user._id ? user._id.toString() : null });
   } catch (error) {
     console.error('Error fetching public user info:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── USER PROFILE ────────────────────────────────────────────────────────────────
+
+// GET /api/user/profile – get current user's full profile (auth required)
+app.get('/api/user/profile', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const user = await db.collection('users').findOne(
+      { _id: new ObjectId(req.userId) },
+      { projection: { password: 0 } }
+    );
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/user/profile – update current user's profile (auth required)
+app.put('/api/user/profile', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { firstName, lastName, phone } = req.body;
+  const updates = { updatedAt: new Date() };
+  if (firstName !== undefined) updates.firstName = String(firstName).slice(0, 100);
+  if (lastName !== undefined) updates.lastName = String(lastName).slice(0, 100);
+  if (phone !== undefined) updates.phone = String(phone).slice(0, 30);
+
+  try {
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(req.userId) },
+      { $set: updates }
+    );
+    const updated = await db.collection('users').findOne(
+      { _id: new ObjectId(req.userId) },
+      { projection: { password: 0 } }
+    );
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/user/profile – delete current user's account (auth required)
+app.delete('/api/user/profile', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    await db.collection('users').deleteOne({ _id: new ObjectId(req.userId) });
+    await db.collection('sellers').deleteOne({ userId: req.userId });
+    await db.collection('carts').deleteOne({ userId: req.userId });
+    res.json({ message: 'Account deleted' });
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/auth/change-password – change current user's password (auth required)
+app.post('/api/auth/change-password', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'currentPassword and newPassword are required' });
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+
+  try {
+    const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const valid = await bcrypt.compare(currentPassword, user.password);
+    if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(req.userId) },
+      { $set: { password: hashed, updatedAt: new Date() } }
+    );
+    res.json({ message: 'Password updated' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── SELLERS ──────────────────────────────────────────────────────────────────────
+
+// POST /api/sellers – create seller profile (auth required)
+app.post('/api/sellers', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const existing = await db.collection('sellers').findOne({ userId: req.userId });
+    if (existing) return res.status(400).json({ error: 'Seller profile already exists' });
+
+    const {
+      accountType, shopName, shopDescription, businessEmail, phoneNumber,
+      businessAddress, businessCity, businessState, businessZip,
+      personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip
+    } = req.body;
+
+    if (!accountType || !shopName) {
+      return res.status(400).json({ error: 'accountType and shopName are required' });
+    }
+
+    const seller = {
+      userId: req.userId,
+      accountType: String(accountType).slice(0, 20),
+      shopName: String(shopName).slice(0, 200),
+      shopDescription: String(shopDescription || '').slice(0, 2000),
+      businessEmail: String(businessEmail || '').slice(0, 200),
+      phoneNumber: String(phoneNumber || '').slice(0, 30),
+      businessAddress: String(businessAddress || '').slice(0, 200),
+      businessCity: String(businessCity || '').slice(0, 100),
+      businessState: String(businessState || '').slice(0, 100),
+      businessZip: String(businessZip || '').slice(0, 20),
+      personalName: String(personalName || '').slice(0, 200),
+      personalEmail: String(personalEmail || '').slice(0, 200),
+      shippingAddress: String(shippingAddress || '').slice(0, 200),
+      shippingCity: String(shippingCity || '').slice(0, 100),
+      shippingState: String(shippingState || '').slice(0, 100),
+      shippingZip: String(shippingZip || '').slice(0, 20),
+      joinDate: new Date(),
+      rating: 5,
+      totalSales: 0,
+      isVerified: false,
+      createdAt: new Date()
+    };
+
+    const result = await db.collection('sellers').insertOne(seller);
+
+    // Mark user as seller
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(req.userId) },
+      { $set: { isSeller: true, updatedAt: new Date() } }
+    );
+
+    res.status(201).json({ ...seller, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error creating seller:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/sellers/me – get current user's seller profile (auth required)
+app.get('/api/sellers/me', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
+    res.json(seller);
+  } catch (error) {
+    console.error('Error fetching seller profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/sellers/me – update current user's seller profile (auth required)
+app.put('/api/sellers/me', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const allowedFields = [
+    'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
+    'businessAddress', 'businessCity', 'businessState', 'businessZip',
+    'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
+    'shippingState', 'shippingZip'
+  ];
+  const updates = { updatedAt: new Date() };
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) updates[field] = String(req.body[field]).slice(0, 2000);
+  }
+
+  try {
+    const result = await db.collection('sellers').updateOne(
+      { userId: req.userId },
+      { $set: updates }
+    );
+    if (result.matchedCount === 0) return res.status(404).json({ error: 'Seller profile not found' });
+    const updated = await db.collection('sellers').findOne({ userId: req.userId });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating seller profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/sellers/user/:userId – get seller profile by userId (public)
+app.get('/api/sellers/user/:userId', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { userId } = req.params;
+  if (!userId || userId.length > 128) {
+    return res.status(400).json({ error: 'Invalid userId' });
+  }
+
+  try {
+    const seller = await db.collection('sellers').findOne({ userId });
+    if (!seller) return res.status(404).json({ error: 'Seller not found' });
+    res.json(seller);
+  } catch (error) {
+    console.error('Error fetching seller by userId:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── MESSAGES ────────────────────────────────────────────────────────────────────
+
+// GET /api/messages – get all conversations for current user (auth required)
+app.get('/api/messages', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const messages = await db.collection('messages')
+      .find({ $or: [{ fromUserId: req.userId }, { toUserId: req.userId }] })
+      .sort({ createdAt: 1 })
+      .toArray();
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/messages – send a message (auth required)
+app.post('/api/messages', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { toUserId, subject, body } = req.body;
+  if (!toUserId || !subject || !body) {
+    return res.status(400).json({ error: 'toUserId, subject, and body are required' });
+  }
+  if (typeof subject !== 'string' || subject.length > 200) {
+    return res.status(400).json({ error: 'Invalid subject' });
+  }
+  if (typeof body !== 'string' || body.length > 5000) {
+    return res.status(400).json({ error: 'Invalid body' });
+  }
+
+  try {
+    // Resolve sender display name
+    let fromDisplayName = req.userEmail;
+    try {
+      const userDoc = await db.collection('users').findOne({ _id: new ObjectId(req.userId) });
+      if (userDoc) {
+        const fullName = ((userDoc.firstName || '') + ' ' + (userDoc.lastName || '')).trim();
+        fromDisplayName = fullName || userDoc.email || req.userEmail;
+      }
+    } catch (_) {}
+
+    const message = {
+      fromUserId: req.userId,
+      fromEmail: req.userEmail,
+      fromDisplayName,
+      toUserId: String(toUserId),
+      subject: subject.trim(),
+      body: body.trim(),
+      read: false,
+      createdAt: new Date()
+    };
+
+    const result = await db.collection('messages').insertOne(message);
+    res.status(201).json({ ...message, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/messages/:id/read – mark message as read (auth required)
+app.put('/api/messages/:id/read', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  let objectId;
+  try {
+    objectId = new ObjectId(req.params.id);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid message ID' });
+  }
+
+  try {
+    const msg = await db.collection('messages').findOne({ _id: objectId });
+    if (!msg) return res.status(404).json({ error: 'Message not found' });
+    if (msg.toUserId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    await db.collection('messages').updateOne({ _id: objectId }, { $set: { read: true } });
+    res.json({ message: 'Marked as read' });
+  } catch (error) {
+    console.error('Error marking message as read:', error);
     res.status(500).json({ error: error.message });
   }
 });

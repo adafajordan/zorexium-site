@@ -251,55 +251,10 @@
   }
 
   function loadSellerProfile() {
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    const seller = sellers[sellerUsername];
+    // Fetch seller profile from backend API
+    const BACKEND_URL = 'https://zorexium-backend.onrender.com';
 
-    if (seller) {
-      populateSellerFields(seller);
-
-      // Load seller's profile picture from MongoDB backend
-      const authToken = localStorage.getItem('authToken');
-      if (authToken) {
-        fetch(BACKEND_URL + '/api/user/profile-picture', {
-          headers: { 'Authorization': 'Bearer ' + authToken }
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
-            if (data && data.profileImage && (data.profileImage.startsWith('https://') || data.profileImage.startsWith('http://') || data.profileImage.startsWith('data:image/'))) {
-              document.getElementById('shopAvatar').src = data.profileImage;
-            }
-          })
-          .catch(() => {});
-      }
-
-      // Also fetch backend products and merge with localStorage products
-      const sellerEmail = seller.businessEmail || seller.personalEmail ||
-        (function() {
-          try {
-            const users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-            return (users[sellerUsername] && users[sellerUsername].email) || null;
-          } catch (e) { return null; }
-        })();
-      if (sellerEmail) {
-        fetch(BACKEND_URL + '/api/user/public-info?email=' + encodeURIComponent(sellerEmail))
-          .then(r => r.ok ? r.json() : null)
-          .then(function(data) {
-            const userId = data && data.userId;
-            if (!userId) return;
-            return fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId))
-              .then(r => r.ok ? r.json() : [])
-              .then(function(backendProducts) {
-                const mapped = mapBackendProducts(backendProducts || []);
-                document.getElementById('productCount').textContent = mapped.length;
-                loadProducts(mapped);
-              });
-          })
-          .catch(function() {});
-      }
-      return;
-    }
-
-    // Not a registered seller in localStorage — look up community user info by email
+    // First look up user info (userId) by email or username
     const params = new URLSearchParams(window.location.search);
     const email = params.get('email');
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerUsername);
@@ -314,15 +269,31 @@
           const userId = (data && data.userId) || null;
 
           if (userId) {
-            // Fetch the user's products from the backend
-            return fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId))
-              .then(r => r.ok ? r.json() : [])
-              .then(function(products) {
+            // Try to load seller profile from backend
+            Promise.all([
+              fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(userId)).then(r => r.ok ? r.json() : null),
+              fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId)).then(r => r.ok ? r.json() : [])
+            ]).then(function([sellerProfile, products]) {
+              if (sellerProfile) {
+                const mapped = mapBackendProducts(products || []);
+                populateSellerFields({
+                  shopName: sellerProfile.shopName || displayName,
+                  shopDescription: sellerProfile.shopDescription || 'Verified seller',
+                  rating: sellerProfile.rating || 5.0,
+                  products: mapped,
+                  totalSales: sellerProfile.totalSales || 0,
+                  isVerified: sellerProfile.isVerified || false,
+                  joinDate: sellerProfile.joinDate,
+                  businessCity: sellerProfile.businessCity,
+                  businessState: sellerProfile.businessState,
+                  profileImage: profileImage
+                });
+              } else {
                 loadCommunityUserProfile(displayName, profileImage, products || []);
-              })
-              .catch(function() {
-                loadCommunityUserProfile(displayName, profileImage, []);
-              });
+              }
+            }).catch(function() {
+              loadCommunityUserProfile(displayName, profileImage, []);
+            });
           } else {
             loadCommunityUserProfile(displayName, profileImage, []);
           }

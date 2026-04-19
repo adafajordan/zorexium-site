@@ -243,24 +243,34 @@
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let currentUser = localStorage.getItem('currentUser');
+  let authToken = localStorage.getItem('authToken');
   let currentStep = 1;
   let imageData = null;
   let editingProductId = null;
+  let _sellerData = null;
 
-  function init() {
-    if (!currentUser) {
+  async function init() {
+    if (!authToken) {
       window.location.href = 'seller-signup.html';
       return;
     }
 
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (!sellers[currentUser]) {
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (!res.ok) {
+        window.location.href = 'seller-signup.html';
+        return;
+      }
+      _sellerData = await res.json();
+    } catch (e) {
       window.location.href = 'seller-signup.html';
       return;
     }
 
     // Only business account sellers can create listings
-    if (sellers[currentUser].accountType && sellers[currentUser].accountType !== 'business') {
+    if (_sellerData.accountType && _sellerData.accountType !== 'business') {
       ZrxNotify.showNotification('Only business account sellers can create product listings. Please upgrade to a business account to add products.', 'error');
       window.location.href = 'seller-dashboard.html';
       return;
@@ -276,34 +286,39 @@
     }
   }
 
-  function loadProductForEdit(productId) {
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    const product = sellers[currentUser].products.find(p => p.id == productId);
-    if (!product) return;
+  async function loadProductForEdit(productId) {
+    try {
+      const res = await fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId));
+      if (!res.ok) return;
+      const product = await res.json();
 
-    editingProductId = product.id;
+      editingProductId = String(product._id || product.id);
 
-    document.getElementById('productName').value = product.name;
-    document.getElementById('productDescription').value = product.description;
-    document.getElementById('productPrice').value = product.price;
-    document.getElementById('productQuantity').value = product.quantity;
-    document.getElementById('productCondition').value = product.condition;
-    document.getElementById('productCategory').value = product.category;
+      document.getElementById('productName').value = product.name || '';
+      document.getElementById('productDescription').value = product.description || '';
+      document.getElementById('productPrice').value = product.price || '';
+      document.getElementById('productQuantity').value = product.quantity || 1;
+      document.getElementById('productCondition').value = product.condition || '';
+      document.getElementById('productCategory').value = product.category || '';
 
-    document.getElementById('specMemory').value = product.specs?.memory || '';
-    document.getElementById('specMemoryType').value = product.specs?.memoryType || '';
-    document.getElementById('specCores').value = product.specs?.cores || '';
-    document.getElementById('specBaseClock').value = product.specs?.baseClock || '';
-    document.getElementById('specBoostClock').value = product.specs?.boostClock || '';
-    document.getElementById('specTDP').value = product.specs?.tdp || '';
-    document.getElementById('specBusWidth').value = product.specs?.busWidth || '';
-    document.getElementById('specInterface').value = product.specs?.interface || '';
-    document.getElementById('specAdditional').value = product.specs?.additional || '';
+      const specs = product.specifications || product.specs || {};
+      document.getElementById('specMemory').value = specs.memory || '';
+      document.getElementById('specMemoryType').value = specs.memoryType || '';
+      document.getElementById('specCores').value = specs.cores || '';
+      document.getElementById('specBaseClock').value = specs.baseClock || '';
+      document.getElementById('specBoostClock').value = specs.boostClock || '';
+      document.getElementById('specTDP').value = specs.tdp || '';
+      document.getElementById('specBusWidth').value = specs.busWidth || '';
+      document.getElementById('specInterface').value = specs.interface || '';
+      document.getElementById('specAdditional').value = specs.additional || '';
 
-    if (product.image) {
-      imageData = product.image;
-      document.getElementById('imagePreview').src = imageData;
-      document.getElementById('imagePreviewContainer').classList.remove('hidden');
+      if (product.image) {
+        imageData = product.image;
+        document.getElementById('imagePreview').src = imageData;
+        document.getElementById('imagePreviewContainer').classList.remove('hidden');
+      }
+    } catch (e) {
+      console.error('Failed to load product for edit:', e);
     }
   }
 
@@ -367,15 +382,15 @@
   function publishListing() {
     if (!validateStep1()) return;
 
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (!sellers[currentUser]) {
-      window.location.href = 'seller-dashboard.html';
+    if (!authToken) {
+      ZrxNotify.showNotification('You must be logged in to create listings', 'error');
       return;
     }
 
-    const productId = editingProductId || Date.now();
+    const sellerUsername = localStorage.getItem('currentUsername') || localStorage.getItem('currentUser');
+    const shopName = _sellerData ? _sellerData.shopName : (sellerUsername || '');
+
     const product = {
-      id: productId,
       name: document.getElementById('productName').value.trim(),
       description: document.getElementById('productDescription').value.trim(),
       price: parseFloat(document.getElementById('productPrice').value),
@@ -383,7 +398,7 @@
       condition: document.getElementById('productCondition').value,
       category: document.getElementById('productCategory').value.trim(),
       image: imageData,
-      specs: {
+      specifications: {
         memory: document.getElementById('specMemory').value,
         memoryType: document.getElementById('specMemoryType').value,
         cores: document.getElementById('specCores').value,
@@ -394,74 +409,67 @@
         interface: document.getElementById('specInterface').value,
         additional: document.getElementById('specAdditional').value
       },
-      createdDate: new Date().toLocaleDateString()
+      sellerName: shopName,
+      sellerUsername: sellerUsername
     };
 
-    // Save to localStorage (seller-specific)
-    const existingIndex = sellers[currentUser].products.findIndex(p => p.id == productId);
-    if (existingIndex >= 0) {
-      sellers[currentUser].products[existingIndex] = product;
-    } else {
-      sellers[currentUser].products.push(product);
-    }
-    localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-
-    // Save to server for cross-browser persistence
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
-      ZrxNotify.showNotification('You must be logged in to create listings', 'error');
-      return;
-    }
-
-    const sellerUsername = localStorage.getItem('currentUsername') || localStorage.getItem('currentUser');
-    if (!sellerUsername) {
-      ZrxNotify.showNotification('Could not determine seller identity. Please log out and log in again.', 'error');
-      return;
-    }
-    fetch(BACKEND_URL + '/api/products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authToken}`
-      },
-      body: JSON.stringify({
-        name: product.name,
-        price: product.price,
-        category: product.category,
-        description: product.description,
-        condition: product.condition,
-        image: imageData,
-        specifications: product.specs,
-        sellerName: sellerUsername,
-        sellerUsername: sellerUsername
+    if (editingProductId) {
+      // Update existing product
+      fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(editingProductId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify(product)
       })
-    })
-    .then(res => {
-      if (!res.ok) throw new Error(res.statusText);
-      return res.json();
-    })
-    .then(data => {
-      if (data.error) {
-        ZrxNotify.showNotification('Error saving product: ' + data.error, 'error');
-      } else {
-        ZrxNotify.showNotification('Product listing published successfully!', 'success');
-        window.location.href = 'marketplace.html';
-      }
-    })
+      .then(res => { if (!res.ok) throw new Error(res.statusText); return res.json(); })
+      .then(data => {
+        if (data.error) {
+          ZrxNotify.showNotification('Error updating product: ' + data.error, 'error');
+        } else {
+          ZrxNotify.showNotification('Product listing updated successfully!', 'success');
+          window.location.href = 'seller-dashboard.html';
+        }
+      })
+      .catch(err => ZrxNotify.showNotification('Failed to update listing: ' + err.message, 'error'));
+    } else {
+      // Create new product
+      fetch(BACKEND_URL + '/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify(product)
+      })
+      .then(res => { if (!res.ok) throw new Error(res.statusText); return res.json(); })
+      .then(data => {
+        if (data.error) {
+          ZrxNotify.showNotification('Error saving product: ' + data.error, 'error');
+        } else {
+          ZrxNotify.showNotification('Product listing published successfully!', 'success');
+          window.location.href = 'seller-dashboard.html';
+        }
+      })
+      .catch(err => ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'));
+    }
+  }
     .catch(err => ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'));
   }
 
-  function updateCartBadge() {
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
-    if (badge) {
-      if (cart.length > 0) {
-        badge.textContent = cart.length;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
+    if (!badge) return;
+    if (!authToken) {
+      const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+      badge.textContent = cart.length;
+      badge.classList.toggle('hidden', cart.length === 0);
+      return;
     }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (res.ok) {
+        const data = await res.json();
+        const count = (data.items || []).length;
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    } catch (_) {}
   }
 
   function toggleDropdown(id) {
