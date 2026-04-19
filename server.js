@@ -90,13 +90,13 @@ function setAuthCookies(res, token, email, username, userId) {
     buildCookieHeader('authToken', token, {
       httpOnly: true,
       maxAge: COOKIE_MAX_AGE,
-      sameSite: 'Strict',
+      sameSite: 'Lax',
       secure: isProduction
     }),
     buildCookieHeader('_zrx_user', userPayload, {
       httpOnly: false,
       maxAge: COOKIE_MAX_AGE,
-      sameSite: 'Strict',
+      sameSite: 'Lax',
       secure: isProduction
     })
   ]);
@@ -104,8 +104,8 @@ function setAuthCookies(res, token, email, username, userId) {
 
 function clearAuthCookies(res) {
   res.setHeader('Set-Cookie', [
-    buildCookieHeader('authToken', '', { httpOnly: true, maxAge: 0, sameSite: 'Strict', secure: isProduction }),
-    buildCookieHeader('_zrx_user', '', { httpOnly: false, maxAge: 0, sameSite: 'Strict', secure: isProduction })
+    buildCookieHeader('authToken', '', { httpOnly: true, maxAge: 0, sameSite: 'Lax', secure: isProduction }),
+    buildCookieHeader('_zrx_user', '', { httpOnly: false, maxAge: 0, sameSite: 'Lax', secure: isProduction })
   ]);
 }
 
