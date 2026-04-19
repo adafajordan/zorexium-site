@@ -119,23 +119,18 @@
 
   async function fetchUserInfoById(userId) {
     if (userInfoCache['id:' + userId]) return userInfoCache['id:' + userId];
-        if (!ZrxSession.isLoggedIn()) {
-      userInfoCache['id:' + userId] = { displayName: userId, profileImage: null };
-      return userInfoCache['id:' + userId];
-    }
     try {
-      // Use the profile endpoint via info endpoint approach with userId lookup
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/info?userId=' + encodeURIComponent(userId), {
-        credentials: 'include'
-      });
-      const data = res.ok ? await res.json() : null;
-      userInfoCache['id:' + userId] = {
-        displayName: (data && data.displayName) || userId,
-        profileImage: (data && data.profileImage) || null
-      };
-    } catch (_) {
-      userInfoCache['id:' + userId] = { displayName: userId, profileImage: null };
-    }
+      const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(userId));
+      if (res.ok) {
+        const data = await res.json();
+        userInfoCache['id:' + userId] = {
+          displayName: data.shopName || userId,
+          profileImage: data.profileImage || null
+        };
+        return userInfoCache['id:' + userId];
+      }
+    } catch (_) {}
+    userInfoCache['id:' + userId] = { displayName: userId, profileImage: null };
     return userInfoCache['id:' + userId];
   }
 
