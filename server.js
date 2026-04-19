@@ -200,7 +200,7 @@ app.post('/api/products', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const { name, price, category, description, image, condition, specifications } = req.body;
+    const { name, price, category, description, image, condition, specifications, sellerName, sellerUsername } = req.body;
 
     if (!name || price === undefined || price === null || !category) {
       return res.status(400).json({ error: 'name, price, and category are required' });
@@ -209,6 +209,24 @@ app.post('/api/products', verifyToken, async function(req, res) {
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       return res.status(400).json({ error: 'price must be a non-negative number' });
+    }
+
+    // Resolve display name: use provided sellerName/sellerUsername or fall back to user's firstName from DB
+    let resolvedSellerName = (typeof sellerName === 'string' && sellerName.trim()) ? sellerName.trim()
+      : (typeof sellerUsername === 'string' && sellerUsername.trim()) ? sellerUsername.trim()
+      : null;
+    let resolvedSellerUsername = (typeof sellerUsername === 'string' && sellerUsername.trim()) ? sellerUsername.trim() : null;
+
+    if (!resolvedSellerName) {
+      try {
+        const user = await db.collection('users').findOne(
+          { _id: new ObjectId(req.userId) },
+          { projection: { firstName: 1 } }
+        );
+        if (user && user.firstName) resolvedSellerName = user.firstName;
+      } catch (lookupErr) {
+        console.error('Could not look up user firstName for product attribution:', lookupErr.message);
+      }
     }
 
     const product = {
@@ -220,6 +238,8 @@ app.post('/api/products', verifyToken, async function(req, res) {
       condition: condition || 'used',
       specifications: specifications || {},
       sellerId: req.userId,
+      sellerName: resolvedSellerName || null,
+      sellerUsername: resolvedSellerUsername || null,
       status: 'pending',
       createdAt: new Date()
     };
