@@ -299,7 +299,7 @@
 
   function getCurrentUserId() {
     const user = ZrxSession.getUser();
-    return user ? user.userId : null;
+    return user ? user.email : null;
   }
 
   function renderPosts(postsToRender, feed) {
