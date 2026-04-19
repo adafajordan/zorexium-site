@@ -1226,6 +1226,18 @@ app.post('/api/auth/change-password', authRateLimit, verifyToken, async function
   }
 });
 
+// GET /api/user/is-seller – check if the current user has a seller profile (auth required)
+app.get('/api/user/is-seller', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    res.json({ isSeller: !!seller });
+  } catch (error) {
+    console.error('Error checking seller status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── SELLERS ──────────────────────────────────────────────────────────────────────
 
 // POST /api/sellers – create seller profile (auth required)
@@ -1333,6 +1345,55 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
     res.json(updated);
   } catch (error) {
     console.error('Error updating seller profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sellers/recover-missing – recover orphaned seller records (auth required)
+app.post('/api/sellers/recover-missing', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const products = await db.collection('products').find({}, { projection: { sellerId: 1 } }).toArray();
+    const sellerIds = [...new Set(products.map(function(p) { return p.sellerId; }).filter(Boolean))];
+
+    // Batch fetch existing seller records and users
+    const existingSellers = await db.collection('sellers').find({ userId: { $in: sellerIds } }, { projection: { userId: 1 } }).toArray();
+    const existingSellerIds = new Set(existingSellers.map(function(s) { return s.userId; }));
+    const missingSellerIds = sellerIds.filter(function(id) { return !existingSellerIds.has(id); });
+
+    let recovered = 0;
+    for (const sellerId of missingSellerIds) {
+      let user = null;
+      try {
+        user = await db.collection('users').findOne({ _id: new ObjectId(sellerId) });
+      } catch (_) {}
+
+      if (!user) continue;
+
+      await db.collection('sellers').insertOne({
+        userId: sellerId,
+        accountType: 'individual',
+        shopName: resolveSellerName(user),
+        shopDescription: 'Shop',
+        joinDate: new Date(),
+        rating: 5,
+        totalSales: 0,
+        isVerified: false,
+        createdAt: new Date()
+      });
+
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(sellerId) },
+        { $set: { isSeller: true, updatedAt: new Date() } }
+      );
+
+      recovered++;
+    }
+
+    console.log(`✅ Seller recovery: recovered ${recovered} seller record(s) from ${sellerIds.length} unique seller ID(s)`);
+    res.json({ message: `Recovered ${recovered} seller records` });
+  } catch (error) {
+    console.error('Error recovering seller records:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1584,6 +1645,63 @@ app.use(function(err, req, res, next) {
 
 const PORT = process.env.PORT || 5000;
 
+// Recover missing seller records by inspecting product sellerId values
+function resolveSellerName(user) {
+  return ((user.firstName || '') + ' ' + (user.lastName || '')).trim()
+    || user.email
+    || 'My Shop';
+}
+
+async function recoverMissingSellers() {
+  if (!mongoConnected) return;
+  try {
+    const products = await db.collection('products').find({}, { projection: { sellerId: 1 } }).toArray();
+    const sellerIds = [...new Set(products.map(function(p) { return p.sellerId; }).filter(Boolean))];
+
+    // Batch fetch existing seller records
+    const existingSellers = await db.collection('sellers').find({ userId: { $in: sellerIds } }, { projection: { userId: 1 } }).toArray();
+    const existingSellerIds = new Set(existingSellers.map(function(s) { return s.userId; }));
+    const missingSellerIds = sellerIds.filter(function(id) { return !existingSellerIds.has(id); });
+
+    let recovered = 0;
+    for (const sellerId of missingSellerIds) {
+      let user = null;
+      try {
+        user = await db.collection('users').findOne({ _id: new ObjectId(sellerId) });
+      } catch (_) {}
+
+      if (!user) continue;
+
+      await db.collection('sellers').insertOne({
+        userId: sellerId,
+        accountType: 'individual',
+        shopName: resolveSellerName(user),
+        shopDescription: 'Shop',
+        joinDate: new Date(),
+        rating: 5,
+        totalSales: 0,
+        isVerified: false,
+        createdAt: new Date()
+      });
+
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(sellerId) },
+        { $set: { isSeller: true, updatedAt: new Date() } }
+      );
+
+      recovered++;
+    }
+
+    if (recovered > 0) {
+      console.log(`✅ Seller recovery: recovered ${recovered} seller record(s) from ${sellerIds.length} unique seller ID(s)`);
+    } else {
+      console.log(`ℹ️  Seller recovery: all ${sellerIds.length} seller(s) already have records`);
+    }
+  } catch (err) {
+    console.error('⚠️  Seller recovery error:', err.message);
+  }
+}
+
 // Start server and connect to MongoDB
 async function start() {
   console.log('🚀 Starting server...');
@@ -1591,6 +1709,7 @@ async function start() {
     const connected = await connectDB();
     if (connected) {
       console.log('✅ Database connected — starting HTTP server');
+      await recoverMissingSellers();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
     }
