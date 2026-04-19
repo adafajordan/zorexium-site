@@ -185,10 +185,11 @@
   function init() {
     const params = new URLSearchParams(window.location.search);
     sellerUsername = params.get('seller');
+    const sellerId = params.get('id');
 
     updateCartBadge();
 
-    if (!sellerUsername) {
+    if (!sellerUsername && !sellerId) {
       ZrxNotify.showNotification('Seller not found', 'error');
       window.location.href = 'marketplace.html';
       return;
@@ -257,6 +258,37 @@
     // First look up user info (userId) by email or username
     const params = new URLSearchParams(window.location.search);
     const email = params.get('email');
+    const sellerId = params.get('id');
+
+    // If a direct seller ID is provided, use it without needing email lookup
+    if (sellerId) {
+      Promise.all([
+        fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(sellerId)).then(r => r.ok ? r.json() : null),
+        fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(sellerId)).then(r => r.ok ? r.json() : [])
+      ]).then(function([sellerProfile, products]) {
+        if (sellerProfile) {
+          const mapped = mapBackendProducts(products || []);
+          populateSellerFields({
+            shopName: sellerProfile.shopName || sellerUsername || 'Seller',
+            shopDescription: sellerProfile.shopDescription || 'Verified seller',
+            rating: sellerProfile.rating || 5.0,
+            products: mapped,
+            totalSales: sellerProfile.totalSales || 0,
+            isVerified: sellerProfile.isVerified || false,
+            joinDate: sellerProfile.joinDate,
+            businessCity: sellerProfile.businessCity,
+            businessState: sellerProfile.businessState,
+            profileImage: sellerProfile.profileImage || null
+          });
+        } else {
+          loadCommunityUserProfile(sellerUsername || 'Seller', null, products || []);
+        }
+      }).catch(function() {
+        loadCommunityUserProfile(sellerUsername || 'Seller', null, []);
+      });
+      return;
+    }
+
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sellerUsername);
     const lookupEmail = email || (isEmail ? sellerUsername : null);
 
