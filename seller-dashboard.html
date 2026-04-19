@@ -69,7 +69,7 @@
       <div>
         <h1 class="text-4xl font-bold text-white mb-2" id="shopNameDisplay">Your Shop</h1>
         <p class="text-gray-400 mb-2" id="shopDescDisplay"></p>
-        <a href="#" id="viewProfileLink" class="text-cyan-400 hover:text-cyan-300 text-sm font-semibold flex items-center gap-1">
+        <a href="#" id="viewProfileLink" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-sm font-semibold flex items-center gap-1">
           <i class="fas fa-external-link-alt"></i> View Your Public Profile
         </a>
       </div>
@@ -143,6 +143,7 @@
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let sellerData = {};
+  let _userId = null;
 
   async function getUserIdFromSession() {
     try {
@@ -171,9 +172,9 @@
       sellerData.products = [];
 
       // Fetch products from backend
-      const userId = await getUserIdFromSession();
-      if (userId) {
-        const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId));
+      _userId = await getUserIdFromSession();
+      if (_userId) {
+        const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(_userId));
         if (prodRes.ok) {
           const backendProducts = await prodRes.json();
           if (Array.isArray(backendProducts)) {
@@ -218,10 +219,12 @@
 
   function loadDashboard() {
     // Update shop info
-    const currentUser = (ZrxSession.getUser() || {}).email || '';
     document.getElementById('shopNameDisplay').textContent = sellerData.shopName;
     document.getElementById('shopDescDisplay').textContent = sellerData.shopDescription;
-    document.getElementById('viewProfileLink').href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser);
+    const profileParam = _userId
+      ? 'id=' + encodeURIComponent(_userId)
+      : 'seller=' + encodeURIComponent((ZrxSession.getUser() || {}).email || '');
+    document.getElementById('viewProfileLink').href = 'seller-profile.html?' + profileParam;
 
     // Update stats
     document.getElementById('totalProducts').textContent = sellerData.products.length;
