@@ -125,11 +125,26 @@
       const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(userId));
       if (res.ok) {
         const data = await res.json();
-        console.log('Seller data for ' + userId + ':', data);
+        console.log('=== SELLER ENDPOINT ===');
+        console.log('URL:', BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(userId));
+        console.log('Full Response:', data);
+        console.log('All keys:', Object.keys(data));
+        console.log('profileImage:', data.profileImage);
+        console.log('profilePicture:', data.profilePicture);
+        console.log('image:', data.image);
+        console.log('avatar:', data.avatar);
+        console.log('photo:', data.photo);
+
+        // Try every possible field that might contain an image
+        const imageUrl = data.profileImage || data.profilePicture || data.image ||
+                         data.avatar || data.photo || data.profile_image ||
+                         data.profile_picture || null;
+
         userInfoCache['id:' + userId] = {
           displayName: data.shopName || userId,
-          profileImage: data.profileImage || data.profilePicture || null
+          profileImage: imageUrl
         };
+        console.log('Cached result:', userInfoCache['id:' + userId]);
         return userInfoCache['id:' + userId];
       }
     } catch (e) {
@@ -141,11 +156,20 @@
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/info?userId=' + encodeURIComponent(userId));
       if (res.ok) {
         const data = await res.json();
-        console.log('User info data for ' + userId + ':', data);
+        console.log('=== USER INFO ENDPOINT ===');
+        console.log('URL:', BACKEND_URL + '/api/user/info?userId=' + encodeURIComponent(userId));
+        console.log('Full Response:', data);
+        console.log('All keys:', Object.keys(data));
+
+        const imageUrl = data.profileImage || data.profilePicture || data.image ||
+                         data.avatar || data.photo || data.profile_image ||
+                         data.profile_picture || null;
+
         userInfoCache['id:' + userId] = {
           displayName: data.displayName || userId,
-          profileImage: data.profileImage || data.profilePicture || data.avatar || null
+          profileImage: imageUrl
         };
+        console.log('Cached result:', userInfoCache['id:' + userId]);
         return userInfoCache['id:' + userId];
       }
     } catch (e) {
@@ -154,6 +178,7 @@
 
     // Fallback
     userInfoCache['id:' + userId] = { displayName: userId, profileImage: null };
+    console.log('All endpoints failed, using fallback for userId:', userId);
     return userInfoCache['id:' + userId];
   }
 
