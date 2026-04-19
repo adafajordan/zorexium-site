@@ -88,38 +88,62 @@
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   const PLACEHOLDER_IMG = 'https://placehold.co/40x40/333/fff?text=U';
 
+  let currentUserId = null;
   let currentUser = null;
-  let currentUsername = null;
-  let selectedContact = null;
-  let allMessages = {};
+  let selectedContactId = null;
+  let allMessages = [];
   const userInfoCache = {};
+
+  function getUserIdFromToken(token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId || null;
+    } catch (e) { return null; }
+  }
 
   async function fetchUserInfo(email) {
     if (userInfoCache[email]) return userInfoCache[email];
     const token = localStorage.getItem('authToken');
-    if (!token) {
-      userInfoCache[email] = { displayName: email, profileImage: null };
-      return userInfoCache[email];
-    }
     try {
-      const res = await fetch(BACKEND_URL + '/api/user/info?email=' + encodeURIComponent(email), {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
+      const res = await fetch(BACKEND_URL + '/api/user/public-info?email=' + encodeURIComponent(email));
       const data = res.ok ? await res.json() : null;
       userInfoCache[email] = {
         displayName: (data && data.displayName) || email,
+        profileImage: (data && data.profileImage) || null,
+        userId: (data && data.userId) || null
+      };
+    } catch (_) {
+      userInfoCache[email] = { displayName: email, profileImage: null, userId: null };
+    }
+    return userInfoCache[email];
+  }
+
+  async function fetchUserInfoById(userId) {
+    if (userInfoCache['id:' + userId]) return userInfoCache['id:' + userId];
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      userInfoCache['id:' + userId] = { displayName: userId, profileImage: null };
+      return userInfoCache['id:' + userId];
+    }
+    try {
+      // Use the profile endpoint via info endpoint approach with userId lookup
+      const res = await fetch(BACKEND_URL + '/api/user/info?userId=' + encodeURIComponent(userId), {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const data = res.ok ? await res.json() : null;
+      userInfoCache['id:' + userId] = {
+        displayName: (data && data.displayName) || userId,
         profileImage: (data && data.profileImage) || null
       };
     } catch (_) {
-      userInfoCache[email] = { displayName: email, profileImage: null };
+      userInfoCache['id:' + userId] = { displayName: userId, profileImage: null };
     }
-    return userInfoCache[email];
+    return userInfoCache['id:' + userId];
   }
 
   function avatarHtml(profileImage, displayName, size) {
     const s = size || 40;
     const safeName = escapeHtml(displayName);
-    // Only allow specific safe image types (exclude SVG which can contain scripts)
     const safeSrc = (profileImage && typeof profileImage === 'string' &&
       /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(profileImage))
       ? profileImage : PLACEHOLDER_IMG;
@@ -135,39 +159,49 @@
       .replace(/'/g, '&#39;');
   }
 
-  function init() {
+  async function init() {
+    const token = localStorage.getItem('authToken');
     currentUser = localStorage.getItem('currentUser');
-    currentUsername = localStorage.getItem('currentUsername') || currentUser;
-    if (!currentUser) {
+    if (!token || !currentUser) {
       ZrxNotify.showNotification('Please log in', 'info');
       window.location.href = 'signup-login.html';
       return;
     }
+    currentUserId = getUserIdFromToken(token);
 
     const params = new URLSearchParams(window.location.search);
     const directContact = params.get('with');
-    loadConversations(directContact);
+
+    await loadConversations(directContact);
   }
 
-  function loadConversations(directContact) {
-    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
-    const conversations = {};
-    Object.keys(msgs).forEach(key => {
-      let otherUser = null;
-      if (key.startsWith(currentUser + '_')) {
-        otherUser = key.slice(currentUser.length + 1);
-      } else if (key.endsWith('_' + currentUser)) {
-        otherUser = key.slice(0, key.length - currentUser.length - 1);
+  async function loadConversations(directContactId) {
+    const token = localStorage.getItem('authToken');
+    try {
+      const res = await fetch(BACKEND_URL + '/api/messages', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (res.ok) {
+        allMessages = await res.json();
       }
-      if (otherUser !== null) {
-        conversations[otherUser] = msgs[key];
-      }
-    });
-    if (directContact && !conversations[directContact]) {
-      conversations[directContact] = [];
+    } catch (_) {
+      allMessages = [];
     }
-    renderConversations(conversations);
-    if (directContact) selectContact(directContact);
+
+    // Build unique conversations (by other party's userId)
+    const conversations = {};
+    allMessages.forEach(msg => {
+      const otherId = msg.fromUserId === currentUserId ? msg.toUserId : msg.fromUserId;
+      if (!conversations[otherId]) conversations[otherId] = [];
+      conversations[otherId].push(msg);
+    });
+
+    if (directContactId && !conversations[directContactId]) {
+      conversations[directContactId] = [];
+    }
+
+    await renderConversations(conversations);
+    if (directContactId) selectContact(directContactId);
   }
 
   async function renderConversations(conversations) {
@@ -179,23 +213,22 @@
       return;
     }
 
-    for (const contact of Object.keys(conversations)) {
-      const info = await fetchUserInfo(contact);
+    for (const contactId of Object.keys(conversations)) {
+      const info = await fetchUserInfoById(contactId);
       const button = document.createElement('button');
       button.className = 'w-full text-left px-3 py-2 hover:bg-[#2a2e38] rounded transition-colors text-white flex items-center gap-2';
       button.innerHTML = `${avatarHtml(info.profileImage, info.displayName, 32)}<span class="truncate">${escapeHtml(info.displayName)}</span>`;
-      button.onclick = () => selectContact(contact);
+      button.onclick = () => selectContact(contactId);
       list.appendChild(button);
     }
   }
 
-  async function selectContact(contact) {
-    selectedContact = contact;
+  async function selectContact(contactId) {
+    selectedContactId = contactId;
 
-    const info = await fetchUserInfo(contact);
+    const info = await fetchUserInfoById(contactId);
     const headerLeft = document.getElementById('chatHeaderLeft');
 
-    // Replace static text with avatar + display name
     headerLeft.innerHTML = `
       <div class="flex items-center gap-3">
         ${avatarHtml(info.profileImage, info.displayName, 40)}
@@ -206,9 +239,11 @@
       </div>
     `;
 
-    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
-    const conversationKey = [currentUser, contact].sort().join('_');
-    renderMessages(msgs[conversationKey] || [], info);
+    const msgs = allMessages.filter(msg =>
+      (msg.fromUserId === currentUserId && msg.toUserId === contactId) ||
+      (msg.fromUserId === contactId && msg.toUserId === currentUserId)
+    );
+    renderMessages(msgs, info);
   }
 
   function renderMessages(msgs, contactInfo) {
@@ -221,26 +256,25 @@
     }
 
     msgs.forEach(msg => {
-      const isOwn = msg.from === currentUsername || msg.from === currentUser;
+      const isOwn = msg.fromUserId === currentUserId;
       const div = document.createElement('div');
       div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'} items-end gap-2`;
       if (isOwn) {
         div.innerHTML = `
           <div class="max-w-xs message-bubble bg-cyan-600 text-white rounded-lg p-3">
-            <p class="text-xs opacity-75 mb-1">${escapeHtml(msg.subject)}</p>
+            <p class="text-xs opacity-75 mb-1">${escapeHtml(msg.subject || '')}</p>
             <p class="break-words">${escapeHtml(msg.body)}</p>
-            <p class="text-xs opacity-50 mt-2">${new Date(msg.timestamp).toLocaleString()}</p>
+            <p class="text-xs opacity-50 mt-2">${new Date(msg.createdAt).toLocaleString()}</p>
           </div>
         `;
       } else {
-        const info = contactInfo || { displayName: msg.from, profileImage: null };
         div.innerHTML = `
-          ${avatarHtml(info.profileImage, info.displayName, 32)}
+          ${avatarHtml(contactInfo.profileImage, contactInfo.displayName, 32)}
           <div class="max-w-xs message-bubble bg-gray-700 text-white rounded-lg p-3">
-            <p class="text-xs font-semibold text-cyan-400 mb-1">${escapeHtml(info.displayName)}</p>
-            <p class="text-xs opacity-75 mb-1">${escapeHtml(msg.subject)}</p>
+            <p class="text-xs font-semibold text-cyan-400 mb-1">${escapeHtml(contactInfo.displayName)}</p>
+            <p class="text-xs opacity-75 mb-1">${escapeHtml(msg.subject || '')}</p>
             <p class="break-words">${escapeHtml(msg.body)}</p>
-            <p class="text-xs opacity-50 mt-2">${new Date(msg.timestamp).toLocaleString()}</p>
+            <p class="text-xs opacity-50 mt-2">${new Date(msg.createdAt).toLocaleString()}</p>
           </div>
         `;
       }
@@ -250,8 +284,8 @@
     container.scrollTop = container.scrollHeight;
   }
 
-  function sendCurrentMessage() {
-    if (!selectedContact) {
+  async function sendCurrentMessage() {
+    if (!selectedContactId) {
       ZrxNotify.showNotification('Select a conversation first', 'info');
       return;
     }
@@ -264,33 +298,25 @@
       return;
     }
 
-    const conversationKey = [currentUser, selectedContact].sort().join('_');
-    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
-    if (!msgs[conversationKey]) msgs[conversationKey] = [];
-    msgs[conversationKey].push({
-      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      from: currentUsername,
-      to: selectedContact,
-      subject: subject,
-      body: body,
-      timestamp: new Date().toISOString(),
-      read: false,
-    });
-    localStorage.setItem('zorexiumMessages', JSON.stringify(msgs));
-    document.getElementById('msgSubject').value = '';
-    document.getElementById('msgBody').value = '';
-    selectContact(selectedContact);
-
-    fetch('/send-message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: currentUsername,
-        to: selectedContact,
-        subject: subject,
-        body: body,
-      }),
-    }).catch(() => {});
+    const token = localStorage.getItem('authToken');
+    try {
+      const res = await fetch(BACKEND_URL + '/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ toUserId: selectedContactId, subject, body })
+      });
+      if (res.ok) {
+        document.getElementById('msgSubject').value = '';
+        document.getElementById('msgBody').value = '';
+        // Reload conversations and re-select
+        await loadConversations(selectedContactId);
+      } else {
+        const data = await res.json();
+        ZrxNotify.showNotification(data.error || 'Failed to send message', 'error');
+      }
+    } catch (_) {
+      ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
   }
 
   init();

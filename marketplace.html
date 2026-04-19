@@ -245,16 +245,47 @@
     window.location.href = 'product-detail.html?id=' + encodeURIComponent(productId);
   }
 
-  function addToCart(productId, name, price, image) {
-    let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-    const existingItem = cart.find(item => item.id === productId);
-    if (existingItem) {
-      existingItem.quantity += 1;
+  async function addToCart(productId, name, price, image) {
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      try {
+        // Fetch current cart from server
+        const cartRes = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+        let items = [];
+        if (cartRes.ok) {
+          const data = await cartRes.json();
+          items = data.items || [];
+        }
+        const existing = items.find(item => item.id === productId);
+        if (existing) {
+          existing.quantity += 1;
+        } else {
+          items.push({ id: productId, name, price, quantity: 1, image });
+        }
+        await fetch(BACKEND_URL + '/api/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({ items })
+        });
+        const count = items.length;
+        const badge = document.getElementById('cartBadge');
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      } catch (_) {
+        ZrxNotify.showNotification('Failed to add to cart', 'error');
+        return;
+      }
     } else {
-      cart.push({ id: productId, name, price, quantity: 1, image });
+      let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+      const existingItem = cart.find(item => item.id === productId);
+      if (existingItem) {
+        existingItem.quantity += 1;
+      } else {
+        cart.push({ id: productId, name, price, quantity: 1, image });
+      }
+      localStorage.setItem('zorexiumCart', JSON.stringify(cart));
+      updateCartBadge();
     }
-    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
-    updateCartBadge();
     ZrxNotify.showNotification('Added to cart!', 'success');
   }
 
@@ -262,15 +293,25 @@
     window.location.href = 'seller-signup.html';
   }
 
-  function updateCartBadge() {
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  async function updateCartBadge() {
+    const authToken = localStorage.getItem('authToken');
     const badge = document.getElementById('cartBadge');
-    if (cart.length > 0) {
-      badge.textContent = cart.length;
-      badge.classList.remove('hidden');
-    } else {
-      badge.classList.add('hidden');
+    if (!badge) return;
+    if (authToken) {
+      try {
+        const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+        if (res.ok) {
+          const data = await res.json();
+          const count = (data.items || []).length;
+          badge.textContent = count;
+          badge.classList.toggle('hidden', count === 0);
+          return;
+        }
+      } catch (_) {}
     }
+    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+    badge.textContent = cart.length;
+    badge.classList.toggle('hidden', cart.length === 0);
   }
 
   function setViewMode(mode) {

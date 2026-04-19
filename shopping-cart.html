@@ -114,11 +114,46 @@
 
 <script src="notifications.js"></script>
 <script>
-  let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const authToken = localStorage.getItem('authToken');
+  let cart = [];
 
-  function loadCart() {
+  async function loadCart() {
+    if (authToken) {
+      try {
+        const res = await fetch(BACKEND_URL + '/api/cart', {
+          headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          cart = data.items || [];
+        }
+      } catch (_) {
+        cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+      }
+    } else {
+      cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+    }
+    renderCart();
+  }
+
+  async function saveCart() {
+    if (authToken) {
+      try {
+        await fetch(BACKEND_URL + '/api/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({ items: cart })
+        });
+      } catch (_) {}
+    } else {
+      localStorage.setItem('zorexiumCart', JSON.stringify(cart));
+    }
+  }
+
+  function renderCart() {
     const cartItemsDiv = document.getElementById('cartItems');
-    
+
     if (cart.length === 0) {
       cartItemsDiv.innerHTML = `
         <div class="text-center py-12">
@@ -155,25 +190,25 @@
     updateSummary();
   }
 
-  function updateQuantity(index, change) {
+  async function updateQuantity(index, change) {
     cart[index].quantity += change;
     if (cart[index].quantity < 1) cart[index].quantity = 1;
-    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
-    loadCart();
+    await saveCart();
+    renderCart();
   }
 
-  function setQuantity(index, value) {
+  async function setQuantity(index, value) {
     const qty = parseInt(value) || 1;
     if (qty < 1) return;
     cart[index].quantity = qty;
-    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
-    loadCart();
+    await saveCart();
+    renderCart();
   }
 
-  function removeFromCart(index) {
+  async function removeFromCart(index) {
     cart.splice(index, 1);
-    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
-    loadCart();
+    await saveCart();
+    renderCart();
   }
 
   function updateSummary() {
@@ -202,6 +237,8 @@
       ZrxNotify.showNotification('Your cart is empty', 'info');
       return;
     }
+    // Sync to localStorage for checkout page (which also needs it)
+    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
     window.location.href = 'checkout.html';
   }
 

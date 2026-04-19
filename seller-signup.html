@@ -256,62 +256,37 @@
       return;
     }
 
-    // Get or create sellers object
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-
-    // Check if user is already a seller
-    if (sellers[currentUser]) {
-      errorAlert.textContent = 'You are already registered as a seller!';
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      errorAlert.textContent = 'You must be logged in to become a seller.';
       errorAlert.classList.remove('hidden');
       return;
     }
 
-    // Create seller profile
-    sellers[currentUser] = selectedType === 'business' ? {
-      accountType: 'business',
-      shopName,
-      shopDescription,
-      businessEmail,
-      phoneNumber,
-      businessAddress,
-      businessCity,
-      businessState,
-      businessZip,
-      joinDate: new Date().toLocaleDateString(),
-      rating: 5,
-      products: [],
-      totalSales: 0,
-      isVerified: false
-    } : {
-      accountType: 'individual',
-      shopName: shopName || personalName,
-      shopDescription: shopDescription || 'Individual seller',
-      personalName,
-      personalEmail,
-      shippingAddress,
-      shippingCity,
-      shippingState,
-      shippingZip,
-      joinDate: new Date().toLocaleDateString(),
-      rating: 5,
-      products: [],
-      totalSales: 0,
-      isVerified: false
-    };
+    const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+    const sellerPayload = selectedType === 'business'
+      ? { accountType: 'business', shopName, shopDescription, businessEmail, phoneNumber, businessAddress, businessCity, businessState, businessZip }
+      : { accountType: 'individual', shopName: shopName || personalName, shopDescription: shopDescription || 'Individual seller', personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip };
 
-    localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-
-    // Update user's seller status
-    let users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    if (users[currentUser]) {
-      users[currentUser].isSeller = true;
-      localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify(sellerPayload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorAlert.textContent = data.error || 'Failed to create seller profile.';
+        errorAlert.classList.remove('hidden');
+        return;
+      }
+      successAlert.textContent = 'Welcome to Zorexium Sellers!';
+      successAlert.classList.remove('hidden');
+      window.location.href = 'seller-dashboard.html';
+    } catch (err) {
+      errorAlert.textContent = 'Network error. Please try again.';
+      errorAlert.classList.remove('hidden');
     }
-
-    successAlert.textContent = 'Welcome to Zorexium Sellers!';
-    successAlert.classList.remove('hidden');
-
-    window.location.href = 'seller-dashboard.html';
   }
 
   function toggleDropdown(id) {
@@ -578,47 +553,33 @@
       return;
     }
 
-    // Get or create sellers object
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-
-    // Check if user is already a seller
-    if (sellers[currentUser]) {
-      errorAlert.textContent = 'You are already registered as a seller!';
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      errorAlert.textContent = 'You must be logged in to become a seller.';
       errorAlert.classList.remove('hidden');
       return;
     }
 
-    // Create seller profile
-    sellers[currentUser] = {
-      accountType: 'business',
-      shopName,
-      shopDescription,
-      businessEmail,
-      phoneNumber,
-      businessAddress,
-      businessCity,
-      businessState,
-      businessZip,
-      joinDate: new Date().toLocaleDateString(),
-      rating: 5,
-      products: [],
-      totalSales: 0,
-      isVerified: false
-    };
-
-    localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
-
-    // Update user's seller status
-    let users = JSON.parse(localStorage.getItem('zorexiumUsers') || '{}');
-    if (users[currentUser]) {
-      users[currentUser].isSeller = true;
-      localStorage.setItem('zorexiumUsers', JSON.stringify(users));
+    const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ accountType: 'business', shopName, shopDescription, businessEmail, phoneNumber, businessAddress, businessCity, businessState, businessZip })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorAlert.textContent = data.error || 'Failed to create seller profile.';
+        errorAlert.classList.remove('hidden');
+        return;
+      }
+      successAlert.textContent = 'Welcome to Zorexium Sellers!';
+      successAlert.classList.remove('hidden');
+      window.location.href = 'seller-dashboard.html';
+    } catch (err) {
+      errorAlert.textContent = 'Network error. Please try again.';
+      errorAlert.classList.remove('hidden');
     }
-
-    successAlert.textContent = 'Welcome to Zorexium Sellers!';
-    successAlert.classList.remove('hidden');
-
-    window.location.href = 'seller-dashboard.html';
   }
 
   function toggleDropdown(id) {

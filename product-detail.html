@@ -137,6 +137,7 @@
 </div>
 
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let currentProduct = null;
   let currentProductId = null;
 
@@ -166,7 +167,7 @@
 
     // Try backend API first (source of truth for MongoDB products)
     try {
-      const res = await fetch('/api/products/' + encodeURIComponent(currentProductId));
+      const res = await fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(currentProductId));
       if (res.ok) {
         const product = await res.json();
         if (product && (product._id || product.id)) {
@@ -192,57 +193,10 @@
     } catch (e) {
       console.error('Failed to fetch product from backend:', e);
     }
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    
-    // Search through all sellers' products
-    let foundProduct = null;
-    let foundSeller = null;
-    
-    for (const [sellerUsername, sellerData] of Object.entries(sellers)) {
-      if (sellerData.products && Array.isArray(sellerData.products)) {
-        const product = sellerData.products.find(p => String(p.id) === String(currentProductId));
-        if (product) {
-          foundProduct = product;
-          foundSeller = { username: sellerUsername, ...sellerData };
-          // found product
-          break;
-        }
-      }
-    }
 
-    // Fallback to mock products if not found in sellers
-    if (!foundProduct) {
-      // Product not found in sellers, will try mock data
-      const mockProducts = {
-        'item_gpu_rtx4090': { name: 'RTX 4090', price: 1599.99, sellerId: 'seller1', image: 'https://via.placeholder.com/400x300?text=RTX+4090', description: 'High-end RTX 4090 graphics card. Excellent condition.' },
-        'item_cpu_ryzen9': { name: 'Ryzen 9 7950X', price: 699.99, sellerId: 'seller2', image: 'https://via.placeholder.com/400x300?text=Ryzen+9', description: '16-core Ryzen 9 processor. Perfect for gaming and streaming.' },
-        'item_ram_32gb': { name: 'DDR5 32GB', price: 149.99, sellerId: 'seller3', image: 'https://via.placeholder.com/400x300?text=DDR5+RAM', description: '32GB DDR5 RAM module. High performance memory.' },
-      };
-      
-      foundProduct = mockProducts[currentProductId];
-        if (foundProduct) {
-        foundSeller = { username: 'seller', shopName: foundProduct.sellerId };
-      } else {
-        // Display error message without redirecting - show a user-friendly message
-        document.getElementById('productName').innerText = 'Product Not Found';
-        document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or has been removed. Please return to the marketplace to view available products.';
-        document.getElementById('productPrice').innerText = 'N/A';
-        return;
-      }
-    }
-
-    currentProduct = foundProduct;
-    const sellerUsername = foundSeller.username;
-    // ensure product has seller reference for messaging
-    try { currentProduct.sellerId = sellerUsername; } catch(e) {}
-
-    document.getElementById('productName').innerText = currentProduct.name;
-    document.getElementById('productPrice').innerText = '$' + currentProduct.price.toFixed(2);
-    document.getElementById('productDescription').innerText = currentProduct.description || 'No description available';
-    document.getElementById('productImage').src = currentProduct.image || 'https://via.placeholder.com/400x300?text=Product';
-    document.getElementById('productId').innerText = currentProductId;
-    document.getElementById('sellerName').innerText = foundSeller.shopName || sellerUsername;
-    document.getElementById('sellerLink').href = 'seller-profile.html?seller=' + sellerUsername;
+    document.getElementById('productName').innerText = 'Product Not Found';
+    document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or has been removed. Please return to the marketplace to view available products.';
+    document.getElementById('productPrice').innerText = 'N/A';
   }
 
   function increaseQty() {
@@ -262,43 +216,73 @@
     if (parseInt(qty.value) < 1) qty.value = 1;
   }
 
-  function addToCart() {
-    let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  async function addToCart() {
+    const authToken = localStorage.getItem('authToken');
     const quantity = parseInt(document.getElementById('quantity').value);
 
-    // Get seller info from the current product
-    const sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    let sellerUsername = document.getElementById('sellerLink').href.split('seller=')[1];
-    let sellerData = sellers[sellerUsername] || {};
-
-    const existingItem = cart.find(item => String(item.id) === String(currentProductId));
-    if (existingItem) {
-      existingItem.quantity += quantity;
+    if (authToken) {
+      try {
+        const cartRes = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+        let items = [];
+        if (cartRes.ok) {
+          const data = await cartRes.json();
+          items = data.items || [];
+        }
+        const existingItem = items.find(item => String(item.id) === String(currentProductId));
+        if (existingItem) {
+          existingItem.quantity += quantity;
+        } else {
+          items.push({
+            id: currentProductId,
+            name: currentProduct.name,
+            price: currentProduct.price,
+            quantity: quantity,
+            image: currentProduct.image || 'https://via.placeholder.com/400x300?text=Product',
+            sellerName: document.getElementById('sellerName').innerText
+          });
+        }
+        await fetch(BACKEND_URL + '/api/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({ items })
+        });
+        const count = items.length;
+        const badge = document.getElementById('cartBadge');
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      } catch (_) {
+        ZrxNotify.showNotification('Failed to add to cart', 'error');
+        return;
+      }
     } else {
-      cart.push({
-        id: currentProductId,
-        name: currentProduct.name,
-        price: currentProduct.price,
-        quantity: quantity,
-        image: currentProduct.image || 'https://via.placeholder.com/400x300?text=Product',
-        sellerUsername: sellerUsername,
-        sellerName: sellerData.shopName || sellerUsername,
-      });
+      let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+      const existingItem = cart.find(item => String(item.id) === String(currentProductId));
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      } else {
+        cart.push({
+          id: currentProductId,
+          name: currentProduct.name,
+          price: currentProduct.price,
+          quantity: quantity,
+          image: currentProduct.image || 'https://via.placeholder.com/400x300?text=Product',
+          sellerName: document.getElementById('sellerName').innerText
+        });
+      }
+      localStorage.setItem('zorexiumCart', JSON.stringify(cart));
+      updateCartBadge();
     }
-
-    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
-    updateCartBadge();
     ZrxNotify.showNotification(quantity + ' item(s) added to cart!', 'success');
   }
 
-  function goToCheckout() {
-    addToCart();
+  async function goToCheckout() {
+    await addToCart();
     window.location.href = 'shopping-cart.html';
   }
 
   function contactSeller() {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
       ZrxNotify.showNotification('Please log in to contact the seller', 'info');
       window.location.href = 'signup-login.html';
       return;
@@ -316,13 +300,12 @@
     document.getElementById('messageBody').value = '';
   }
 
-  function sendMessage() {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
+  async function sendMessage() {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
       ZrxNotify.showNotification('Please log in to send a message', 'info');
       return;
     }
-    const currentUsername = localStorage.getItem('currentUsername') || currentUser;
 
     const subject = document.getElementById('messageSubject').value.trim();
     const body = document.getElementById('messageBody').value.trim();
@@ -333,40 +316,44 @@
     }
 
     const sellerId = currentProduct.sellerId;
-    const conversationKey = [currentUser, sellerId].sort().join('_');
-    const msgs = JSON.parse(localStorage.getItem('zorexiumMessages') || '{}');
-    if (!msgs[conversationKey]) msgs[conversationKey] = [];
-    msgs[conversationKey].push({
-      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      from: currentUsername,
-      to: sellerId,
-      subject: subject,
-      body: body,
-      timestamp: new Date().toISOString(),
-      read: false,
-    });
-    localStorage.setItem('zorexiumMessages', JSON.stringify(msgs));
-
-    ZrxNotify.showNotification('Message sent to ' + sellerId + '!', 'success');
-    closeContactModal();
-    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerId);
-
-    fetch('/send-message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: currentUsername, to: sellerId, subject, body }),
-    }).catch(() => {});
+    try {
+      const res = await fetch(BACKEND_URL + '/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ toUserId: sellerId, subject, body })
+      });
+      if (res.ok) {
+        ZrxNotify.showNotification('Message sent!', 'success');
+        closeContactModal();
+        window.location.href = 'messages.html?with=' + encodeURIComponent(sellerId);
+      } else {
+        const data = await res.json();
+        ZrxNotify.showNotification(data.error || 'Failed to send message', 'error');
+      }
+    } catch (_) {
+      ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
   }
 
-  function updateCartBadge() {
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
-    if (cart.length > 0) {
-      badge.textContent = cart.length;
-      badge.classList.remove('hidden');
-    } else {
-      badge.classList.add('hidden');
+    if (!badge) return;
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      try {
+        const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+        if (res.ok) {
+          const data = await res.json();
+          const count = (data.items || []).length;
+          badge.textContent = count;
+          badge.classList.toggle('hidden', count === 0);
+          return;
+        }
+      } catch (_) {}
     }
+    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+    badge.textContent = cart.length;
+    badge.classList.toggle('hidden', cart.length === 0);
   }
 
   // Initialize on page load
