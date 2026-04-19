@@ -317,7 +317,7 @@
   async function loadAccountData() {
     try {
       // Fetch user profile from backend
-      const profileRes = await fetch(BACKEND_URL + '/api/user/profile', {
+      const profileRes = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
         credentials: 'include'
       });
       if (!profileRes.ok) {
@@ -346,7 +346,7 @@
 
     // Cart badge from backend
     try {
-      const cartRes = await fetch(BACKEND_URL + '/api/cart', {
+      const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
         credentials: 'include'
       });
       if (cartRes.ok) {
@@ -362,7 +362,7 @@
 
     // Check if seller
     try {
-      const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
+      const sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
         credentials: 'include'
       });
       if (sellerRes.ok) {
@@ -379,7 +379,7 @@
 
         // Fetch product count via session endpoint
         try {
-          const sessionRes = await fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
+          const sessionRes = await ZrxSession.fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
           if (sessionRes.ok) {
             const session = await sessionRes.json();
             if (session.userId) {
@@ -408,7 +408,7 @@
       document.getElementById('profileImage').src = dataUrl;
       if (ZrxSession.isLoggedIn()) {
         try {
-          const res = await fetch(BACKEND_URL + '/api/user/profile-picture', {
+          const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile-picture', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
@@ -480,7 +480,7 @@
     }
 
     try {
-      const res = await fetch(BACKEND_URL + '/api/auth/change-password', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -508,7 +508,7 @@
     const shopName = document.getElementById('shopName').value;
     const shopDescription = document.getElementById('shopDescription').value;
     try {
-      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -534,7 +534,7 @@
   async function deleteAccount() {
     ZrxNotify.showConfirm('Are you sure? This action cannot be undone.', async function() {
       try {
-        const res = await fetch(BACKEND_URL + '/api/user/profile', {
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
           method: 'DELETE',
           credentials: 'include'
         });
@@ -559,7 +559,7 @@
     const phone = document.getElementById('editPhone').value.trim();
 
     try {
-      const res = await fetch(BACKEND_URL + '/api/user/profile', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

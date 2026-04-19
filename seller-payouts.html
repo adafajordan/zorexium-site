@@ -169,7 +169,7 @@
     updateCartBadge();
 
     try {
-      const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
+      const sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
         credentials: 'include'
       });
       if (!sellerRes.ok) {
@@ -189,7 +189,7 @@
     const user = ZrxSession.getUser();
     const userId = user ? user.userId : null;
     try {
-      const res = await fetch(BACKEND_URL + '/api/payouts', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts', {
         credentials: 'include'
       });
       if (res.ok) {
@@ -278,7 +278,7 @@
       return;
     }
     try {
-      var res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         var data = await res.json();
         var count = (data.items || []).reduce(function(s, i) { return s + (i.quantity || 1); }, 0);

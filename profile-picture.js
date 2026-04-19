@@ -12,9 +12,21 @@
   }
 
   function loadProfilePicture() {
-    // Token is in an HTTP-only cookie – use credentials:'include' so it is
-    // forwarded automatically; no localStorage read needed.
-    fetch(BACKEND_URL + '/api/user/profile-picture', { credentials: 'include' })
+    // Use ZrxSession.fetch if available (adds Authorization header for cross-domain auth)
+    var fetchFn = (window.ZrxSession && window.ZrxSession.fetch) ? window.ZrxSession.fetch.bind(window.ZrxSession) : null;
+    if (!fetchFn) {
+      // Fallback: build Authorization header from sessionStorage token directly
+      var token = null;
+      try { token = sessionStorage.getItem('authToken'); } catch (e) {}
+      var options = { credentials: 'include' };
+      if (token) { options.headers = { 'Authorization': 'Bearer ' + token }; }
+      fetch(BACKEND_URL + '/api/user/profile-picture', options)
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (data) { if (data && data.profileImage) updateProfileImages(data.profileImage); })
+        .catch(function () {});
+      return;
+    }
+    fetchFn(BACKEND_URL + '/api/user/profile-picture')
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (data) {
         if (data && data.profileImage) {

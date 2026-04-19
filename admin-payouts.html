@@ -147,7 +147,7 @@
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/payouts', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts', {
         credentials: 'include'
       });
       if (res.ok) {
@@ -225,7 +225,7 @@
 
   async function markDelivered(payoutId) {
     try {
-      const res = await fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -250,7 +250,7 @@
       'Confirm payout of $' + Number(payout.amount).toFixed(2) + ' to ' + (payout.sellerName || payout.sellerUsername) + '?',
       async function() {
         try {
-          const res = await fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
+          const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -300,7 +300,7 @@
       return;
     }
     try {
-      var res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         var data = await res.json();
         var count = (data.items || []).reduce(function(s, i) { return s + (i.quantity || 1); }, 0);

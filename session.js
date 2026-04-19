@@ -1,11 +1,12 @@
 /**
  * ZrxSession – client-side session utility
- * Replaces all direct localStorage token usage with secure cookie-based auth.
  *
- * The authToken JWT lives in an HTTP-only cookie (server-set, not readable by JS).
- * A companion _zrx_user cookie (non-httpOnly) holds {email, username} for display.
- * All authenticated API requests use credentials:'include' so the HTTP-only
- * authToken cookie is forwarded automatically by the browser.
+ * Authentication strategy (cross-domain compatible):
+ * 1. After login, the JWT is stored in sessionStorage ('authToken') and user
+ *    info in sessionStorage ('_zrx_user').  This works cross-domain.
+ * 2. authFetch() automatically adds an Authorization: Bearer header so the
+ *    backend verifyToken middleware accepts the request regardless of cookies.
+ * 3. Cookie-based auth is kept as a fallback for backward compatibility.
  */
 (function () {
   'use strict';
@@ -28,36 +29,69 @@
     document.cookie = name + '=; Path=/; Max-Age=0; SameSite=Strict';
   }
 
-  /** Returns the current user object {email, username} or null if not logged in. */
-  function getUser() {
-    var raw = getCookie('_zrx_user');
-    if (!raw) return null;
-    try { return JSON.parse(raw); } catch (e) { return null; }
+  /** Returns the stored JWT token (sessionStorage first, then cookie fallback). */
+  function getToken() {
+    try {
+      var t = sessionStorage.getItem('authToken');
+      if (t) return t;
+    } catch (e) {}
+    return getCookie('authToken');
   }
 
-  /** Returns true if the user appears to be logged in (has a session cookie). */
+  /** Returns the current user object {email, username} or null if not logged in. */
+  function getUser() {
+    // Check sessionStorage first (cross-domain JWT flow)
+    try {
+      var raw = sessionStorage.getItem('_zrx_user');
+      if (raw) {
+        try { return JSON.parse(raw); } catch (e) {}
+      }
+    } catch (e) {}
+    // Fall back to cookie (same-domain flow)
+    var cookieRaw = getCookie('_zrx_user');
+    if (!cookieRaw) return null;
+    try { return JSON.parse(cookieRaw); } catch (e) { return null; }
+  }
+
+  /** Returns true if the user appears to be logged in. */
   function isLoggedIn() {
+    // Check sessionStorage token first (cross-domain)
+    try {
+      if (sessionStorage.getItem('authToken')) return true;
+    } catch (e) {}
+    // Fall back to cookie-based check
     return getUser() !== null;
   }
 
   /**
-   * Performs an authenticated fetch. Automatically adds credentials:'include'
-   * so the HTTP-only authToken cookie is forwarded.
+   * Performs an authenticated fetch. Adds credentials:'include' and an
+   * Authorization: Bearer header (from sessionStorage) so auth works
+   * cross-domain when cookies are not available.
    * @param {string} url
    * @param {RequestInit} [options]
    */
   function authFetch(url, options) {
     options = Object.assign({}, options);
     options.credentials = 'include';
+    var token = getToken();
+    if (token) {
+      options.headers = Object.assign({}, options.headers, {
+        'Authorization': 'Bearer ' + token
+      });
+    }
     return fetch(url, options);
   }
 
   /**
-   * Logs the user out by calling the server logout endpoint (clears HTTP-only cookie)
-   * then invokes the optional callback.
+   * Logs the user out by calling the server logout endpoint (clears HTTP-only cookie),
+   * clears sessionStorage auth data, then invokes the optional callback.
    * @param {function} [callback]
    */
   function logout(callback) {
+    try {
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('_zrx_user');
+    } catch (e) {}
     fetch(BACKEND_URL + '/api/auth/logout', { method: 'POST', credentials: 'include' })
       .catch(function () {})
       .finally(function () {
@@ -70,6 +104,7 @@
     isLoggedIn: isLoggedIn,
     fetch: authFetch,
     logout: logout,
+    getToken: getToken,
     getCookie: getCookie,
     setCookie: setCookie,
     deleteCookie: deleteCookie,

@@ -255,7 +255,7 @@
     }
 
     try {
-      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
         credentials: 'include'
       });
       if (!res.ok) {
@@ -287,7 +287,7 @@
 
   async function loadProductForEdit(productId) {
     try {
-      const res = await fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId));
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId));
       if (!res.ok) return;
       const product = await res.json();
 
@@ -415,7 +415,7 @@
 
     if (editingProductId) {
       // Update existing product
-      fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(editingProductId), {
+      ZrxSession.fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(editingProductId), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -433,7 +433,7 @@
       .catch(err => ZrxNotify.showNotification('Failed to update listing: ' + err.message, 'error'));
     } else {
       // Create new product
-      fetch(BACKEND_URL + '/api/products', {
+      ZrxSession.fetch(BACKEND_URL + '/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -460,7 +460,7 @@
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const count = (data.items || []).length;
@@ -489,6 +489,7 @@
 </script>
 
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

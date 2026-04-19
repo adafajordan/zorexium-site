@@ -156,7 +156,7 @@
 
     Promise.all(files.map(readFile)).then(async function(fileObjs) {
       try {
-        const res = await fetch(BACKEND_URL + '/api/labs', {
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/labs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

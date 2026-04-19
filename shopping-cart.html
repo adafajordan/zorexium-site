@@ -121,7 +121,7 @@
   async function loadCart() {
     if (ZrxSession.isLoggedIn()) {
       try {
-        const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           cart = data.items || [];
@@ -141,7 +141,7 @@
   async function saveCart() {
     if (ZrxSession.isLoggedIn()) {
       try {
-        await fetch(BACKEND_URL + '/api/cart', {
+        await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

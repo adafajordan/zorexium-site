@@ -251,7 +251,7 @@
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/posts', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -382,7 +382,7 @@
     const countEl = document.getElementById('like-count-' + postId);
     if (!btn) return;
     try {
-      const res = await fetch(BACKEND_URL + '/api/posts/' + postId + '/like', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/like', {
         method: 'POST',
         credentials: 'include'
       });
@@ -411,7 +411,7 @@
     const replyText = document.getElementById('replyText-' + postId).value.trim();
     if (!replyText) return;
     try {
-      const res = await fetch(BACKEND_URL + '/api/posts/' + postId + '/replies', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/replies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -476,6 +476,7 @@
 </script>
 
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

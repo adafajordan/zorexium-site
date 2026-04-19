@@ -146,7 +146,7 @@
 
   async function getUserIdFromSession() {
     try {
-      const res = await fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
       if (res.ok) { const d = await res.json(); return d.userId || null; }
     } catch (_) {}
     return null;
@@ -160,7 +160,7 @@
 
     try {
       // Fetch seller profile from backend
-      const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
+      const sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
         credentials: 'include'
       });
       if (!sellerRes.ok) {
@@ -284,7 +284,7 @@
   function deleteProduct(productId) {
     ZrxNotify.showConfirm('Are you sure you want to delete this product?', function() {
       sellerData.products = sellerData.products.filter(p => p.id !== productId);
-      fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId), {
+      ZrxSession.fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId), {
         method: 'DELETE',
         credentials: 'include'
       }).catch(err => console.error('Failed to delete product from server:', err));
@@ -337,7 +337,7 @@
   function deleteLab(labId) {
     if (!labId) return;
     ZrxNotify.showConfirm('Are you sure you want to delete this lab?', function() {
-      fetch(BACKEND_URL + '/api/labs/' + encodeURIComponent(labId), {
+      ZrxSession.fetch(BACKEND_URL + '/api/labs/' + encodeURIComponent(labId), {
         method: 'DELETE',
         credentials: 'include'
       })
@@ -371,7 +371,7 @@
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const count = (data.items || []).length;
