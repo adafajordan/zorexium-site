@@ -1410,7 +1410,22 @@ app.get('/api/sellers/user/:userId', async function(req, res) {
   try {
     const seller = await db.collection('sellers').findOne({ userId });
     if (!seller) return res.status(404).json({ error: 'Seller not found' });
-    res.json(seller);
+
+    // Include the user's profile picture from the users collection (sellers collection doesn't store it)
+    let profileImage = seller.profileImage || null;
+    if (!profileImage) {
+      try {
+        const user = await db.collection('users').findOne(
+          { _id: new ObjectId(userId) },
+          { projection: { profileImage: 1 } }
+        );
+        profileImage = (user && user.profileImage) || null;
+      } catch (userLookupError) {
+        console.error('Error fetching user profileImage for seller:', userLookupError);
+      }
+    }
+
+    res.json({ ...seller, profileImage });
   } catch (error) {
     console.error('Error fetching seller by userId:', error);
     res.status(500).json({ error: error.message });
