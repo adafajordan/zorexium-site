@@ -285,7 +285,7 @@ app.get('/api/auth/session', authRateLimit, verifyToken, async function(req, res
 });
 
 // POST /api/auth/logout – clear auth cookies
-app.post('/api/auth/logout', function(req, res) {
+app.post('/api/auth/logout', authRateLimit, function(req, res) {
   clearAuthCookies(res);
   res.json({ message: 'Logged out' });
 });
