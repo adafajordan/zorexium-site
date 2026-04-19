@@ -268,12 +268,7 @@
       return;
     }
 
-    // Only business account sellers can create listings
-    if (_sellerData.accountType && _sellerData.accountType !== 'business') {
-      ZrxNotify.showNotification('Only business account sellers can create product listings. Please upgrade to a business account to add products.', 'error');
-      window.location.href = 'seller-dashboard.html';
-      return;
-    }
+    // All registered sellers (business and individual) can create listings
 
     updateCartBadge();
 

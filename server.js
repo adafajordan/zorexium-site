@@ -1652,6 +1652,11 @@ function resolveSellerName(user) {
     || 'My Shop';
 }
 
+// Known seller IDs that should always be restored as business accounts
+const BUSINESS_SELLER_IDS = new Set([
+  '69e28ba63d419ba71f5a1d7d' // Steve – original business seller, registered 4/17
+]);
+
 async function recoverMissingSellers() {
   if (!mongoConnected) return;
   try {
@@ -1672,9 +1677,11 @@ async function recoverMissingSellers() {
 
       if (!user) continue;
 
+      const accountType = BUSINESS_SELLER_IDS.has(sellerId) ? 'business' : 'individual';
+
       await db.collection('sellers').insertOne({
         userId: sellerId,
-        accountType: 'individual',
+        accountType,
         shopName: resolveSellerName(user),
         shopDescription: 'Shop',
         joinDate: new Date(),
@@ -1696,6 +1703,22 @@ async function recoverMissingSellers() {
       console.log(`✅ Seller recovery: recovered ${recovered} seller record(s) from ${sellerIds.length} unique seller ID(s)`);
     } else {
       console.log(`ℹ️  Seller recovery: all ${sellerIds.length} seller(s) already have records`);
+    }
+
+    // Ensure known business sellers have the correct accountType even if already recovered
+    for (const sellerId of BUSINESS_SELLER_IDS) {
+      try {
+        const existing = await db.collection('sellers').findOne({ userId: sellerId });
+        if (existing && existing.accountType !== 'business') {
+          await db.collection('sellers').updateOne(
+            { userId: sellerId },
+            { $set: { accountType: 'business', updatedAt: new Date() } }
+          );
+          console.log(`✅ Restored business accountType for seller ${sellerId}`);
+        }
+      } catch (err) {
+        console.error(`⚠️  Could not verify business accountType for seller ${sellerId}:`, err.message);
+      }
     }
   } catch (err) {
     console.error('⚠️  Seller recovery error:', err.message);
