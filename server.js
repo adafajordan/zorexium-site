@@ -6,6 +6,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ObjectId } = require('mongodb');
+const rateLimit = require('express-rate-limit');
 
 if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
@@ -108,33 +109,22 @@ function clearAuthCookies(res) {
   ]);
 }
 
-// ── Simple in-memory rate limiter ─────────────────────────────────────────────
-function createRateLimiter(windowMs, max) {
-  var hits = new Map();
-  setInterval(function() {
-    var now = Date.now();
-    hits.forEach(function(data, key) {
-      if (now - data.start >= windowMs) hits.delete(key);
-    });
-  }, windowMs);
-  return function(req, res, next) {
-    var key = req.ip || req.connection.remoteAddress || 'unknown';
-    var now = Date.now();
-    var entry = hits.get(key);
-    if (!entry || now - entry.start >= windowMs) {
-      hits.set(key, { count: 1, start: now });
-      return next();
-    }
-    entry.count++;
-    if (entry.count > max) {
-      return res.status(429).json({ error: 'Too many requests, please try again later.' });
-    }
-    next();
-  };
-}
+// ── Rate Limiters ─────────────────────────────────────────────────────────────
+var authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
 
-var authRateLimit = createRateLimiter(15 * 60 * 1000, 20); // 20 requests per 15 min
-var prefsRateLimit = createRateLimiter(60 * 1000, 30);     // 30 requests per 1 min
+var prefsRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
 
 // ── CORS Middleware ────────────────────────────────────────────────────────────
 // Only allow credentialed requests from explicitly trusted origins.
@@ -142,20 +132,14 @@ var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
   .split(',').map(function(o) { return o.trim(); }).filter(Boolean);
 // Always allow the production backend origin itself
 ALLOWED_ORIGINS.push('https://zorexium-backend.onrender.com');
-// Allow localhost variants for dev (non-credentialed only)
 
 app.use(function(req, res, next) {
   var origin = req.headers.origin;
   if (origin && ALLOWED_ORIGINS.indexOf(origin) !== -1) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
-  } else if (!origin) {
-    // Same-origin or non-browser clients – no CORS headers needed
-  } else {
-    // Unknown origin – reflect for non-credentialed methods only
-    res.header('Access-Control-Allow-Origin', origin);
-    // Do NOT set Allow-Credentials for unknown origins
   }
+  // Unknown origins or same-origin requests: no CORS headers set
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
