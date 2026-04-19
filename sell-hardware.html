@@ -282,17 +282,17 @@
 
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  const authToken = localStorage.getItem('authToken');
+  // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
 
   async function handleBecomeSeller() {
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'signup-login.html';
       return;
     }
 
     try {
       const res = await fetch(BACKEND_URL + '/api/sellers/me', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        credentials: 'include'
       });
       if (res.ok) {
         // Already a seller, go to dashboard
@@ -315,7 +315,7 @@
 
     updateCartBadge();
 
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       // Not logged in
       becomSellerBtn.style.display = 'inline-flex';
       dashboardLink.classList.add('hidden');
@@ -328,7 +328,7 @@
 
     try {
       const res = await fetch(BACKEND_URL + '/api/sellers/me', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        credentials: 'include'
       });
       if (res.ok) {
         const seller = await res.json();
@@ -366,12 +366,12 @@
   async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
     if (!badge) return;
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       badge.classList.add('hidden');
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const count = (data.items || []).length;

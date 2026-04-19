@@ -271,6 +271,7 @@
       const res = await fetch(BACKEND_URL + '/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password, firstName: username })
       });
       const data = await res.json();
@@ -278,9 +279,7 @@
         ZrxNotify.showNotification(data.error || 'Registration failed. Please try again.', 'error');
         return;
       }
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('currentUser', email);
-      localStorage.setItem('currentUsername', username);
+      // Auth token is set as an HTTP-only cookie by the server – no localStorage needed
       window.location.href = 'marketplace.html';
     } catch (err) {
       console.error(err);
@@ -297,6 +296,7 @@
       const res = await fetch(BACKEND_URL + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
@@ -304,9 +304,7 @@
         ZrxNotify.showNotification(data.error || 'Invalid email or password.', 'error');
         return;
       }
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('currentUser', email);
-      localStorage.setItem('currentUsername', (data.user && data.user.firstName) || email);
+      // Auth token is set as an HTTP-only cookie by the server – no localStorage needed
       window.location.href = 'marketplace.html';
     } catch (err) {
       console.error(err);

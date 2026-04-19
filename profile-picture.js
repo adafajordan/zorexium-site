@@ -12,12 +12,9 @@
   }
 
   function loadProfilePicture() {
-    var token = localStorage.getItem('authToken');
-    if (!token) return;
-
-    fetch(BACKEND_URL + '/api/user/profile-picture', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
+    // Token is in an HTTP-only cookie – use credentials:'include' so it is
+    // forwarded automatically; no localStorage read needed.
+    fetch(BACKEND_URL + '/api/user/profile-picture', { credentials: 'include' })
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (data) {
         if (data && data.profileImage) {

@@ -139,21 +139,21 @@
 </footer>
 
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  let currentUser = localStorage.getItem('currentUser');
-  let authToken = localStorage.getItem('authToken');
   let sellerData = {};
 
-  function getUserIdFromToken(token) {
+  async function getUserIdFromSession() {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId || null;
-    } catch (e) { return null; }
+      const res = await fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
+      if (res.ok) { const d = await res.json(); return d.userId || null; }
+    } catch (_) {}
+    return null;
   }
 
   async function init() {
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'seller-signup.html';
       return;
     }
@@ -161,7 +161,7 @@
     try {
       // Fetch seller profile from backend
       const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        credentials: 'include'
       });
       if (!sellerRes.ok) {
         window.location.href = 'seller-signup.html';
@@ -171,7 +171,7 @@
       sellerData.products = [];
 
       // Fetch products from backend
-      const userId = getUserIdFromToken(authToken);
+      const userId = await getUserIdFromSession();
       if (userId) {
         const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId));
         if (prodRes.ok) {
@@ -218,9 +218,10 @@
 
   function loadDashboard() {
     // Update shop info
+    const currentUser = (ZrxSession.getUser() || {}).email || '';
     document.getElementById('shopNameDisplay').textContent = sellerData.shopName;
     document.getElementById('shopDescDisplay').textContent = sellerData.shopDescription;
-    document.getElementById('viewProfileLink').href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser || '');
+    document.getElementById('viewProfileLink').href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser);
 
     // Update stats
     document.getElementById('totalProducts').textContent = sellerData.products.length;
@@ -285,7 +286,7 @@
       sellerData.products = sellerData.products.filter(p => p.id !== productId);
       fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId), {
         method: 'DELETE',
-        headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
+        credentials: 'include'
       }).catch(err => console.error('Failed to delete product from server:', err));
       loadProducts();
       document.getElementById('totalProducts').textContent = sellerData.products.length;
@@ -297,8 +298,8 @@
   function loadLabs() {
     const labsList = document.getElementById('labsList');
     labsList.innerHTML = '<div class="text-center py-12 col-span-full"><i class="fas fa-spinner fa-spin text-4xl text-gray-600 mb-4 block"></i><p class="text-gray-400">Loading labs…</p></div>';
-    const userId = getUserIdFromToken(authToken);
-    fetch(BACKEND_URL + '/api/labs')
+    getUserIdFromSession().then(function(userId) {
+      fetch(BACKEND_URL + '/api/labs')
       .then(function(res) { return res.ok ? res.json() : []; })
       .then(function(allLabs) {
         const myLabs = allLabs.filter(function(l) { return l.userId === userId; });
@@ -330,6 +331,7 @@
       .catch(function() {
         labsList.innerHTML = '<div class="text-center py-12 col-span-full"><p class="text-gray-400">Failed to load labs.</p></div>';
       });
+    });
   }
 
   function deleteLab(labId) {
@@ -337,7 +339,7 @@
     ZrxNotify.showConfirm('Are you sure you want to delete this lab?', function() {
       fetch(BACKEND_URL + '/api/labs/' + encodeURIComponent(labId), {
         method: 'DELETE',
-        headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
+        credentials: 'include'
       })
       .then(function(res) {
         if (!res.ok) return res.json().then(function(d) { throw new Error(d.error || 'Delete failed'); });
@@ -351,29 +353,25 @@
 
   function viewPublicProfile(e) {
     e.preventDefault();
-    window.location.href = 'seller-profile.html?seller=' + encodeURIComponent(currentUser || '');
+    var user = ZrxSession.getUser();
+    window.location.href = 'seller-profile.html?seller=' + encodeURIComponent(user ? user.email : '');
   }
 
   function logout() {
     ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUsername');
-      window.location.href = 'index.html';
+      ZrxSession.logout(function() { window.location.href = 'index.html'; });
     });
   }
 
   async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
     if (!badge) return;
-    if (!authToken) {
-      const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-      badge.textContent = cart.length;
-      badge.classList.toggle('hidden', cart.length === 0);
+    if (!ZrxSession.isLoggedIn()) {
+      badge.classList.add('hidden');
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const count = (data.items || []).length;

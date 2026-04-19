@@ -246,45 +246,37 @@
   }
 
   async function addToCart(productId, name, price, image) {
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      try {
-        // Fetch current cart from server
-        const cartRes = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
-        let items = [];
-        if (cartRes.ok) {
-          const data = await cartRes.json();
-          items = data.items || [];
-        }
-        const existing = items.find(item => item.id === productId);
-        if (existing) {
-          existing.quantity += 1;
-        } else {
-          items.push({ id: productId, name, price, quantity: 1, image });
-        }
-        await fetch(BACKEND_URL + '/api/cart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-          body: JSON.stringify({ items })
-        });
-        const count = items.length;
-        const badge = document.getElementById('cartBadge');
-        badge.textContent = count;
-        badge.classList.toggle('hidden', count === 0);
-      } catch (_) {
-        ZrxNotify.showNotification('Failed to add to cart', 'error');
-        return;
+    if (!ZrxSession.isLoggedIn()) {
+      ZrxNotify.showNotification('Please log in to add items to your cart', 'info');
+      return;
+    }
+    try {
+      // Fetch current cart from server
+      const cartRes = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      let items = [];
+      if (cartRes.ok) {
+        const data = await cartRes.json();
+        items = data.items || [];
       }
-    } else {
-      let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-      const existingItem = cart.find(item => item.id === productId);
-      if (existingItem) {
-        existingItem.quantity += 1;
+      const existing = items.find(item => item.id === productId);
+      if (existing) {
+        existing.quantity += 1;
       } else {
-        cart.push({ id: productId, name, price, quantity: 1, image });
+        items.push({ id: productId, name, price, quantity: 1, image });
       }
-      localStorage.setItem('zorexiumCart', JSON.stringify(cart));
-      updateCartBadge();
+      await fetch(BACKEND_URL + '/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ items })
+      });
+      const count = items.length;
+      const badge = document.getElementById('cartBadge');
+      badge.textContent = count;
+      badge.classList.toggle('hidden', count === 0);
+    } catch (_) {
+      ZrxNotify.showNotification('Failed to add to cart', 'error');
+      return;
     }
     ZrxNotify.showNotification('Added to cart!', 'success');
   }
@@ -294,12 +286,11 @@
   }
 
   async function updateCartBadge() {
-    const authToken = localStorage.getItem('authToken');
     const badge = document.getElementById('cartBadge');
     if (!badge) return;
-    if (authToken) {
+    if (ZrxSession.isLoggedIn()) {
       try {
-        const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+        const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           const count = (data.items || []).length;
@@ -309,9 +300,7 @@
         }
       } catch (_) {}
     }
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-    badge.textContent = cart.length;
-    badge.classList.toggle('hidden', cart.length === 0);
+    badge.classList.add('hidden');
   }
 
   function setViewMode(mode) {
@@ -344,6 +333,7 @@
   window.addEventListener('load', init);
 </script>
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 
 <script src="profile-picture.js"></script>
 </body>

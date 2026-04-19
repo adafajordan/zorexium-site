@@ -1,5 +1,15 @@
 (function(){
-  if (localStorage.getItem('cookieConsent')) return;
+  function getCookieConsent() {
+    var match = document.cookie.match(/(?:^|;)\s*cookieConsent\s*=\s*([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function setCookieConsent(value) {
+    var maxAge = 365 * 24 * 60 * 60;
+    document.cookie = 'cookieConsent=' + encodeURIComponent(value) + '; Path=/; Max-Age=' + maxAge + '; SameSite=Strict';
+  }
+
+  if (getCookieConsent()) return;
 
   const banner = document.createElement('div');
   banner.id = 'cookieConsentBanner';
@@ -23,11 +33,11 @@
   document.addEventListener('DOMContentLoaded', function(){
     document.body.appendChild(banner);
     document.getElementById('cookieAccept').addEventListener('click', function(){
-      localStorage.setItem('cookieConsent','accepted');
+      setCookieConsent('accepted');
       banner.remove();
     });
     document.getElementById('cookieReject').addEventListener('click', function(){
-      localStorage.setItem('cookieConsent','rejected');
+      setCookieConsent('rejected');
       banner.remove();
     });
   });

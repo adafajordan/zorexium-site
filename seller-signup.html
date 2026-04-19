@@ -197,10 +197,10 @@
   </div>
 </footer>
 
+<script src="session.js"></script>
 <script>
   function checkAuth() {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
+    if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'signup-login.html';
       return false;
     }
@@ -212,7 +212,6 @@
 
     if (!checkAuth()) return;
 
-    const currentUser = localStorage.getItem('currentUser');
     const shopName = document.getElementById('shopName').value.trim();
     const shopDescription = document.getElementById('shopDescription').value.trim();
     const selectedType = document.querySelector('input[name="accountType"]:checked').value;
@@ -256,8 +255,7 @@
       return;
     }
 
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       errorAlert.textContent = 'You must be logged in to become a seller.';
       errorAlert.classList.remove('hidden');
       return;
@@ -271,7 +269,8 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/sellers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(sellerPayload)
       });
       const data = await res.json();
@@ -511,8 +510,7 @@
 
 <script>
   function checkAuth() {
-    const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
+    if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'signup-login.html';
       return false;
     }
@@ -524,7 +522,6 @@
 
     if (!checkAuth()) return;
 
-    const currentUser = localStorage.getItem('currentUser');
     const shopName = document.getElementById('shopName').value.trim();
     const shopDescription = document.getElementById('shopDescription').value.trim();
     const businessEmail = document.getElementById('businessEmail').value.trim();
@@ -553,8 +550,7 @@
       return;
     }
 
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       errorAlert.textContent = 'You must be logged in to become a seller.';
       errorAlert.classList.remove('hidden');
       return;
@@ -564,7 +560,8 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/sellers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ accountType: 'business', shopName, shopDescription, businessEmail, phoneNumber, businessAddress, businessCity, businessState, businessZip })
       });
       const data = await res.json();

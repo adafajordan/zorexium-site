@@ -58,9 +58,65 @@ async function connectDB() {
   }
 }
 
+// ── Cookie helpers ────────────────────────────────────────────────────────────
+function parseCookies(cookieHeader) {
+  if (!cookieHeader) return {};
+  return cookieHeader.split(';').reduce(function(cookies, cookie) {
+    var parts = cookie.trim().split('=');
+    var name = parts[0].trim();
+    var value = parts.slice(1).join('=').trim();
+    try { cookies[name] = decodeURIComponent(value); } catch (e) { cookies[name] = value; }
+    return cookies;
+  }, {});
+}
+
+function buildCookieHeader(name, value, options) {
+  var str = name + '=' + encodeURIComponent(value);
+  str += '; Path=' + (options.path || '/');
+  if (options.maxAge !== undefined) str += '; Max-Age=' + options.maxAge;
+  if (options.httpOnly) str += '; HttpOnly';
+  if (options.sameSite) str += '; SameSite=' + options.sameSite;
+  if (options.secure) str += '; Secure';
+  return str;
+}
+
+var COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
+var isProduction = process.env.NODE_ENV === 'production';
+
+function setAuthCookies(res, token, email, username, userId) {
+  var userPayload = JSON.stringify({ email: email, username: username || email, userId: userId || '' });
+  res.setHeader('Set-Cookie', [
+    buildCookieHeader('authToken', token, {
+      httpOnly: true,
+      maxAge: COOKIE_MAX_AGE,
+      sameSite: 'Strict',
+      secure: isProduction
+    }),
+    buildCookieHeader('_zrx_user', userPayload, {
+      httpOnly: false,
+      maxAge: COOKIE_MAX_AGE,
+      sameSite: 'Strict',
+      secure: isProduction
+    })
+  ]);
+}
+
+function clearAuthCookies(res) {
+  res.setHeader('Set-Cookie', [
+    buildCookieHeader('authToken', '', { httpOnly: true, maxAge: 0, sameSite: 'Strict', secure: isProduction }),
+    buildCookieHeader('_zrx_user', '', { httpOnly: false, maxAge: 0, sameSite: 'Strict', secure: isProduction })
+  ]);
+}
+
 // ── CORS Middleware ────────────────────────────────────────────────────────────
 app.use(function(req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*');
+  var origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
@@ -71,7 +127,12 @@ app.use(function(req, res, next) {
 
 // ── JWT Middleware ────────────────────────────────────────────────────────────
 function verifyToken(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
+  // Accept token from Authorization header (Bearer) or HTTP-only cookie
+  var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+  if (!token) {
+    var cookies = parseCookies(req.headers.cookie);
+    token = cookies['authToken'];
+  }
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
@@ -133,7 +194,8 @@ app.post('/api/auth/register', async function(req, res) {
       { expiresIn: '7d' }
     );
 
-    res.json({ message: 'User created successfully', userId: result.insertedId, token });
+    setAuthCookies(res, token, email, firstName || email, result.insertedId.toString());
+    res.json({ message: 'User created successfully', userId: result.insertedId, token, user: { email, firstName: firstName || '' } });
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: error.message });
@@ -165,7 +227,8 @@ app.post('/api/auth/login', async function(req, res) {
       JWT_SECRET,
       { expiresIn: '7d' }
     );
-    
+
+    setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
     res.json({
       token,
       user: {
@@ -179,6 +242,29 @@ app.post('/api/auth/login', async function(req, res) {
     console.error('Login error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ── SESSION MANAGEMENT ─────────────────────────────────────────────────────────
+
+// GET /api/auth/session – verify current session and return user info
+app.get('/api/auth/session', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const user = await db.collection('users').findOne(
+      { _id: new ObjectId(req.userId) },
+      { projection: { password: 0 } }
+    );
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ userId: req.userId, email: req.userEmail, firstName: user.firstName, lastName: user.lastName });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/auth/logout – clear auth cookies
+app.post('/api/auth/logout', function(req, res) {
+  clearAuthCookies(res);
+  res.json({ message: 'Logged out' });
 });
 
 // ── PRODUCTS ────────────────────────────────────────────────────────────────────
@@ -1037,11 +1123,52 @@ app.delete('/api/user/profile', verifyToken, async function(req, res) {
     await db.collection('users').deleteOne({ _id: new ObjectId(req.userId) });
     await db.collection('sellers').deleteOne({ userId: req.userId });
     await db.collection('carts').deleteOne({ userId: req.userId });
+    clearAuthCookies(res);
     res.json({ message: 'Account deleted' });
   } catch (error) {
     console.error('Error deleting account:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// GET /api/user/preferences – get user preferences (auth optional, uses userId or sessionId)
+app.get('/api/user/preferences', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+  if (!token) { var c = parseCookies(req.headers.cookie); token = c['authToken']; }
+  var userId = null;
+  if (token) {
+    try { var d = jwt.verify(token, JWT_SECRET); userId = d.userId; } catch (_) {}
+  }
+  if (!userId) return res.json({ cookieConsent: null });
+  try {
+    var prefs = await db.collection('userPreferences').findOne({ userId });
+    res.json(prefs || { cookieConsent: null });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/user/preferences – save user preferences (auth optional)
+app.post('/api/user/preferences', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+  if (!token) { var c = parseCookies(req.headers.cookie); token = c['authToken']; }
+  var userId = null;
+  if (token) {
+    try { var d = jwt.verify(token, JWT_SECRET); userId = d.userId; } catch (_) {}
+  }
+  const { cookieConsent } = req.body;
+  if (userId) {
+    try {
+      await db.collection('userPreferences').updateOne(
+        { userId },
+        { $set: { userId, cookieConsent, updatedAt: new Date() } },
+        { upsert: true }
+      );
+    } catch (_) {}
+  }
+  res.json({ cookieConsent });
 });
 
 // POST /api/auth/change-password – change current user's password (auth required)

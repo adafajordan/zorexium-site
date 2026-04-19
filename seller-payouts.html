@@ -152,20 +152,14 @@
 </footer>
 
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  const authToken = localStorage.getItem('authToken');
+  // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
   var sellerPayouts = [];
 
-  function getUserIdFromToken(token) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId || null;
-    } catch (e) { return null; }
-  }
-
   async function init() {
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       document.getElementById('notLoggedIn').classList.remove('hidden');
       document.getElementById('earningsContent').classList.add('hidden');
       updateCartBadge();
@@ -176,7 +170,7 @@
 
     try {
       const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        credentials: 'include'
       });
       if (!sellerRes.ok) {
         document.getElementById('notLoggedIn').classList.remove('hidden');
@@ -192,10 +186,11 @@
   }
 
   async function loadEarnings() {
-    const userId = getUserIdFromToken(authToken);
+    const user = ZrxSession.getUser();
+    const userId = user ? user.userId : null;
     try {
       const res = await fetch(BACKEND_URL + '/api/payouts', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        credentials: 'include'
       });
       if (res.ok) {
         const allPayouts = await res.json();
@@ -278,12 +273,12 @@
   async function updateCartBadge() {
     var badge = document.getElementById('cartBadge');
     if (!badge) return;
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       badge.classList.add('hidden');
       return;
     }
     try {
-      var res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      var res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         var data = await res.json();
         var count = (data.items || []).reduce(function(s, i) { return s + (i.quantity || 1); }, 0);

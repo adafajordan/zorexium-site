@@ -120,8 +120,7 @@
   function openAddLab(){ document.getElementById('addLabModal').classList.remove('hidden'); document.getElementById('addLabModal').classList.add('flex'); }
   function closeAddLab(){ document.getElementById('addLabModal').classList.add('hidden'); document.getElementById('addLabModal').classList.remove('flex'); }
   document.getElementById('addLabBtn').addEventListener('click', function(){
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+        if (!ZrxSession.isLoggedIn()) {
       ZrxNotify.showNotification('Please log in to add a lab', 'info');
       window.location.href = 'signup-login.html';
       return;
@@ -142,8 +141,7 @@
   });
 
   async function saveLab(){
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+        if (!ZrxSession.isLoggedIn()) {
       ZrxNotify.showNotification('Please log in to add a lab', 'info');
       window.location.href = 'signup-login.html';
       return;
@@ -160,7 +158,8 @@
       try {
         const res = await fetch(BACKEND_URL + '/api/labs', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
           body: JSON.stringify({
             name,
             location: document.getElementById('labLocation').value.trim(),
@@ -219,6 +218,7 @@
 </script>
 
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

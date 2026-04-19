@@ -89,12 +89,13 @@
                 document.getElementById('seller-status').classList.add('text-green-400');
 
                 // Update seller profile on backend with Stripe account ID
-                const authToken = localStorage.getItem('authToken');
-                if (authToken) {
+                // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
+                if (ZrxSession.isLoggedIn()) {
                     try {
                         await fetch(BACKEND_URL + '/api/sellers/me', {
                             method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                            headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
                             body: JSON.stringify({ stripeAccountId: accountId, stripeVerified: true })
                         });
                     } catch (e) {
@@ -110,5 +111,6 @@
         checkStatus();
         </script>
         <script src="notifications.js"></script>
+<script src="session.js"></script>
 </body>
 </html>

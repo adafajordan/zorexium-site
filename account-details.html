@@ -297,14 +297,14 @@
 </footer>
 
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  let _authToken = localStorage.getItem('authToken');
   let _profileData = null;
   let _sellerData = null;
 
   function checkAuth() {
-    if (!_authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       document.getElementById('notLoggedIn').classList.remove('hidden');
       document.getElementById('loggedInContent').classList.add('hidden');
       return false;
@@ -318,7 +318,7 @@
     try {
       // Fetch user profile from backend
       const profileRes = await fetch(BACKEND_URL + '/api/user/profile', {
-        headers: { 'Authorization': 'Bearer ' + _authToken }
+        credentials: 'include'
       });
       if (!profileRes.ok) {
         document.getElementById('notLoggedIn').classList.remove('hidden');
@@ -347,7 +347,7 @@
     // Cart badge from backend
     try {
       const cartRes = await fetch(BACKEND_URL + '/api/cart', {
-        headers: { 'Authorization': 'Bearer ' + _authToken }
+        credentials: 'include'
       });
       if (cartRes.ok) {
         const cartData = await cartRes.json();
@@ -363,7 +363,7 @@
     // Check if seller
     try {
       const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
-        headers: { 'Authorization': 'Bearer ' + _authToken }
+        credentials: 'include'
       });
       if (sellerRes.ok) {
         _sellerData = await sellerRes.json();
@@ -377,16 +377,17 @@
         document.getElementById('totalSales').textContent = '$' + (_sellerData.totalSales || 0).toFixed(2);
         document.getElementById('avgRating').textContent = _sellerData.rating ? _sellerData.rating.toFixed(1) + '★' : 'N/A';
 
-        // Fetch product count
+        // Fetch product count via session endpoint
         try {
-          const token = _authToken;
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          const userId = payload.userId;
-          if (userId) {
-            const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(userId));
-            if (prodRes.ok) {
-              const products = await prodRes.json();
-              document.getElementById('productsListed').textContent = (products || []).length;
+          const sessionRes = await fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
+          if (sessionRes.ok) {
+            const session = await sessionRes.json();
+            if (session.userId) {
+              const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(session.userId));
+              if (prodRes.ok) {
+                const products = await prodRes.json();
+                document.getElementById('productsListed').textContent = (products || []).length;
+              }
             }
           }
         } catch (_) {}
@@ -405,11 +406,12 @@
     reader.onload = async function(ev) {
       const dataUrl = ev.target.result;
       document.getElementById('profileImage').src = dataUrl;
-      if (_authToken) {
+      if (ZrxSession.isLoggedIn()) {
         try {
           const res = await fetch(BACKEND_URL + '/api/user/profile-picture', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ profileImage: dataUrl })
           });
           if (res.ok) {
@@ -430,22 +432,15 @@
   }
 
   function uploadPurchaseFile(e) {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const user = localStorage.getItem('currentUser'); if (!user) { ZrxNotify.showNotification('Log in first', 'info'); return; }
-      const list = JSON.parse(localStorage.getItem('purchaseFiles_' + user) || '[]');
-      list.unshift({ name: file.name, data: ev.target.result, added: new Date().toLocaleString() });
-      localStorage.setItem('purchaseFiles_' + user, JSON.stringify(list)); renderPurchaseFiles();
-    };
-    reader.readAsDataURL(file);
+    // Purchase file upload is not available – files are managed server-side
+    ZrxNotify.showNotification('File uploads are being migrated to cloud storage. Please check back soon.', 'info');
+    e.target.value = '';
   }
 
   function renderPurchaseFiles() {
-    const user = localStorage.getItem('currentUser'); if (!user) return;
-    const list = JSON.parse(localStorage.getItem('purchaseFiles_' + user) || '[]');
-    const el = document.getElementById('purchaseFilesList'); if (!el) return;
-    el.innerHTML = list.map(f => `<div><a href="${f.data}" download="${f.name}" class="underline text-gray-300">${f.name}</a> <span class="text-xs text-gray-500">${f.added}</span></div>`).join('') || '<div class="text-gray-500">No files</div>';
+    const el = document.getElementById('purchaseFilesList');
+    if (!el) return;
+    el.innerHTML = '<div class="text-gray-500">Purchase files are managed server-side. Contact support for your downloads.</div>';
   }
 
   function switchTab(tab) {
@@ -487,7 +482,8 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ currentPassword, newPassword })
       });
       const data = await res.json();
@@ -514,7 +510,8 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/sellers/me', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ shopName, shopDescription })
       });
       if (res.ok) {
@@ -529,10 +526,9 @@
   }
 
   function logout() {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUsername');
-    window.location.href = 'signup-login.html';
+    ZrxSession.logout(function() {
+      window.location.href = 'signup-login.html';
+    });
   }
 
   async function deleteAccount() {
@@ -540,12 +536,9 @@
       try {
         const res = await fetch(BACKEND_URL + '/api/user/profile', {
           method: 'DELETE',
-          headers: { 'Authorization': 'Bearer ' + _authToken }
+          credentials: 'include'
         });
         if (res.ok) {
-          localStorage.removeItem('currentUser');
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('currentUsername');
           ZrxNotify.showNotification('Account deleted', 'success');
           window.location.href = 'index.html';
         } else {
@@ -559,7 +552,7 @@
   }
 
   async function saveProfile() {
-    if (!_authToken) { ZrxNotify.showNotification('Not logged in', 'info'); return; }
+    if (!ZrxSession.isLoggedIn()) { ZrxNotify.showNotification('Not logged in', 'info'); return; }
     const nameParts = document.getElementById('editUsername').value.trim().split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
@@ -568,7 +561,8 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/user/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ firstName, lastName, phone })
       });
       if (res.ok) {
@@ -588,12 +582,10 @@
 
   async function deactivateAccount() {
     ZrxNotify.showConfirm('Deactivate your account? You can reactivate by contacting support.', async function() {
-      // Deactivation is treated same as logout (no dedicated deactivate endpoint needed)
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUsername');
-      ZrxNotify.showNotification('Account deactivated', 'success');
-      window.location.href = 'index.html';
+      ZrxSession.logout(function() {
+        ZrxNotify.showNotification('Account deactivated', 'success');
+        window.location.href = 'index.html';
+      });
     });
   }
 
