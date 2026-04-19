@@ -108,14 +108,53 @@ function clearAuthCookies(res) {
   ]);
 }
 
+// ── Simple in-memory rate limiter ─────────────────────────────────────────────
+function createRateLimiter(windowMs, max) {
+  var hits = new Map();
+  setInterval(function() {
+    var now = Date.now();
+    hits.forEach(function(data, key) {
+      if (now - data.start >= windowMs) hits.delete(key);
+    });
+  }, windowMs);
+  return function(req, res, next) {
+    var key = req.ip || req.connection.remoteAddress || 'unknown';
+    var now = Date.now();
+    var entry = hits.get(key);
+    if (!entry || now - entry.start >= windowMs) {
+      hits.set(key, { count: 1, start: now });
+      return next();
+    }
+    entry.count++;
+    if (entry.count > max) {
+      return res.status(429).json({ error: 'Too many requests, please try again later.' });
+    }
+    next();
+  };
+}
+
+var authRateLimit = createRateLimiter(15 * 60 * 1000, 20); // 20 requests per 15 min
+var prefsRateLimit = createRateLimiter(60 * 1000, 30);     // 30 requests per 1 min
+
 // ── CORS Middleware ────────────────────────────────────────────────────────────
+// Only allow credentialed requests from explicitly trusted origins.
+var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
+  .split(',').map(function(o) { return o.trim(); }).filter(Boolean);
+// Always allow the production backend origin itself
+ALLOWED_ORIGINS.push('https://zorexium-backend.onrender.com');
+// Allow localhost variants for dev (non-credentialed only)
+
 app.use(function(req, res, next) {
   var origin = req.headers.origin;
-  if (origin) {
+  if (origin && ALLOWED_ORIGINS.indexOf(origin) !== -1) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
+  } else if (!origin) {
+    // Same-origin or non-browser clients – no CORS headers needed
   } else {
-    res.header('Access-Control-Allow-Origin', '*');
+    // Unknown origin – reflect for non-credentialed methods only
+    res.header('Access-Control-Allow-Origin', origin);
+    // Do NOT set Allow-Credentials for unknown origins
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -163,7 +202,7 @@ app.get('/api/config', function(req, res) {
 
 // ── USER AUTHENTICATION ────────────────────────────────────────────────────────
 
-app.post('/api/auth/register', async function(req, res) {
+app.post('/api/auth/register', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
@@ -202,7 +241,7 @@ app.post('/api/auth/register', async function(req, res) {
   }
 });
 
-app.post('/api/auth/login', async function(req, res) {
+app.post('/api/auth/login', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
@@ -247,7 +286,7 @@ app.post('/api/auth/login', async function(req, res) {
 // ── SESSION MANAGEMENT ─────────────────────────────────────────────────────────
 
 // GET /api/auth/session – verify current session and return user info
-app.get('/api/auth/session', verifyToken, async function(req, res) {
+app.get('/api/auth/session', authRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const user = await db.collection('users').findOne(
@@ -1116,7 +1155,7 @@ app.put('/api/user/profile', verifyToken, async function(req, res) {
 });
 
 // DELETE /api/user/profile – delete current user's account (auth required)
-app.delete('/api/user/profile', verifyToken, async function(req, res) {
+app.delete('/api/user/profile', authRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -1132,7 +1171,7 @@ app.delete('/api/user/profile', verifyToken, async function(req, res) {
 });
 
 // GET /api/user/preferences – get user preferences (auth optional, uses userId or sessionId)
-app.get('/api/user/preferences', async function(req, res) {
+app.get('/api/user/preferences', prefsRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
   if (!token) { var c = parseCookies(req.headers.cookie); token = c['authToken']; }
@@ -1150,7 +1189,7 @@ app.get('/api/user/preferences', async function(req, res) {
 });
 
 // POST /api/user/preferences – save user preferences (auth optional)
-app.post('/api/user/preferences', async function(req, res) {
+app.post('/api/user/preferences', prefsRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
   if (!token) { var c = parseCookies(req.headers.cookie); token = c['authToken']; }
@@ -1172,7 +1211,7 @@ app.post('/api/user/preferences', async function(req, res) {
 });
 
 // POST /api/auth/change-password – change current user's password (auth required)
-app.post('/api/auth/change-password', verifyToken, async function(req, res) {
+app.post('/api/auth/change-password', authRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { currentPassword, newPassword } = req.body;
