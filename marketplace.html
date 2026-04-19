@@ -145,6 +145,41 @@
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let allProducts = [];
   let viewMode = 'grid';
+  const sellerCache = {};
+
+  async function getSellerInfo(sellerId) {
+    if (!sellerId) return null;
+    if (sellerCache[sellerId] !== undefined) return sellerCache[sellerId];
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(sellerId));
+      if (res.ok) {
+        const seller = await res.json();
+        sellerCache[sellerId] = seller.shopName || seller.sellerName || null;
+        return sellerCache[sellerId];
+      }
+    } catch (e) {}
+    sellerCache[sellerId] = null;
+    return null;
+  }
+
+  async function updateSellerNames() {
+    const badges = document.querySelectorAll('[data-seller-id]');
+    const sellerIds = [...new Set([...badges].map(b => b.dataset.sellerId).filter(Boolean))];
+    await Promise.all(sellerIds.map(async (sellerId) => {
+      const name = await getSellerInfo(sellerId);
+      if (name) {
+        badges.forEach(badge => {
+          if (badge.dataset.sellerId === sellerId) {
+            badge.innerHTML = '';
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-store';
+            badge.appendChild(icon);
+            badge.appendChild(document.createTextNode(' ' + name));
+          }
+        });
+      }
+    }));
+  }
 
   function init() {
     loadAllProducts();
@@ -191,7 +226,7 @@
         <div class="p-4">
           <h3 class="text-white font-semibold flex-1 line-clamp-2 mb-2">${product.name}</h3>
           <div class="mb-3">
-            <span class="seller-badge"><i class="fas fa-store"></i> ${product.sellerName || 'Zorexium'}</span>
+            <span class="seller-badge" data-seller-id="${product.sellerId || ''}"><i class="fas fa-store"></i> ${product.sellerName || 'Zorexium'}</span>
           </div>
           <p class="text-gray-400 text-sm mb-3 line-clamp-2">${product.description || ''}</p>
           <div class="flex justify-between items-center mb-3">
@@ -218,6 +253,8 @@
         </div>
       </div>
     `).join('');
+
+    updateSellerNames();
   }
 
   function filterProducts() {
