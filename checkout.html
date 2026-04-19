@@ -314,7 +314,7 @@ fetch(BACKEND_URL + '/api/config')
   async function loadCart() {
     if (ZrxSession.isLoggedIn()) {
       try {
-        const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           cart = data.items || [];
@@ -540,7 +540,7 @@ fetch(BACKEND_URL + '/api/config')
         },
       };
 
-      return fetch(BACKEND_URL + '/api/orders', {
+      return ZrxSession.fetch(BACKEND_URL + '/api/orders', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
@@ -582,7 +582,7 @@ fetch(BACKEND_URL + '/api/config')
         return Promise.reject(new Error('Order reference lost. Please refresh and try again.'));
       }
 
-      return fetch(BACKEND_URL + '/api/orders/' + pendingOrderId + '/capture', {
+      return ZrxSession.fetch(BACKEND_URL + '/api/orders/' + pendingOrderId + '/capture', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
       })

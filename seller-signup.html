@@ -267,7 +267,7 @@
       : { accountType: 'individual', shopName: shopName || personalName, shopDescription: shopDescription || 'Individual seller', personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip };
 
     try {
-      const res = await fetch(BACKEND_URL + '/api/sellers', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -558,7 +558,7 @@
 
     const BACKEND_URL = 'https://zorexium-backend.onrender.com';
     try {
-      const res = await fetch(BACKEND_URL + '/api/sellers', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

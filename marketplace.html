@@ -252,7 +252,7 @@
     }
     try {
       // Fetch current cart from server
-      const cartRes = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       let items = [];
       if (cartRes.ok) {
         const data = await cartRes.json();
@@ -264,7 +264,7 @@
       } else {
         items.push({ id: productId, name, price, quantity: 1, image });
       }
-      await fetch(BACKEND_URL + '/api/cart', {
+      await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -290,7 +290,7 @@
     if (!badge) return;
     if (ZrxSession.isLoggedIn()) {
       try {
-        const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
           const count = (data.items || []).length;

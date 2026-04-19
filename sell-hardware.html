@@ -291,7 +291,7 @@
     }
 
     try {
-      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
         credentials: 'include'
       });
       if (res.ok) {
@@ -327,7 +327,7 @@
     }
 
     try {
-      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
         credentials: 'include'
       });
       if (res.ok) {
@@ -371,7 +371,7 @@
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const count = (data.items || []).length;
@@ -390,6 +390,8 @@
   window.addEventListener('load', checkUserStatus);
 </script>
 
+<script src="notifications.js"></script>
+<script src="session.js"></script>
 <script src="profile-picture.js"></script>
 </body>
 </html>

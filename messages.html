@@ -125,7 +125,7 @@
     }
     try {
       // Use the profile endpoint via info endpoint approach with userId lookup
-      const res = await fetch(BACKEND_URL + '/api/user/info?userId=' + encodeURIComponent(userId), {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/info?userId=' + encodeURIComponent(userId), {
         credentials: 'include'
       });
       const data = res.ok ? await res.json() : null;
@@ -174,7 +174,7 @@
 
   async function loadConversations(directContactId) {
         try {
-      const res = await fetch(BACKEND_URL + '/api/messages', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
         credentials: 'include'
       });
       if (res.ok) {
@@ -295,7 +295,7 @@
     }
 
         try {
-      const res = await fetch(BACKEND_URL + '/api/messages', {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -92,7 +92,7 @@
                 // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
                 if (ZrxSession.isLoggedIn()) {
                     try {
-                        await fetch(BACKEND_URL + '/api/sellers/me', {
+                        await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
