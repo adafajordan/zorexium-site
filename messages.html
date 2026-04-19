@@ -134,13 +134,19 @@
     return userInfoCache['id:' + userId];
   }
 
-  function avatarHtml(profileImage, displayName, size) {
+  function avatarHtml(profileImage, displayName, size, userId) {
     const s = size || 40;
     const safeName = escapeHtml(displayName);
     const safeSrc = (profileImage && typeof profileImage === 'string' &&
-      /^data:image\/(jpeg|jpg|png|gif|webp);base64,/.test(profileImage))
+      (profileImage.startsWith('data:image/') ||
+       profileImage.startsWith('http://') ||
+       profileImage.startsWith('https://')))
       ? profileImage : PLACEHOLDER_IMG;
-    return `<img src="${safeSrc}" alt="${safeName}" class="rounded-full object-cover flex-shrink-0" style="width:${s}px;height:${s}px;">`;
+    const imgHtml = `<img src="${safeSrc}" alt="${safeName}" class="rounded-full object-cover flex-shrink-0" style="width:${s}px;height:${s}px;">`;
+    if (userId) {
+      return `<a href="seller-profile.html?id=${encodeURIComponent(userId)}" class="hover:opacity-75 transition-opacity cursor-pointer" title="View seller profile">${imgHtml}</a>`;
+    }
+    return imgHtml;
   }
 
   function escapeHtml(str) {
@@ -221,7 +227,7 @@
       const info = await fetchUserInfoById(contactId);
       const button = document.createElement('button');
       button.className = 'w-full text-left px-3 py-2 hover:bg-[#2a2e38] rounded transition-colors text-white flex items-center gap-2';
-      button.innerHTML = `${avatarHtml(info.profileImage, info.displayName, 32)}<span class="truncate">${escapeHtml(info.displayName)}</span>`;
+      button.innerHTML = `${avatarHtml(info.profileImage, info.displayName, 32, contactId)}<span class="truncate">${escapeHtml(info.displayName)}</span>`;
       button.onclick = () => selectContact(contactId);
       list.appendChild(button);
     }
@@ -235,7 +241,7 @@
 
     headerLeft.innerHTML = `
       <div class="flex items-center gap-3">
-        ${avatarHtml(info.profileImage, info.displayName, 40)}
+        ${avatarHtml(info.profileImage, info.displayName, 40, contactId)}
         <div>
           <h2 class="text-lg font-bold text-white">${escapeHtml(info.displayName)}</h2>
           <p class="text-gray-400 text-sm">Conversation with ${escapeHtml(info.displayName)}</p>
@@ -273,7 +279,7 @@
         `;
       } else {
         div.innerHTML = `
-          ${avatarHtml(contactInfo.profileImage, contactInfo.displayName, 32)}
+          ${avatarHtml(contactInfo.profileImage, contactInfo.displayName, 32, selectedContactId)}
           <div class="max-w-xs message-bubble bg-gray-700 text-white rounded-lg p-3">
             <p class="text-xs font-semibold text-cyan-400 mb-1">${escapeHtml(contactInfo.displayName)}</p>
             <p class="text-xs opacity-75 mb-1">${escapeHtml(msg.subject || '')}</p>
