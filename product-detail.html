@@ -141,6 +141,18 @@
   let currentProduct = null;
   let currentProductId = null;
 
+  async function getSellerInfo(sellerId) {
+    if (!sellerId) return null;
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(sellerId));
+      if (res.ok) {
+        const seller = await res.json();
+        return seller.shopName || seller.sellerName || null;
+      }
+    } catch (e) {}
+    return null;
+  }
+
   function init() {
     const params = new URLSearchParams(window.location.search);
     currentProductId = params.get('id') || sessionStorage.getItem('viewingProductId');
@@ -185,8 +197,9 @@
           document.getElementById('productDescription').innerText = currentProduct.description || 'No description available';
           document.getElementById('productImage').src = currentProduct.image || 'https://via.placeholder.com/400x300?text=Product';
           document.getElementById('productId').innerText = currentProductId;
-          document.getElementById('sellerName').innerText = product.sellerName || product.sellerId || 'Zorexium Seller';
-          document.getElementById('sellerLink').href = 'seller-profile.html?seller=' + encodeURIComponent(product.sellerId || '');
+          const sellerDisplayName = await getSellerInfo(product.sellerId) || product.sellerName || product.sellerId || 'Zorexium Seller';
+          document.getElementById('sellerName').innerText = sellerDisplayName;
+          document.getElementById('sellerLink').href = 'seller-profile.html?id=' + encodeURIComponent(product.sellerId || '');
           return;
         }
       }
