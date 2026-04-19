@@ -130,7 +130,8 @@ var prefsRateLimit = rateLimit({
 // Only allow credentialed requests from explicitly trusted origins.
 var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
   .split(',').map(function(o) { return o.trim(); }).filter(Boolean);
-// Always allow the production backend origin itself
+// Always allow the production frontend and backend origins
+ALLOWED_ORIGINS.push('https://zorexiumlabs.com');
 ALLOWED_ORIGINS.push('https://zorexium-backend.onrender.com');
 
 app.use(function(req, res, next) {
