@@ -112,7 +112,7 @@
         }
 
         // Items
-        const itemNames = (order.items || []).map(function(i) { return (i.name || 'Item') + ' \xD7' + (i.quantity || 1); }).join(', ');
+        const itemNames = (order.items || []).map(function(i) { return (i.name || 'Item') + ' ×' + (i.quantity || 1); }).join(', ');
         document.getElementById('orderItems').textContent = itemNames || '—';
 
         // Total

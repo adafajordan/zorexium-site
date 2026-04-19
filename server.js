@@ -1325,7 +1325,7 @@ app.post('/api/labs', verifyToken, async function(req, res) {
       if (!f || typeof f.data !== 'string') continue;
       if (!f.data.startsWith('data:')) continue;
       if (f.data.length > 7 * 1024 * 1024) {
-        return res.status(400).json({ error: 'One or more files are too large (max ~5 MB each)' });
+        return res.status(400).json({ error: 'One or more files are too large (max ~5 MB each, base64 limit ~7 MB)' });
       }
       sanitizedFiles.push({
         name: String(f.name || '').slice(0, 200),

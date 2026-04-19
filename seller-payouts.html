@@ -199,13 +199,9 @@
       });
       if (res.ok) {
         const allPayouts = await res.json();
-        // Filter payouts that belong to this seller
-        // Payouts are matched by the sellerId stored in the payout (if present)
-        // or by sellerUsername as a fallback
+        // Filter payouts that belong to this seller by userId (from token)
         sellerPayouts = allPayouts.filter(function(p) {
-          return (p.sellerId && p.sellerId === userId) ||
-            (!p.sellerId && p.sellerUsername && localStorage.getItem('currentUser') &&
-             p.sellerUsername === localStorage.getItem('currentUser'));
+          return p.sellerId && p.sellerId === userId;
         });
       }
     } catch (_) {
