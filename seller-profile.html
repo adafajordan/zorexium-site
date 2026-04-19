@@ -259,7 +259,6 @@
     // First look up user info (userId) by email or username
     const params = new URLSearchParams(window.location.search);
     const email = params.get('email');
-    const sellerId = params.get('id');
 
     // If a direct seller ID is provided, use it without needing email lookup
     if (sellerId) {
