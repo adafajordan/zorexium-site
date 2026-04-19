@@ -626,6 +626,7 @@
     <script>
 
     <script src="notifications.js"></script>
+    <script src="session.js"></script>
         function toggleDropdown(id) {
             var el = document.getElementById(id);
             if (!el) return;
@@ -654,11 +655,17 @@
         <script>
         // Header account/cart wiring and 'dokan' sweep
         (function(){
-            // Cart badge update
+            // Cart badge update (requires auth via cookie)
             try{
-                const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-                const badge = document.getElementById('cartBadgeHeader');
-                if(badge){ if(cart.length>0){ badge.textContent = cart.length; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); } }
+                if(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()){
+                    fetch('https://zorexium-backend.onrender.com/api/cart', { credentials: 'include' })
+                        .then(function(r){ return r.ok ? r.json() : null; })
+                        .then(function(data){
+                            var count = (data && data.items) ? data.items.length : 0;
+                            var badge = document.getElementById('cartBadgeHeader');
+                            if(badge){ badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+                        }).catch(function(){});
+                }
             }catch(e){/* ignore */}
 
             // Account dropdown
@@ -668,9 +675,9 @@
                 acctIcon.addEventListener('click', (e)=>{ e.preventDefault(); acctDrop.classList.toggle('hidden'); });
             }
             const signOut = document.getElementById('signOutHeader');
-            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); localStorage.removeItem('currentUser'); ZrxNotify.showNotification('Signed out', 'info'); window.location.href='index (1).html'; });
+            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'info'); window.location.href='index (1).html'; }); });
             const deactivate = document.getElementById('deactivateHeader');
-            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ localStorage.removeItem('currentUser'); ZrxNotify.showNotification('Account deactivated', 'info'); window.location.href='index (1).html'; }); });
+            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'info'); window.location.href='index (1).html'; }); }); });
 
             // Sweep any visible 'dokan' occurrences on page
             document.body.innerHTML = document.body.innerHTML.replace(/dokan/gi, '');

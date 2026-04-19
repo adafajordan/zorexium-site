@@ -206,8 +206,7 @@
   }
 
   function checkAuth(redirect = null) {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
+    if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'signup-login.html';
       return false;
     }
@@ -216,7 +215,7 @@
   }
 
   function updateUI() {
-    const token = localStorage.getItem('authToken');
+    const token = ZrxSession.isLoggedIn();
     const logoutBtn = document.getElementById('logoutBtn');
     const notLoggedIn = document.getElementById('notLoggedIn');
     if (token) {
@@ -235,15 +234,12 @@
 
   function logout() {
     ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
-      window.location.reload();
+      ZrxSession.logout(function() { window.location.reload(); });
     });
   }
 
   async function publishPost() {
-    const token = localStorage.getItem('authToken');
-    if (!token) { window.location.href = 'signup-login.html'; return; }
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'signup-login.html'; return; }
     const title = document.getElementById('postTitle').value.trim();
     const content = document.getElementById('postContent').value.trim();
     const imageUrl = document.getElementById('postImageUrl').value.trim();
@@ -254,7 +250,8 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ title, content, boardType, ...(imageUrl ? { imageUrl } : {}) })
       });
       if (!res.ok) {
@@ -293,9 +290,8 @@
   }
 
   function getCurrentUserId() {
-    const token = localStorage.getItem('authToken');
-    if (!token) return null;
-    try { return JSON.parse(atob(token.split('.')[1])).userId; } catch (e) { return null; }
+    const user = ZrxSession.getUser();
+    return user ? user.userId : null;
   }
 
   function renderPosts(postsToRender, feed) {
@@ -372,8 +368,7 @@
   }
 
   async function toggleLike(postId) {
-    const token = localStorage.getItem('authToken');
-    if (!token) { window.location.href = 'signup-login.html'; return; }
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'signup-login.html'; return; }
     const btn = document.getElementById('like-btn-' + postId);
     const icon = document.getElementById('like-icon-' + postId);
     const countEl = document.getElementById('like-count-' + postId);
@@ -381,7 +376,7 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/posts/' + postId + '/like', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + token }
+        credentials: 'include'
       });
       if (!res.ok) {
         if (res.status === 401) { window.location.href = 'signup-login.html'; return; }
@@ -404,14 +399,14 @@
   }
 
   async function submitReply(postId) {
-    const token = localStorage.getItem('authToken');
-    if (!token) { window.location.href = 'signup-login.html'; return; }
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'signup-login.html'; return; }
     const replyText = document.getElementById('replyText-' + postId).value.trim();
     if (!replyText) return;
     try {
       const res = await fetch(BACKEND_URL + '/api/posts/' + postId + '/replies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ content: replyText })
       });
       if (!res.ok) {

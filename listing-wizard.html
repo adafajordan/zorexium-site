@@ -242,22 +242,21 @@
 
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  let currentUser = localStorage.getItem('currentUser');
-  let authToken = localStorage.getItem('authToken');
+  // Auth is handled via HTTP-only cookies (ZrxSession)
   let currentStep = 1;
   let imageData = null;
   let editingProductId = null;
   let _sellerData = null;
 
   async function init() {
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'seller-signup.html';
       return;
     }
 
     try {
       const res = await fetch(BACKEND_URL + '/api/sellers/me', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        credentials: 'include'
       });
       if (!res.ok) {
         window.location.href = 'seller-signup.html';
@@ -382,12 +381,13 @@
   function publishListing() {
     if (!validateStep1()) return;
 
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       ZrxNotify.showNotification('You must be logged in to create listings', 'error');
       return;
     }
 
-    const sellerUsername = localStorage.getItem('currentUsername') || localStorage.getItem('currentUser');
+    const _user = ZrxSession.getUser();
+    const sellerUsername = (_user && (_user.username || _user.email)) || '';
     const shopName = _sellerData ? _sellerData.shopName : (sellerUsername || '');
 
     const product = {
@@ -417,7 +417,8 @@
       // Update existing product
       fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(editingProductId), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(product)
       })
       .then(res => { if (!res.ok) throw new Error(res.statusText); return res.json(); })
@@ -434,7 +435,8 @@
       // Create new product
       fetch(BACKEND_URL + '/api/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(product)
       })
       .then(res => { if (!res.ok) throw new Error(res.statusText); return res.json(); })
@@ -453,14 +455,12 @@
   async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
     if (!badge) return;
-    if (!authToken) {
-      const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-      badge.textContent = cart.length;
-      badge.classList.toggle('hidden', cart.length === 0);
+    if (!ZrxSession.isLoggedIn()) {
+      badge.classList.add('hidden');
       return;
     }
     try {
-      const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      const res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const count = (data.items || []).length;

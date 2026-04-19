@@ -134,20 +134,21 @@
 </footer>
 
 <script src="notifications.js"></script>
+<script src="session.js"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  const authToken = localStorage.getItem('authToken');
+  // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
   let allPayouts = [];
 
   async function loadPayouts() {
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       ZrxNotify.showNotification('Please log in to view payouts', 'info');
       window.location.href = 'signup-login.html';
       return;
     }
     try {
       const res = await fetch(BACKEND_URL + '/api/payouts', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        credentials: 'include'
       });
       if (res.ok) {
         allPayouts = await res.json();
@@ -226,7 +227,8 @@
     try {
       const res = await fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status: 'ready_to_pay' })
       });
       if (!res.ok) {
@@ -250,7 +252,8 @@
         try {
           const res = await fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+            headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
             body: JSON.stringify({ status: 'paid' })
           });
           if (!res.ok) {
@@ -292,12 +295,12 @@
   async function updateCartBadge() {
     var badge = document.getElementById('cartBadge');
     if (!badge) return;
-    if (!authToken) {
+    if (!ZrxSession.isLoggedIn()) {
       badge.classList.add('hidden');
       return;
     }
     try {
-      var res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      var res = await fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
         var data = await res.json();
         var count = (data.items || []).reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
