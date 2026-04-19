@@ -413,6 +413,7 @@
       return;
     }
 
+    const sellerUsername = localStorage.getItem('currentUsername') || localStorage.getItem('currentUser');
     fetch(BACKEND_URL + '/api/products', {
       method: 'POST',
       headers: {
@@ -426,7 +427,9 @@
         description: product.description,
         condition: product.condition,
         image: imageData,
-        specifications: product.specs
+        specifications: product.specs,
+        sellerName: sellerUsername,
+        sellerUsername: sellerUsername
       })
     })
     .then(res => {
