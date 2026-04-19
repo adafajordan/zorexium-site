@@ -180,12 +180,13 @@
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let sellerUsername = null;
+  let sellerId = null;
   let currentTab = 'products';
 
   function init() {
     const params = new URLSearchParams(window.location.search);
     sellerUsername = params.get('seller');
-    const sellerId = params.get('id');
+    sellerId = params.get('id');
 
     updateCartBadge();
 
@@ -430,7 +431,13 @@
       window.location.href = 'signup-login.html';
       return;
     }
-    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerUsername);
+
+    if (!sellerId) {
+      ZrxNotify.showNotification('Seller information not available', 'error');
+      return;
+    }
+
+    window.location.href = 'messages.html?with=' + encodeURIComponent(sellerId);
   }
 
   window.addEventListener('load', init);
