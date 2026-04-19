@@ -20,13 +20,16 @@
   }
 
   function setCookie(name, value, maxAge) {
-    var cookie = name + '=' + encodeURIComponent(value) + '; Path=/; SameSite=Strict';
+    var cookie = name + '=' + encodeURIComponent(value) + '; Path=/; SameSite=Lax';
     if (maxAge !== undefined) cookie += '; Max-Age=' + maxAge;
+    if (location.protocol === 'https:') cookie += '; Secure';
     document.cookie = cookie;
   }
 
   function deleteCookie(name) {
-    document.cookie = name + '=; Path=/; Max-Age=0; SameSite=Strict';
+    var cookie = name + '=; Path=/; Max-Age=0; SameSite=Lax';
+    if (location.protocol === 'https:') cookie += '; Secure';
+    document.cookie = cookie;
   }
 
   /** Returns the stored JWT token (sessionStorage first, then cookie fallback). */
