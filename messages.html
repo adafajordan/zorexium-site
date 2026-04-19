@@ -119,17 +119,40 @@
 
   async function fetchUserInfoById(userId) {
     if (userInfoCache['id:' + userId]) return userInfoCache['id:' + userId];
+
     try {
+      // Try seller endpoint first
       const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(userId));
       if (res.ok) {
         const data = await res.json();
+        console.log('Seller data for ' + userId + ':', data);
         userInfoCache['id:' + userId] = {
           displayName: data.shopName || userId,
-          profileImage: data.profileImage || null
+          profileImage: data.profileImage || data.profilePicture || null
         };
         return userInfoCache['id:' + userId];
       }
-    } catch (_) {}
+    } catch (e) {
+      console.error('Error fetching seller:', e);
+    }
+
+    // Fallback: try user info endpoint (auth required)
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/info?userId=' + encodeURIComponent(userId));
+      if (res.ok) {
+        const data = await res.json();
+        console.log('User info data for ' + userId + ':', data);
+        userInfoCache['id:' + userId] = {
+          displayName: data.displayName || userId,
+          profileImage: data.profileImage || data.profilePicture || data.avatar || null
+        };
+        return userInfoCache['id:' + userId];
+      }
+    } catch (e) {
+      console.error('Error fetching user info:', e);
+    }
+
+    // Fallback
     userInfoCache['id:' + userId] = { displayName: userId, profileImage: null };
     return userInfoCache['id:' + userId];
   }
