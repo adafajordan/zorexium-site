@@ -158,13 +158,26 @@
   }
 
   async function init() {
-        currentUser = (ZrxSession.getUser() ? ZrxSession.getUser().email : null);
-    if (!token || !currentUser) {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
       ZrxNotify.showNotification('Please log in', 'info');
       window.location.href = 'signup-login.html';
       return;
     }
+
     currentUserId = getUserIdFromToken(token);
+    if (!currentUserId) {
+      ZrxNotify.showNotification('Authentication error', 'error');
+      window.location.href = 'signup-login.html';
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      currentUser = payload.email || null;
+    } catch (e) {
+      currentUser = null;
+    }
 
     const params = new URLSearchParams(window.location.search);
     const directContact = params.get('with');
