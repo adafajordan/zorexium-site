@@ -308,7 +308,26 @@ fetch(BACKEND_URL + '/api/config')
   }
 
   // ── Cart ──────────────────────────────────────────────────────────────────
-  let cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  let cart = [];
+
+  async function loadCart() {
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      try {
+        const res = await fetch(BACKEND_URL + '/api/cart', {
+          headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          cart = data.items || [];
+        }
+      } catch (_) {}
+    }
+    // Fallback to localStorage for guests or if backend fetch failed
+    if (cart.length === 0) {
+      cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+    }
+  }
 
   // ── Totals ────────────────────────────────────────────────────────────────
   function getShippingCost() {
@@ -607,7 +626,8 @@ fetch(BACKEND_URL + '/api/config')
   } // end initPayPalButtons
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  function init() {
+  async function init() {
+    await loadCart();
     if (cart.length === 0) {
       document.getElementById('checkoutContent').classList.add('hidden');
       document.getElementById('emptyCartMsg').classList.remove('hidden');

@@ -135,17 +135,28 @@
 
 <script src="notifications.js"></script>
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const authToken = localStorage.getItem('authToken');
   let allPayouts = [];
 
-  function loadPayouts() {
-    const orders  = JSON.parse(localStorage.getItem('zorexiumOrders') || '[]');
-    const payouts = JSON.parse(localStorage.getItem('zorexiumPendingPayouts') || '[]');
-
-    allPayouts = payouts.map(function(payout) {
-      const order = orders.find(function(o) { return o.orderId === payout.orderId; });
-      return Object.assign({}, payout, { placedAt: order ? order.placedAt : payout.createdAt });
-    });
-
+  async function loadPayouts() {
+    if (!authToken) {
+      ZrxNotify.showNotification('Please log in to view payouts', 'info');
+      window.location.href = 'signup-login.html';
+      return;
+    }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/payouts', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (res.ok) {
+        allPayouts = await res.json();
+      } else {
+        allPayouts = [];
+      }
+    } catch (_) {
+      allPayouts = [];
+    }
     renderPayouts();
     updateStats();
   }
@@ -171,8 +182,9 @@
     }
 
     tbody.innerHTML = filtered.map(function(payout) {
+      const payoutId = payout._id ? String(payout._id) : (payout.id || '');
       return '<tr class="border-t border-gray-700 hover:bg-[#2a2e38] transition">' +
-        '<td class="px-6 py-3 font-mono text-xs text-cyan-400">' + payout.orderId.substring(0, 14) + '…</td>' +
+        '<td class="px-6 py-3 font-mono text-xs text-cyan-400">' + (payout.orderId ? payout.orderId.substring(0, 14) + '…' : '—') + '</td>' +
         '<td class="px-6 py-3">' +
           '<p class="font-semibold text-white">' + escHtml(payout.sellerName || payout.sellerUsername) + '</p>' +
           '<p class="text-xs text-gray-400">@' + escHtml(payout.sellerUsername) + '</p>' +
@@ -180,19 +192,19 @@
         '<td class="px-6 py-3 font-bold text-green-400">$' + Number(payout.amount).toFixed(2) + '</td>' +
         '<td class="px-6 py-3">' + statusBadge(payout.status) + '</td>' +
         '<td class="px-6 py-3 text-gray-400 text-xs">' + (payout.placedAt ? new Date(payout.placedAt).toLocaleDateString() : '—') + '</td>' +
-        '<td class="px-6 py-3">' + actionButton(payout) + '</td>' +
+        '<td class="px-6 py-3">' + actionButton(payout, payoutId) + '</td>' +
       '</tr>';
     }).join('');
   }
 
-  function actionButton(payout) {
+  function actionButton(payout, payoutId) {
     if (payout.status === 'pending_delivery') {
-      return '<button onclick="markDelivered(\'' + payout.id + '\')" ' +
+      return '<button onclick="markDelivered(\'' + payoutId + '\')" ' +
         'class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition">' +
         '<i class="fas fa-truck mr-1"></i>Mark Delivered</button>';
     }
     if (payout.status === 'ready_to_pay') {
-      return '<button onclick="markPaidOut(\'' + payout.id + '\')" ' +
+      return '<button onclick="markPaidOut(\'' + payoutId + '\')" ' +
         'class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-semibold transition">' +
         '<i class="fas fa-check mr-1"></i>Confirm Payout</button>';
     }
@@ -210,33 +222,49 @@
       (labels[status] || status) + '</span>';
   }
 
-  function markDelivered(payoutId) {
-    var idx = allPayouts.findIndex(function(p) { return p.id === payoutId; });
-    if (idx < 0) return;
-    allPayouts[idx].status      = 'ready_to_pay';
-    allPayouts[idx].deliveredAt = new Date().toISOString();
-    savePayouts();
-    ZrxNotify.showNotification('Order marked as delivered. Ready to process payout.', 'success');
+  async function markDelivered(payoutId) {
+    try {
+      const res = await fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ status: 'ready_to_pay' })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        ZrxNotify.showNotification(data.error || 'Failed to update payout', 'error');
+        return;
+      }
+      ZrxNotify.showNotification('Order marked as delivered. Ready to process payout.', 'success');
+      await loadPayouts();
+    } catch (_) {
+      ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
   }
 
-  function markPaidOut(payoutId) {
-    var idx = allPayouts.findIndex(function(p) { return p.id === payoutId; });
-    if (idx < 0) return;
+  async function markPaidOut(payoutId) {
+    var payout = allPayouts.find(function(p) { return (p._id ? String(p._id) : p.id) === payoutId; });
+    if (!payout) return;
     ZrxNotify.showConfirm(
-      'Confirm payout of $' + Number(allPayouts[idx].amount).toFixed(2) + ' to ' + (allPayouts[idx].sellerName || allPayouts[idx].sellerUsername) + '?',
-      function() {
-        allPayouts[idx].status = 'paid';
-        allPayouts[idx].paidAt = new Date().toISOString();
-        savePayouts();
-        ZrxNotify.showNotification('Payout confirmed and marked as paid.', 'success');
+      'Confirm payout of $' + Number(payout.amount).toFixed(2) + ' to ' + (payout.sellerName || payout.sellerUsername) + '?',
+      async function() {
+        try {
+          const res = await fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+            body: JSON.stringify({ status: 'paid' })
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            ZrxNotify.showNotification(data.error || 'Failed to confirm payout', 'error');
+            return;
+          }
+          ZrxNotify.showNotification('Payout confirmed and marked as paid.', 'success');
+          await loadPayouts();
+        } catch (_) {
+          ZrxNotify.showNotification('Network error. Please try again.', 'error');
+        }
       }
     );
-  }
-
-  function savePayouts() {
-    localStorage.setItem('zorexiumPendingPayouts', JSON.stringify(allPayouts));
-    renderPayouts();
-    updateStats();
   }
 
   function updateStats() {
@@ -252,16 +280,6 @@
       platform += Number(p.platformFee || 0);
     });
 
-    // Fallback: compute platform fee from orders if not stored in payout
-    if (platform === 0) {
-      var orders = JSON.parse(localStorage.getItem('zorexiumOrders') || '[]');
-      orders.forEach(function(order) {
-        (order.items || []).forEach(function(item) {
-          platform += parseFloat(item.price) * (item.quantity || 1) * 0.10;
-        });
-      });
-    }
-
     document.getElementById('statPending').textContent       = '$' + pending.toFixed(2);
     document.getElementById('statPendingCount').textContent  = pendingCount + ' payout' + (pendingCount !== 1 ? 's' : '');
     document.getElementById('statReady').textContent         = '$' + ready.toFixed(2);
@@ -271,14 +289,22 @@
     document.getElementById('statEarnings').textContent      = '$' + platform.toFixed(2);
   }
 
-  function updateCartBadge() {
-    var cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-    var count = cart.reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
+  async function updateCartBadge() {
     var badge = document.getElementById('cartBadge');
-    if (badge) {
-      badge.textContent = count;
-      badge.classList.toggle('hidden', count === 0);
+    if (!badge) return;
+    if (!authToken) {
+      badge.classList.add('hidden');
+      return;
     }
+    try {
+      var res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (res.ok) {
+        var data = await res.json();
+        var count = (data.items || []).reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    } catch (_) {}
   }
 
   function escHtml(str) {

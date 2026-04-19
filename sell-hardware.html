@@ -281,30 +281,31 @@
 </footer>
 
 <script>
-  let currentUser = localStorage.getItem('currentUser');
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const authToken = localStorage.getItem('authToken');
 
-  function handleBecomeSeller() {
-    currentUser = localStorage.getItem('currentUser');
-
-    if (!currentUser) {
+  async function handleBecomeSeller() {
+    if (!authToken) {
       window.location.href = 'signup-login.html';
       return;
     }
 
-    // Check if already a seller
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (sellers[currentUser]) {
-      // Already a seller, go to dashboard
-      window.location.href = 'seller-dashboard.html';
-      return;
-    }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (res.ok) {
+        // Already a seller, go to dashboard
+        window.location.href = 'seller-dashboard.html';
+        return;
+      }
+    } catch (_) {}
 
     // Logged in but not a seller yet — go to seller sign-up
     window.location.href = 'seller-signup.html';
   }
 
-  function checkUserStatus() {
-    currentUser = localStorage.getItem('currentUser');
+  async function checkUserStatus() {
     const dashboardLink = document.getElementById('dashboardLink');
     const listingLink = document.getElementById('listingLink');
     const becomSellerBtn = document.getElementById('becomSellerBtn');
@@ -314,7 +315,7 @@
 
     updateCartBadge();
 
-    if (!currentUser) {
+    if (!authToken) {
       // Not logged in
       becomSellerBtn.style.display = 'inline-flex';
       dashboardLink.classList.add('hidden');
@@ -325,26 +326,31 @@
       return;
     }
 
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    
-    if (sellers[currentUser]) {
-      // User is already a seller
-      becomSellerBtn.classList.add('hidden');
-      dashboardLink.classList.remove('hidden');
-      listingLink.classList.remove('hidden');
-      userStatus.classList.remove('hidden');
-      userStatus.textContent = `✓ Welcome back, seller! You have ${sellers[currentUser].products ? sellers[currentUser].products.length : 0} product(s) listed.`;
-      ctaTitle.textContent = 'Welcome Back!';
-      ctaDescription.textContent = 'Ready to list more products or manage your inventory? Access your seller dashboard to continue growing your business.';
-    } else {
-      // User is logged in but not a seller yet
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (res.ok) {
+        const seller = await res.json();
+        becomSellerBtn.classList.add('hidden');
+        dashboardLink.classList.remove('hidden');
+        listingLink.classList.remove('hidden');
+        userStatus.classList.remove('hidden');
+        userStatus.textContent = '✓ Welcome back, seller! Your shop: ' + (seller.shopName || 'your shop') + '.';
+        ctaTitle.textContent = 'Welcome Back!';
+        ctaDescription.textContent = 'Ready to list more products or manage your inventory? Access your seller dashboard to continue growing your business.';
+      } else {
+        // Logged in but not a seller
+        becomSellerBtn.style.display = 'inline-flex';
+        dashboardLink.classList.add('hidden');
+        listingLink.classList.add('hidden');
+        userStatus.classList.remove('hidden');
+        userStatus.textContent = 'You\'re logged in. Ready to become a seller?';
+        ctaTitle.textContent = 'Join Our Seller Community';
+        ctaDescription.textContent = 'You have an account with us. Now register as a seller to start listing your hardware and reaching buyers.';
+      }
+    } catch (_) {
       becomSellerBtn.style.display = 'inline-flex';
-      dashboardLink.classList.add('hidden');
-      listingLink.classList.add('hidden');
-      userStatus.classList.remove('hidden');
-      userStatus.textContent = `You're logged in as "${currentUser}". Ready to become a seller?`;
-      ctaTitle.textContent = 'Join Our Seller Community';
-      ctaDescription.textContent = 'You have an account with us. Now register as a seller to start listing your hardware and reaching buyers.';
     }
   }
 
@@ -357,17 +363,22 @@
     el.classList.toggle('active');
   }
 
-  function updateCartBadge() {
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
-    if (badge) {
-      if (cart.length > 0) {
-        badge.textContent = cart.length;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
+    if (!badge) return;
+    if (!authToken) {
+      badge.classList.add('hidden');
+      return;
     }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (res.ok) {
+        const data = await res.json();
+        const count = (data.items || []).length;
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    } catch (_) {}
   }
 
   document.addEventListener('click', function(e) {

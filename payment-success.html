@@ -85,52 +85,57 @@
   </div>
 
   <script>
-    (function () {
+    (async function () {
+      const BACKEND_URL = 'https://zorexium-backend.onrender.com';
       const params = new URLSearchParams(window.location.search);
       const orderId = params.get('orderId');
 
-      // Find the matching order from localStorage
-      const history = JSON.parse(localStorage.getItem('zorexiumOrders') || '[]');
-      const order = (orderId ? history.find(o => o.orderId === orderId) : null) || history[0] || null;
-
-      // Display order ID from URL param or from the found order record
-      const displayId = orderId || (order && order.orderId);
-      if (displayId) {
-        document.getElementById('orderId').textContent = displayId;
+      // Display order ID from URL param
+      if (orderId) {
+        document.getElementById('orderId').textContent = orderId;
       }
 
-      if (!order) return; // Nothing more to render if no order was found
+      if (!orderId) return;
 
-      // Date
-      const date = new Date(order.placedAt);
-      document.getElementById('orderDate').textContent = date.toLocaleDateString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      });
+      // Fetch order details from backend
+      try {
+        const res = await fetch(BACKEND_URL + '/api/orders/' + encodeURIComponent(orderId));
+        if (!res.ok) return;
+        const order = await res.json();
 
-      // Items
-      const itemNames = (order.items || []).map(i => `${i.name} ×${i.quantity || 1}`).join(', ');
-      document.getElementById('orderItems').textContent = itemNames || '—';
+        // Date
+        if (order.createdAt) {
+          const date = new Date(order.createdAt);
+          document.getElementById('orderDate').textContent = date.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          });
+        }
 
-      // Total
-      if (order.totals) {
-        document.getElementById('orderTotal').textContent = '$' + parseFloat(order.totals.total).toFixed(2);
-      }
+        // Items
+        const itemNames = (order.items || []).map(function(i) { return (i.name || 'Item') + ' ×' + (i.quantity || 1); }).join(', ');
+        document.getElementById('orderItems').textContent = itemNames || '—';
 
-      // Shipping method
-      if (order.shipping && order.shipping.method) {
-        document.getElementById('orderShipping').textContent = order.shipping.method.charAt(0).toUpperCase() + order.shipping.method.slice(1);
-      }
+        // Total
+        if (order.total != null) {
+          document.getElementById('orderTotal').textContent = '$' + parseFloat(order.total).toFixed(2);
+        }
 
-      // Estimated delivery
-      if (order.shipping && order.shipping.estimatedDelivery) {
-        document.getElementById('orderDelivery').textContent = order.shipping.estimatedDelivery;
-      }
+        // Shipping method
+        if (order.shippingMethod) {
+          document.getElementById('orderShipping').textContent =
+            order.shippingMethod.charAt(0).toUpperCase() + order.shippingMethod.slice(1);
+        }
 
-      // Address
-      if (order.shipping && order.shipping.address) {
-        const a = order.shipping.address;
-        document.getElementById('orderAddress').innerHTML =
-          `${a.name}<br>${a.street}<br>${a.city}, ${a.state} ${a.zip}<br>${a.country}`;
+        // Address
+        if (order.buyer && order.buyer.address) {
+          const a = order.buyer.address;
+          const name = ((order.buyer.firstName || '') + ' ' + (order.buyer.lastName || '')).trim();
+          document.getElementById('orderAddress').innerHTML =
+            [name, a.line1, a.line2, (a.city + ', ' + a.state + ' ' + a.zip).trim(), a.country]
+              .filter(Boolean).join('<br>');
+        }
+      } catch (e) {
+        console.error('Could not load order details:', e);
       }
     })();
   </script>

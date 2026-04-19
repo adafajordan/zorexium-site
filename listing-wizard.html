@@ -449,8 +449,6 @@
       .catch(err => ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'));
     }
   }
-    .catch(err => ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'));
-  }
 
   async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');

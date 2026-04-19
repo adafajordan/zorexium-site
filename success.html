@@ -75,6 +75,8 @@
     </div>
 
     <script>
+        const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
         async function checkStatus() {
             const urlParams = new URLSearchParams(window.location.search);
             const accountId = urlParams.get('account_id');
@@ -86,20 +88,18 @@
                 document.getElementById('seller-status').classList.remove('text-yellow-400');
                 document.getElementById('seller-status').classList.add('text-green-400');
 
-                // Store in localStorage for reference
-                try {
-                    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-                    const currentUser = localStorage.getItem('currentUser');
-                    
-                    if (currentUser && sellers[currentUser]) {
-                        sellers[currentUser].stripeAccountId = accountId;
-                        sellers[currentUser].stripeVerified = true;
-                        localStorage.setItem('zorexiumSellers', JSON.stringify(sellers));
+                // Update seller profile on backend with Stripe account ID
+                const authToken = localStorage.getItem('authToken');
+                if (authToken) {
+                    try {
+                        await fetch(BACKEND_URL + '/api/sellers/me', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                            body: JSON.stringify({ stripeAccountId: accountId, stripeVerified: true })
+                        });
+                    } catch (e) {
+                        console.error('Could not update seller stripe info on backend:', e);
                     }
-                } catch (e) {
-                        if (window.ZrxNotify && ZrxNotify.showNotification) {
-                            ZrxNotify.showNotification('Could not update localStorage', 'error');
-                        }
                 }
             } else {
                 document.getElementById('status-msg').innerText = "Verifying your account...";

@@ -237,8 +237,10 @@
       ZrxNotify.showNotification('Your cart is empty', 'info');
       return;
     }
-    // Sync to localStorage for checkout page (which also needs it)
-    localStorage.setItem('zorexiumCart', JSON.stringify(cart));
+    if (!authToken) {
+      // Guest users: store cart in localStorage for checkout page
+      localStorage.setItem('zorexiumCart', JSON.stringify(cart));
+    }
     window.location.href = 'checkout.html';
   }
 
