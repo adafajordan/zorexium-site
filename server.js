@@ -1349,18 +1349,20 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
   }
 });
 
-// POST /api/sellers/recover-missing – recover orphaned seller records (no auth required, safe to call on startup)
-app.post('/api/sellers/recover-missing', async function(req, res) {
+// POST /api/sellers/recover-missing – recover orphaned seller records (auth required)
+app.post('/api/sellers/recover-missing', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const products = await db.collection('products').find({}, { projection: { sellerId: 1 } }).toArray();
     const sellerIds = [...new Set(products.map(function(p) { return p.sellerId; }).filter(Boolean))];
 
-    let recovered = 0;
-    for (const sellerId of sellerIds) {
-      const existingSeller = await db.collection('sellers').findOne({ userId: sellerId });
-      if (existingSeller) continue;
+    // Batch fetch existing seller records and users
+    const existingSellers = await db.collection('sellers').find({ userId: { $in: sellerIds } }, { projection: { userId: 1 } }).toArray();
+    const existingSellerIds = new Set(existingSellers.map(function(s) { return s.userId; }));
+    const missingSellerIds = sellerIds.filter(function(id) { return !existingSellerIds.has(id); });
 
+    let recovered = 0;
+    for (const sellerId of missingSellerIds) {
       let user = null;
       try {
         user = await db.collection('users').findOne({ _id: new ObjectId(sellerId) });
@@ -1368,14 +1370,10 @@ app.post('/api/sellers/recover-missing', async function(req, res) {
 
       if (!user) continue;
 
-      const sellerName = ((user.firstName || '') + ' ' + (user.lastName || '')).trim()
-        || user.email
-        || 'My Shop';
-
       await db.collection('sellers').insertOne({
         userId: sellerId,
         accountType: 'individual',
-        shopName: sellerName,
+        shopName: resolveSellerName(user),
         shopDescription: 'Shop',
         joinDate: new Date(),
         rating: 5,
@@ -1648,17 +1646,25 @@ app.use(function(err, req, res, next) {
 const PORT = process.env.PORT || 5000;
 
 // Recover missing seller records by inspecting product sellerId values
+function resolveSellerName(user) {
+  return ((user.firstName || '') + ' ' + (user.lastName || '')).trim()
+    || user.email
+    || 'My Shop';
+}
+
 async function recoverMissingSellers() {
   if (!mongoConnected) return;
   try {
     const products = await db.collection('products').find({}, { projection: { sellerId: 1 } }).toArray();
     const sellerIds = [...new Set(products.map(function(p) { return p.sellerId; }).filter(Boolean))];
 
-    let recovered = 0;
-    for (const sellerId of sellerIds) {
-      const existingSeller = await db.collection('sellers').findOne({ userId: sellerId });
-      if (existingSeller) continue;
+    // Batch fetch existing seller records
+    const existingSellers = await db.collection('sellers').find({ userId: { $in: sellerIds } }, { projection: { userId: 1 } }).toArray();
+    const existingSellerIds = new Set(existingSellers.map(function(s) { return s.userId; }));
+    const missingSellerIds = sellerIds.filter(function(id) { return !existingSellerIds.has(id); });
 
+    let recovered = 0;
+    for (const sellerId of missingSellerIds) {
       let user = null;
       try {
         user = await db.collection('users').findOne({ _id: new ObjectId(sellerId) });
@@ -1666,14 +1672,10 @@ async function recoverMissingSellers() {
 
       if (!user) continue;
 
-      const sellerName = ((user.firstName || '') + ' ' + (user.lastName || '')).trim()
-        || user.email
-        || 'My Shop';
-
       await db.collection('sellers').insertOne({
         userId: sellerId,
         accountType: 'individual',
-        shopName: sellerName,
+        shopName: resolveSellerName(user),
         shopDescription: 'Shop',
         joinDate: new Date(),
         rating: 5,
