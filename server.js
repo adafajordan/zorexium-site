@@ -562,7 +562,30 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
         }
       }
     );
-    
+
+    // Auto-create payout entry for this order
+    try {
+      const existingPayout = await db.collection('payouts').findOne({ orderId: order.id });
+      if (!existingPayout) {
+        const totalAmount = parseFloat(order.total) || 0;
+        const platformFee = parseFloat((totalAmount * 0.1).toFixed(2));
+        const payoutAmount = parseFloat((totalAmount * 0.9).toFixed(2));
+        const firstItem = Array.isArray(order.items) && order.items[0] ? order.items[0] : {};
+        await db.collection('payouts').insertOne({
+          orderId: order.id,
+          sellerUsername: firstItem.sellerUsername || '',
+          sellerName: firstItem.sellerName || firstItem.sellerUsername || '',
+          amount: payoutAmount,
+          platformFee,
+          status: 'pending_delivery',
+          placedAt: order.createdAt || new Date(),
+          createdAt: new Date()
+        });
+      }
+    } catch (payoutErr) {
+      console.error('Failed to create payout entry:', payoutErr.message);
+    }
+
     res.json({ orderId, paypalCaptureId: captureData.id, status: 'completed' });
   } catch (error) {
     console.error('Capture error:', error);
@@ -578,6 +601,26 @@ app.get('/api/orders', verifyToken, async function(req, res) {
     const orders = await db.collection('orders').find({}).toArray();
     res.json(orders);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── GET SINGLE ORDER BY ORDER ID (public, order ID is unguessable) ─────────────
+app.get('/api/orders/:orderId', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { orderId } = req.params;
+  if (!orderId || orderId.length > 64) {
+    return res.status(400).json({ error: 'Invalid orderId' });
+  }
+
+  try {
+    const order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    // Return order without internal MongoDB _id, keeping buyer info for confirmation display
+    res.json(order);
+  } catch (error) {
+    console.error('Error fetching order:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1113,11 +1156,20 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
     'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
     'businessAddress', 'businessCity', 'businessState', 'businessZip',
     'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
-    'shippingState', 'shippingZip'
+    'shippingState', 'shippingZip', 'stripeAccountId', 'stripeVerified'
   ];
   const updates = { updatedAt: new Date() };
-  for (const field of allowedFields) {
+  const stringFields = [
+    'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
+    'businessAddress', 'businessCity', 'businessState', 'businessZip',
+    'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
+    'shippingState', 'shippingZip', 'stripeAccountId'
+  ];
+  for (const field of stringFields) {
     if (req.body[field] !== undefined) updates[field] = String(req.body[field]).slice(0, 2000);
+  }
+  if (req.body.stripeVerified !== undefined) {
+    updates.stripeVerified = Boolean(req.body.stripeVerified);
   }
 
   try {
@@ -1235,6 +1287,140 @@ app.put('/api/messages/:id/read', verifyToken, async function(req, res) {
     res.json({ message: 'Marked as read' });
   } catch (error) {
     console.error('Error marking message as read:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── VERIFIED LABS ────────────────────────────────────────────────────────────────
+
+// GET /api/labs – get all labs (public)
+app.get('/api/labs', async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const labs = await db.collection('labs').find().sort({ createdAt: -1 }).toArray();
+    res.json(labs);
+  } catch (error) {
+    console.error('Error fetching labs:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/labs – create a lab (auth required)
+app.post('/api/labs', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { name, location, description, files } = req.body;
+
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(400).json({ error: 'Lab name is required' });
+  }
+  if (name.length > 200) {
+    return res.status(400).json({ error: 'Lab name is too long (max 200 characters)' });
+  }
+
+  const sanitizedFiles = [];
+  if (Array.isArray(files)) {
+    for (const f of files) {
+      if (!f || typeof f.data !== 'string') continue;
+      if (!f.data.startsWith('data:')) continue;
+      if (f.data.length > 7 * 1024 * 1024) {
+        return res.status(400).json({ error: 'One or more files are too large (max ~5 MB each)' });
+      }
+      sanitizedFiles.push({
+        name: String(f.name || '').slice(0, 200),
+        type: String(f.type || '').slice(0, 100),
+        size: Number(f.size) || 0,
+        data: f.data
+      });
+    }
+  }
+
+  try {
+    const lab = {
+      userId: req.userId,
+      name: name.trim().slice(0, 200),
+      location: String(location || '').trim().slice(0, 200),
+      description: String(description || '').trim().slice(0, 2000),
+      files: sanitizedFiles,
+      createdAt: new Date()
+    };
+    const result = await db.collection('labs').insertOne(lab);
+    res.status(201).json({ ...lab, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error creating lab:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/labs/:id – delete a lab (auth required, owner only)
+app.delete('/api/labs/:id', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  let objectId;
+  try {
+    objectId = new ObjectId(req.params.id);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid lab ID' });
+  }
+
+  try {
+    const lab = await db.collection('labs').findOne({ _id: objectId });
+    if (!lab) return res.status(404).json({ error: 'Lab not found' });
+    if (lab.userId !== req.userId) return res.status(403).json({ error: 'Forbidden: you do not own this lab' });
+    await db.collection('labs').deleteOne({ _id: objectId });
+    res.json({ message: 'Lab deleted' });
+  } catch (error) {
+    console.error('Error deleting lab:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── PAYOUTS ───────────────────────────────────────────────────────────────────────
+
+// GET /api/payouts – get all payouts (auth required)
+app.get('/api/payouts', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const payouts = await db.collection('payouts').find().sort({ createdAt: -1 }).toArray();
+    res.json(payouts);
+  } catch (error) {
+    console.error('Error fetching payouts:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/payouts/:id – update payout status (auth required)
+app.put('/api/payouts/:id', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  let objectId;
+  try {
+    objectId = new ObjectId(req.params.id);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid payout ID' });
+  }
+
+  const { status } = req.body;
+  const validStatuses = ['pending_delivery', 'ready_to_pay', 'paid'];
+  if (!status || !validStatuses.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
+  }
+
+  try {
+    const payout = await db.collection('payouts').findOne({ _id: objectId });
+    if (!payout) return res.status(404).json({ error: 'Payout not found' });
+
+    const updates = { status, updatedAt: new Date() };
+    if (status === 'ready_to_pay') updates.deliveredAt = new Date();
+    if (status === 'paid') updates.paidAt = new Date();
+
+    await db.collection('payouts').updateOne({ _id: objectId }, { $set: updates });
+    const updated = await db.collection('payouts').findOne({ _id: objectId });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating payout:', error);
     res.status(500).json({ error: error.message });
   }
 });

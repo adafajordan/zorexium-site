@@ -153,28 +153,64 @@
 
 <script src="notifications.js"></script>
 <script>
-  var currentSeller = null;
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const authToken = localStorage.getItem('authToken');
   var sellerPayouts = [];
 
-  function init() {
-    currentSeller = localStorage.getItem('currentUser');
-    updateCartBadge();
+  function getUserIdFromToken(token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.userId || null;
+    } catch (e) { return null; }
+  }
 
-    if (!currentSeller) {
+  async function init() {
+    if (!authToken) {
       document.getElementById('notLoggedIn').classList.remove('hidden');
       document.getElementById('earningsContent').classList.add('hidden');
+      updateCartBadge();
       return;
     }
 
-    document.getElementById('sellerSubtitle').textContent =
-      'Earnings for @' + currentSeller + ' · 90% of each sale goes to you.';
+    updateCartBadge();
+
+    try {
+      const sellerRes = await fetch(BACKEND_URL + '/api/sellers/me', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (!sellerRes.ok) {
+        document.getElementById('notLoggedIn').classList.remove('hidden');
+        document.getElementById('earningsContent').classList.add('hidden');
+        return;
+      }
+      const seller = await sellerRes.json();
+      document.getElementById('sellerSubtitle').textContent =
+        'Earnings for ' + escHtml(seller.shopName || 'your shop') + ' · 90% of each sale goes to you.';
+    } catch (_) {}
 
     loadEarnings();
   }
 
-  function loadEarnings() {
-    var allPayouts = JSON.parse(localStorage.getItem('zorexiumPendingPayouts') || '[]');
-    sellerPayouts  = allPayouts.filter(function(p) { return p.sellerUsername === currentSeller; });
+  async function loadEarnings() {
+    const userId = getUserIdFromToken(authToken);
+    try {
+      const res = await fetch(BACKEND_URL + '/api/payouts', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (res.ok) {
+        const allPayouts = await res.json();
+        // Filter payouts that belong to this seller
+        // Payouts are matched by the sellerId stored in the payout (if present)
+        // or by sellerUsername as a fallback
+        sellerPayouts = allPayouts.filter(function(p) {
+          return (p.sellerId && p.sellerId === userId) ||
+            (!p.sellerId && p.sellerUsername && localStorage.getItem('currentUser') &&
+             p.sellerUsername === localStorage.getItem('currentUser'));
+        });
+      }
+    } catch (_) {
+      sellerPayouts = [];
+    }
     renderEarnings();
     updateStats();
   }
@@ -243,14 +279,22 @@
     document.getElementById('totalAmount').textContent   = '$' + (pending + ready + paid).toFixed(2);
   }
 
-  function updateCartBadge() {
-    var cart  = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
-    var count = cart.reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
+  async function updateCartBadge() {
     var badge = document.getElementById('cartBadge');
-    if (badge) {
-      badge.textContent = count;
-      badge.classList.toggle('hidden', count === 0);
+    if (!badge) return;
+    if (!authToken) {
+      badge.classList.add('hidden');
+      return;
     }
+    try {
+      var res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (res.ok) {
+        var data = await res.json();
+        var count = (data.items || []).reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    } catch (_) {}
   }
 
   function escHtml(str) {

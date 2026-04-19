@@ -296,39 +296,56 @@
 
   function loadLabs() {
     const labsList = document.getElementById('labsList');
-    const allLabs = JSON.parse(localStorage.getItem('local_verifiedLabs_v1') || '[]');
-    const myLabs = allLabs.filter(l => l.addedBy === currentUser);
-    if (myLabs.length === 0) {
-      labsList.innerHTML = `
-        <div class="text-center py-12 col-span-full">
-          <i class="fas fa-flask text-5xl text-gray-600 mb-4 block"></i>
-          <p class="text-gray-400">No labs added yet</p>
-          <a href="verified-labs.html" class="btn-primary inline-block mt-4">Add Your First Lab</a>
-        </div>
-      `;
-      return;
-    }
-    labsList.innerHTML = myLabs.map(l => `
-      <div class="product-card p-4">
-        <h3 class="text-white font-semibold mb-1 line-clamp-2">${escapeHtml(l.name)}</h3>
-        <p class="text-gray-400 text-sm mb-2">${escapeHtml(l.location || '')}</p>
-        <p class="text-gray-300 text-sm mb-3">${escapeHtml((l.description || '').slice(0, 120))}</p>
-        <div class="text-xs text-gray-500 mb-3">Added: ${escapeHtml(l.created)}</div>
-        <div class="flex gap-2">
-          <button onclick="deleteLab(${l.id})" class="bg-red-900 hover:bg-red-800 text-red-300 px-4 py-2 rounded text-sm font-medium w-full">Delete</button>
-        </div>
-      </div>
-    `).join('');
+    labsList.innerHTML = '<div class="text-center py-12 col-span-full"><i class="fas fa-spinner fa-spin text-4xl text-gray-600 mb-4 block"></i><p class="text-gray-400">Loading labs…</p></div>';
+    const userId = getUserIdFromToken(authToken);
+    fetch(BACKEND_URL + '/api/labs')
+      .then(function(res) { return res.ok ? res.json() : []; })
+      .then(function(allLabs) {
+        const myLabs = allLabs.filter(function(l) { return l.userId === userId; });
+        if (myLabs.length === 0) {
+          labsList.innerHTML = `
+            <div class="text-center py-12 col-span-full">
+              <i class="fas fa-flask text-5xl text-gray-600 mb-4 block"></i>
+              <p class="text-gray-400">No labs added yet</p>
+              <a href="verified-labs.html" class="btn-primary inline-block mt-4">Add Your First Lab</a>
+            </div>
+          `;
+          return;
+        }
+        labsList.innerHTML = myLabs.map(function(l) {
+          const labId = l._id ? String(l._id) : '';
+          return `
+            <div class="product-card p-4">
+              <h3 class="text-white font-semibold mb-1 line-clamp-2">${escapeHtml(l.name)}</h3>
+              <p class="text-gray-400 text-sm mb-2">${escapeHtml(l.location || '')}</p>
+              <p class="text-gray-300 text-sm mb-3">${escapeHtml((l.description || '').slice(0, 120))}</p>
+              <div class="text-xs text-gray-500 mb-3">Added: ${escapeHtml(new Date(l.createdAt).toLocaleString())}</div>
+              <div class="flex gap-2">
+                <button onclick="deleteLab('${escapeHtml(labId)}')" class="bg-red-900 hover:bg-red-800 text-red-300 px-4 py-2 rounded text-sm font-medium w-full">Delete</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      })
+      .catch(function() {
+        labsList.innerHTML = '<div class="text-center py-12 col-span-full"><p class="text-gray-400">Failed to load labs.</p></div>';
+      });
   }
 
   function deleteLab(labId) {
-    labId = parseInt(labId, 10);
-    if (isNaN(labId)) return;
+    if (!labId) return;
     ZrxNotify.showConfirm('Are you sure you want to delete this lab?', function() {
-      const allLabs = JSON.parse(localStorage.getItem('local_verifiedLabs_v1') || '[]');
-      const updated = allLabs.filter(l => !(l.id === labId && l.addedBy === currentUser));
-      localStorage.setItem('local_verifiedLabs_v1', JSON.stringify(updated));
-      loadLabs();
+      fetch(BACKEND_URL + '/api/labs/' + encodeURIComponent(labId), {
+        method: 'DELETE',
+        headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
+      })
+      .then(function(res) {
+        if (!res.ok) return res.json().then(function(d) { throw new Error(d.error || 'Delete failed'); });
+        loadLabs();
+      })
+      .catch(function(err) {
+        ZrxNotify.showNotification(err.message || 'Failed to delete lab', 'error');
+      });
     });
   }
 

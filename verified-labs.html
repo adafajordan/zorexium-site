@@ -115,9 +115,17 @@
 </footer>
 
 <script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
   function openAddLab(){ document.getElementById('addLabModal').classList.remove('hidden'); document.getElementById('addLabModal').classList.add('flex'); }
   function closeAddLab(){ document.getElementById('addLabModal').classList.add('hidden'); document.getElementById('addLabModal').classList.remove('flex'); }
   document.getElementById('addLabBtn').addEventListener('click', function(){
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      ZrxNotify.showNotification('Please log in to add a lab', 'info');
+      window.location.href = 'signup-login.html';
+      return;
+    }
     openAddLab();
   });
 
@@ -133,7 +141,13 @@
     });
   });
 
-  function saveLab(){
+  async function saveLab(){
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      ZrxNotify.showNotification('Please log in to add a lab', 'info');
+      window.location.href = 'signup-login.html';
+      return;
+    }
     const name = document.getElementById('labName').value.trim();
     if(!name){ ZrxNotify.showNotification('Enter a lab name', 'error'); return; }
     const filesInput = document.getElementById('labFilesInput');
@@ -142,37 +156,61 @@
       const r = new FileReader(); r.onload = e => res({ name: file.name, data: e.target.result, type: file.type, size: file.size }); r.onerror = reject; r.readAsDataURL(file);
     });
 
-    Promise.all(files.map(readFile)).then(fileObjs => {
-      const labs = JSON.parse(localStorage.getItem('local_verifiedLabs_v1') || '[]');
-      labs.unshift({ id: Date.now(), name, location: document.getElementById('labLocation').value.trim(), description: document.getElementById('labDescription').value.trim(), files: fileObjs, created: new Date().toLocaleString(), addedBy: localStorage.getItem('currentUser') || null });
-      localStorage.setItem('local_verifiedLabs_v1', JSON.stringify(labs));
-      // clear inputs
-      document.getElementById('labName').value=''; document.getElementById('labLocation').value=''; document.getElementById('labDescription').value=''; filesInput.value=''; document.getElementById('labFilesPreview').innerHTML='';
-      closeAddLab(); renderLabs();
+    Promise.all(files.map(readFile)).then(async function(fileObjs) {
+      try {
+        const res = await fetch(BACKEND_URL + '/api/labs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            name,
+            location: document.getElementById('labLocation').value.trim(),
+            description: document.getElementById('labDescription').value.trim(),
+            files: fileObjs
+          })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          ZrxNotify.showNotification(data.error || 'Failed to save lab', 'error');
+          return;
+        }
+        // clear inputs
+        document.getElementById('labName').value=''; document.getElementById('labLocation').value=''; document.getElementById('labDescription').value=''; filesInput.value=''; document.getElementById('labFilesPreview').innerHTML='';
+        closeAddLab(); renderLabs();
+      } catch(err) {
+        console.error(err); ZrxNotify.showNotification('Network error saving lab', 'error');
+      }
     }).catch(err=>{ console.error(err); ZrxNotify.showNotification('Error reading files', 'error'); });
   }
 
-  function renderLabs(){
-    const container = document.getElementById('labsList'); container.innerHTML='';
-    const labs = JSON.parse(localStorage.getItem('local_verifiedLabs_v1') || '[]');
-    if(labs.length===0){ container.innerHTML='<div class="col-span-1 text-center text-gray-400 py-12">No labs yet. Click Add Lab to create one.</div>'; return; }
-    labs.forEach(l=>{
-      const el=document.createElement('div'); el.className='lab-card';
-      let inner = `<h3 class="text-lg font-semibold text-white mb-1">${escapeHtml(l.name)}</h3><p class="text-sm text-gray-400 mb-2">${escapeHtml(l.location||'')}</p><p class="text-sm text-gray-300 mb-3">${escapeHtml((l.description||'').slice(0,200))}</p>`;
-      if(l.files && l.files.length){
-        inner += '<div class="mb-3 flex flex-wrap gap-2">';
-        l.files.forEach(f=>{
-          if(f.type && f.type.startsWith('image/')){
-            inner += `<a href="${f.data}" target="_blank"><img src="${f.data}" class="w-32 h-20 object-cover rounded"/></a>`;
-          } else {
-            inner += `<div class="px-2 py-1 bg-[#08121a] rounded"><a href="${f.data}" download="${escapeHtml(f.name)}" class="underline text-gray-300">${escapeHtml(f.name)}</a></div>`;
-          }
-        });
-        inner += '</div>';
-      }
-      inner += `<div class="text-xs text-gray-500">Added: ${l.created}</div>`;
-      el.innerHTML = inner; container.appendChild(el);
-    });
+  async function renderLabs(){
+    const container = document.getElementById('labsList'); container.innerHTML='<div class="col-span-1 text-center text-gray-400 py-12">Loading labs…</div>';
+    try {
+      const res = await fetch(BACKEND_URL + '/api/labs');
+      if (!res.ok) throw new Error('Failed to load labs');
+      const labs = await res.json();
+      if(labs.length===0){ container.innerHTML='<div class="col-span-1 text-center text-gray-400 py-12">No labs yet. Click Add Lab to create one.</div>'; return; }
+      container.innerHTML = '';
+      labs.forEach(l=>{
+        const el=document.createElement('div'); el.className='lab-card';
+        const labId = l._id ? String(l._id) : '';
+        let inner = `<h3 class="text-lg font-semibold text-white mb-1">${escapeHtml(l.name)}</h3><p class="text-sm text-gray-400 mb-2">${escapeHtml(l.location||'')}</p><p class="text-sm text-gray-300 mb-3">${escapeHtml((l.description||'').slice(0,200))}</p>`;
+        if(l.files && l.files.length){
+          inner += '<div class="mb-3 flex flex-wrap gap-2">';
+          l.files.forEach(f=>{
+            if(f.type && f.type.startsWith('image/')){
+              inner += `<a href="${escapeHtml(f.data)}" target="_blank"><img src="${escapeHtml(f.data)}" class="w-32 h-20 object-cover rounded"/></a>`;
+            } else {
+              inner += `<div class="px-2 py-1 bg-[#08121a] rounded"><a href="${escapeHtml(f.data)}" download="${escapeHtml(f.name)}" class="underline text-gray-300">${escapeHtml(f.name)}</a></div>`;
+            }
+          });
+          inner += '</div>';
+        }
+        inner += `<div class="text-xs text-gray-500">Added: ${new Date(l.createdAt).toLocaleString()}</div>`;
+        el.innerHTML = inner; container.appendChild(el);
+      });
+    } catch(err) {
+      container.innerHTML='<div class="col-span-1 text-center text-gray-400 py-12">Failed to load labs. Please try again.</div>';
+    }
   }
 
   function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }

@@ -132,7 +132,8 @@
 </footer>
 
 <script>
-  let currentUser = localStorage.getItem('currentUser');
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const authToken = localStorage.getItem('authToken');
   let currentTab = 'all';
   let mockOrders = [
     // Example structure for orders
@@ -147,14 +148,21 @@
     // }
   ];
 
-  function init() {
-    if (!currentUser) {
+  async function init() {
+    if (!authToken) {
       window.location.href = 'seller-signup.html';
       return;
     }
 
-    let sellers = JSON.parse(localStorage.getItem('zorexiumSellers') || '{}');
-    if (!sellers[currentUser]) {
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/me', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (!res.ok) {
+        window.location.href = 'seller-signup.html';
+        return;
+      }
+    } catch (_) {
       window.location.href = 'seller-signup.html';
       return;
     }
@@ -283,21 +291,28 @@
   function logout() {
     ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUsername');
       window.location.href = 'index.html';
     });
   }
 
-  function updateCartBadge() {
-    const cart = JSON.parse(localStorage.getItem('zorexiumCart') || '[]');
+  async function updateCartBadge() {
     const badge = document.getElementById('cartBadge');
-    if (badge) {
-      if (cart.length > 0) {
-        badge.textContent = cart.length;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
+    if (!badge) return;
+    if (!authToken) {
+      badge.classList.add('hidden');
+      return;
     }
+    try {
+      const res = await fetch(BACKEND_URL + '/api/cart', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (res.ok) {
+        const data = await res.json();
+        const count = (data.items || []).length;
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    } catch (_) {}
   }
 
   function toggleDropdown(id) {
