@@ -279,12 +279,12 @@
         ZrxNotify.showNotification(data.error || 'Registration failed. Please try again.', 'error');
         return;
       }
-      // Store JWT in sessionStorage for cross-domain auth (cookies are domain-locked)
+      // Store JWT in localStorage (persists across page navigations within the same origin)
       if (data.token) {
         try {
-          sessionStorage.setItem('authToken', data.token);
+          localStorage.setItem('authToken', data.token);
           const userInfo = (data.user) ? { email: data.user.email, username: data.user.firstName || data.user.email } : { email, username };
-          sessionStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+          localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
         } catch (e) {}
       }
       window.location.href = 'marketplace.html';
@@ -311,12 +311,12 @@
         ZrxNotify.showNotification(data.error || 'Invalid email or password.', 'error');
         return;
       }
-      // Store JWT in sessionStorage for cross-domain auth (cookies are domain-locked)
+      // Store JWT in localStorage (persists across page navigations within the same origin)
       if (data.token) {
         try {
-          sessionStorage.setItem('authToken', data.token);
+          localStorage.setItem('authToken', data.token);
           const userInfo = (data.user) ? { email: data.user.email, username: data.user.firstName || data.user.email } : { email, username: email };
-          sessionStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+          localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
         } catch (e) {}
       }
       window.location.href = 'marketplace.html';

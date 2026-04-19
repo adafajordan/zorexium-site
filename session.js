@@ -2,8 +2,9 @@
  * ZrxSession – client-side session utility
  *
  * Authentication strategy (cross-domain compatible):
- * 1. After login, the JWT is stored in sessionStorage ('authToken') and user
- *    info in sessionStorage ('_zrx_user').  This works cross-domain.
+ * 1. After login, the JWT is stored in localStorage ('authToken') and user
+ *    info in localStorage ('_zrx_user').  This persists across page navigations
+ *    and browser sessions until explicitly cleared.
  * 2. authFetch() automatically adds an Authorization: Bearer header so the
  *    backend verifyToken middleware accepts the request regardless of cookies.
  * 3. Cookie-based auth is kept as a fallback for backward compatibility.
@@ -32,10 +33,10 @@
     document.cookie = cookie;
   }
 
-  /** Returns the stored JWT token (sessionStorage first, then cookie fallback). */
+  /** Returns the stored JWT token (localStorage first, then cookie fallback). */
   function getToken() {
     try {
-      var t = sessionStorage.getItem('authToken');
+      var t = localStorage.getItem('authToken');
       if (t) return t;
     } catch (e) {}
     return getCookie('authToken');
@@ -43,9 +44,9 @@
 
   /** Returns the current user object {email, username} or null if not logged in. */
   function getUser() {
-    // Check sessionStorage first (cross-domain JWT flow)
+    // Check localStorage first (for JWT-based auth flow)
     try {
-      var raw = sessionStorage.getItem('_zrx_user');
+      var raw = localStorage.getItem('_zrx_user');
       if (raw) {
         try { return JSON.parse(raw); } catch (e) {}
       }
@@ -58,9 +59,9 @@
 
   /** Returns true if the user appears to be logged in. */
   function isLoggedIn() {
-    // Check sessionStorage token first (cross-domain)
+    // Check localStorage token first (for JWT-based auth)
     try {
-      if (sessionStorage.getItem('authToken')) return true;
+      if (localStorage.getItem('authToken')) return true;
     } catch (e) {}
     // Fall back to cookie-based check
     return getUser() !== null;
@@ -68,7 +69,7 @@
 
   /**
    * Performs an authenticated fetch. Adds credentials:'include' and an
-   * Authorization: Bearer header (from sessionStorage) so auth works
+   * Authorization: Bearer header (from localStorage) so auth works
    * cross-domain when cookies are not available.
    * @param {string} url
    * @param {RequestInit} [options]
@@ -87,13 +88,13 @@
 
   /**
    * Logs the user out by calling the server logout endpoint (clears HTTP-only cookie),
-   * clears sessionStorage auth data, then invokes the optional callback.
+   * clears localStorage auth data, then invokes the optional callback.
    * @param {function} [callback]
    */
   function logout(callback) {
     try {
-      sessionStorage.removeItem('authToken');
-      sessionStorage.removeItem('_zrx_user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('_zrx_user');
     } catch (e) {}
     fetch(BACKEND_URL + '/api/auth/logout', { method: 'POST', credentials: 'include' })
       .catch(function () {})

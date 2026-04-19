@@ -15,9 +15,9 @@
     // Use ZrxSession.fetch if available (adds Authorization header for cross-domain auth)
     var fetchFn = (window.ZrxSession && window.ZrxSession.fetch) ? window.ZrxSession.fetch.bind(window.ZrxSession) : null;
     if (!fetchFn) {
-      // Fallback: build Authorization header from sessionStorage token directly
+      // Fallback: build Authorization header from localStorage token directly
       var token = null;
-      try { token = sessionStorage.getItem('authToken'); } catch (e) {}
+      try { token = localStorage.getItem('authToken'); } catch (e) {}
       var options = { credentials: 'include' };
       if (token) { options.headers = { 'Authorization': 'Bearer ' + token }; }
       fetch(BACKEND_URL + '/api/user/profile-picture', options)
