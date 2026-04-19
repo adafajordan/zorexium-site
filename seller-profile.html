@@ -405,8 +405,11 @@
   }
 
   function viewProduct(productId) {
-    // Placeholder for product detail view
-    ZrxNotify.showNotification('Product detail view coming soon! Product ID: ' + productId, 'info');
+    if (!productId) {
+      console.error('Product ID is missing');
+      return;
+    }
+    window.location.href = 'product-detail.html?id=' + encodeURIComponent(productId);
   }
 
   function updateCartBadge() {
