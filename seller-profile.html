@@ -302,6 +302,7 @@
           const userId = (data && data.userId) || null;
 
           if (userId) {
+            sellerId = userId;
             // Try to load seller profile from backend
             Promise.all([
               fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(userId)).then(r => r.ok ? r.json() : null),
