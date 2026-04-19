@@ -413,6 +413,11 @@
       return;
     }
 
+    const sellerUsername = localStorage.getItem('currentUsername') || localStorage.getItem('currentUser');
+    if (!sellerUsername) {
+      ZrxNotify.showNotification('Could not determine seller identity. Please log out and log in again.', 'error');
+      return;
+    }
     fetch(BACKEND_URL + '/api/products', {
       method: 'POST',
       headers: {
@@ -426,7 +431,9 @@
         description: product.description,
         condition: product.condition,
         image: imageData,
-        specifications: product.specs
+        specifications: product.specs,
+        sellerName: sellerUsername,
+        sellerUsername: sellerUsername
       })
     })
     .then(res => {
