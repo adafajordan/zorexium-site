@@ -246,5 +246,85 @@
         </a>
     </div>
 
+
+    <script src="notifications.js"></script>
+    <script src="session.js"></script>
+    <script>
+        // Header account/cart wiring
+        (function(){
+            var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
+            // Determine login state and show the correct header section
+            var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
+            var loginForm    = document.getElementById('headerLoginForm');
+            var acctSection  = document.getElementById('headerAccountSection');
+            var verifiedBtn  = document.getElementById('verifiedLabsBtn');
+            if(loggedIn){
+                if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
+                if(loginForm)  { loginForm.classList.add('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
+            } else {
+                if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
+                if(acctSection){ acctSection.classList.add('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.add('hidden'); }
+            }
+
+            // Cart badge update (requires auth)
+            try{
+                if(loggedIn){
+                    fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                        .then(function(r){ return r.ok ? r.json() : null; })
+                        .then(function(data){
+                            var count = (data && data.items) ? data.items.length : 0;
+                            var badge = document.getElementById('cartBadgeHeader');
+                            if(badge){ badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+                        }).catch(function(){});
+                }
+            }catch(e){/* ignore */}
+
+            // Account dropdown toggle
+            const acctIcon = document.getElementById('accountIconHeader');
+            const acctDrop = document.getElementById('accountDropdownHeader');
+            if(acctIcon && acctDrop){
+                acctIcon.addEventListener('click', (e)=>{ e.preventDefault(); acctDrop.classList.toggle('hidden'); });
+            }
+            const signOut = document.getElementById('signOutHeader');
+            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'success'); window.location.href='index.html'; }); });
+            const deactivate = document.getElementById('deactivateHeader');
+            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'success'); window.location.href='index.html'; }); }); });
+
+            // Inline header login handler
+            async function doHeaderLogin(){
+                var email    = document.getElementById('headerLoginEmail').value.trim();
+                var password = document.getElementById('headerLoginPassword').value;
+                if(!email || !password){ ZrxNotify.showNotification('Please enter your email/username and password.', 'error'); return; }
+                try{
+                    var res  = await fetch(BACKEND_URL + '/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ email: email, password: password })
+                    });
+                    var data = await res.json();
+                    if(!res.ok){ ZrxNotify.showNotification(data.error || 'Invalid email or password.', 'error'); return; }
+                    if(data.token){
+                        try{
+                            localStorage.setItem('authToken', data.token);
+                            var userInfo = data.user ? { email: data.user.email, username: data.user.firstName || data.user.email } : { email: email, username: email };
+                            localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+                        }catch(ex){}
+                    }
+                    window.location.reload();
+                }catch(err){
+                    ZrxNotify.showNotification('Login failed. Please check your connection and try again.', 'error');
+                }
+            }
+            var loginBtn = document.getElementById('headerLoginBtn');
+            if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
+            var pwdInput = document.getElementById('headerLoginPassword');
+            if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
+        })();
+    </script>
+    <script src="profile-picture.js"></script>
 </body>
 </html>
