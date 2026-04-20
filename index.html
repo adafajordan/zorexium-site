@@ -521,8 +521,14 @@
         // Load and render all marketplace products on home page
         (function() {
             var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+            var homeProductsList = [];
+
+            function escAttr(str) {
+                return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            }
 
             function renderHomeProducts(products) {
+                homeProductsList = products;
                 var grid = document.getElementById('homeProductsGrid');
                 var emptyState = document.getElementById('homeEmptyState');
                 var countEl = document.getElementById('homeResultCount');
@@ -536,7 +542,7 @@
                 grid.classList.remove('hidden');
                 if (emptyState) emptyState.classList.add('hidden');
                 if (countEl) countEl.textContent = products.length;
-                grid.innerHTML = products.map(function(product) {
+                grid.innerHTML = products.map(function(product, i) {
                     var id = product._id || '';
                     var name = product.name || 'Unnamed Product';
                     var img = product.image || 'https://placehold.co/300x200/333/fff?text=Product';
@@ -544,62 +550,71 @@
                     var description = product.description || '';
                     var condition = product.condition || 'New';
                     var price = parseFloat(product.price || 0).toFixed(2);
+                    var rating = product.rating ? parseFloat(product.rating).toFixed(1) : '5.0';
+                    var detailUrl = 'product-detail.html?id=' + encodeURIComponent(id);
                     return '<div class="product-card">' +
-                        '<img src="' + img + '" alt="' + name + '" class="product-image" onclick="window.location.href=\'product-detail.html?id=' + encodeURIComponent(id) + '\'">' +
+                        '<img src="' + escAttr(img) + '" alt="' + escAttr(name) + '" class="product-image" onclick="window.location.href=' + "'" + detailUrl + "'" + '">' +
                         '<div class="p-4">' +
-                        '<h3 class="text-gray-900 font-semibold line-clamp-2 mb-2">' + name + '</h3>' +
-                        '<div class="mb-3"><span class="seller-badge"><i class="fas fa-store"></i> ' + sellerName + '</span></div>' +
-                        '<p class="text-gray-400 text-sm mb-3 line-clamp-2">' + description + '</p>' +
+                        '<h3 class="text-gray-900 font-semibold line-clamp-2 mb-2">' + escAttr(name) + '</h3>' +
+                        '<div class="mb-3"><span class="seller-badge"><i class="fas fa-store"></i> ' + escAttr(sellerName) + '</span></div>' +
+                        '<p class="text-gray-400 text-sm mb-3 line-clamp-2">' + escAttr(description) + '</p>' +
                         '<div class="flex justify-between items-center mb-3">' +
-                        '<div><p class="text-gray-500 text-xs">Condition</p><p class="text-gray-900 font-semibold text-sm">' + condition + '</p></div>' +
-                        '<div class="flex items-center gap-2 text-sm"><div class="text-yellow-400"><i class="fas fa-star"></i></div><div class="text-gray-400 text-xs">5.0</div></div>' +
+                        '<div><p class="text-gray-500 text-xs">Condition</p><p class="text-gray-900 font-semibold text-sm">' + escAttr(condition) + '</p></div>' +
+                        '<div class="flex items-center gap-2 text-sm"><div class="text-yellow-400"><i class="fas fa-star"></i></div><div class="text-gray-400 text-xs">' + escAttr(rating) + '</div></div>' +
                         '</div>' +
                         '<div class="flex justify-between items-center">' +
-                        '<p class="text-cyan-500 text-2xl font-bold">$' + price + '</p>' +
+                        '<p class="text-cyan-500 text-2xl font-bold">$' + escAttr(price) + '</p>' +
                         '<div class="flex gap-2">' +
-                        '<a href="product-detail.html?id=' + encodeURIComponent(id) + '" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-info-circle"></i></a>' +
-                        '<button onclick="homeAddToCart(\'' + id + '\',\'' + name.replace(/'/g, "\\'") + '\',' + product.price + ',\'' + img + '\')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-shopping-cart"></i></button>' +
+                        '<a href="' + escAttr(detailUrl) + '" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-info-circle"></i></a>' +
+                        '<button onclick="homeAddToCart(' + i + ')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-shopping-cart"></i></button>' +
                         '</div></div>' +
                         '</div></div>';
                 }).join('');
             }
+
+            window.homeAddToCart = async function(index) {
+                var product = homeProductsList[index];
+                if (!product) return;
+                var productId = product._id || '';
+                var name = product.name || '';
+                var price = product.price || 0;
+                var image = product.image || '';
+                if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
+                    try {
+                        var cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+                        var items = [];
+                        if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
+                        var existing = items.find(function(item) { return item.id === productId; });
+                        if (existing) { existing.quantity += 1; } else { items.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
+                        await ZrxSession.fetch(BACKEND_URL + '/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: items }) });
+                        var badge = document.getElementById('cartBadgeHeader');
+                        if (badge) { badge.textContent = items.length; badge.classList.toggle('hidden', items.length === 0); }
+                    } catch (err) {
+                        console.error('Failed to add to cart:', err);
+                        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to add to cart', 'error');
+                        return;
+                    }
+                } else {
+                    var guestCart = [];
+                    try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (err) { console.error('Failed to read guest cart:', err); }
+                    var existingGuest = guestCart.find(function(item) { return item.id === productId; });
+                    if (existingGuest) { existingGuest.quantity += 1; } else { guestCart.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
+                    try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (err) { console.error('Failed to save guest cart:', err); }
+                }
+                if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');
+            };
 
             fetch(BACKEND_URL + '/api/products')
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
                     renderHomeProducts(Array.isArray(data) ? data : []);
                 })
-                .catch(function() {
+                .catch(function(err) {
+                    console.error('Error loading products:', err);
                     var grid = document.getElementById('homeProductsGrid');
                     if (grid) grid.innerHTML = '<div class="col-span-3 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4 block"></i><p class="text-red-400">Failed to load products. Please refresh the page.</p></div>';
                 });
         })();
-
-        async function homeAddToCart(productId, name, price, image) {
-            var BACKEND_URL = 'https://zorexium-backend.onrender.com';
-            if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
-                try {
-                    var cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
-                    var items = [];
-                    if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
-                    var existing = items.find(function(item) { return item.id === productId; });
-                    if (existing) { existing.quantity += 1; } else { items.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
-                    await ZrxSession.fetch(BACKEND_URL + '/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: items }) });
-                    var badge = document.getElementById('cartBadgeHeader');
-                    if (badge) { badge.textContent = items.length; badge.classList.toggle('hidden', items.length === 0); }
-                } catch (_) {
-                    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to add to cart', 'error');
-                    return;
-                }
-            } else {
-                var guestCart = [];
-                try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) {}
-                var existingGuest = guestCart.find(function(item) { return item.id === productId; });
-                if (existingGuest) { existingGuest.quantity += 1; } else { guestCart.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
-                try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (_) {}
-            }
-            if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');
-        }
         </script>
 
 <script src="profile-picture.js"></script>
