@@ -44,7 +44,7 @@
 <body class="min-h-screen flex flex-col">
 
     <!-- Top Navigation -->
-    <header class="bg-[#181b21] border-b border-gray-800">
+    <header class="bg-white border-b border-gray-200">
         <div class="px-4 sm:px-6">
             <div class="flex justify-between items-center h-24">
                 <!-- Logo -->
@@ -64,8 +64,8 @@
                 <nav class="hidden md:flex space-x-8">
                     <!-- Marketplace (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
-                        <a href="marketplace.html" class="text-gray-300 hover:text-white px-4 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
-                        <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-300 hover:text-white px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
+                        <a href="marketplace.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
+                        <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
@@ -90,8 +90,8 @@
 
                     <!-- Community Hub (existing) -->
                     <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
-                        <a href="community-hub.html" class="text-gray-300 hover:text-white px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
-                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-300 hover:text-white px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
+                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
@@ -116,8 +116,8 @@
 
                     <!-- Sell Hardware (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
-                        <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
-                        <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-300 hover:text-white px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Sell Hardware menu">
+                        <a href="sell-hardware.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+                        <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Sell Hardware menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
@@ -141,7 +141,7 @@
 
                 <!-- Right Side Actions -->
                 <div class="flex items-center space-x-5">
-                    <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative flex items-center gap-2 px-3 py-2 rounded-md">
+                    <a href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
                         <i class="fas fa-shopping-cart text-2xl"></i>
                         <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
                     </a>
@@ -165,9 +165,9 @@
     </header>
 
     <!-- Sub-header / Search -->
-    <div class="bg-[#181b21] py-6">
+    <div class="bg-white py-6 border-b border-gray-200">
             <div class="px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-5">
-            <a href="marketplace.html" class="text-white font-medium text-xl hidden md:block">Marketplace</a>
+            <a href="marketplace.html" class="text-black font-medium text-xl hidden md:block">Marketplace</a>
             
             <div class="flex-1 w-full relative">
                 <div class="relative">
@@ -186,7 +186,7 @@
                         <a href="trusted-seller.html" class="bg-amber-500 hover:bg-amber-600 text-black px-5 py-2.5 rounded-md text-base font-bold flex items-center gap-2">
                             <i class="fas fa-shopping-bag"></i> Trusted Seller
                         </a>
-                        <button class="text-gray-400 hover:text-white">
+                        <button class="text-gray-500 hover:text-black">
                             <i class="fas fa-plus text-xl"></i>
                         </button>
                     </div>
