@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #e2e8f0; }
         .message-bubble { word-wrap: break-word; }
     </style>
     <script src="open-links-new-tab.js"></script>
@@ -17,7 +17,7 @@
 <body class="min-h-screen flex flex-col">
 
 <!-- Header -->
-<header class="bg-[#181b21] border-b border-gray-800">
+<header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
     <div class="flex justify-between items-center h-16">
       <a href="index.html" class="flex-shrink-0 flex items-center gap-3">
@@ -37,7 +37,7 @@
 
 <!-- Main Content -->
 <main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
-  <h1 class="text-5xl font-bold text-white mb-12">Messages</h1>
+  <h1 class="text-5xl font-bold text-gray-900 mb-12">Messages</h1>
 
   <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
     <!-- Conversations List -->
@@ -68,12 +68,12 @@
       <div class="bg-[#181b21] border-t border-gray-700 p-4 space-y-3">
         <div>
           <label class="block text-white text-base font-semibold mb-2">Subject</label>
-          <input type="text" id="msgSubject" placeholder="Message subject" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
+          <input type="text" id="msgSubject" placeholder="Message subject" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
         </div>
         <div>
           <label class="block text-white text-base font-semibold mb-2">Message</label>
           <div class="flex gap-3">
-            <textarea id="msgBody" placeholder="Type your message..." rows="2" class="flex-1 bg-[#2a2e38] border border-gray-700 text-white px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
+            <textarea id="msgBody" placeholder="Type your message..." rows="2" class="flex-1 bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
             <button onclick="sendCurrentMessage()" class="px-8 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg self-end">
               <i class="fas fa-paper-plane"></i>
             </button>

@@ -8,16 +8,16 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #e2e8f0; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .product-card { background-color: #20232a; border-radius: 8px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+    .product-card { background-color: #ffffff; border-radius: 8px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
     .product-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(34, 197, 94, 0.15); }
-    .product-image { width: 100%; height: 200px; object-fit: cover; background-color: #2a2e38; }
+    .product-image { width: 100%; height: 200px; object-fit: cover; background-color: #f9fafb; }
     .seller-badge { display: inline-flex; align-items: center; gap: 6px; background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
     .seller-badge:hover { background-color: rgba(34, 197, 94, 0.2); }
     .spec-badge { display: inline-block; background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
-    .filter-btn { padding: 8px 16px; border-radius: 6px; font-size: 14px; transition: all 0.2s; border: 1px solid #333; background-color: #2a2e38; color: #e2e8f0; }
+    .filter-btn { padding: 8px 16px; border-radius: 6px; font-size: 14px; transition: all 0.2s; border: 1px solid #e5e7eb; background-color: #f9fafb; color: #e2e8f0; }
     .filter-btn.active { background-color: #65a30d; border-color: #65a30d; }
   </style>
   <script src="open-links-new-tab.js"></script>
@@ -26,7 +26,7 @@
 <body class="min-h-screen flex flex-col">
 
 <!-- Top Navigation -->
-<header class="bg-[#181b21] border-b border-gray-800">
+<header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
     <div class="flex justify-between items-center h-16">
       <div class="flex items-center">
@@ -43,8 +43,8 @@
         <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Community</a>
         <a href="messages.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Messages</a>
         <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
-          <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
-          <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base inline-flex items-center"><i class="fas fa-chevron-down text-sm"></i></button>
+          <a href="sell-hardware.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+          <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base inline-flex items-center"><i class="fas fa-chevron-down text-sm"></i></button>
           <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
             <div class="px-6 py-3 bg-[#181b21] border-b border-gray-700"><p class="text-sm font-bold text-cyan-400 uppercase tracking-wider">Marketplace</p></div>
             <a href="marketplace.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors border-b-2 border-cyan-400"><i class="fas fa-store text-cyan-400 w-4 text-center"></i>Browse Products</a>
@@ -56,7 +56,7 @@
         </div>
       </nav>
       <div class="flex items-center space-x-4">
-        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
+        <a href="shopping-cart.html" class="text-gray-700 hover:text-black relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
         <a href="marketplace-settings.html" class="text-gray-300 hover:text-white" title="Marketplace Settings"><i class="fas fa-cog text-xl"></i></a>
         <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-xl"></i></a>
         <a href="account-details.html" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block"><img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></a>
@@ -70,7 +70,7 @@
   <!-- Header -->
   <div class="mb-12 flex justify-between items-start">
     <div>
-      <h1 class="text-5xl font-bold text-white mb-2">Hardware Marketplace</h1>
+      <h1 class="text-5xl font-bold text-gray-900 mb-2">Hardware Marketplace</h1>
       <p class="text-gray-400">Browse quality hardware from verified sellers</p>
     </div>
     <button onclick="checkSellerAndRedirect()" class="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold h-fit">
@@ -79,15 +79,15 @@
   </div>
 
   <!-- Search and Filters -->
-  <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6 mb-12">
+  <div class="bg-white border border-gray-200 rounded-lg p-6 mb-12">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <div>
         <label class="block text-white text-base font-semibold mb-2">Search Products</label>
-        <input type="text" id="searchInput" placeholder="Search GPU, CPU, RAM..." class="w-full bg-[#2a2e38] border border-gray-700 text-white px-6 py-3 rounded-lg" onkeyup="filterProducts()">
+        <input type="text" id="searchInput" placeholder="Search GPU, CPU, RAM..." class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg" onkeyup="filterProducts()">
       </div>
       <div>
         <label class="block text-white text-base font-semibold mb-2">Filter by Condition</label>
-        <select id="conditionFilter" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-6 py-3 rounded-lg" onchange="filterProducts()">
+        <select id="conditionFilter" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg" onchange="filterProducts()">
           <option value="">All Conditions</option>
           <option value="New">New</option>
           <option value="Like New">Like New</option>
@@ -97,7 +97,7 @@
       </div>
       <div>
         <label class="block text-white text-base font-semibold mb-2">Sort By</label>
-        <select id="sortFilter" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-6 py-3 rounded-lg" onchange="filterProducts()">
+        <select id="sortFilter" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg" onchange="filterProducts()">
           <option value="">Newest</option>
           <option value="price-low">Price: Low to High</option>
           <option value="price-high">Price: High to Low</option>

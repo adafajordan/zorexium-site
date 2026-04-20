@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #e2e8f0; }
     </style>
     <script src="open-links-new-tab.js"></script>
     <script src="cookie-consent.js"></script>
@@ -16,7 +16,7 @@
 <body class="min-h-screen flex flex-col">
 
 <!-- Header -->
-<header class="bg-[#181b21] border-b border-gray-800">
+<header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
     <div class="flex justify-between items-center h-16">
       <a href="index.html" class="flex-shrink-0 flex items-center gap-3">
@@ -27,7 +27,7 @@
         </div>
       </a>
       <div class="flex items-center space-x-4">
-        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
+        <a href="shopping-cart.html" class="text-gray-700 hover:text-black relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
         <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-xl"></i></a>
       </div>
     </div>
@@ -66,7 +66,7 @@
       </div>
 
       <!-- Quantity & Actions -->
-      <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6">
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="mb-8">
           <label class="block text-white text-base font-semibold mb-2">Quantity</label>
           <div class="flex items-center gap-6">
@@ -88,7 +88,7 @@
       </div>
 
       <!-- Product Details -->
-      <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6">
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
         <h3 class="text-xl font-semibold text-white mb-6">Product Details</h3>
         <div class="space-y-3 text-base">
           <div class="flex justify-between">
@@ -113,19 +113,19 @@
 <div id="contactModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
   <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6 max-w-md w-full">
     <div class="flex justify-between items-center mb-6">
-      <h2 class="text-3xl font-bold text-white">Contact Seller</h2>
+      <h2 class="text-3xl font-bold text-gray-900">Contact Seller</h2>
       <button onclick="closeContactModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
     </div>
 
     <div class="space-y-4">
       <div>
         <label class="block text-white text-base font-semibold mb-2">Subject</label>
-        <input type="text" id="messageSubject" placeholder="Question about this product" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
+        <input type="text" id="messageSubject" placeholder="Question about this product" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
       </div>
 
       <div>
         <label class="block text-white text-base font-semibold mb-2">Message</label>
-        <textarea id="messageBody" placeholder="Type your message..." rows="5" class="w-full bg-[#2a2e38] border border-gray-700 text-white px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
+        <textarea id="messageBody" placeholder="Type your message..." rows="5" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
       </div>
 
       <div class="flex gap-3">

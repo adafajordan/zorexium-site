@@ -8,10 +8,10 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #e2e8f0; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .form-input { background-color: #2a2e38; border: 1px solid #333; color: #e2e8f0; padding: 12px 16px; border-radius: 6px; width: 100%; margin-bottom: 12px; }
+    .form-input { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #1f2937; padding: 12px 16px; border-radius: 6px; width: 100%; margin-bottom: 12px; }
     .form-input:focus { outline: none; border-color: #65a30d; }
     .btn-primary { background-color: #65a30d; color: white; padding: 12px 24px; border-radius: 6px; font-weight: 600; transition: all 0.2s; }
     .btn-primary:hover { background-color: #4d7c0f; }
@@ -25,7 +25,7 @@
 <body class="min-h-screen flex flex-col">
 
 <!-- Top Navigation -->
-<header class="bg-[#181b21] border-b border-gray-800">
+<header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
     <div class="flex justify-between items-center h-16">
       <div class="flex items-center">
@@ -39,8 +39,8 @@
       </div>
       <nav class="hidden md:flex space-x-8">
         <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
-          <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
-          <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base inline-flex items-center"><i class="fas fa-chevron-down text-sm"></i></button>
+          <a href="sell-hardware.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+          <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base inline-flex items-center"><i class="fas fa-chevron-down text-sm"></i></button>
           <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
             <a href="listing-wizard.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-list-alt text-cyan-400 w-4 text-center"></i>Listing Wizard</a>
             <a href="fulfillment-testing.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-truck-loading text-cyan-400 w-4 text-center"></i>Fulfillment & Testing</a>
@@ -59,7 +59,7 @@
 <!-- Main Content -->
 <main class="flex-1 max-w-4xl mx-auto px-6 sm:px-8 lg:px-10 py-12 w-full">
   <div class="mb-12">
-    <h1 class="text-5xl font-bold text-white mb-2">Become a Seller</h1>
+    <h1 class="text-5xl font-bold text-gray-900 mb-2">Become a Seller</h1>
     <p class="text-gray-400">Start selling high-quality hardware to the Zorexium Labs community</p>
   </div>
 

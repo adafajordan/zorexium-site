@@ -8,19 +8,19 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #e2e8f0; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .profile-section { background-color: #20232a; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+    .profile-section { background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
     .section-title { color: #22d3ee; font-size: 18px; font-weight: 600; margin-bottom: 16px; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
 <!-- Top Navigation -->
-<header class="bg-[#181b21] border-b border-gray-800">
+<header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
     <div class="flex justify-between items-center h-16">
       <div class="flex items-center">
@@ -39,7 +39,7 @@
         <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Sell</a>
       </nav>
       <div class="flex items-center space-x-4">
-        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
+        <a href="shopping-cart.html" class="text-gray-700 hover:text-black relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
         <a href="account-details.html" class="text-cyan-400 hover:text-white"><i class="fas fa-user-circle text-xl"></i></a>
         <a href="account-details.html" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block"><img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></a>
       </div>
@@ -52,7 +52,7 @@
   <div class="mb-12">
     <div class="flex items-start justify-between">
       <div>
-        <h1 class="text-5xl font-bold text-white mb-2">Account Details</h1>
+        <h1 class="text-5xl font-bold text-gray-900 mb-2">Account Details</h1>
         <p class="text-gray-400">Manage your profile and preferences</p>
       </div>
       <div class="ml-4">
