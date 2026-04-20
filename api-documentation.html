@@ -14,45 +14,45 @@
 </head>
 <body class="min-h-screen flex flex-col">
     <header class="bg-[#181b21] border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
             <div class="flex justify-between items-center h-16">
-                <a href="index.html" class="flex-shrink-0 flex items-center gap-2">
-                    <div class="text-cyan-400 text-3xl"><i class="fas fa-microchip"></i></div>
+                <a href="index.html" class="flex-shrink-0 flex items-center gap-3">
+                    <div class="text-cyan-400 text-4xl"><i class="fas fa-microchip"></i></div>
                     <div class="flex flex-col">
-                        <span class="text-cyan-400 font-bold text-xl tracking-wide leading-none">ZOREXIUM</span>
-                        <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+                        <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
+                        <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
                     </div>
                 </a>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h1 class="text-4xl font-bold text-white mb-2">API Documentation</h1>
-        <p class="text-gray-400 mb-8">Build with the Zorexium Labs API</p>
+    <main class="flex-1 max-w-4xl mx-auto px-6 sm:px-8 lg:px-10 py-16">
+        <h1 class="text-5xl font-bold text-white mb-2">API Documentation</h1>
+        <p class="text-gray-400 mb-12">Build with the Zorexium Labs API</p>
 
         <div class="space-y-8 text-gray-300">
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Introduction</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Introduction</h2>
                 <p>The Zorexium Labs API allows developers to programmatically access marketplace data, manage listings, and build integrations. Our REST API provides endpoints for products, sellers, orders, and more.</p>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Authentication</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Authentication</h2>
                 <p>All API requests require authentication using an API key. Include your key in the Authorization header:</p>
                 <div class="code-block">Authorization: Bearer YOUR_API_KEY</div>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Base URL</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Base URL</h2>
                 <div class="code-block">https://api.zorexium.labs/v1</div>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Endpoints</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Endpoints</h2>
                 <div class="space-y-4">
                     <div>
-                        <h3 class="text-lg font-semibold text-white">Products</h3>
+                        <h3 class="text-xl font-semibold text-white">Products</h3>
                         <div class="code-block mt-2">GET /products - List all products
 GET /products/{id} - Get product details
 POST /products - Create new listing
@@ -60,13 +60,13 @@ PUT /products/{id} - Update listing
 DELETE /products/{id} - Remove listing</div>
                     </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-white">Sellers</h3>
+                        <h3 class="text-xl font-semibold text-white">Sellers</h3>
                         <div class="code-block mt-2">GET /sellers/{username} - Get seller profile
 GET /sellers/{username}/products - List seller products
 GET /sellers/{username}/stats - Get seller statistics</div>
                     </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-white">Orders</h3>
+                        <h3 class="text-xl font-semibold text-white">Orders</h3>
                         <div class="code-block mt-2">GET /orders - List user orders
 GET /orders/{id} - Get order details
 POST /orders - Create new order
@@ -76,18 +76,18 @@ PUT /orders/{id} - Update order status</div>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Rate Limiting</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Rate Limiting</h2>
                 <p>API requests are limited to 1000 requests per hour per API key. Rate limit headers are included in all responses.</p>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Pagination</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Pagination</h2>
                 <p>List endpoints support pagination with limit and offset parameters:</p>
                 <div class="code-block">GET /products?limit=20&offset=0</div>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Error Handling</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Error Handling</h2>
                 <p>Errors return appropriate HTTP status codes with error messages:</p>
                 <ul class="list-disc list-inside space-y-2 mt-2">
                     <li>400: Bad Request</li>
@@ -99,12 +99,12 @@ PUT /orders/{id} - Update order status</div>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Get Your API Key</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Get Your API Key</h2>
                 <p>Visit your account settings to generate an API key. Keep it secret and never share it publicly.</p>
             </section>
 
             <section>
-                <h2 class="text-2xl font-semibold text-cyan-400 mb-4">Support</h2>
+                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Support</h2>
                 <p>For API support and questions, contact developers@zorexium.labs</p>
             </section>
         </div>
@@ -112,34 +112,34 @@ PUT /orders/{id} - Update order status</div>
 
         <!-- Footer -->
     <footer class="bg-[#131620] border-t border-gray-800 mt-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
 
                 <!-- Column 1: Forum Categories, Knowledge Base, Help Center -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-3">Forum Categories</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-3">Forum Categories</h4>
                         <ul class="space-y-2">
-                            <li><a href="community-hub.html" class="text-gray-400 hover:text-white text-sm transition-colors">General Discussion</a></li>
-                            <li><a href="hardware-reviews.html" class="text-gray-400 hover:text-white text-sm transition-colors">Hardware Reviews</a></li>
-                            <li><a href="troubleshooting-support.html" class="text-gray-400 hover:text-white text-sm transition-colors">Troubleshooting & Support</a></li>
-                            <li><a href="deals-promotions.html" class="text-gray-400 hover:text-white text-sm transition-colors">Deals & Promotions</a></li>
+                            <li><a href="community-hub.html" class="text-gray-400 hover:text-white text-base transition-colors">General Discussion</a></li>
+                            <li><a href="hardware-reviews.html" class="text-gray-400 hover:text-white text-base transition-colors">Hardware Reviews</a></li>
+                            <li><a href="troubleshooting-support.html" class="text-gray-400 hover:text-white text-base transition-colors">Troubleshooting & Support</a></li>
+                            <li><a href="deals-promotions.html" class="text-gray-400 hover:text-white text-base transition-colors">Deals & Promotions</a></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-3">Knowledge Base / Documentation</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-3">Knowledge Base / Documentation</h4>
                         <ul class="space-y-2">
-                            <li><a href="getting-started.html" class="text-gray-400 hover:text-white text-sm transition-colors">Getting Started Guide</a></li>
-                            <li><a href="api-documentation.html" class="text-gray-400 hover:text-white text-sm transition-colors">API Documentation</a></li>
-                            <li><a href="hardware-compatibility.html" class="text-gray-400 hover:text-white text-sm transition-colors">Hardware Compatibility</a></li>
+                            <li><a href="getting-started.html" class="text-gray-400 hover:text-white text-base transition-colors">Getting Started Guide</a></li>
+                            <li><a href="api-documentation.html" class="text-gray-400 hover:text-white text-base transition-colors">API Documentation</a></li>
+                            <li><a href="hardware-compatibility.html" class="text-gray-400 hover:text-white text-base transition-colors">Hardware Compatibility</a></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-3">Help Center / FAQ</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-3">Help Center / FAQ</h4>
                         <ul class="space-y-2">
-                            <li><a href="faq.html" class="text-gray-400 hover:text-white text-sm transition-colors">Frequently Asked Questions</a></li>
-                            <li><a href="contact-support.html" class="text-gray-400 hover:text-white text-sm transition-colors">Contact Support</a></li>
-                            <li><a href="community-guidelines.html" class="text-gray-400 hover:text-white text-sm transition-colors">Community Guidelines</a></li>
+                            <li><a href="faq.html" class="text-gray-400 hover:text-white text-base transition-colors">Frequently Asked Questions</a></li>
+                            <li><a href="contact-support.html" class="text-gray-400 hover:text-white text-base transition-colors">Contact Support</a></li>
+                            <li><a href="community-guidelines.html" class="text-gray-400 hover:text-white text-base transition-colors">Community Guidelines</a></li>
                         </ul>
                     </div>
                 </div>
@@ -147,26 +147,26 @@ PUT /orders/{id} - Update order status</div>
                 <!-- Column 2: Selling & Orders -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-4">Selling & Orders</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-6">Selling & Orders</h4>
                         <ul class="space-y-3">
                             <li>
-                                <a href="sell-hardware.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-store text-xs text-gray-500"></i> Sell on Zorexium
+                                <a href="sell-hardware.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-store text-sm text-gray-500"></i> Sell on Zorexium
                                 </a>
                             </li>
                             <li>
-                                <a href="sellers-guidelines.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-clipboard-list text-xs text-gray-500"></i> Sellers Guidelines
+                                <a href="sellers-guidelines.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-clipboard-list text-sm text-gray-500"></i> Sellers Guidelines
                                 </a>
                             </li>
                             <li>
-                                <a href="track-your-order.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-shipping-fast text-xs text-gray-500"></i> Track Your Order
+                                <a href="track-your-order.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-shipping-fast text-sm text-gray-500"></i> Track Your Order
                                 </a>
                             </li>
                             <li>
-                                <a href="return-refund-policy.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-undo-alt text-xs text-gray-500"></i> Return & Refund Policy
+                                <a href="return-refund-policy.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-undo-alt text-sm text-gray-500"></i> Return & Refund Policy
                                 </a>
                             </li>
                         </ul>
@@ -176,21 +176,21 @@ PUT /orders/{id} - Update order status</div>
                 <!-- Column 3: Legal & Privacy -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-4">Legal & Privacy</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-6">Legal & Privacy</h4>
                         <ul class="space-y-3">
                             <li>
-                                <a href="privacy-policy.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-shield-alt text-xs text-gray-500"></i> Privacy Policy
+                                <a href="privacy-policy.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-shield-alt text-sm text-gray-500"></i> Privacy Policy
                                 </a>
                             </li>
                             <li>
-                                <a href="terms-of-service.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-file-contract text-xs text-gray-500"></i> Terms of Service
+                                <a href="terms-of-service.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-file-contract text-sm text-gray-500"></i> Terms of Service
                                 </a>
                             </li>
                             <li>
-                                <a href="cookie-settings.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-cookie-bite text-xs text-gray-500"></i> Cookie Settings
+                                <a href="cookie-settings.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-cookie-bite text-sm text-gray-500"></i> Cookie Settings
                                 </a>
                             </li>
                         </ul>
@@ -200,12 +200,12 @@ PUT /orders/{id} - Update order status</div>
             </div>
 
             <!-- Divider & Copyright -->
-            <div class="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <i class="fas fa-microchip text-cyan-400 text-lg"></i>
-                    <span class="text-white font-semibold text-sm">ZOREXIUM LABS</span>
+            <div class="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-microchip text-cyan-400 text-xl"></i>
+                    <span class="text-white font-semibold text-base">ZOREXIUM LABS</span>
                 </div>
-                <p class="text-gray-500 text-xs text-center md:text-right">&copy; 2026 Zorexium Labs. All rights reserved.</p>
+                <p class="text-gray-500 text-sm text-center md:text-right">&copy; 2026 Zorexium Labs. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -213,7 +213,7 @@ PUT /orders/{id} - Update order status</div>
     <!-- Chat Bubble -->
     <div class="fixed bottom-6 right-6 z-50">
         <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
-            <i class="fas fa-comment-dots text-2xl"></i>
+            <i class="fas fa-comment-dots text-3xl"></i>
         </a>
     </div>
 </body>

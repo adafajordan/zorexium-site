@@ -22,27 +22,27 @@
 
 <!-- Top Navigation -->
 <header class="bg-[#181b21] border-b border-gray-800">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
     <div class="flex justify-between items-center h-16">
       <div class="flex items-center">
-        <a href="index.html" class="flex-shrink-0 flex items-center gap-2">
-          <div class="text-cyan-400 text-3xl"><i class="fas fa-microchip"></i></div>
+        <a href="index.html" class="flex-shrink-0 flex items-center gap-3">
+          <div class="text-cyan-400 text-4xl"><i class="fas fa-microchip"></i></div>
           <div class="flex flex-col">
-            <span class="text-cyan-400 font-bold text-xl tracking-wide leading-none">ZOREXIUM</span>
-            <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+            <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
+            <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
           </div>
         </a>
       </div>
       <nav class="hidden md:flex space-x-8">
-        <a href="marketplace.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Marketplace</a>
-        <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Community</a>
-        <a href="messages.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Messages</a>
-        <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Sell</a>
+        <a href="marketplace.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Marketplace</a>
+        <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Community</a>
+        <a href="messages.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Messages</a>
+        <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Sell</a>
       </nav>
       <div class="flex items-center space-x-4">
-        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-lg"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
-        <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-lg"></i></a>
-        <button onclick="handleMessaging()" class="text-gray-300 hover:text-white"><i class="fas fa-envelope text-lg"></i></button>
+        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
+        <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-xl"></i></a>
+        <button onclick="handleMessaging()" class="text-gray-300 hover:text-white"><i class="fas fa-envelope text-xl"></i></button>
         <a href="account-details.html" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block"><img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></a>
       </div>
     </div>
@@ -51,39 +51,39 @@
 
 <!-- Seller Hero Section -->
 <div class="bg-gradient-to-r from-cyan-600 via-cyan-500 to-green-500 py-12">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center gap-8">
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+    <div class="flex items-center gap-10">
       <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-white flex-shrink-0 bg-gray-800">
         <img id="shopAvatar" src="https://placehold.co/200x200/333/fff?text=U" alt="Seller Profile Picture" class="w-full h-full object-cover">
       </div>
       <div>
         <div class="flex items-center gap-3 mb-2">
-          <h1 class="text-4xl font-bold text-white" id="shopName">Loading...</h1>
+          <h1 class="text-5xl font-bold text-white" id="shopName">Loading...</h1>
           <div id="verifiedBadge" class="hidden verified-badge" style="background-color: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.8); color: white;">
             <i class="fas fa-check-circle"></i> Verified Seller
           </div>
         </div>
-        <p class="text-white text-lg mb-3" id="shopDescription">Description loading...</p>
-        <div class="flex items-center gap-6 text-white">
-          <div class="flex items-center gap-2">
+        <p class="text-white text-xl mb-3" id="shopDescription">Description loading...</p>
+        <div class="flex items-center gap-8 text-white">
+          <div class="flex items-center gap-3">
             <i class="fas fa-star text-yellow-300"></i>
             <span class="font-semibold" id="ratingDisplay">5.0</span>
-            <span class="text-sm opacity-90">(0 reviews)</span>
+            <span class="text-base opacity-90">(0 reviews)</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-3">
             <i class="fas fa-box text-white"></i>
             <span class="font-semibold" id="productCount">0</span>
-            <span class="text-sm opacity-90">Products</span>
+            <span class="text-base opacity-90">Products</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-3">
             <i class="fas fa-calendar text-white"></i>
             <span class="font-semibold" id="joinDate">2026</span>
-            <span class="text-sm opacity-90">Member</span>
+            <span class="text-base opacity-90">Member</span>
           </div>
         </div>
       </div>
       <div class="ml-auto flex items-center gap-3">
-        <button onclick="handleMessaging()" class="bg-white text-cyan-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center gap-2">
+        <button onclick="handleMessaging()" class="bg-white text-cyan-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center gap-3">
           <i class="fas fa-paper-plane"></i> Contact Seller
         </button>
       </div>
@@ -92,55 +92,55 @@
 </div>
 
 <!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12 w-full">
   
   <!-- Seller Info Tabs -->
-  <div class="bg-[#20232a] border border-gray-700 rounded-lg mb-8">
+  <div class="bg-[#20232a] border border-gray-700 rounded-lg mb-12">
     <div class="flex border-b border-gray-700">
-      <button onclick="switchTab('products')" class="tab-btn flex-1 px-6 py-4 text-white font-semibold border-b-2 border-cyan-400 hover:bg-[#2a2e38] transition">Products</button>
-      <button onclick="switchTab('about')" class="tab-btn flex-1 px-6 py-4 text-gray-400 font-semibold border-b-2 border-transparent hover:bg-[#2a2e38] transition">About</button>
-      <button onclick="switchTab('reviews')" class="tab-btn flex-1 px-6 py-4 text-gray-400 font-semibold border-b-2 border-transparent hover:bg-[#2a2e38] transition">Reviews</button>
+      <button onclick="switchTab('products')" class="tab-btn flex-1 px-8 py-6 text-white font-semibold border-b-2 border-cyan-400 hover:bg-[#2a2e38] transition">Products</button>
+      <button onclick="switchTab('about')" class="tab-btn flex-1 px-8 py-6 text-gray-400 font-semibold border-b-2 border-transparent hover:bg-[#2a2e38] transition">About</button>
+      <button onclick="switchTab('reviews')" class="tab-btn flex-1 px-8 py-6 text-gray-400 font-semibold border-b-2 border-transparent hover:bg-[#2a2e38] transition">Reviews</button>
     </div>
 
     <!-- About Tab -->
     <div id="about-tab" class="tab-content hidden p-8">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div>
-          <h3 class="text-white font-semibold text-lg mb-4">Seller Information</h3>
+          <h3 class="text-white font-semibold text-xl mb-6">Seller Information</h3>
           <div class="space-y-4">
             <div>
-              <p class="text-gray-500 text-sm">Username</p>
+              <p class="text-gray-500 text-base">Username</p>
               <p class="text-white" id="sellerUsername">@username</p>
             </div>
             <div>
-              <p class="text-gray-500 text-sm">Shop Name</p>
+              <p class="text-gray-500 text-base">Shop Name</p>
               <p class="text-white" id="sellerShopName">Shop Name</p>
             </div>
             <div>
-              <p class="text-gray-500 text-sm">Location</p>
+              <p class="text-gray-500 text-base">Location</p>
               <p class="text-white" id="businessLocation">City, State</p>
             </div>
             <div>
-              <p class="text-gray-500 text-sm">Member Since</p>
+              <p class="text-gray-500 text-base">Member Since</p>
               <p class="text-white" id="memberSince">January 2026</p>
             </div>
           </div>
         </div>
         
         <div>
-          <h3 class="text-white font-semibold text-lg mb-4">Shop Statistics</h3>
+          <h3 class="text-white font-semibold text-xl mb-6">Shop Statistics</h3>
           <div class="space-y-4">
             <div class="bg-[#181b21] p-4 rounded-lg">
-              <p class="text-gray-500 text-sm mb-1">Total Sales</p>
-              <p class="text-2xl font-bold text-green-400" id="totalSales">$0</p>
+              <p class="text-gray-500 text-base mb-1">Total Sales</p>
+              <p class="text-3xl font-bold text-green-400" id="totalSales">$0</p>
             </div>
             <div class="bg-[#181b21] p-4 rounded-lg">
-              <p class="text-gray-500 text-sm mb-1">Response Time</p>
-              <p class="text-2xl font-bold text-cyan-400">< 2 hrs</p>
+              <p class="text-gray-500 text-base mb-1">Response Time</p>
+              <p class="text-3xl font-bold text-cyan-400">< 2 hrs</p>
             </div>
             <div class="bg-[#181b21] p-4 rounded-lg">
-              <p class="text-gray-500 text-sm mb-1">Positive Rating</p>
-              <p class="text-2xl font-bold text-yellow-400">100%</p>
+              <p class="text-gray-500 text-base mb-1">Positive Rating</p>
+              <p class="text-3xl font-bold text-yellow-400">100%</p>
             </div>
           </div>
         </div>
@@ -149,7 +149,7 @@
 
     <!-- Products Tab -->
     <div id="products-tab" class="tab-content p-8">
-      <div id="productsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div id="productsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <!-- Products loaded here -->
       </div>
     </div>
@@ -158,7 +158,7 @@
     <div id="reviews-tab" class="tab-content hidden p-8">
       <div id="reviewsList">
         <div class="text-center py-12">
-          <i class="fas fa-star text-4xl text-gray-600 mb-4 block"></i>
+          <i class="fas fa-star text-5xl text-gray-600 mb-6 block"></i>
           <p class="text-gray-400">No reviews yet. Be the first to review this seller!</p>
         </div>
       </div>
@@ -168,34 +168,34 @@
 </main>
     <!-- Footer -->
     <footer class="bg-[#131620] border-t border-gray-800 mt-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
 
                 <!-- Column 1: Forum Categories, Knowledge Base, Help Center -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-3">Forum Categories</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-3">Forum Categories</h4>
                         <ul class="space-y-2">
-                            <li><a href="community-hub.html" class="text-gray-400 hover:text-white text-sm transition-colors">General Discussion</a></li>
-                            <li><a href="hardware-reviews.html" class="text-gray-400 hover:text-white text-sm transition-colors">Hardware Reviews</a></li>
-                            <li><a href="troubleshooting-support.html" class="text-gray-400 hover:text-white text-sm transition-colors">Troubleshooting &amp; Support</a></li>
-                            <li><a href="deals-promotions.html" class="text-gray-400 hover:text-white text-sm transition-colors">Deals &amp; Promotions</a></li>
+                            <li><a href="community-hub.html" class="text-gray-400 hover:text-white text-base transition-colors">General Discussion</a></li>
+                            <li><a href="hardware-reviews.html" class="text-gray-400 hover:text-white text-base transition-colors">Hardware Reviews</a></li>
+                            <li><a href="troubleshooting-support.html" class="text-gray-400 hover:text-white text-base transition-colors">Troubleshooting &amp; Support</a></li>
+                            <li><a href="deals-promotions.html" class="text-gray-400 hover:text-white text-base transition-colors">Deals &amp; Promotions</a></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-3">Knowledge Base / Documentation</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-3">Knowledge Base / Documentation</h4>
                         <ul class="space-y-2">
-                            <li><a href="getting-started.html" class="text-gray-400 hover:text-white text-sm transition-colors">Getting Started Guide</a></li>
-                            <li><a href="api-documentation.html" class="text-gray-400 hover:text-white text-sm transition-colors">API Documentation</a></li>
-                            <li><a href="hardware-compatibility.html" class="text-gray-400 hover:text-white text-sm transition-colors">Hardware Compatibility</a></li>
+                            <li><a href="getting-started.html" class="text-gray-400 hover:text-white text-base transition-colors">Getting Started Guide</a></li>
+                            <li><a href="api-documentation.html" class="text-gray-400 hover:text-white text-base transition-colors">API Documentation</a></li>
+                            <li><a href="hardware-compatibility.html" class="text-gray-400 hover:text-white text-base transition-colors">Hardware Compatibility</a></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-3">Help Center / FAQ</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-3">Help Center / FAQ</h4>
                         <ul class="space-y-2">
-                            <li><a href="faq.html" class="text-gray-400 hover:text-white text-sm transition-colors">Frequently Asked Questions</a></li>
-                            <li><a href="contact-support.html" class="text-gray-400 hover:text-white text-sm transition-colors">Contact Support</a></li>
-                            <li><a href="community-guidelines.html" class="text-gray-400 hover:text-white text-sm transition-colors">Community Guidelines</a></li>
+                            <li><a href="faq.html" class="text-gray-400 hover:text-white text-base transition-colors">Frequently Asked Questions</a></li>
+                            <li><a href="contact-support.html" class="text-gray-400 hover:text-white text-base transition-colors">Contact Support</a></li>
+                            <li><a href="community-guidelines.html" class="text-gray-400 hover:text-white text-base transition-colors">Community Guidelines</a></li>
                         </ul>
                     </div>
                 </div>
@@ -203,26 +203,26 @@
                 <!-- Column 2: Selling & Orders -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-4">Selling &amp; Orders</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-6">Selling &amp; Orders</h4>
                         <ul class="space-y-3">
                             <li>
-                                <a href="sell-hardware.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-store text-xs text-gray-500"></i> Sell on Zorexium
+                                <a href="sell-hardware.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-store text-sm text-gray-500"></i> Sell on Zorexium
                                 </a>
                             </li>
                             <li>
-                                <a href="sellers-guidelines.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-clipboard-list text-xs text-gray-500"></i> Sellers Guidelines
+                                <a href="sellers-guidelines.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-clipboard-list text-sm text-gray-500"></i> Sellers Guidelines
                                 </a>
                             </li>
                             <li>
-                                <a href="track-your-order.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-shipping-fast text-xs text-gray-500"></i> Track Your Order
+                                <a href="track-your-order.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-shipping-fast text-sm text-gray-500"></i> Track Your Order
                                 </a>
                             </li>
                             <li>
-                                <a href="return-refund-policy.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-undo-alt text-xs text-gray-500"></i> Return &amp; Refund Policy
+                                <a href="return-refund-policy.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-undo-alt text-sm text-gray-500"></i> Return &amp; Refund Policy
                                 </a>
                             </li>
                         </ul>
@@ -232,21 +232,21 @@
                 <!-- Column 3: Legal & Privacy -->
                 <div class="space-y-6">
                     <div>
-                        <h4 class="text-cyan-400 text-sm font-semibold uppercase tracking-wider mb-4">Legal &amp; Privacy</h4>
+                        <h4 class="text-cyan-400 text-base font-semibold uppercase tracking-wider mb-6">Legal &amp; Privacy</h4>
                         <ul class="space-y-3">
                             <li>
-                                <a href="privacy-policy.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-shield-alt text-xs text-gray-500"></i> Privacy Policy
+                                <a href="privacy-policy.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-shield-alt text-sm text-gray-500"></i> Privacy Policy
                                 </a>
                             </li>
                             <li>
-                                <a href="terms-of-service.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-file-contract text-xs text-gray-500"></i> Terms of Service
+                                <a href="terms-of-service.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-file-contract text-sm text-gray-500"></i> Terms of Service
                                 </a>
                             </li>
                             <li>
-                                <a href="cookie-settings.html" class="text-gray-400 hover:text-white text-sm transition-colors flex items-center gap-2">
-                                    <i class="fas fa-cookie-bite text-xs text-gray-500"></i> Cookie Settings
+                                <a href="cookie-settings.html" class="text-gray-400 hover:text-white text-base transition-colors flex items-center gap-3">
+                                    <i class="fas fa-cookie-bite text-sm text-gray-500"></i> Cookie Settings
                                 </a>
                             </li>
                         </ul>
@@ -256,12 +256,12 @@
             </div>
 
             <!-- Divider & Copyright -->
-            <div class="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <i class="fas fa-microchip text-cyan-400 text-lg"></i>
-                    <span class="text-white font-semibold text-sm">ZOREXIUM LABS</span>
+            <div class="border-t border-gray-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-microchip text-cyan-400 text-xl"></i>
+                    <span class="text-white font-semibold text-base">ZOREXIUM LABS</span>
                 </div>
-                <p class="text-gray-500 text-xs text-center md:text-right">&copy; 2026 Zorexium Labs. All rights reserved.</p>
+                <p class="text-gray-500 text-sm text-center md:text-right">&copy; 2026 Zorexium Labs. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -269,7 +269,7 @@
     <!-- Chat Bubble -->
     <div class="fixed bottom-6 right-6 z-50">
         <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
-            <i class="fas fa-comment-dots text-2xl"></i>
+            <i class="fas fa-comment-dots text-3xl"></i>
         </a>
     </div>
 
@@ -450,7 +450,7 @@
         <img src="${product.image || 'https://placehold.co/300x200/333/fff?text=Product'}" alt="${product.name}" class="product-image">
         <div class="p-4">
           <h3 class="text-white font-semibold mb-2">${product.name}</h3>
-          <p class="text-gray-400 text-sm mb-3 line-clamp-2">${product.description}</p>
+          <p class="text-gray-400 text-base mb-3 line-clamp-2">${product.description}</p>
           
           ${product.specs && Object.keys(product.specs).length > 0 ? `
             <div class="mb-3">
@@ -462,12 +462,12 @@
           
           <div class="flex justify-between items-center">
             <div>
-              <p class="text-gray-500 text-xs">Condition</p>
+              <p class="text-gray-500 text-sm">Condition</p>
               <p class="text-white font-semibold">${product.condition}</p>
             </div>
             <div class="text-right">
-              <p class="text-cyan-400 text-2xl font-bold">$${product.price}</p>
-              <p class="text-gray-500 text-xs">${product.quantity} in stock</p>
+              <p class="text-cyan-400 text-3xl font-bold">$${product.price}</p>
+              <p class="text-gray-500 text-sm">${product.quantity} in stock</p>
             </div>
           </div>
         </div>
