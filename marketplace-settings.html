@@ -1,0 +1,536 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marketplace Settings - Zorexium Labs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+    .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
+    .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
+    .sub-menu-item { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-size: 14px; color: #9ca3af; transition: background 0.15s, color 0.15s; }
+    .sub-menu-item:hover { background-color: #2a2e38; color: #e2e8f0; }
+    .sub-menu-item.active { background-color: rgba(34, 197, 94, 0.12); color: #22c55e; font-weight: 500; }
+  </style>
+  <script src="open-links-new-tab.js"></script>
+  <script src="cookie-consent.js"></script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Top Navigation -->
+<header class="bg-[#181b21] border-b border-gray-800">
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+    <div class="flex justify-between items-center h-16">
+      <div class="flex items-center">
+        <a href="index.html" class="flex-shrink-0 flex items-center gap-3">
+          <div class="text-cyan-400 text-4xl"><i class="fas fa-microchip"></i></div>
+          <div class="flex flex-col">
+            <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
+            <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
+          </div>
+        </a>
+      </div>
+      <nav class="hidden md:flex space-x-8">
+        <a href="marketplace.html" class="text-cyan-400 hover:text-white px-3 py-3 rounded-md text-base font-medium border-b-2 border-cyan-400">Marketplace</a>
+        <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Community</a>
+        <a href="messages.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Messages</a>
+        <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
+          <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+          <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base inline-flex items-center"><i class="fas fa-chevron-down text-sm"></i></button>
+          <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+            <div class="px-6 py-3 bg-[#181b21] border-b border-gray-700"><p class="text-sm font-bold text-cyan-400 uppercase tracking-wider">Marketplace</p></div>
+            <a href="marketplace.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-store text-cyan-400 w-4 text-center"></i>Browse Products</a>
+            <div class="px-6 py-3 bg-[#181b21] border-b border-gray-700 border-t border-gray-700"><p class="text-sm font-bold text-cyan-400 uppercase tracking-wider">Seller Tools</p></div>
+            <a href="listing-wizard.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-list-alt text-cyan-400 w-4 text-center"></i>Listing Wizard</a>
+            <a href="seller-dashboard.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-tachometer-alt text-cyan-400 w-4 text-center"></i>Seller Dashboard</a>
+            <a href="fulfillment-testing.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-truck-loading text-cyan-400 w-4 text-center"></i>Fulfillment &amp; Testing</a>
+          </div>
+        </div>
+      </nav>
+      <div class="flex items-center space-x-4">
+        <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative"><i class="fas fa-shopping-cart text-xl"></i><span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span></a>
+        <a href="marketplace-settings.html" class="text-cyan-400 hover:text-white" title="Marketplace Settings"><i class="fas fa-cog text-xl"></i></a>
+        <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-xl"></i></a>
+        <a href="account-details.html" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block"><img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Content -->
+<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10 w-full">
+  <div class="mb-8">
+    <h1 class="text-4xl font-bold text-white mb-1">Marketplace Settings</h1>
+    <p class="text-gray-400">Manage your orders, account, and notification preferences</p>
+  </div>
+
+  <div class="flex gap-8">
+    <!-- Left Sidebar -->
+    <aside class="w-64 flex-shrink-0">
+      <nav class="bg-[#20232a] rounded-xl border border-gray-700 overflow-hidden">
+
+        <!-- Orders -->
+        <div class="px-5 pt-5 pb-2">
+          <p class="text-white font-bold text-sm uppercase tracking-wider mb-2">Orders</p>
+          <ul class="space-y-0.5">
+            <li class="sub-menu-item active" data-panel="order-history" onclick="showPanel('order-history')">Order History</li>
+            <li class="sub-menu-item" data-panel="return-status" onclick="showPanel('return-status')">Return Status / History</li>
+            <li class="sub-menu-item" data-panel="claim-history" onclick="showPanel('claim-history')">Marketplace Claim History</li>
+          </ul>
+        </div>
+
+        <div class="border-t border-gray-700 mx-3 my-2"></div>
+
+        <!-- Manage Account -->
+        <div class="px-5 py-2">
+          <p class="text-white font-bold text-sm uppercase tracking-wider mb-2">Manage Account</p>
+          <ul class="space-y-0.5">
+            <li class="sub-menu-item" data-panel="account-settings" onclick="showPanel('account-settings')">Account Settings</li>
+            <li class="sub-menu-item" data-panel="payment-options" onclick="showPanel('payment-options')">Payment Options</li>
+            <li class="sub-menu-item" data-panel="manage-reviews" onclick="showPanel('manage-reviews')">Manage Reviews</li>
+          </ul>
+        </div>
+
+        <div class="border-t border-gray-700 mx-3 my-2"></div>
+
+        <!-- Notifications -->
+        <div class="px-5 pt-2 pb-5">
+          <p class="text-white font-bold text-sm uppercase tracking-wider mb-2">Notifications</p>
+          <ul class="space-y-0.5">
+            <li class="sub-menu-item" data-panel="message-center" onclick="showPanel('message-center')">Message Center</li>
+            <li class="sub-menu-item" data-panel="email-notifications" onclick="showPanel('email-notifications')">Email Notifications</li>
+            <li class="sub-menu-item" data-panel="mobile-text-alert" onclick="showPanel('mobile-text-alert')">Mobile Text Alert</li>
+            <li class="sub-menu-item" data-panel="auto-notify" onclick="showPanel('auto-notify')">Auto Notify</li>
+            <li class="sub-menu-item" data-panel="price-alerts" onclick="showPanel('price-alerts')">Price Alerts</li>
+          </ul>
+        </div>
+
+      </nav>
+    </aside>
+
+    <!-- Right Content Panel -->
+    <section class="flex-1 bg-[#20232a] rounded-xl border border-gray-700 p-8 min-h-[480px]">
+
+      <!-- Order History -->
+      <div id="panel-order-history" class="settings-panel active">
+        <h2 class="text-2xl font-bold text-white mb-1">Order History</h2>
+        <p class="text-gray-400 mb-6">View all past orders placed on the marketplace.</p>
+        <div class="overflow-x-auto rounded-lg border border-gray-700">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
+              <tr>
+                <th class="px-4 py-3">Order ID</th>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Item</th>
+                <th class="px-4 py-3">Total</th>
+                <th class="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+              <tr class="hover:bg-[#2a2e38]">
+                <td class="px-4 py-3 text-cyan-400">#ZRX-00128</td>
+                <td class="px-4 py-3">Apr 12, 2026</td>
+                <td class="px-4 py-3">RTX 4090 FE</td>
+                <td class="px-4 py-3">$1,249.00</td>
+                <td class="px-4 py-3"><span class="bg-green-900 text-green-400 text-xs px-2 py-1 rounded-full">Delivered</span></td>
+              </tr>
+              <tr class="hover:bg-[#2a2e38]">
+                <td class="px-4 py-3 text-cyan-400">#ZRX-00115</td>
+                <td class="px-4 py-3">Mar 28, 2026</td>
+                <td class="px-4 py-3">Core i9-14900K</td>
+                <td class="px-4 py-3">$549.00</td>
+                <td class="px-4 py-3"><span class="bg-green-900 text-green-400 text-xs px-2 py-1 rounded-full">Delivered</span></td>
+              </tr>
+              <tr class="hover:bg-[#2a2e38]">
+                <td class="px-4 py-3 text-cyan-400">#ZRX-00103</td>
+                <td class="px-4 py-3">Mar 5, 2026</td>
+                <td class="px-4 py-3">Samsung 990 Pro 2TB</td>
+                <td class="px-4 py-3">$189.00</td>
+                <td class="px-4 py-3"><span class="bg-blue-900 text-blue-400 text-xs px-2 py-1 rounded-full">In Transit</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Return Status / History -->
+      <div id="panel-return-status" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Return Status / History</h2>
+        <p class="text-gray-400 mb-6">Track active return requests and view past returns.</p>
+        <div class="overflow-x-auto rounded-lg border border-gray-700">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
+              <tr>
+                <th class="px-4 py-3">Return ID</th>
+                <th class="px-4 py-3">Order</th>
+                <th class="px-4 py-3">Reason</th>
+                <th class="px-4 py-3">Submitted</th>
+                <th class="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+              <tr class="hover:bg-[#2a2e38]">
+                <td class="px-4 py-3 text-cyan-400">#RET-0041</td>
+                <td class="px-4 py-3">#ZRX-00103</td>
+                <td class="px-4 py-3">Item not as described</td>
+                <td class="px-4 py-3">Apr 14, 2026</td>
+                <td class="px-4 py-3"><span class="bg-yellow-900 text-yellow-400 text-xs px-2 py-1 rounded-full">Pending Review</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-gray-500 text-sm mt-4">Refunds are processed within 3–5 business days after approval.</p>
+      </div>
+
+      <!-- Marketplace Claim History -->
+      <div id="panel-claim-history" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Marketplace Claim History</h2>
+        <p class="text-gray-400 mb-6">Review disputes and claims you have filed on marketplace orders.</p>
+        <div class="overflow-x-auto rounded-lg border border-gray-700">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
+              <tr>
+                <th class="px-4 py-3">Claim ID</th>
+                <th class="px-4 py-3">Order</th>
+                <th class="px-4 py-3">Type</th>
+                <th class="px-4 py-3">Filed</th>
+                <th class="px-4 py-3">Resolution</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+              <tr class="hover:bg-[#2a2e38]">
+                <td colspan="5" class="px-4 py-6 text-center text-gray-500">No claims on record.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Account Settings -->
+      <div id="panel-account-settings" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Account Settings</h2>
+        <p class="text-gray-400 mb-6">Update your display name, email address, and password.</p>
+        <div class="space-y-5 max-w-lg">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
+            <input type="text" placeholder="Your name" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+            <input type="email" placeholder="email@example.com" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">New Password</label>
+            <input type="password" placeholder="Leave blank to keep current" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+          </div>
+          <button class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors">Save Changes</button>
+        </div>
+      </div>
+
+      <!-- Payment Options -->
+      <div id="panel-payment-options" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Payment Options</h2>
+        <p class="text-gray-400 mb-6">Manage saved payment methods used at checkout.</p>
+        <div class="space-y-3 max-w-lg">
+          <div class="flex items-center justify-between bg-[#181b21] border border-gray-700 rounded-lg px-4 py-3">
+            <div class="flex items-center gap-3">
+              <i class="fab fa-cc-visa text-blue-400 text-2xl"></i>
+              <div>
+                <p class="text-white text-sm font-medium">Visa ending in 4242</p>
+                <p class="text-gray-500 text-xs">Expires 08/28</p>
+              </div>
+            </div>
+            <span class="text-xs bg-green-900 text-green-400 px-2 py-1 rounded-full">Default</span>
+          </div>
+          <div class="flex items-center justify-between bg-[#181b21] border border-gray-700 rounded-lg px-4 py-3">
+            <div class="flex items-center gap-3">
+              <i class="fab fa-paypal text-blue-500 text-2xl"></i>
+              <div>
+                <p class="text-white text-sm font-medium">PayPal</p>
+                <p class="text-gray-500 text-xs">user@example.com</p>
+              </div>
+            </div>
+            <button class="text-xs text-gray-400 hover:text-red-400 transition-colors">Remove</button>
+          </div>
+          <button class="mt-2 px-5 py-2 border border-dashed border-gray-600 hover:border-cyan-500 text-gray-400 hover:text-cyan-400 rounded-lg text-sm transition-colors w-full"><i class="fas fa-plus mr-2"></i>Add Payment Method</button>
+        </div>
+      </div>
+
+      <!-- Manage Reviews -->
+      <div id="panel-manage-reviews" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Manage Reviews</h2>
+        <p class="text-gray-400 mb-6">View and edit reviews you have left for sellers and products.</p>
+        <div class="overflow-x-auto rounded-lg border border-gray-700">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
+              <tr>
+                <th class="px-4 py-3">Product</th>
+                <th class="px-4 py-3">Rating</th>
+                <th class="px-4 py-3">Comment</th>
+                <th class="px-4 py-3">Date</th>
+                <th class="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+              <tr class="hover:bg-[#2a2e38]">
+                <td class="px-4 py-3">RTX 4090 FE</td>
+                <td class="px-4 py-3 text-yellow-400">★★★★★</td>
+                <td class="px-4 py-3 text-gray-300 max-w-xs truncate">Excellent card, runs cool and quiet.</td>
+                <td class="px-4 py-3">Apr 13, 2026</td>
+                <td class="px-4 py-3"><button class="text-cyan-400 hover:text-cyan-300 text-xs">Edit</button> <span class="text-gray-600 mx-1">|</span> <button class="text-red-400 hover:text-red-300 text-xs">Delete</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Message Center -->
+      <div id="panel-message-center" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Message Center</h2>
+        <p class="text-gray-400 mb-6">Configure which in-platform message notifications you receive.</p>
+        <div class="space-y-4 max-w-lg">
+          <div class="flex items-center justify-between py-3 border-b border-gray-700">
+            <div>
+              <p class="text-white text-sm font-medium">New messages from sellers</p>
+              <p class="text-gray-500 text-xs">Get notified when a seller replies to your inquiry</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between py-3 border-b border-gray-700">
+            <div>
+              <p class="text-white text-sm font-medium">Order status updates</p>
+              <p class="text-gray-500 text-xs">Shipping, delivery, and confirmation notices</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between py-3">
+            <div>
+              <p class="text-white text-sm font-medium">Promotional messages</p>
+              <p class="text-gray-500 text-xs">Deals, offers, and marketplace news</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email Notifications -->
+      <div id="panel-email-notifications" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Email Notifications</h2>
+        <p class="text-gray-400 mb-6">Choose which emails Zorexium sends to your registered address.</p>
+        <div class="space-y-4 max-w-lg">
+          <div class="flex items-center justify-between py-3 border-b border-gray-700">
+            <div>
+              <p class="text-white text-sm font-medium">Order confirmations</p>
+              <p class="text-gray-500 text-xs">Email receipt for every purchase</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between py-3 border-b border-gray-700">
+            <div>
+              <p class="text-white text-sm font-medium">Shipping updates</p>
+              <p class="text-gray-500 text-xs">Tracking info and delivery confirmations</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between py-3 border-b border-gray-700">
+            <div>
+              <p class="text-white text-sm font-medium">Return &amp; refund updates</p>
+              <p class="text-gray-500 text-xs">Status changes on your return requests</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between py-3">
+            <div>
+              <p class="text-white text-sm font-medium">Newsletter &amp; promotions</p>
+              <p class="text-gray-500 text-xs">Weekly deals and product highlights</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Text Alert -->
+      <div id="panel-mobile-text-alert" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Mobile Text Alert</h2>
+        <p class="text-gray-400 mb-6">Receive SMS alerts for critical order and account events.</p>
+        <div class="space-y-5 max-w-lg">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
+            <input type="tel" placeholder="+1 (555) 000-0000" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+          </div>
+          <div class="space-y-4">
+            <div class="flex items-center justify-between py-3 border-b border-gray-700">
+              <p class="text-white text-sm font-medium">Order shipped alerts</p>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between py-3 border-b border-gray-700">
+              <p class="text-white text-sm font-medium">Delivery confirmation</p>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <p class="text-white text-sm font-medium">Return status changes</p>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" class="sr-only peer">
+                <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+              </label>
+            </div>
+          </div>
+          <button class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors">Save Number &amp; Preferences</button>
+        </div>
+      </div>
+
+      <!-- Auto Notify -->
+      <div id="panel-auto-notify" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Auto Notify</h2>
+        <p class="text-gray-400 mb-6">Automatically notify you when tracked items become available or change status.</p>
+        <div class="space-y-4 max-w-lg">
+          <div class="flex items-center justify-between py-3 border-b border-gray-700">
+            <div>
+              <p class="text-white text-sm font-medium">Back-in-stock alerts</p>
+              <p class="text-gray-500 text-xs">Get notified when a wish-listed item is restocked</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between py-3 border-b border-gray-700">
+            <div>
+              <p class="text-white text-sm font-medium">New listings in saved searches</p>
+              <p class="text-gray-500 text-xs">Auto-alert when a new product matches your saved filters</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          <div class="flex items-center justify-between py-3">
+            <div>
+              <p class="text-white text-sm font-medium">Seller activity updates</p>
+              <p class="text-gray-500 text-xs">Know when a followed seller lists new hardware</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer">
+              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Price Alerts -->
+      <div id="panel-price-alerts" class="settings-panel">
+        <h2 class="text-2xl font-bold text-white mb-1">Price Alerts</h2>
+        <p class="text-gray-400 mb-6">Set target prices and get notified when listings drop to or below your threshold.</p>
+        <div class="overflow-x-auto rounded-lg border border-gray-700 mb-5">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
+              <tr>
+                <th class="px-4 py-3">Product</th>
+                <th class="px-4 py-3">Target Price</th>
+                <th class="px-4 py-3">Current Price</th>
+                <th class="px-4 py-3">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+              <tr class="hover:bg-[#2a2e38]">
+                <td class="px-4 py-3">RTX 5090</td>
+                <td class="px-4 py-3 text-green-400">$1,800.00</td>
+                <td class="px-4 py-3">$2,099.00</td>
+                <td class="px-4 py-3"><button class="text-red-400 hover:text-red-300 text-xs">Remove</button></td>
+              </tr>
+              <tr class="hover:bg-[#2a2e38]">
+                <td class="px-4 py-3">Threadripper PRO 9985WX</td>
+                <td class="px-4 py-3 text-green-400">$2,500.00</td>
+                <td class="px-4 py-3">$2,799.00</td>
+                <td class="px-4 py-3"><button class="text-red-400 hover:text-red-300 text-xs">Remove</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex gap-3 max-w-lg">
+          <input type="text" placeholder="Product name or listing URL" class="flex-1 bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+          <input type="number" placeholder="$ Target" class="w-32 bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+          <button class="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors">Add Alert</button>
+        </div>
+      </div>
+
+    </section>
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="bg-[#181b21] border-t border-gray-800 mt-auto">
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <p class="text-gray-500 text-sm">&copy; 2026 Zorexium Labs. All rights reserved.</p>
+    <div class="flex gap-6 text-sm text-gray-500">
+      <a href="privacy-policy.html" class="hover:text-gray-300 transition-colors">Privacy Policy</a>
+      <a href="terms-of-service.html" class="hover:text-gray-300 transition-colors">Terms of Service</a>
+      <a href="contact-support.html" class="hover:text-gray-300 transition-colors">Support</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function toggleDropdown(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('active');
+  }
+
+  function showPanel(panelId) {
+    // Deactivate all panels
+    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+    // Deactivate all menu items
+    document.querySelectorAll('.sub-menu-item').forEach(i => i.classList.remove('active'));
+    // Activate selected panel
+    document.getElementById('panel-' + panelId).classList.add('active');
+    // Activate selected menu item
+    document.querySelector('[data-panel="' + panelId + '"]').classList.add('active');
+  }
+</script>
+</body>
+</html>
