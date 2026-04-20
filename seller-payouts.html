@@ -9,36 +9,158 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
-  </style>
+          .nav-dropdown {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+        }
+        .nav-dropdown-trigger:hover .nav-dropdown,
+        .nav-dropdown-trigger.active .nav-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+</style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-<!-- Top Navigation -->
-<header class="bg-white border-b border-gray-200">
-  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-    <div class="flex justify-between items-center h-16">
-      <a href="index.html" class="flex-shrink-0 flex items-center gap-3">
-        <div class="text-cyan-400 text-4xl"><i class="fas fa-microchip"></i></div>
-        <div class="flex flex-col">
-          <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
-          <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
+    <!-- Top Navigation -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="px-4 sm:px-6">
+            <div class="flex justify-between items-center h-24">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-3">
+                        <div class="text-cyan-400 text-5xl">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-cyan-400 font-bold text-3xl tracking-wide leading-none">ZOREXIUM</span>
+                            <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-8">
+                    <!-- Marketplace (hover or click to reveal) -->
+                    <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
+                        <a href="marketplace.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
+                        <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                            <a href="ai-ml-accelerators.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-robot text-cyan-400 w-4 text-center"></i>
+                                AI & ML Accelerators
+                            </a>
+                            <a href="compute-graphics.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-desktop text-cyan-400 w-4 text-center"></i>
+                                Compute & Graphics
+                            </a>
+                            <a href="networking-data-flow.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-network-wired text-cyan-400 w-4 text-center"></i>
+                                Networking & Data Flow
+                            </a>
+                            <a href="storage-memory.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-database text-cyan-400 w-4 text-center"></i>
+                                Storage & Memory
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Community Hub (existing) -->
+                    <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
+                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                            <a href="trading-floor.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-chart-line text-cyan-400 w-4 text-center"></i>
+                                Trading Floor
+                            </a>
+                            <a href="tech-discussions.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-flask text-cyan-400 w-4 text-center"></i>
+                                Tech Discussions (The Lab)
+                            </a>
+                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-shield-alt text-cyan-400 w-4 text-center"></i>
+                                Trust Center
+                            </a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-lightbulb text-cyan-400 w-4 text-center"></i>
+                                Innovation & News
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Sell Hardware (hover or click to reveal) -->
+                    <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
+                        <a href="sell-hardware.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+                        <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Sell Hardware menu">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                            <div class="px-4 py-2 bg-[#181b21] border-b border-gray-700"><p class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Marketplace</p></div>
+                            <a href="marketplace.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-store text-cyan-400 w-4 text-center"></i>Browse Products
+                            </a>
+                            <div class="px-4 py-2 bg-[#181b21] border-b border-gray-700 border-t border-gray-700"><p class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Seller Tools</p></div>
+                            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-list-alt text-cyan-400 w-4 text-center"></i>Listing Wizard
+                            </a>
+                            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-tachometer-alt text-cyan-400 w-4 text-center"></i>Seller Dashboard
+                            </a>
+                            <a href="fulfillment-testing.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
+                                <i class="fas fa-truck-loading text-cyan-400 w-4 text-center"></i>Fulfillment & Testing
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Right Side Actions -->
+                <div class="flex items-center space-x-5">
+                    <a href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
+                        <i class="fas fa-shopping-cart text-2xl"></i>
+                        <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                    </a>
+                    <a id="verifiedLabsBtn" href="verified-labs.html" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded text-base font-medium hidden">Verified Labs</a>
+
+                    <!-- Inline login form – shown only when NOT logged in -->
+                    <div id="headerLoginForm" class="hidden items-center gap-2">
+                        <input id="headerLoginEmail" type="text" placeholder="Email or username"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-40">
+                        <input id="headerLoginPassword" type="password" placeholder="Password"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-36">
+                        <button id="headerLoginBtn" type="button"
+                            class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors whitespace-nowrap">
+                            Log In
+                        </button>
+                        <a href="signup-login.html?forgot=1" class="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap">Forgot account?</a>
+                    </div>
+
+                    <!-- Account icon – shown only when logged in -->
+                    <div id="headerAccountSection" class="relative hidden">
+                        <a href="account-details.html" id="accountIconHeader" class="h-11 w-11 rounded-full overflow-hidden border border-gray-600 inline-block">
+                            <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover">
+                        </a>
+                        <button id="accountBtnHeader" class="ml-2 hidden">Account</button>
+                        <div id="accountDropdownHeader" class="nav-dropdown absolute right-0 mt-2 w-48 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl p-2 z-50 hidden">
+                            <a href="account-details.html" class="block px-3 py-2 text-sm text-gray-200 hover:bg-[#2a2e38]">View Account</a>
+                            <a href="seller-dashboard.html" class="block px-3 py-2 text-sm text-gray-200 hover:bg-[#2a2e38]">Manage Products</a>
+                            <a href="settings.html" class="block px-3 py-2 text-sm text-gray-200 hover:bg-[#2a2e38]">Settings</a>
+                            <a href="#" id="signOutHeader" class="block px-3 py-2 text-sm text-red-400 hover:bg-[#2a2e38]">Sign Out</a>
+                            <a href="#" id="deactivateHeader" class="block px-3 py-2 text-sm text-yellow-300 hover:bg-[#2a2e38]">Deactivate Account</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </a>
-      <nav class="hidden md:flex space-x-8">
-        <a href="marketplace.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Marketplace</a>
-        <a href="seller-dashboard.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium">Seller Dashboard</a>
-        <a href="seller-payouts.html" class="text-cyan-400 hover:text-white px-3 py-3 rounded-md text-base font-medium border-b-2 border-cyan-400">My Earnings</a>
-      </nav>
-      <div class="flex items-center space-x-4">
-        <a href="shopping-cart.html" class="text-gray-700 hover:text-black relative">
-          <i class="fas fa-shopping-cart text-xl"></i>
-          <span id="cartBadge" class="absolute -top-2 -right-2 bg-red-600 text-white text-sm rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
-        </a>
-        <a href="account-details.html" class="text-gray-300 hover:text-white"><i class="fas fa-user-circle text-xl"></i></a>
-      </div>
-    </div>
-  </div>
-</header>
+    </header>
+
 
 <!-- Main Content -->
 <main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10 w-full">
@@ -392,5 +514,110 @@
 
   window.addEventListener('load', init);
 </script>
+
+    <!-- Dropdown toggle script: supports hover (CSS) and click (JS) -->
+    <script>
+        function toggleDropdown(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            // Close other dropdowns
+            document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) {
+                if (d.id !== id) d.classList.remove('active');
+            });
+            el.classList.toggle('active');
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
+                if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
+            });
+        });
+
+        // Close all on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
+            }
+        });
+    </script>
+
+    <script>
+        // Header account/cart wiring
+        (function(){
+            var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
+            // Determine login state and show the correct header section
+            var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
+            var loginForm    = document.getElementById('headerLoginForm');
+            var acctSection  = document.getElementById('headerAccountSection');
+            var verifiedBtn  = document.getElementById('verifiedLabsBtn');
+            if(loggedIn){
+                if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
+                if(loginForm)  { loginForm.classList.add('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
+            } else {
+                if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
+                if(acctSection){ acctSection.classList.add('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.add('hidden'); }
+            }
+
+            // Cart badge update (requires auth)
+            try{
+                if(loggedIn){
+                    fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                        .then(function(r){ return r.ok ? r.json() : null; })
+                        .then(function(data){
+                            var count = (data && data.items) ? data.items.length : 0;
+                            var badge = document.getElementById('cartBadgeHeader');
+                            if(badge){ badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+                        }).catch(function(){});
+                }
+            }catch(e){/* ignore */}
+
+            // Account dropdown toggle
+            const acctIcon = document.getElementById('accountIconHeader');
+            const acctDrop = document.getElementById('accountDropdownHeader');
+            if(acctIcon && acctDrop){
+                acctIcon.addEventListener('click', (e)=>{ e.preventDefault(); acctDrop.classList.toggle('hidden'); });
+            }
+            const signOut = document.getElementById('signOutHeader');
+            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'success'); window.location.href='index.html'; }); });
+            const deactivate = document.getElementById('deactivateHeader');
+            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'success'); window.location.href='index.html'; }); }); });
+
+            // Inline header login handler
+            async function doHeaderLogin(){
+                var email    = document.getElementById('headerLoginEmail').value.trim();
+                var password = document.getElementById('headerLoginPassword').value;
+                if(!email || !password){ ZrxNotify.showNotification('Please enter your email/username and password.', 'error'); return; }
+                try{
+                    var res  = await fetch(BACKEND_URL + '/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ email: email, password: password })
+                    });
+                    var data = await res.json();
+                    if(!res.ok){ ZrxNotify.showNotification(data.error || 'Invalid email or password.', 'error'); return; }
+                    if(data.token){
+                        try{
+                            localStorage.setItem('authToken', data.token);
+                            var userInfo = data.user ? { email: data.user.email, username: data.user.firstName || data.user.email } : { email: email, username: email };
+                            localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+                        }catch(ex){}
+                    }
+                    window.location.reload();
+                }catch(err){
+                    ZrxNotify.showNotification('Login failed. Please check your connection and try again.', 'error');
+                }
+            }
+            var loginBtn = document.getElementById('headerLoginBtn');
+            if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
+            var pwdInput = document.getElementById('headerLoginPassword');
+            if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
+        })();
+    </script>
+    <script src="profile-picture.js"></script>
 </body>
 </html>
