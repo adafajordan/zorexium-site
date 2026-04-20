@@ -285,7 +285,6 @@
     const searchQuery = params.get('search');
     if (searchQuery) {
       document.getElementById('searchInput').value = searchQuery;
-      filterProducts();
     }
   }
 
@@ -294,7 +293,7 @@
       .then(res => res.json())
       .then(data => {
         allProducts = Array.isArray(data) ? data : [];
-        renderProducts(allProducts);
+        filterProducts();
       })
       .catch(err => {
         console.error('Error loading products:', err);
