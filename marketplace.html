@@ -82,11 +82,11 @@
   <div class="bg-white border border-gray-200 rounded-lg p-6 mb-12">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <div>
-        <label class="block text-white text-base font-semibold mb-2">Search Products</label>
+        <label class="block text-gray-900 text-base font-semibold mb-2">Search Products</label>
         <input type="text" id="searchInput" placeholder="Search GPU, CPU, RAM..." class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg" onkeyup="filterProducts()">
       </div>
       <div>
-        <label class="block text-white text-base font-semibold mb-2">Filter by Condition</label>
+        <label class="block text-gray-900 text-base font-semibold mb-2">Filter by Condition</label>
         <select id="conditionFilter" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg" onchange="filterProducts()">
           <option value="">All Conditions</option>
           <option value="New">New</option>
@@ -96,7 +96,7 @@
         </select>
       </div>
       <div>
-        <label class="block text-white text-base font-semibold mb-2">Sort By</label>
+        <label class="block text-gray-900 text-base font-semibold mb-2">Sort By</label>
         <select id="sortFilter" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg" onchange="filterProducts()">
           <option value="">Newest</option>
           <option value="price-low">Price: Low to High</option>
@@ -321,7 +321,7 @@
       <div class="product-card">
         <img src="${product.image || 'https://placehold.co/300x200/333/fff?text=Product'}" alt="${product.name}" class="product-image" onclick="viewProduct('${product._id}')">
         <div class="p-4">
-          <h3 class="text-white font-semibold flex-1 line-clamp-2 mb-2">${product.name}</h3>
+          <h3 class="text-gray-900 font-semibold flex-1 line-clamp-2 mb-2">${product.name}</h3>
           <div class="mb-3">
             <span class="seller-badge" data-seller-id="${product.sellerId || ''}"><i class="fas fa-store"></i> ${product.sellerName || 'Zorexium'}</span>
           </div>
@@ -329,7 +329,7 @@
           <div class="flex justify-between items-center mb-3">
             <div>
               <p class="text-gray-500 text-sm">Condition</p>
-              <p class="text-white font-semibold text-base">${product.condition || 'New'}</p>
+              <p class="text-gray-900 font-semibold text-base">${product.condition || 'New'}</p>
             </div>
             <div class="flex items-center gap-3 text-base">
               <div class="text-yellow-400"><i class="fas fa-star"></i></div>

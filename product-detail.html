@@ -46,7 +46,7 @@
     <div class="flex flex-col gap-8">
       <!-- Title & Price -->
       <div>
-        <h1 id="productName" class="text-5xl font-bold text-white mb-2">Loading...</h1>
+        <h1 id="productName" class="text-5xl font-bold text-gray-900 mb-2">Loading...</h1>
         <p id="productPrice" class="text-4xl font-bold text-cyan-400 mb-6">$0.00</p>
         <p id="productDescription" class="text-gray-400 text-xl">Loading product details...</p>
       </div>
@@ -68,7 +68,7 @@
       <!-- Quantity & Actions -->
       <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="mb-8">
-          <label class="block text-white text-base font-semibold mb-2">Quantity</label>
+          <label class="block text-gray-900 text-base font-semibold mb-2">Quantity</label>
           <div class="flex items-center gap-6">
             <button onclick="decreaseQty()" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded">−</button>
             <input type="number" id="quantity" value="1" min="1" class="w-16 bg-gray-800 text-white text-center px-3 py-3 rounded border border-gray-700" onchange="validateQty()">
@@ -89,15 +89,15 @@
 
       <!-- Product Details -->
       <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-xl font-semibold text-white mb-6">Product Details</h3>
+        <h3 class="text-xl font-semibold text-gray-900 mb-6">Product Details</h3>
         <div class="space-y-3 text-base">
           <div class="flex justify-between">
             <span class="text-gray-400">Product ID:</span>
-            <span id="productId" class="text-white font-mono">-</span>
+            <span id="productId" class="text-gray-900 font-mono">-</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-400">Condition:</span>
-            <span class="text-white">New</span>
+            <span class="text-gray-900">New</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-400">In Stock:</span>

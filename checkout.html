@@ -69,7 +69,7 @@
   <div class="mb-12 flex items-center gap-3 text-base text-gray-400">
     <a href="shopping-cart.html" class="hover:text-cyan-400 transition-colors"><i class="fas fa-arrow-left mr-1"></i>Cart</a>
     <span>/</span>
-    <span class="text-white font-medium">Checkout</span>
+    <span class="text-gray-900 font-medium">Checkout</span>
   </div>
 
   <div id="emptyCartMsg" class="hidden text-center py-20">
@@ -85,7 +85,7 @@
 
       <!-- Contact Info -->
       <div class="form-card">
-        <h2 class="text-xl font-bold text-white mb-5 flex items-center">
+        <h2 class="text-xl font-bold text-gray-900 mb-5 flex items-center">
           <span class="step-badge">1</span>Contact Information
         </h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -113,7 +113,7 @@
 
       <!-- Shipping Address -->
       <div class="form-card">
-        <h2 class="text-xl font-bold text-white mb-5 flex items-center">
+        <h2 class="text-xl font-bold text-gray-900 mb-5 flex items-center">
           <span class="step-badge">2</span>Shipping Address
         </h2>
         <div class="space-y-4">
@@ -161,14 +161,14 @@
 
       <!-- Shipping Method -->
       <div class="form-card">
-        <h2 class="text-xl font-bold text-white mb-5 flex items-center">
+        <h2 class="text-xl font-bold text-gray-900 mb-5 flex items-center">
           <span class="step-badge">3</span>Shipping Method
         </h2>
         <div class="space-y-3" id="shippingOptions">
           <label class="shipping-option selected" id="opt-standard">
             <input type="radio" name="shipping" value="standard" data-days="8" checked>
             <div class="flex-1">
-              <p class="text-white font-semibold text-base">Standard Shipping</p>
+              <p class="text-gray-900 font-semibold text-base">Standard Shipping</p>
               <p class="text-gray-400 text-sm" id="delivery-standard">5–8 business days</p>
             </div>
             <span class="text-cyan-400 font-bold text-base" id="standardShippingCost"></span>
@@ -178,7 +178,7 @@
 
       <!-- PayPal Payment -->
       <div class="form-card">
-        <h2 class="text-xl font-bold text-white mb-2 flex items-center">
+        <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center">
           <span class="step-badge">4</span>Payment
         </h2>
         <p class="text-gray-400 text-base mb-5">Complete your purchase securely via PayPal. You can pay with your PayPal balance, credit card, or debit card.</p>
@@ -209,7 +209,7 @@
             <span id="summaryTax">$0.00</span>
           </div>
           <div class="border-t border-gray-700 pt-3">
-            <div class="flex justify-between text-white text-xl font-bold">
+            <div class="flex justify-between text-gray-900 text-xl font-bold">
               <span>Total</span>
               <span id="summaryTotal">$0.00</span>
             </div>
@@ -465,7 +465,7 @@ fetch(BACKEND_URL + '/api/config')
         <img src="${item.image || 'https://placehold.co/60x60/333/fff?text=?'}"
              alt="${item.name}" class="w-12 h-12 rounded object-cover flex-shrink-0">
         <div class="flex-1 min-w-0">
-          <p class="text-white text-base font-medium truncate">${item.name}</p>
+          <p class="text-gray-900 text-base font-medium truncate">${item.name}</p>
           <p class="text-gray-400 text-sm">Qty: ${item.quantity || 1}</p>
         </div>
         <p class="text-cyan-400 text-base font-semibold flex-shrink-0">
