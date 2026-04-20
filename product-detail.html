@@ -230,25 +230,52 @@
   }
 
   async function addToCart() {
-    if (!ZrxSession.isLoggedIn()) {
-      ZrxNotify.showNotification('Please log in to add items to your cart', 'info');
-      window.location.href = 'signup-login.html';
-      return;
-    }
     const quantity = parseInt(document.getElementById('quantity').value);
 
-    try {
-      const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
-      let items = [];
-      if (cartRes.ok) {
-        const data = await cartRes.json();
-        items = data.items || [];
+    if (ZrxSession.isLoggedIn()) {
+      try {
+        const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        let items = [];
+        if (cartRes.ok) {
+          const data = await cartRes.json();
+          items = data.items || [];
+        }
+        const existingItem = items.find(item => String(item.id) === String(currentProductId));
+        if (existingItem) {
+          existingItem.quantity += quantity;
+        } else {
+          items.push({
+            id: currentProductId,
+            name: currentProduct.name,
+            price: currentProduct.price,
+            quantity: quantity,
+            image: currentProduct.image || 'https://via.placeholder.com/400x300?text=Product',
+            sellerName: document.getElementById('sellerName').innerText
+          });
+        }
+        await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ items })
+        });
+        const count = items.length;
+        const badge = document.getElementById('cartBadge');
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      } catch (_) {
+        ZrxNotify.showNotification('Failed to add to cart', 'error');
+        return;
       }
-      const existingItem = items.find(item => String(item.id) === String(currentProductId));
+    } else {
+      // Guest: use localStorage
+      let guestCart = [];
+      try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) {}
+      const existingItem = guestCart.find(item => String(item.id) === String(currentProductId));
       if (existingItem) {
         existingItem.quantity += quantity;
       } else {
-        items.push({
+        guestCart.push({
           id: currentProductId,
           name: currentProduct.name,
           price: currentProduct.price,
@@ -257,19 +284,10 @@
           sellerName: document.getElementById('sellerName').innerText
         });
       }
-      await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ items })
-      });
-      const count = items.length;
+      try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (_) {}
       const badge = document.getElementById('cartBadge');
-      badge.textContent = count;
-      badge.classList.toggle('hidden', count === 0);
-    } catch (_) {
-      ZrxNotify.showNotification('Failed to add to cart', 'error');
-      return;
+      badge.textContent = guestCart.length;
+      badge.classList.toggle('hidden', guestCart.length === 0);
     }
     ZrxNotify.showNotification(quantity + ' item(s) added to cart!', 'success');
   }
@@ -346,6 +364,14 @@
           badge.classList.toggle('hidden', count === 0);
           return;
         }
+      } catch (_) {}
+    } else {
+      try {
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
+        const count = guestCart.length;
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+        return;
       } catch (_) {}
     }
     badge.classList.add('hidden');

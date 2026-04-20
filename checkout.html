@@ -417,11 +417,9 @@ fetch(BACKEND_URL + '/api/config')
           cart = data.items || [];
         }
       } catch (_) {}
-    }
-    // If not logged in or cart is empty, redirect to login
-    if (!ZrxSession.isLoggedIn()) {
-      ZrxNotify.showNotification('Please log in to checkout', 'info');
-      window.location.href = 'signup-login.html';
+    } else {
+      // Guest: load from localStorage
+      try { cart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) { cart = []; }
     }
   }
 
@@ -692,11 +690,15 @@ fetch(BACKEND_URL + '/api/config')
         });
       })
       .then(function(result) {
-        // Clear cart on backend
-        fetch('https://zorexium-backend.onrender.com' + '/api/cart', {
-          method: 'DELETE',
-          credentials: 'include'
-        }).catch(function() {});
+        // Clear cart after successful purchase
+        if (ZrxSession.isLoggedIn()) {
+          fetch('https://zorexium-backend.onrender.com' + '/api/cart', {
+            method: 'DELETE',
+            credentials: 'include'
+          }).catch(function() {});
+        } else {
+          try { localStorage.removeItem('guestCart'); } catch (_) {}
+        }
         window.location.href = 'payment-success.html?orderId=' + encodeURIComponent(pendingOrderId);
       })
       .catch(function(err) {
@@ -723,6 +725,14 @@ fetch(BACKEND_URL + '/api/config')
       document.getElementById('checkoutContent').classList.add('hidden');
       document.getElementById('emptyCartMsg').classList.remove('hidden');
     } else {
+      // Auto-fill email for logged-in users
+      if (ZrxSession.isLoggedIn()) {
+        const user = ZrxSession.getUser();
+        if (user && user.email) {
+          const emailEl = document.getElementById('email');
+          if (emailEl && !emailEl.value) emailEl.value = user.email;
+        }
+      }
       updateDeliveryDates();
       renderSummary();
       updateCartBadge();
