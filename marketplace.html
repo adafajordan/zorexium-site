@@ -297,7 +297,7 @@
       })
       .catch(err => {
         console.error('Error loading products:', err);
-        document.getElementById('productsGrid').innerHTML = '<div class="col-span-3 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-600 mb-4 block"></i><p class="text-gray-400">Failed to load products.</p></div>';
+        document.getElementById('productsGrid').innerHTML = '<div class="col-span-3 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-600 mb-4 block"></i><p class="text-red-400">Failed to load products. Please refresh the page.</p></div>';
       });
   }
 
@@ -336,7 +336,7 @@
             </div>
           </div>
           <div class="flex justify-between items-center">
-            <p class="text-cyan-400 text-2xl font-bold">$${parseFloat(product.price).toFixed(2)}</p>
+            <p class="text-cyan-400 text-2xl font-bold">$${parseFloat(product.price || 0).toFixed(2)}</p>
             <div class="flex gap-2">
               <a href="product-detail.html?id=${product._id}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm font-semibold">
                 <i class="fas fa-info-circle"></i>
@@ -359,8 +359,9 @@
     const sortBy = document.getElementById('sortFilter').value;
 
     let filtered = allProducts.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm) || 
-                            (product.description || '').toLowerCase().includes(searchTerm);
+      const matchesSearch = !searchTerm || 
+        ((product.name && product.name.toLowerCase().includes(searchTerm)) || 
+        (product.description || '').toLowerCase().includes(searchTerm));
       const matchesCondition = !condition || product.condition === condition;
       return matchesSearch && matchesCondition;
     });
@@ -370,7 +371,7 @@
     } else if (sortBy === 'price-high') {
       filtered.sort((a, b) => b.price - a.price);
     } else if (sortBy === 'rating') {
-      filtered.sort((a, b) => (b.sellerRating || 0) - (a.sellerRating || 0));
+      filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else {
       filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     }
@@ -465,6 +466,14 @@
     document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
       if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
     });
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
+        dropdown.classList.remove('active');
+      });
+    }
   });
 
   window.addEventListener('load', init);
