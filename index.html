@@ -37,6 +37,11 @@
             visibility: visible;
             transform: translateY(0);
         }
+        .product-card { background-color: #ffffff; border-radius: 8px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border: 1px solid #e5e7eb; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(34, 197, 94, 0.15); }
+        .product-image { width: 100%; height: 200px; object-fit: cover; background-color: #f9fafb; }
+        .seller-badge { display: inline-flex; align-items: center; gap: 6px; background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .seller-badge:hover { background-color: rgba(34, 197, 94, 0.2); }
     </style>
     <script src="open-links-new-tab.js"></script>
     <script src="cookie-consent.js"></script>
@@ -270,10 +275,20 @@
         </aside>
 
         <!-- Main Content Area -->
-        <main class="flex-1 p-8 flex items-center justify-center">
-            <div class="text-center text-gray-400">
-                <i class="fas fa-store text-5xl mb-4 text-gray-300"></i>
-                <p class="text-xl font-medium text-gray-500">Browse the Marketplace</p>
+        <main class="flex-1 p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold text-gray-800">All Products</h2>
+                <p class="text-gray-400 text-sm">Showing <span id="homeResultCount">0</span> products</p>
+            </div>
+            <div id="homeProductsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="col-span-3 text-center py-16 text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-4xl mb-4 block"></i>
+                    <p>Loading products...</p>
+                </div>
+            </div>
+            <div id="homeEmptyState" class="hidden text-center py-16 text-gray-400">
+                <i class="fas fa-box-open text-5xl mb-4 block text-gray-300"></i>
+                <p class="text-xl font-medium text-gray-500">No products found</p>
                 <p class="text-sm mt-2">Use the search bar or select a category to get started.</p>
             </div>
         </main>
@@ -501,6 +516,89 @@
             if (query.length > 0) {
                 window.location.href = 'marketplace.html?search=' + encodeURIComponent(query);
             }
+        }
+
+        // Load and render all marketplace products on home page
+        (function() {
+            var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
+            function renderHomeProducts(products) {
+                var grid = document.getElementById('homeProductsGrid');
+                var emptyState = document.getElementById('homeEmptyState');
+                var countEl = document.getElementById('homeResultCount');
+                if (!grid) return;
+                if (!products || products.length === 0) {
+                    grid.classList.add('hidden');
+                    if (emptyState) emptyState.classList.remove('hidden');
+                    if (countEl) countEl.textContent = '0';
+                    return;
+                }
+                grid.classList.remove('hidden');
+                if (emptyState) emptyState.classList.add('hidden');
+                if (countEl) countEl.textContent = products.length;
+                grid.innerHTML = products.map(function(product) {
+                    var id = product._id || '';
+                    var name = product.name || 'Unnamed Product';
+                    var img = product.image || 'https://placehold.co/300x200/333/fff?text=Product';
+                    var sellerName = product.sellerName || 'Zorexium';
+                    var description = product.description || '';
+                    var condition = product.condition || 'New';
+                    var price = parseFloat(product.price || 0).toFixed(2);
+                    return '<div class="product-card">' +
+                        '<img src="' + img + '" alt="' + name + '" class="product-image" onclick="window.location.href=\'product-detail.html?id=' + encodeURIComponent(id) + '\'">' +
+                        '<div class="p-4">' +
+                        '<h3 class="text-gray-900 font-semibold line-clamp-2 mb-2">' + name + '</h3>' +
+                        '<div class="mb-3"><span class="seller-badge"><i class="fas fa-store"></i> ' + sellerName + '</span></div>' +
+                        '<p class="text-gray-400 text-sm mb-3 line-clamp-2">' + description + '</p>' +
+                        '<div class="flex justify-between items-center mb-3">' +
+                        '<div><p class="text-gray-500 text-xs">Condition</p><p class="text-gray-900 font-semibold text-sm">' + condition + '</p></div>' +
+                        '<div class="flex items-center gap-2 text-sm"><div class="text-yellow-400"><i class="fas fa-star"></i></div><div class="text-gray-400 text-xs">5.0</div></div>' +
+                        '</div>' +
+                        '<div class="flex justify-between items-center">' +
+                        '<p class="text-cyan-500 text-2xl font-bold">$' + price + '</p>' +
+                        '<div class="flex gap-2">' +
+                        '<a href="product-detail.html?id=' + encodeURIComponent(id) + '" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-info-circle"></i></a>' +
+                        '<button onclick="homeAddToCart(\'' + id + '\',\'' + name.replace(/'/g, "\\'") + '\',' + product.price + ',\'' + img + '\')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-2 rounded text-sm font-semibold"><i class="fas fa-shopping-cart"></i></button>' +
+                        '</div></div>' +
+                        '</div></div>';
+                }).join('');
+            }
+
+            fetch(BACKEND_URL + '/api/products')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    renderHomeProducts(Array.isArray(data) ? data : []);
+                })
+                .catch(function() {
+                    var grid = document.getElementById('homeProductsGrid');
+                    if (grid) grid.innerHTML = '<div class="col-span-3 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4 block"></i><p class="text-red-400">Failed to load products. Please refresh the page.</p></div>';
+                });
+        })();
+
+        async function homeAddToCart(productId, name, price, image) {
+            var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+            if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
+                try {
+                    var cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+                    var items = [];
+                    if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
+                    var existing = items.find(function(item) { return item.id === productId; });
+                    if (existing) { existing.quantity += 1; } else { items.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
+                    await ZrxSession.fetch(BACKEND_URL + '/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: items }) });
+                    var badge = document.getElementById('cartBadgeHeader');
+                    if (badge) { badge.textContent = items.length; badge.classList.toggle('hidden', items.length === 0); }
+                } catch (_) {
+                    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to add to cart', 'error');
+                    return;
+                }
+            } else {
+                var guestCart = [];
+                try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) {}
+                var existingGuest = guestCart.find(function(item) { return item.id === productId; });
+                if (existingGuest) { existingGuest.quantity += 1; } else { guestCart.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
+                try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (_) {}
+            }
+            if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');
         }
         </script>
 
