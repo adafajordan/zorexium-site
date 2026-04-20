@@ -8,7 +8,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #181b21; color: #e2e8f0; }
+    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #e2e8f0; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .custom-green { background-color: #65a30d; }
     .custom-green-text { color: #65a30d; }
@@ -20,7 +20,7 @@
 <body class="min-h-screen flex flex-col">
 
 <!-- Top Navigation -->
-<header class="bg-[#181b21] border-b border-gray-800">
+<header class="bg-white border-b border-gray-200">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
     <div class="flex justify-between items-center h-16">
       <!-- Logo -->
@@ -36,8 +36,8 @@
       <!-- Nav Links -->
       <nav class="hidden md:flex space-x-8">
         <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
-          <a href="marketplace.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
-          <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu"><i class="fas fa-chevron-down text-sm"></i></button>
+          <a href="marketplace.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
+          <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu"><i class="fas fa-chevron-down text-sm"></i></button>
           <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
             <a href="ai-ml-accelerators.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-robot text-cyan-400 w-4 text-center"></i>AI & ML Accelerators</a>
             <a href="compute-graphics.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-desktop text-cyan-400 w-4 text-center"></i>Compute & Graphics</a>
@@ -46,8 +46,8 @@
           </div>
         </div>
         <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
-          <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
-          <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu"><i class="fas fa-chevron-down text-sm"></i></button>
+          <a href="community-hub.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+          <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu"><i class="fas fa-chevron-down text-sm"></i></button>
           <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
             <a href="trading-floor.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-chart-line text-cyan-400 w-4 text-center"></i>Trading Floor</a>
             <a href="tech-discussions.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-flask text-cyan-400 w-4 text-center"></i>Tech Discussions (The Lab)</a>
@@ -56,8 +56,8 @@
           </div>
         </div>
         <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
-          <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
-          <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-300 hover:text-white px-3 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Sell Hardware menu"><i class="fas fa-chevron-down text-sm"></i></button>
+          <a href="sell-hardware.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+          <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Sell Hardware menu"><i class="fas fa-chevron-down text-sm"></i></button>
           <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
             <a href="listing-wizard.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-list-alt text-cyan-400 w-4 text-center"></i>Listing Wizard</a>
             <a href="fulfillment-testing.html" class="flex items-center gap-3 px-6 py-3 text-base text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-truck-loading text-cyan-400 w-4 text-center"></i>Fulfillment & Testing</a>
@@ -75,7 +75,7 @@
 </header>
 
 <!-- Sub-header / Search -->
-<div class="bg-[#181b21] py-6">
+<div class="bg-gray-50 py-6">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row items-center justify-between gap-6">
     <a href="marketplace.html" class="text-white font-medium text-xl hidden md:block">Marketplace</a>
     <div class="flex-1 w-full max-w-3xl relative">
@@ -96,7 +96,7 @@
 <!-- Main Content -->
 <main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
   <div class="text-center py-12">
-    <h1 class="text-5xl font-bold text-white mb-6">Track Your Order</h1>
+    <h1 class="text-5xl font-bold text-gray-900 mb-6">Track Your Order</h1>
     <p class="text-gray-400 text-xl">Monitor and track the status of your orders in real-time.</p>
   </div>
 </main>
