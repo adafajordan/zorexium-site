@@ -45,17 +45,17 @@
 
     <!-- Top Navigation -->
     <header class="bg-[#181b21] border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
+        <div class="px-4 sm:px-6">
+            <div class="flex justify-between items-center h-24">
                 <!-- Logo -->
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 flex items-center gap-2">
-                        <div class="text-cyan-400 text-3xl">
+                    <div class="flex-shrink-0 flex items-center gap-3">
+                        <div class="text-cyan-400 text-5xl">
                             <i class="fas fa-microchip"></i>
                         </div>
                         <div class="flex flex-col">
-                            <span class="text-cyan-400 font-bold text-xl tracking-wide leading-none">ZOREXIUM</span>
-                            <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+                            <span class="text-cyan-400 font-bold text-3xl tracking-wide leading-none">ZOREXIUM</span>
+                            <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
                         </div>
                     </div>
                 </div>
@@ -64,8 +64,8 @@
                 <nav class="hidden md:flex space-x-8">
                     <!-- Marketplace (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
-                        <a href="marketplace.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
-                        <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-300 hover:text-white px-2 py-2 rounded-md text-sm inline-flex items-center" aria-label="Toggle Marketplace menu">
+                        <a href="marketplace.html" class="text-gray-300 hover:text-white px-4 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
+                        <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-300 hover:text-white px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
@@ -90,8 +90,8 @@
 
                     <!-- Community Hub (existing) -->
                     <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
-                        <a href="community-hub.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium inline-flex items-center">Community Hub</a>
-                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-300 hover:text-white px-2 py-2 rounded-md text-sm inline-flex items-center" aria-label="Toggle Community Hub menu">
+                        <a href="community-hub.html" class="text-gray-300 hover:text-white px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-300 hover:text-white px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
@@ -116,8 +116,8 @@
 
                     <!-- Sell Hardware (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
-                        <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium inline-flex items-center">Sell Hardware</a>
-                        <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-300 hover:text-white px-2 py-2 rounded-md text-sm inline-flex items-center" aria-label="Toggle Sell Hardware menu">
+                        <a href="sell-hardware.html" class="text-gray-300 hover:text-white px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+                        <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-300 hover:text-white px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Sell Hardware menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
@@ -140,14 +140,14 @@
                 </nav>
 
                 <!-- Right Side Actions -->
-                <div class="flex items-center space-x-4">
-                    <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative flex items-center gap-2 px-3 py-1 rounded-md">
-                        <i class="fas fa-shopping-cart text-lg"></i>
+                <div class="flex items-center space-x-5">
+                    <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative flex items-center gap-2 px-3 py-2 rounded-md">
+                        <i class="fas fa-shopping-cart text-2xl"></i>
                         <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
                     </a>
-                    <a href="verified-labs.html" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1.5 rounded text-sm font-medium">Verified Labs</a>
+                    <a href="verified-labs.html" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded text-base font-medium">Verified Labs</a>
                     <div class="relative">
-                        <a href="account-details.html" id="accountIconHeader" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block">
+                        <a href="account-details.html" id="accountIconHeader" class="h-11 w-11 rounded-full overflow-hidden border border-gray-600 inline-block">
                             <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover">
                         </a>
                         <button id="accountBtnHeader" class="ml-2 hidden">Account</button>
@@ -166,10 +166,10 @@
 
     <!-- Sub-header / Search -->
     <div class="bg-[#181b21] py-4">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <a href="marketplace.html" class="text-white font-medium text-lg hidden md:block">Marketplace</a>
             
-            <div class="flex-1 w-full max-w-3xl relative">
+            <div class="flex-1 w-full relative">
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fas fa-search text-gray-400"></i>
@@ -193,33 +193,33 @@
         </div>
     </div>
 
-    <!-- Hero Banner (full width, outside max-w-7xl) -->
-    <div class="relative overflow-hidden mb-6 h-80 md:h-[500px] w-full group">
-        <div class="w-full h-full bg-black"></div>
-        <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-center px-6 md:px-20 lg:px-32">
-            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
-                Unlock Innovation.<br>
-                Trade & Discover<br>
-                Cutting Edge Hardware
-            </h1>
-            <div class="mt-6">
-                <a href="community-hub.html" class="inline-block bg-[#65a30d] hover:bg-[#4d7c0f] text-white font-bold py-2 px-6 rounded shadow-lg">
-                    Forum
-                </a>
-            </div>
-        </div>
-        <!-- Pagination Dots -->
-        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-            <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-            <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-            <div class="w-2 h-2 bg-white rounded-full"></div>
-            <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-            <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
-        </div>
-    </div>
-
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+
+        <!-- Hero Banner -->
+        <div class="relative rounded-xl overflow-hidden mb-8 h-64 md:h-80 w-full group">
+            <div class="w-full h-full bg-black"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex flex-col justify-center px-8 md:px-16">
+                <h1 class="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">
+                    Unlock Innovation.<br>
+                    Trade & Discover<br>
+                    Cutting Edge Hardware
+                </h1>
+                <div class="mt-6">
+                    <a href="community-hub.html" class="inline-block bg-[#65a30d] hover:bg-[#4d7c0f] text-white font-bold py-2 px-6 rounded shadow-lg">
+                        Forum
+                    </a>
+                </div>
+            </div>
+            <!-- Pagination Dots -->
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <div class="w-2 h-2 bg-white rounded-full"></div>
+                <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <div class="w-2 h-2 bg-gray-400 rounded-full"></div>
+            </div>
+        </div>
 
         <!-- Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
