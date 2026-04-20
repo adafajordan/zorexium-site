@@ -359,7 +359,7 @@
           ${product.image ? `<img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover">` : `<i class="fas fa-image text-gray-600 text-5xl"></i>`}
         </div>
         <div class="p-4">
-          <h3 class="text-white font-semibold mb-2 line-clamp-2">${product.name}</h3>
+          <h3 class="text-gray-900 font-semibold mb-2 line-clamp-2">${product.name}</h3>
           <p class="text-gray-400 text-base mb-3">${product.category || 'Uncategorized'}</p>
           <div class="flex items-center justify-between mb-6">
             <div>
@@ -418,7 +418,7 @@
           const labId = l._id ? String(l._id) : '';
           return `
             <div class="product-card p-4">
-              <h3 class="text-white font-semibold mb-1 line-clamp-2">${escapeHtml(l.name)}</h3>
+              <h3 class="text-gray-900 font-semibold mb-1 line-clamp-2">${escapeHtml(l.name)}</h3>
               <p class="text-gray-400 text-base mb-2">${escapeHtml(l.location || '')}</p>
               <p class="text-gray-300 text-base mb-3">${escapeHtml((l.description || '').slice(0, 120))}</p>
               <div class="text-sm text-gray-500 mb-3">Added: ${escapeHtml(new Date(l.createdAt).toLocaleString())}</div>
