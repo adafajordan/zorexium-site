@@ -165,10 +165,10 @@
     </header>
 
     <!-- Page Layout: Sidebar + Main -->
-    <div class="flex flex-1 min-h-0 bg-gray-100">
+    <div class="flex flex-1 bg-gray-100">
 
         <!-- Left Sidebar -->
-        <aside class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col">
+        <aside class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col self-stretch">
             <div class="p-5 border-b border-gray-200">
                 <h2 class="text-gray-800 font-semibold text-base mb-3 flex items-center gap-2">
                     <i class="fas fa-store text-cyan-400"></i> Marketplace
@@ -186,48 +186,68 @@
             </div>
 
             <!-- Categories -->
-            <div class="p-5 flex-1 overflow-y-auto">
+            <div class="p-5">
                 <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Product Categories</h3>
                 <nav class="space-y-1">
                     <a href="marketplace.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
                         <i class="fas fa-th-large text-cyan-400 w-4 text-center"></i>
                         All Products
                     </a>
-                    <a href="ai-ml-accelerators.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-robot text-cyan-400 w-4 text-center"></i>
-                        AI &amp; ML Accelerators
+                    <a href="storage-memory.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-database text-cyan-400 w-4 text-center"></i>
+                        Components &amp; Storage
                     </a>
-                    <a href="compute-graphics.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                    <a href="marketplace.html?category=computer-systems" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
                         <i class="fas fa-desktop text-cyan-400 w-4 text-center"></i>
-                        Compute &amp; Graphics
+                        Computer Systems
+                    </a>
+                    <a href="marketplace.html?category=computer-peripherals" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-keyboard text-cyan-400 w-4 text-center"></i>
+                        Computer Peripherals
+                    </a>
+                    <a href="marketplace.html?category=servers" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-server text-cyan-400 w-4 text-center"></i>
+                        Servers &amp; Components
+                    </a>
+                    <a href="marketplace.html?category=appliances" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-blender text-cyan-400 w-4 text-center"></i>
+                        Appliances
+                    </a>
+                    <a href="marketplace.html?category=electronics" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-bolt text-cyan-400 w-4 text-center"></i>
+                        Electronics
+                    </a>
+                    <a href="marketplace.html?category=gaming-vr" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-gamepad text-cyan-400 w-4 text-center"></i>
+                        Gaming &amp; VR
                     </a>
                     <a href="networking-data-flow.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
                         <i class="fas fa-network-wired text-cyan-400 w-4 text-center"></i>
-                        Networking &amp; Data Flow
+                        Networking
                     </a>
-                    <a href="storage-memory.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-database text-cyan-400 w-4 text-center"></i>
-                        Storage &amp; Memory
+                    <a href="marketplace.html?category=smart-home" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-home text-cyan-400 w-4 text-center"></i>
+                        Smart Home &amp; Security
                     </a>
-                    <a href="marketplace.html?category=fpga" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-microchip text-cyan-400 w-4 text-center"></i>
-                        FPGAs
+                    <a href="marketplace.html?category=office-solutions" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-briefcase text-cyan-400 w-4 text-center"></i>
+                        Office Solutions
                     </a>
-                    <a href="marketplace.html?category=cpus" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-server text-cyan-400 w-4 text-center"></i>
-                        CPUs
+                    <a href="marketplace.html?category=software-services" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-compact-disc text-cyan-400 w-4 text-center"></i>
+                        Software &amp; Services
                     </a>
-                    <a href="marketplace.html?category=gpus" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-tv text-cyan-400 w-4 text-center"></i>
-                        GPUs
+                    <a href="marketplace.html?category=automotive-tools" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-car text-cyan-400 w-4 text-center"></i>
+                        Automotive &amp; Tools
                     </a>
-                    <a href="marketplace.html?category=cooling" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-fan text-cyan-400 w-4 text-center"></i>
-                        Cooling Systems
+                    <a href="marketplace.html?category=home-outdoors" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-tree text-cyan-400 w-4 text-center"></i>
+                        Home &amp; Outdoors
                     </a>
-                    <a href="marketplace.html?category=dev-kits" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-code text-cyan-400 w-4 text-center"></i>
-                        Dev Kits
+                    <a href="marketplace.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-ellipsis-h text-cyan-400 w-4 text-center"></i>
+                        More
                     </a>
                 </nav>
             </div>
@@ -245,7 +265,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-[#131620] border-t border-gray-800 mt-16">
+    <footer class="bg-[#131620] border-t border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
 
