@@ -145,7 +145,7 @@
                         <i class="fas fa-shopping-cart text-2xl"></i>
                         <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
                     </a>
-                    <a href="verified-labs.html" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded text-base font-medium">Verified Labs</a>
+                    <a id="verifiedLabsBtn" href="verified-labs.html" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded text-base font-medium hidden">Verified Labs</a>
 
                     <!-- Inline login form – shown only when NOT logged in -->
                     <div id="headerLoginForm" class="hidden items-center gap-2">
@@ -424,12 +424,15 @@
             var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
             var loginForm    = document.getElementById('headerLoginForm');
             var acctSection  = document.getElementById('headerAccountSection');
+            var verifiedBtn  = document.getElementById('verifiedLabsBtn');
             if(loggedIn){
                 if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
                 if(loginForm)  { loginForm.classList.add('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
             } else {
                 if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
                 if(acctSection){ acctSection.classList.add('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.add('hidden'); }
             }
 
             // Cart badge update (requires auth)
