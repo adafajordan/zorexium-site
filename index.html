@@ -582,9 +582,9 @@
                     var detailUrl = 'product-detail.html?id=' + encodeURIComponent(id);
                     return '<div class="product-card">' +
                         '<img src="' + escAttr(img) + '" alt="' + escAttr(name) + '" class="product-image" onclick="window.location.href=' + "'" + detailUrl + "'" + '">' +
-                        '<div class="p-4 flex flex-col items-center text-center gap-2">' +
+                        '<div class="p-4 flex flex-col items-start text-left gap-2">' +
                         '<h3 class="text-gray-900 font-semibold line-clamp-2">' + escAttr(name) + '</h3>' +
-                        '<p class="text-cyan-500 text-2xl font-bold">$' + escAttr(price) + '</p>' +
+                        '<p class="text-black text-2xl font-bold">$' + escAttr(price) + '</p>' +
                         '<button onclick="homeAddToCart(' + i + ')" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-3 py-2 rounded text-sm"><i class="fas fa-shopping-cart mr-1"></i> Add to Cart</button>' +
                         '</div></div>';
                 }).join('');
