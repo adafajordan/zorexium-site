@@ -214,10 +214,11 @@
                         <i class="fas fa-th-large text-cyan-400 w-4 text-center"></i>
                         All Products
                     </a>
-                    <a href="storage-memory.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                    <button onclick="showComponentsSidebar()" class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors text-left">
                         <i class="fas fa-database text-cyan-400 w-4 text-center"></i>
                         Components &amp; Storage
-                    </a>
+                        <i class="fas fa-chevron-right text-gray-400 text-xs ml-auto"></i>
+                    </button>
                     <a href="marketplace.html?category=computer-systems" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
                         <i class="fas fa-desktop text-cyan-400 w-4 text-center"></i>
                         Computer Systems
@@ -269,6 +270,53 @@
                     <a href="marketplace.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
                         <i class="fas fa-ellipsis-h text-cyan-400 w-4 text-center"></i>
                         More
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Components & Storage Sub-Sidebar -->
+        <aside id="componentsSidebar" class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col sticky top-24 h-[calc(100vh-6rem)]" style="display:none;">
+            <div class="p-5 border-b border-gray-200">
+                <!-- Back to Main -->
+                <button onclick="showMainSidebar()" class="flex items-center gap-2 text-gray-500 hover:text-cyan-500 text-sm font-medium mb-4 transition-colors">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                    Back to Main
+                </button>
+                <h2 class="text-gray-800 font-semibold text-base flex items-center gap-2">
+                    <i class="fas fa-database text-cyan-400"></i>
+                    Components &amp; Storage
+                </h2>
+            </div>
+            <div class="p-5 flex-1 overflow-y-auto">
+                <nav class="space-y-1">
+                    <a href="storage-memory.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-database text-cyan-400 w-4 text-center"></i>
+                        Components &amp; Storage
+                    </a>
+                    <a href="marketplace.html?category=core-component" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-microchip text-cyan-400 w-4 text-center"></i>
+                        Core Component
+                    </a>
+                    <a href="marketplace.html?category=storage-device" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-hdd text-cyan-400 w-4 text-center"></i>
+                        Storage Device
+                    </a>
+                    <a href="deals-promotions.html" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-tags text-cyan-400 w-4 text-center"></i>
+                        Deals by Categories
+                    </a>
+                    <a href="marketplace.html?category=accessories" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-plug text-cyan-400 w-4 text-center"></i>
+                        Accessories
+                    </a>
+                    <a href="marketplace.html?category=refurbished" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-recycle text-cyan-400 w-4 text-center"></i>
+                        Refurbished
+                    </a>
+                    <a href="marketplace.html?category=shopping-tools" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
+                        <i class="fas fa-shopping-bag text-cyan-400 w-4 text-center"></i>
+                        Shopping Tools
                     </a>
                 </nav>
             </div>
@@ -454,6 +502,16 @@
         }
         document.addEventListener('DOMContentLoaded', alignSidebarToMarketplace);
         window.addEventListener('resize', alignSidebarToMarketplace);
+
+        function showComponentsSidebar() {
+            document.getElementById('mainSidebar').style.display = 'none';
+            document.getElementById('componentsSidebar').style.display = '';
+        }
+
+        function showMainSidebar() {
+            document.getElementById('componentsSidebar').style.display = 'none';
+            document.getElementById('mainSidebar').style.display = '';
+        }
     </script>
 
 <script src="notifications.js"></script>
