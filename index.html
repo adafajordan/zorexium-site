@@ -428,12 +428,30 @@
             }
         });
 
-        // Resize sidebar to align its right edge with the left edge of the Marketplace nav link
+        // Resize sidebar to align its right edge with the left edge of the Marketplace nav link.
+        // Always measure in the logged-in header layout so sidebar/product rows are the same
+        // width for non-logged-in users as for logged-in users (without affecting the top banner).
         function alignSidebarToMarketplace() {
             var sidebar = document.getElementById('mainSidebar');
             var marketplace = document.getElementById('marketplaceDropdown');
             if (!sidebar || !marketplace) return;
+
+            var loginForm = document.getElementById('headerLoginForm');
+            var acctSection = document.getElementById('headerAccountSection');
+            var isGuestLayout = loginForm && !loginForm.classList.contains('hidden');
+
+            if (isGuestLayout) {
+                loginForm.style.display = 'none';
+                if (acctSection) acctSection.style.display = 'flex';
+            }
+
             var rect = marketplace.getBoundingClientRect();
+
+            if (isGuestLayout) {
+                loginForm.style.display = '';
+                if (acctSection) acctSection.style.display = '';
+            }
+
             if (rect.left > 0) {
                 sidebar.style.width = rect.left + 'px';
                 sidebar.style.minWidth = rect.left + 'px';
