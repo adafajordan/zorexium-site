@@ -277,8 +277,7 @@
         <!-- Main Content Area -->
         <main class="flex-1 p-8">
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-xl font-semibold text-gray-800">All Products</h2>
-                <p class="text-gray-400 text-sm">Showing <span id="homeResultCount">0</span> products</p>
+                <h2 class="text-xl font-semibold text-gray-800">Best Picks</h2>
             </div>
             <div id="homeProductsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="col-span-4 text-center py-16 text-gray-400">
@@ -583,8 +582,8 @@
                     return '<div class="product-card">' +
                         '<img src="' + escAttr(img) + '" alt="' + escAttr(name) + '" class="product-image" onclick="window.location.href=' + "'" + detailUrl + "'" + '">' +
                         '<div class="p-4 flex flex-col items-start text-left gap-2">' +
-                        '<h3 class="text-gray-900 font-semibold line-clamp-2">' + escAttr(name) + '</h3>' +
-                        '<p class="text-black text-2xl font-bold">$' + escAttr(price) + '</p>' +
+                        '<h3 class="text-gray-900 line-clamp-2">' + escAttr(name) + '</h3>' +
+                        '<p class="text-black text-2xl">$' + escAttr(price) + '</p>' +
                         '<button onclick="homeAddToCart(' + i + ')" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-3 py-2 rounded text-sm"><i class="fas fa-shopping-cart mr-1"></i> Add to Cart</button>' +
                         '</div></div>';
                 }).join('');
