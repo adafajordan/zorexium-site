@@ -42,6 +42,11 @@
         .product-image { width: 100%; height: 160px; object-fit: cover; background-color: #f9fafb; }
         .seller-badge { display: inline-flex; align-items: center; gap: 6px; background-color: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; color: #22c55e; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
         .seller-badge:hover { background-color: rgba(34, 197, 94, 0.2); }
+        /* Sidebar accordion */
+        .sidebar-submenu { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
+        .sidebar-submenu.open { max-height: 500px; }
+        .sidebar-chevron { transition: transform 0.25s ease; }
+        .sidebar-category.open .sidebar-chevron { transform: rotate(180deg); }
     </style>
     <script src="open-links-new-tab.js"></script>
     <script src="cookie-consent.js"></script>
@@ -214,78 +219,257 @@
                         <i class="fas fa-th-large text-cyan-400 w-4 text-center"></i>
                         All Products
                     </a>
-                    <a href="marketplace.html?category=processors" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-microchip text-cyan-400 w-4 text-center"></i>
-                        Processors (CPUs)
-                    </a>
-                    <a href="marketplace.html?category=motherboards" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-server text-cyan-400 w-4 text-center"></i>
-                        Motherboards
-                    </a>
-                    <a href="marketplace.html?category=graphics-cards" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-tv text-cyan-400 w-4 text-center"></i>
-                        Graphics Cards (GPUs)
-                    </a>
-                    <a href="marketplace.html?category=memory-ram" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-memory text-cyan-400 w-4 text-center"></i>
-                        Memory (RAM)
-                    </a>
-                    <a href="marketplace.html?category=internal-ssds" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-hdd text-cyan-400 w-4 text-center"></i>
-                        Internal SSDs
-                    </a>
-                    <a href="marketplace.html?category=hard-drives" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-database text-cyan-400 w-4 text-center"></i>
-                        Hard Drives (HDD)
-                    </a>
-                    <a href="marketplace.html?category=external-storage" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-save text-cyan-400 w-4 text-center"></i>
-                        External Storage
-                    </a>
-                    <a href="marketplace.html?category=gaming-desktops" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-desktop text-cyan-400 w-4 text-center"></i>
-                        Gaming Desktops
-                    </a>
-                    <a href="marketplace.html?category=laptops" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-laptop text-cyan-400 w-4 text-center"></i>
-                        Laptops &amp; Notebooks
-                    </a>
-                    <a href="marketplace.html?category=server-solutions" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-network-wired text-cyan-400 w-4 text-center"></i>
-                        Server Solutions
-                    </a>
-                    <a href="marketplace.html?category=monitors" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-tv text-cyan-400 w-4 text-center"></i>
-                        Monitors
-                    </a>
-                    <a href="marketplace.html?category=mechanical-keyboards" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-keyboard text-cyan-400 w-4 text-center"></i>
-                        Mechanical Keyboards
-                    </a>
-                    <a href="marketplace.html?category=precision-mice" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-mouse-pointer text-cyan-400 w-4 text-center"></i>
-                        Precision Mice
-                    </a>
-                    <a href="marketplace.html?category=power-supply" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-plug text-cyan-400 w-4 text-center"></i>
-                        Power Supply Units (PSU)
-                    </a>
-                    <a href="marketplace.html?category=cooling-solutions" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-fan text-cyan-400 w-4 text-center"></i>
-                        Cooling Solutions
-                    </a>
-                    <a href="marketplace.html?category=pc-cases" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-cube text-cyan-400 w-4 text-center"></i>
-                        PC Cases &amp; Chassis
-                    </a>
-                    <a href="marketplace.html?category=networking-gear" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-wifi text-cyan-400 w-4 text-center"></i>
-                        Networking Gear
-                    </a>
-                    <a href="marketplace.html?category=smart-security" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors">
-                        <i class="fas fa-shield-alt text-cyan-400 w-4 text-center"></i>
-                        Smart Security
-                    </a>
+
+                    <!-- Processors (CPUs) -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-microchip text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Processors (CPUs)</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=processors&amp;sub=desktop-hedt" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Desktop &amp; High-End Desktop (HEDT)</a>
+                            <a href="marketplace.html?category=processors&amp;sub=mobile-laptop" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Mobile &amp; Laptop Replacement Chips</a>
+                            <a href="marketplace.html?category=processors&amp;sub=workstation-threadripper" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Workstation &amp; Threadrippers</a>
+                        </div>
+                    </div>
+
+                    <!-- Motherboards -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-server text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Motherboards</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=motherboards&amp;sub=enthusiast-atx" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Enthusiast (ATX/E-ATX)</a>
+                            <a href="marketplace.html?category=motherboards&amp;sub=compact-itx" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Compact &amp; Small Form Factor (ITX)</a>
+                            <a href="marketplace.html?category=motherboards&amp;sub=server-workstation" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Server &amp; Workstation Boards</a>
+                        </div>
+                    </div>
+
+                    <!-- Graphics Cards (GPUs) -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-tv text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Graphics Cards (GPUs)</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=graphics-cards&amp;sub=desktop-gaming" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Desktop Gaming Cards</a>
+                            <a href="marketplace.html?category=graphics-cards&amp;sub=professional-ai" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Professional &amp; AI Rendering Units</a>
+                            <a href="marketplace.html?category=graphics-cards&amp;sub=egpu-docks" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">External GPU Docks</a>
+                        </div>
+                    </div>
+
+                    <!-- Memory (RAM) -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-memory text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Memory (RAM)</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=memory-ram&amp;sub=desktop-ddr5-ddr4" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Desktop DDR5/DDR4</a>
+                            <a href="marketplace.html?category=memory-ram&amp;sub=laptop-sodimm" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Laptop SODIMM</a>
+                            <a href="marketplace.html?category=memory-ram&amp;sub=ecc-server" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">ECC &amp; Server Memory</a>
+                        </div>
+                    </div>
+
+                    <!-- Internal SSDs -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-hdd text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Internal SSDs</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=internal-ssds&amp;sub=nvme-m2" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">NVMe M.2 (Gen4 &amp; Gen5)</a>
+                            <a href="marketplace.html?category=internal-ssds&amp;sub=sata-25" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">2.5" SATA SSDs</a>
+                            <a href="marketplace.html?category=internal-ssds&amp;sub=enterprise-u2" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Enterprise/U.2 Drives</a>
+                        </div>
+                    </div>
+
+                    <!-- Hard Drives (HDD) -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-database text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Hard Drives (HDD)</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=hard-drives&amp;sub=nas-raid" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">NAS &amp; RAID Optimized</a>
+                            <a href="marketplace.html?category=hard-drives&amp;sub=surveillance" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Surveillance Rated</a>
+                            <a href="marketplace.html?category=hard-drives&amp;sub=bulk-desktop" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Bulk Desktop Storage</a>
+                        </div>
+                    </div>
+
+                    <!-- External Storage -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-save text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">External Storage</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=external-storage&amp;sub=portable-rugged" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Portable Rugged SSDs</a>
+                            <a href="marketplace.html?category=external-storage&amp;sub=desktop-hubs" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Desktop Expansion Hubs</a>
+                            <a href="marketplace.html?category=external-storage&amp;sub=flash-media" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">High-Speed Flash Media</a>
+                        </div>
+                    </div>
+
+                    <!-- Gaming Desktops -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-desktop text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Gaming Desktops</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=gaming-desktops&amp;sub=entry-esports" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Entry-Level &amp; Esports</a>
+                            <a href="marketplace.html?category=gaming-desktops&amp;sub=high-end-liquid" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">High-End Liquid Cooled</a>
+                            <a href="marketplace.html?category=gaming-desktops&amp;sub=sff-builds" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Small Form Factor Builds</a>
+                        </div>
+                    </div>
+
+                    <!-- Laptops & Notebooks -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-laptop text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Laptops &amp; Notebooks</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=laptops&amp;sub=gaming" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">High-Performance Gaming</a>
+                            <a href="marketplace.html?category=laptops&amp;sub=ultrabooks" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Thin &amp; Light Ultrabooks</a>
+                            <a href="marketplace.html?category=laptops&amp;sub=mobile-workstations" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Mobile Workstations</a>
+                        </div>
+                    </div>
+
+                    <!-- Server Solutions -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-network-wired text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Server Solutions</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=server-solutions&amp;sub=rackmount-blades" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Rackmount Chassis &amp; Blades</a>
+                            <a href="marketplace.html?category=server-solutions&amp;sub=tower-servers" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Tower Servers</a>
+                            <a href="marketplace.html?category=server-solutions&amp;sub=edge-computing" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Edge Computing Nodes</a>
+                        </div>
+                    </div>
+
+                    <!-- Monitors -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-tv text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Monitors</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=monitors&amp;sub=ultrawide-curved" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Ultra-Wide &amp; Curved Gaming</a>
+                            <a href="marketplace.html?category=monitors&amp;sub=4k-professional" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">4K Professional &amp; Creative</a>
+                            <a href="marketplace.html?category=monitors&amp;sub=portable-usbc" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Portable USB-C Displays</a>
+                        </div>
+                    </div>
+
+                    <!-- Mechanical Keyboards -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-keyboard text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Mechanical Keyboards</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=mechanical-keyboards&amp;sub=custom-hotswap" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Custom &amp; Hot-Swappable Kits</a>
+                            <a href="marketplace.html?category=mechanical-keyboards&amp;sub=low-profile-wireless" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Low-Profile Wireless</a>
+                            <a href="marketplace.html?category=mechanical-keyboards&amp;sub=keycaps-switches" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Keycaps &amp; Switches</a>
+                        </div>
+                    </div>
+
+                    <!-- Precision Mice -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-mouse-pointer text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Precision Mice</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=precision-mice&amp;sub=ultralight-wireless" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Ultra-Lightweight Wireless</a>
+                            <a href="marketplace.html?category=precision-mice&amp;sub=ergonomic-productivity" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Ergonomic &amp; Productivity</a>
+                            <a href="marketplace.html?category=precision-mice&amp;sub=flight-sim-racing" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Flight &amp; Sim Racing Peripherals</a>
+                        </div>
+                    </div>
+
+                    <!-- Power Supply Units (PSU) -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-plug text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Power Supply Units (PSU)</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=power-supply&amp;sub=atx3" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">ATX 3.0 &amp; 3.1 Standards</a>
+                            <a href="marketplace.html?category=power-supply&amp;sub=sfx" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">SFX &amp; Small Form Factor</a>
+                        </div>
+                    </div>
+
+                    <!-- Cooling Solutions -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-fan text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Cooling Solutions</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=cooling-solutions&amp;sub=aio-liquid" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">AIO Liquid Coolers</a>
+                            <a href="marketplace.html?category=cooling-solutions&amp;sub=air-towers" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">High-Performance Air Towers</a>
+                            <a href="marketplace.html?category=cooling-solutions&amp;sub=thermal-paste" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Thermal Pastes &amp; Accessories</a>
+                        </div>
+                    </div>
+
+                    <!-- PC Cases & Chassis -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-cube text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">PC Cases &amp; Chassis</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=pc-cases&amp;sub=mid-full-tower" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Mid-Tower &amp; Full-Tower</a>
+                            <a href="marketplace.html?category=pc-cases&amp;sub=mini-itx" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Mini-ITX Enclosures</a>
+                            <a href="marketplace.html?category=pc-cases&amp;sub=open-frame" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Open-Frame &amp; Test Benches</a>
+                        </div>
+                    </div>
+
+                    <!-- Networking Gear -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-wifi text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Networking Gear</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=networking-gear&amp;sub=wifi7-mesh" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Wi-Fi 7 &amp; Mesh Systems</a>
+                            <a href="marketplace.html?category=networking-gear&amp;sub=high-speed-switches" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">High-Speed Switches (10G/25G)</a>
+                            <a href="marketplace.html?category=networking-gear&amp;sub=nas" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Network Attached Storage (NAS)</a>
+                        </div>
+                    </div>
+
+                    <!-- Smart Security -->
+                    <div class="sidebar-category">
+                        <button onclick="toggleSidebarCategory(this)" class="flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 hover:text-black text-sm transition-colors w-full text-left">
+                            <i class="fas fa-shield-alt text-cyan-400 w-4 text-center flex-shrink-0"></i>
+                            <span class="flex-1">Smart Security</span>
+                            <i class="fas fa-chevron-down text-gray-400 text-xs sidebar-chevron"></i>
+                        </button>
+                        <div class="sidebar-submenu pl-7 space-y-1 mt-0.5">
+                            <a href="marketplace.html?category=smart-security&amp;sub=ip-poe-cameras" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">IP &amp; PoE Cameras</a>
+                            <a href="marketplace.html?category=smart-security&amp;sub=smart-access-locks" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Smart Access &amp; Locks</a>
+                            <a href="marketplace.html?category=smart-security&amp;sub=environment-sensors" class="flex items-center gap-2 px-3 py-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-black text-xs transition-colors">Environment Sensors (Smoke/Flood)</a>
+                        </div>
+                    </div>
                 </nav>
             </div>
         </aside>
@@ -442,6 +626,15 @@
                 document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
             }
         });
+
+        // Sidebar accordion
+        function toggleSidebarCategory(btn) {
+            var category = btn.closest('.sidebar-category');
+            var submenu = category.querySelector('.sidebar-submenu');
+            var isOpen = category.classList.contains('open');
+            category.classList.toggle('open', !isOpen);
+            submenu.classList.toggle('open', !isOpen);
+        }
 
         // Resize sidebar to align its right edge with the Marketplace nav item.
         // For non-logged-in users: align with the right edge of the marketplace arrow button.
