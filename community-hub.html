@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tech Discussions (The Lab) - Zorexium Labs</title>
+  <title>Community Hub - Zorexium Labs</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -56,7 +56,7 @@
                 <nav class="hidden md:flex space-x-8">
                     <!-- Marketplace (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
-                        <a href="marketplace.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
+                        <a href="marketplace.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Marketplace</a>
                         <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
@@ -121,31 +121,8 @@
                         </div>
                     </div>
 
-                    <!-- Community Hub (existing) -->
-                    <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
-                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
-                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                            <a href="trading-floor.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-chart-line text-cyan-400 w-4 text-center"></i>
-                                Trading Floor
-                            </a>
-                            <a href="tech-discussions.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-flask text-cyan-400 w-4 text-center"></i>
-                                Tech Discussions (The Lab)
-                            </a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-shield-alt text-cyan-400 w-4 text-center"></i>
-                                Trust Center
-                            </a>
-                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-lightbulb text-cyan-400 w-4 text-center"></i>
-                                Innovation & News
-                            </a>
-                        </div>
-                    </div>
+                    <!-- Community Hub -->
+                    <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
 
                     <!-- Sell Hardware (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
@@ -216,7 +193,7 @@
 <!-- Sub-header / Search -->
 <div class="bg-gray-50 py-6">
   <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row items-center justify-between gap-6">
-    <a href="marketplace.html" class="text-gray-900 font-medium text-xl hidden md:block">Tech Discussions (The Lab)</a>
+    <a href="community-hub.html" class="text-gray-900 font-medium text-xl hidden md:block">Community Hub</a>
     <div class="flex-1 w-full max-w-3xl relative">
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>

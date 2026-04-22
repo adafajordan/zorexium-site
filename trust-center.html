@@ -57,7 +57,7 @@
                 <nav class="hidden md:flex space-x-8">
                     <!-- Marketplace (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
-                        <a href="marketplace.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center border-b-2 border-green-500">Marketplace</a>
+                        <a href="marketplace.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Marketplace</a>
                         <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
@@ -122,31 +122,8 @@
                         </div>
                     </div>
 
-                    <!-- Community Hub (existing) -->
-                    <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
-                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
-                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                            <a href="trading-floor.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-chart-line text-cyan-400 w-4 text-center"></i>
-                                Trading Floor
-                            </a>
-                            <a href="tech-discussions.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-flask text-cyan-400 w-4 text-center"></i>
-                                Tech Discussions (The Lab)
-                            </a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-shield-alt text-cyan-400 w-4 text-center"></i>
-                                Trust Center
-                            </a>
-                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-lightbulb text-cyan-400 w-4 text-center"></i>
-                                Innovation & News
-                            </a>
-                        </div>
-                    </div>
+                    <!-- Community Hub -->
+                    <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
 
                     <!-- Sell Hardware (hover or click to reveal) -->
                     <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
