@@ -468,7 +468,7 @@
                 }
             }catch(e){/* ignore */}
 
-// Account menu username
+            // Account menu username
             var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
             var userNameEl = document.getElementById('accountMenuUsername');
             if(userNameEl && user) userNameEl.textContent = user.username || user.email || 'Account';
