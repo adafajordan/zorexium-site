@@ -9,7 +9,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
-  </style>
+          .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
+        .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+        </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center px-6 py-16">
 
@@ -282,13 +284,12 @@
                 }
             }catch(e){/* ignore */}
 
-            // Account dropdown toggle
-            const acctIcon = document.getElementById('accountIconHeader');
-            const acctDrop = document.getElementById('accountDropdownHeader');
-            if(acctIcon && acctDrop){
-                acctIcon.addEventListener('click', (e)=>{ e.preventDefault(); acctDrop.classList.toggle('hidden'); });
-            }
+            // Account menu username
+            var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
+            var userNameEl = document.getElementById('accountMenuUsername');
+            if(userNameEl && user) userNameEl.textContent = user.username || user.email || 'Account';
             const signOut = document.getElementById('signOutHeader');
+
             if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'success'); window.location.href='index.html'; }); });
             const deactivate = document.getElementById('deactivateHeader');
             if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'success'); window.location.href='index.html'; }); }); });

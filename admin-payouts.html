@@ -161,7 +161,6 @@
                         <i class="fas fa-shopping-cart text-2xl"></i>
                         <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
                     </a>
-                    <a id="verifiedLabsBtn" href="verified-labs.html" class="bg-gray-700 hover:bg-gray-600 text-white px-5 py-2 rounded text-base font-medium hidden">Verified Labs</a>
 
                     <!-- Inline login form – shown only when NOT logged in -->
                     <div id="headerLoginForm" class="hidden items-center gap-2">
@@ -176,18 +175,47 @@
                         <a href="signup-login.html?forgot=1" class="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap">Forgot account?</a>
                     </div>
 
-                    <!-- Account icon – shown only when logged in -->
-                    <div id="headerAccountSection" class="relative hidden">
-                        <a href="account-details.html" id="accountIconHeader" class="h-11 w-11 rounded-full overflow-hidden border border-gray-600 inline-block">
-                            <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover">
-                        </a>
-                        <button id="accountBtnHeader" class="ml-2 hidden">Account</button>
-                        <div id="accountDropdownHeader" class="nav-dropdown absolute right-0 mt-2 w-48 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl p-2 z-50 hidden">
-                            <a href="account-details.html" class="block px-3 py-2 text-sm text-gray-200 hover:bg-[#2a2e38]">View Account</a>
-                            <a href="seller-dashboard.html" class="block px-3 py-2 text-sm text-gray-200 hover:bg-[#2a2e38]">Manage Products</a>
-                            <a href="settings.html" class="block px-3 py-2 text-sm text-gray-200 hover:bg-[#2a2e38]">Settings</a>
-                            <a href="#" id="signOutHeader" class="block px-3 py-2 text-sm text-red-400 hover:bg-[#2a2e38]">Sign Out</a>
-                            <a href="#" id="deactivateHeader" class="block px-3 py-2 text-sm text-yellow-300 hover:bg-[#2a2e38]">Deactivate Account</a>
+                    <!-- Account &amp; Lists hover menu – shown only when logged in -->
+                    <div id="headerAccountSection" class="relative hidden nav-dropdown-trigger">
+                        <button class="flex flex-col items-center text-gray-700 hover:text-black px-2 py-2 rounded-md cursor-pointer">
+                            <i class="fas fa-user text-2xl"></i>
+                            <span class="text-xs font-medium mt-0.5 whitespace-nowrap">Account &amp; Lists</span>
+                        </button>
+                        <div class="nav-dropdown absolute right-0 top-full mt-1 w-72 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
+                            <!-- User header -->
+                            <div class="px-4 py-3 bg-[#181b21] border-b border-gray-700 flex items-center gap-3">
+                                <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-10 w-10 rounded-full object-cover border border-gray-600 flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <p id="accountMenuUsername" class="text-sm font-semibold text-white truncate">Account</p>
+                                    <a href="account-details.html" class="text-xs text-cyan-400 hover:text-cyan-300">My Profile</a>
+                                </div>
+                                <a href="#" id="signOutHeader" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-2">Sign Out</a>
+                            </div>
+                            <!-- Support -->
+                            <div class="px-4 py-2 bg-[#181b21] border-b border-gray-700"><p class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Support</p></div>
+                            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-question-circle text-cyan-400 w-4 text-center"></i>Help Center</a>
+                            <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-truck text-cyan-400 w-4 text-center"></i>Track an Order</a>
+                            <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-shield-alt text-cyan-400 w-4 text-center"></i>Privacy &amp; Security</a>
+                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-comment-alt text-cyan-400 w-4 text-center"></i>Feedback</a>
+                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-certificate text-cyan-400 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-undo-alt text-cyan-400 w-4 text-center"></i>Return An Item</a>
+                            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-sign-in-alt text-cyan-400 w-4 text-center"></i>Login/Register</a>
+                            <!-- Orders & Returns -->
+                            <div class="px-4 py-2 bg-[#181b21] border-t border-gray-700 border-b border-gray-700"><p class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Orders &amp; Returns</p></div>
+                            <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-box text-cyan-400 w-4 text-center"></i>Order History</a>
+                            <a href="account-details.html#returns" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-exchange-alt text-cyan-400 w-4 text-center"></i>Returns History</a>
+                            <a href="account-details.html#wishlists" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-heart text-cyan-400 w-4 text-center"></i>Wish Lists</a>
+                            <a href="account-details.html#notifications" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-bell text-cyan-400 w-4 text-center"></i>Email Notifications</a>
+                            <a href="account-details.html#buildlists" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-list text-cyan-400 w-4 text-center"></i>My Build Lists</a>
+                            <a href="account-details.html#buildshowcase" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-award text-cyan-400 w-4 text-center"></i>My Build Showcase</a>
+                            <!-- Zorexium -->
+                            <div class="px-4 py-2 bg-[#181b21] border-t border-gray-700 border-b border-gray-700"><p class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Zorexium</p></div>
+                            <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-info-circle text-cyan-400 w-4 text-center"></i>About Us</a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-newspaper text-cyan-400 w-4 text-center"></i>Newsroom</a>
+                            <a href="community-hub.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-blog text-cyan-400 w-4 text-center"></i>Blog/Content</a>
+                            <a href="sell-on-zorexium.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-store text-cyan-400 w-4 text-center"></i>Sell on Zorexium</a>
+                            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-tachometer-alt text-cyan-400 w-4 text-center"></i>Seller Portal</a>
+                            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors"><i class="fas fa-tools text-cyan-400 w-4 text-center"></i>Seller Tools</a>
                         </div>
                     </div>
                 </div>
@@ -635,13 +663,12 @@
                 }
             }catch(e){/* ignore */}
 
-            // Account dropdown toggle
-            const acctIcon = document.getElementById('accountIconHeader');
-            const acctDrop = document.getElementById('accountDropdownHeader');
-            if(acctIcon && acctDrop){
-                acctIcon.addEventListener('click', (e)=>{ e.preventDefault(); acctDrop.classList.toggle('hidden'); });
-            }
+            // Account menu username
+            var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
+            var userNameEl = document.getElementById('accountMenuUsername');
+            if(userNameEl && user) userNameEl.textContent = user.username || user.email || 'Account';
             const signOut = document.getElementById('signOutHeader');
+
             if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'success'); window.location.href='index.html'; }); });
             const deactivate = document.getElementById('deactivateHeader');
             if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'success'); window.location.href='index.html'; }); }); });
