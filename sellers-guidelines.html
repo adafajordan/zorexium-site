@@ -135,6 +135,11 @@
 
                 <!-- Right Side Actions -->
                 <div class="flex items-center space-x-5">
+                    <!-- Account &amp; Lists link – shown only when NOT logged in (replaces cart icon) -->
+                    <a id="headerAccountListsGuest" href="signup-login.html" class="hidden items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md">
+                        <i class="fas fa-user text-2xl"></i>
+                        <span class="text-sm font-medium whitespace-nowrap">Account &amp; Lists</span>
+                    </a>
                     <a id="headerCartLink" href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
                         <i class="fas fa-shopping-cart text-2xl"></i>
                         <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
@@ -380,16 +385,19 @@
             var loginForm    = document.getElementById('headerLoginForm');
             var acctSection  = document.getElementById('headerAccountSection');
             var cartLink     = document.getElementById('headerCartLink');
+            var acctListsGuest = document.getElementById('headerAccountListsGuest');
             var userDropHead = document.getElementById('headerUserDropdownHead');
             var verifiedBtn  = document.getElementById('verifiedLabsBtn');
             if(loggedIn){
                 if(cartLink)   { cartLink.classList.remove('hidden'); }
+                if(acctListsGuest){ acctListsGuest.classList.add('hidden'); }
                 if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
                 if(loginForm)  { loginForm.classList.add('hidden'); }
                 if(userDropHead){ userDropHead.classList.remove('hidden'); }
                 if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
             } else {
                 if(cartLink)   { cartLink.classList.add('hidden'); }
+                if(acctListsGuest){ acctListsGuest.classList.remove('hidden'); acctListsGuest.classList.add('flex'); }
                 if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
                 if(loginForm)  { loginForm.classList.add('hidden'); }
                 if(userDropHead){ userDropHead.classList.add('hidden'); }
