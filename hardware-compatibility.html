@@ -129,34 +129,13 @@
                     <!-- Community Hub -->
                     <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
 
-                    <!-- Sell Hardware (hover or click to reveal) -->
-                    <div class="relative nav-dropdown-trigger" id="sellHardwareDropdown">
-                        <a href="sell-hardware.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
-                        <button onclick="toggleDropdown('sellHardwareDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Sell Hardware menu">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-64 bg-[#20232a] border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden">
-                            <div class="px-4 py-2 bg-[#181b21] border-b border-gray-700"><p class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Marketplace</p></div>
-                            <a href="marketplace.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-store text-cyan-400 w-4 text-center"></i>Browse Products
-                            </a>
-                            <div class="px-4 py-2 bg-[#181b21] border-b border-gray-700 border-t border-gray-700"><p class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Seller Tools</p></div>
-                            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-list-alt text-cyan-400 w-4 text-center"></i>Listing Wizard
-                            </a>
-                            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-tachometer-alt text-cyan-400 w-4 text-center"></i>Seller Dashboard
-                            </a>
-                            <a href="fulfillment-testing.html" class="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2a2e38] hover:text-white transition-colors">
-                                <i class="fas fa-truck-loading text-cyan-400 w-4 text-center"></i>Fulfillment & Testing
-                            </a>
-                        </div>
-                    </div>
+                    <!-- Sell Hardware -->
+                    <a id="sellHardwareLink" href="sell-on-zorexium.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
                 </nav>
 
                 <!-- Right Side Actions -->
                 <div class="flex items-center space-x-5">
-                    <a href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
+                    <a id="headerCartLink" href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
                         <i class="fas fa-shopping-cart text-2xl"></i>
                         <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
                     </a>
@@ -182,7 +161,7 @@
                         </button>
                         <div class="nav-dropdown absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
                             <!-- User header -->
-                            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
+                            <div id="headerUserDropdownHead" class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
                                 <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-10 w-10 rounded-full object-cover border border-gray-300 flex-shrink-0">
                                 <div class="flex-1 min-w-0">
                                     <p id="accountMenuUsername" class="text-sm font-semibold text-gray-900 truncate">Account</p>
@@ -350,15 +329,30 @@
             var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
             var loginForm    = document.getElementById('headerLoginForm');
             var acctSection  = document.getElementById('headerAccountSection');
+            var cartLink     = document.getElementById('headerCartLink');
+            var userDropHead = document.getElementById('headerUserDropdownHead');
             var verifiedBtn  = document.getElementById('verifiedLabsBtn');
             if(loggedIn){
+                if(cartLink)   { cartLink.classList.remove('hidden'); }
                 if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
                 if(loginForm)  { loginForm.classList.add('hidden'); }
+                if(userDropHead){ userDropHead.classList.remove('hidden'); }
                 if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
             } else {
-                if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
-                if(acctSection){ acctSection.classList.add('hidden'); }
+                if(cartLink)   { cartLink.classList.add('hidden'); }
+                if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
+                if(loginForm)  { loginForm.classList.add('hidden'); }
+                if(userDropHead){ userDropHead.classList.add('hidden'); }
                 if(verifiedBtn){ verifiedBtn.classList.add('hidden'); }
+            }
+
+            // Sell Hardware link: sellers → seller-dashboard, others → sell-on-zorexium
+            var sellHardwareLink = document.getElementById('sellHardwareLink');
+            if(sellHardwareLink && loggedIn){
+                ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller')
+                    .then(function(r){ return r.ok ? r.json() : {isSeller:false}; })
+                    .then(function(data){ if(data.isSeller) sellHardwareLink.href = 'seller-dashboard.html'; })
+                    .catch(function(){});
             }
 
             // Cart badge update (requires auth)
