@@ -154,11 +154,63 @@
 
                 <!-- Right Side Actions -->
                 <div class="flex items-center space-x-4">
-                    <a href="shopping-cart.html" class="text-gray-300 hover:text-white relative flex items-center gap-2 px-3 py-1 rounded-md">
-                        <i class="fas fa-shopping-cart text-lg"></i>
+                    <!-- Account &amp; Lists hover menu – shown only when NOT logged in (replaces cart icon) -->
+                    <div id="headerAccountListsGuest" class="relative hidden nav-dropdown-trigger">
+                        <button class="flex items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md cursor-pointer">
+                            <i class="fas fa-user text-2xl"></i>
+                            <span class="text-sm font-medium whitespace-nowrap">Account &amp; Lists</span>
+                        </button>
+                        <div class="nav-dropdown absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
+                            <!-- Sign In section -->
+                            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 text-center">
+                                <a href="signup-login.html" class="block w-full bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors mb-2">Sign In</a>
+                                <p class="text-xs text-gray-500">New to Zorexium? <a href="signup-login.html?register=1" class="text-cyan-600 hover:text-cyan-700 font-medium">Create account</a></p>
+                            </div>
+                            <!-- Support -->
+                            <div class="px-4 py-2 bg-gray-50 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Support</p></div>
+                            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
+                            <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
+                            <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
+                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
+                            <!-- Orders & Returns -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
+                            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
+                            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-exchange-alt text-cyan-600 w-4 text-center"></i>Returns History</a>
+                            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
+                            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
+                            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
+                            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
+                            <!-- Zorexium -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
+                            <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
+                            <a href="community-hub.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="sell-on-zorexium.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-store text-cyan-600 w-4 text-center"></i>Sell on Zorexium</a>
+                            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tachometer-alt text-cyan-600 w-4 text-center"></i>Seller Portal</a>
+                            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tools text-cyan-600 w-4 text-center"></i>Seller Tools</a>
+                        </div>
+                    </div>
+                    <a id="headerCartLink" href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
+                        <i class="fas fa-shopping-cart text-2xl"></i>
                         <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
                     </a>
-                    <!-- Account & Lists hover menu – shown only when logged in -->
+
+                    <!-- Inline login form – shown only when NOT logged in -->
+                    <div id="headerLoginForm" class="hidden items-center gap-2">
+                        <input id="headerLoginEmail" type="text" placeholder="Email or username"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-40">
+                        <input id="headerLoginPassword" type="password" placeholder="Password"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-36">
+                        <button id="headerLoginBtn" type="button"
+                            class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors whitespace-nowrap">
+                            Log In
+                        </button>
+                        <a href="signup-login.html?forgot=1" class="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap">Forgot account?</a>
+                    </div>
+
+                    <!-- Account &amp; Lists hover menu – shown only when logged in -->
                     <div id="headerAccountSection" class="relative hidden nav-dropdown-trigger flex-1">
                         <button class="flex flex-row items-center gap-2 text-gray-300 hover:text-white px-3 py-2 rounded-md cursor-pointer w-full">
                             <i class="fas fa-user text-xl"></i>
@@ -593,17 +645,34 @@
         <script>
         // Header account/cart wiring and 'dokan' sweep
         (function(){
+            var BACKEND_URL = 'https://zorexium-backend.onrender.com';
             var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
+            var loginForm    = document.getElementById('headerLoginForm');
             var acctSection  = document.getElementById('headerAccountSection');
+            var cartLink     = document.getElementById('headerCartLink');
+            var acctListsGuest = document.getElementById('headerAccountListsGuest');
+            var userDropHead = document.getElementById('headerUserDropdownHead');
+            var verifiedBtn  = document.getElementById('verifiedLabsBtn');
             if(loggedIn){
+                if(cartLink)   { cartLink.classList.remove('hidden'); }
+                if(acctListsGuest){ acctListsGuest.classList.add('hidden'); }
                 if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
+                if(loginForm)  { loginForm.classList.add('hidden'); }
+                if(userDropHead){ userDropHead.classList.remove('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
             } else {
-                if(acctSection){ acctSection.classList.add('hidden'); }
+                if(cartLink)   { cartLink.classList.add('hidden'); }
+                if(acctListsGuest){ acctListsGuest.classList.remove('hidden'); acctListsGuest.classList.add('flex'); }
+                if(acctSection){ acctSection.classList.add('hidden'); acctSection.classList.remove('flex'); }
+                if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
+                if(userDropHead){ userDropHead.classList.add('hidden'); }
+                if(verifiedBtn){ verifiedBtn.classList.add('hidden'); }
             }
-            // Cart badge update (requires auth via cookie)
+
+            // Cart badge update (requires auth)
             try{
-                if(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()){
-                    fetch('https://zorexium-backend.onrender.com/api/cart', { credentials: 'include' })
+                if(loggedIn){
+                    fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                         .then(function(r){ return r.ok ? r.json() : null; })
                         .then(function(data){
                             var count = (data && data.items) ? data.items.length : 0;
@@ -618,9 +687,40 @@
             var userNameEl = document.getElementById('accountMenuUsername');
             if(userNameEl && user) userNameEl.textContent = user.username || user.email || 'Account';
             const signOut = document.getElementById('signOutHeader');
-            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'info'); window.location.href='index (1).html'; }); });
+            if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'info'); window.location.href='index.html'; }); });
             const deactivate = document.getElementById('deactivateHeader');
-            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'info'); window.location.href='index (1).html'; }); }); });
+            if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'info'); window.location.href='index.html'; }); }); });
+
+            // Inline header login handler
+            async function doHeaderLogin(){
+                var email    = document.getElementById('headerLoginEmail').value.trim();
+                var password = document.getElementById('headerLoginPassword').value;
+                if(!email || !password){ ZrxNotify.showNotification('Please enter your email/username and password.', 'error'); return; }
+                try{
+                    var res  = await fetch(BACKEND_URL + '/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ email: email, password: password })
+                    });
+                    var data = await res.json();
+                    if(!res.ok){ ZrxNotify.showNotification(data.error || 'Invalid email or password.', 'error'); return; }
+                    if(data.token){
+                        try{
+                            localStorage.setItem('authToken', data.token);
+                            var userInfo = data.user ? { email: data.user.email, username: data.user.firstName || data.user.email } : { email: email, username: email };
+                            localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+                        }catch(ex){}
+                    }
+                    window.location.reload();
+                }catch(err){
+                    ZrxNotify.showNotification('Login failed. Please check your connection and try again.', 'error');
+                }
+            }
+            var loginBtn = document.getElementById('headerLoginBtn');
+            if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
+            var pwdInput = document.getElementById('headerLoginPassword');
+            if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
 
             // Sweep any visible 'dokan' occurrences on page
             document.body.innerHTML = document.body.innerHTML.replace(/dokan/gi, '');
