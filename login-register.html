@@ -20,7 +20,8 @@
     .lr-social-btn { display: flex; align-items: center; justify-content: center; gap-8px; gap: 8px; width: 100%; padding: 9px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-weight: 500; color: #374151; background: #fff; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
     .lr-social-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
     .lr-feature-card { background: #f0fdff; border: 1px solid #a5f3fc; border-radius: 8px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
-    .lr-strength-bar { height: 4px; border-radius: 2px; flex: 1; background: #e5e7eb; transition: background 0.3s; }
+    .lr-btn-secondary { width: 100%; background: #6b7280; color: #fff; font-weight: 700; padding: 11px; border-radius: 6px; font-size: 15px; cursor: pointer; border: none; transition: background 0.15s; }
+    .lr-btn-secondary:hover { background: #4b5563; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -135,7 +136,7 @@
             <button onclick="lrContinueWithEmail()" class="lr-btn-primary">
               Sign In
             </button>
-            <button onclick="lrRequestOTC()" class="lr-btn-primary" style="background:#6b7280;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">
+            <button onclick="lrRequestOTC()" class="lr-btn-secondary">
               Get One-Time Sign In Code
             </button>
           </div>

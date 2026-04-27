@@ -277,7 +277,7 @@
 
                 <!-- Comments textarea -->
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Please enter your comments about this page</label>
+                    <label for="feedbackComments" class="block text-sm font-medium text-gray-700 mb-2">Please enter your comments about this page</label>
                     <textarea id="feedbackComments" rows="5" maxlength="1000"
                         class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
                         placeholder="Share your thoughts..."
@@ -295,8 +295,8 @@
 
                 <!-- Satisfaction rating -->
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-3">How satisfied were you with your visit?</label>
-                    <div class="flex flex-wrap gap-2" id="satisfactionGroup">
+                    <p id="satisfactionLabel" class="block text-sm font-medium text-gray-700 mb-3">How satisfied were you with your visit?</p>
+                    <div class="flex flex-wrap gap-2" id="satisfactionGroup" role="radiogroup" aria-labelledby="satisfactionLabel">
                         <label class="satisfaction-opt flex flex-col items-center gap-1 cursor-pointer">
                             <input type="radio" name="satisfaction" value="very-dissatisfied" class="sr-only">
                             <span class="px-3 py-2 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition select-none satisfaction-label">😞 Very dissatisfied</span>
