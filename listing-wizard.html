@@ -908,6 +908,10 @@
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let currentStep = 1;
   const totalSteps = 7;
+  const MAX_IMAGES = 9;
+  const MAX_IMAGE_SIZE_MB = 10;
+  const MAX_DOCS_SIZE_MB = 25;
+  const MAX_FEATURE_BULLETS = 10;
   let uploadedImages = []; // [{dataUrl, name}]
   let uploadedDocs   = []; // [{name, size}]
   let dragSrcIndex   = null;
@@ -1091,8 +1095,8 @@
   }
   function processImageFiles(files) {
     files.forEach(file => {
-      if (uploadedImages.length >= 9) { ZrxNotify.showNotification('Maximum 9 images allowed.', 'error'); return; }
-      if (file.size > 10 * 1024 * 1024) { ZrxNotify.showNotification(file.name + ' exceeds 10MB limit.', 'error'); return; }
+      if (uploadedImages.length >= MAX_IMAGES) { ZrxNotify.showNotification('Maximum ' + MAX_IMAGES + ' images allowed.', 'error'); return; }
+      if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) { ZrxNotify.showNotification(file.name + ' exceeds ' + MAX_IMAGE_SIZE_MB + 'MB limit.', 'error'); return; }
       const reader = new FileReader();
       reader.onload = (e) => { uploadedImages.push({ dataUrl: e.target.result, name: file.name }); renderImageGrid(); };
       reader.readAsDataURL(file);
@@ -1147,7 +1151,7 @@
   // ── Feature bullets ───────────────────────────────────────────────────────────
   function addFeatureBullet() {
     const container = document.getElementById('featureBulletsContainer');
-    if (container.children.length >= 10) { ZrxNotify.showNotification('Maximum 10 feature bullets allowed.', 'error'); return; }
+    if (container.children.length >= MAX_FEATURE_BULLETS) { ZrxNotify.showNotification('Maximum ' + MAX_FEATURE_BULLETS + ' feature bullets allowed.', 'error'); return; }
     const row = document.createElement('div');
     row.className = 'bullet-row flex gap-2 items-center';
     row.innerHTML = `
@@ -1162,7 +1166,7 @@
   // ── Document upload ───────────────────────────────────────────────────────────
   function handleDocsUpload(event) {
     Array.from(event.target.files).forEach(file => {
-      if (file.size > 25 * 1024 * 1024) { ZrxNotify.showNotification(file.name + ' exceeds 25MB limit.', 'error'); return; }
+      if (file.size > MAX_DOCS_SIZE_MB * 1024 * 1024) { ZrxNotify.showNotification(file.name + ' exceeds ' + MAX_DOCS_SIZE_MB + 'MB limit.', 'error'); return; }
       uploadedDocs.push({ name: file.name, size: (file.size / 1024).toFixed(0) + ' KB' });
     });
     renderDocsPreview();
