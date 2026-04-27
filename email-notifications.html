@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Email Notifications - Zorexium Labs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+    .panel-nav-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #374151; transition: background 0.15s, color 0.15s; }
+    .panel-nav-link:hover, .panel-nav-link.active { background: #ecfeff; color: #0891b2; }
+    .panel-nav-link.active { font-weight: 600; }
+    .notif-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #f3f4f6; }
+    .notif-row:last-child { border-bottom: none; }
+    .toggle-track { width: 44px; height: 24px; background: #e5e7eb; border-radius: 12px; cursor: pointer; position: relative; transition: background 0.2s; }
+    .toggle-track.on { background: #22d3ee; }
+    .toggle-thumb { width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+    .toggle-track.on .toggle-thumb { left: 23px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="px-6"><div class="flex items-center h-20"><a href="index.html" class="flex items-center gap-3 no-underline">
+    <i class="fas fa-microchip text-cyan-400 text-4xl"></i>
+    <div class="flex flex-col">
+      <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
+      <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+    </div>
+  </a></div></div>
+</header>
+
+<main class="flex-1 bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200 px-6 py-5">
+    <nav class="text-xs text-gray-400 mb-1">
+      <a href="index.html" class="hover:text-cyan-500">Home</a><span class="mx-1">/</span>
+      <a href="account-details.html" class="hover:text-cyan-500">My Account</a><span class="mx-1">/</span>
+      <span class="text-cyan-600">Email Notifications</span>
+    </nav>
+    <h1 class="text-xl font-bold text-gray-900"><i class="fas fa-bell text-cyan-500 mr-2"></i>Email Notifications</h1>
+  </div>
+
+  <div class="flex min-h-0">
+    <aside class="w-56 flex-shrink-0 bg-white border-r border-gray-200 p-4 sticky top-0 self-start">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">My Account</p>
+      <nav class="space-y-0.5">
+        <a href="account-details.html" class="panel-nav-link"><i class="fas fa-user text-cyan-400 w-4 text-center"></i>My Profile</a>
+        <a href="order-history.html" class="panel-nav-link"><i class="fas fa-box text-cyan-400 w-4 text-center"></i>Order History</a>
+        <a href="returns-history.html" class="panel-nav-link"><i class="fas fa-exchange-alt text-cyan-400 w-4 text-center"></i>Returns History</a>
+        <a href="wish-lists.html" class="panel-nav-link"><i class="fas fa-heart text-cyan-400 w-4 text-center"></i>Wish Lists</a>
+        <a href="build-lists.html" class="panel-nav-link"><i class="fas fa-list text-cyan-400 w-4 text-center"></i>My Build Lists</a>
+        <a href="build-showcase.html" class="panel-nav-link"><i class="fas fa-award text-cyan-400 w-4 text-center"></i>Build Showcase</a>
+        <a href="email-notifications.html" class="panel-nav-link active"><i class="fas fa-bell text-cyan-400 w-4 text-center"></i>Notifications</a>
+      </nav>
+    </aside>
+
+    <div class="flex-1 p-6">
+      <!-- Auth gate -->
+      <div id="enAuthGate" class="hidden text-center py-16 bg-white border border-gray-200 rounded-lg">
+        <i class="fas fa-lock text-4xl text-gray-300 mb-4 block"></i>
+        <p class="text-lg font-semibold text-gray-700 mb-1">Sign in to manage notifications</p>
+        <p class="text-sm text-gray-400 mb-5">Control which emails you receive from Zorexium.</p>
+        <a href="login-register.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-6 py-2.5 rounded-md transition-colors">Sign In / Register</a>
+      </div>
+
+      <!-- Notification settings -->
+      <div id="enContent" class="hidden space-y-4">
+
+        <!-- Orders -->
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <p class="text-xs font-bold text-cyan-600 uppercase tracking-widest">Orders &amp; Shipping</p>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Order Confirmation</p>
+              <p class="text-xs text-gray-400">Receive an email when your order is placed.</p>
+            </div>
+            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Shipping Updates</p>
+              <p class="text-xs text-gray-400">Get notified when your order ships and at delivery.</p>
+            </div>
+            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Return &amp; Refund Status</p>
+              <p class="text-xs text-gray-400">Updates when your return is received and refund issued.</p>
+            </div>
+            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+        </div>
+
+        <!-- Deals & Alerts -->
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <p class="text-xs font-bold text-cyan-600 uppercase tracking-widest">Deals &amp; Alerts</p>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Price Drop Alerts</p>
+              <p class="text-xs text-gray-400">When items on your Wish List drop in price.</p>
+            </div>
+            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Weekly Deals Digest</p>
+              <p class="text-xs text-gray-400">Top deals curated for your hardware interests.</p>
+            </div>
+            <div class="toggle-track" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Back-in-Stock Alerts</p>
+              <p class="text-xs text-gray-400">When a saved out-of-stock item becomes available.</p>
+            </div>
+            <div class="toggle-track" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+        </div>
+
+        <!-- Community & Account -->
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <p class="text-xs font-bold text-cyan-600 uppercase tracking-widest">Community &amp; Account</p>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Community Replies</p>
+              <p class="text-xs text-gray-400">When someone replies to your post in Community Hub.</p>
+            </div>
+            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Security Alerts</p>
+              <p class="text-xs text-gray-400">Sign-ins from new devices and password changes.</p>
+            </div>
+            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+          <div class="notif-row">
+            <div>
+              <p class="text-sm font-medium text-gray-800">Zorexium Newsletter</p>
+              <p class="text-xs text-gray-400">Monthly product highlights and platform news.</p>
+            </div>
+            <div class="toggle-track" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+          </div>
+        </div>
+
+        <div class="flex justify-end">
+          <button onclick="enSave()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-6 py-2 rounded-md transition-colors">Save Preferences</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  (function() {
+    var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
+    if (!isLoggedIn) {
+      document.getElementById('enAuthGate').classList.remove('hidden');
+    } else {
+      document.getElementById('enContent').classList.remove('hidden');
+    }
+  })();
+  function enToggle(track) {
+    track.classList.toggle('on');
+  }
+  function enSave() {
+    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Notification preferences saved!', 'success');
+    else alert('Notification preferences saved!');
+  }
+</script>
+</body>
+</html>

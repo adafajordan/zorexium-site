@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wish Lists - Zorexium Labs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+    .panel-nav-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #374151; transition: background 0.15s, color 0.15s; }
+    .panel-nav-link:hover, .panel-nav-link.active { background: #ecfeff; color: #0891b2; }
+    .panel-nav-link.active { font-weight: 600; }
+    .wish-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; transition: box-shadow 0.15s, border-color 0.15s; }
+    .wish-card:hover { box-shadow: 0 4px 16px rgba(34,211,238,0.1); border-color: #a5f3fc; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="px-6"><div class="flex items-center h-20"><a href="index.html" class="flex items-center gap-3 no-underline">
+    <i class="fas fa-microchip text-cyan-400 text-4xl"></i>
+    <div class="flex flex-col">
+      <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
+      <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+    </div>
+  </a></div></div>
+</header>
+
+<main class="flex-1 bg-gray-50">
+
+  <div class="bg-white border-b border-gray-200 px-6 py-5">
+    <nav class="text-xs text-gray-400 mb-1">
+      <a href="index.html" class="hover:text-cyan-500">Home</a><span class="mx-1">/</span>
+      <a href="account-details.html" class="hover:text-cyan-500">My Account</a><span class="mx-1">/</span>
+      <span class="text-cyan-600">Wish Lists</span>
+    </nav>
+    <div class="flex items-center justify-between">
+      <h1 class="text-xl font-bold text-gray-900"><i class="fas fa-heart text-cyan-500 mr-2"></i>Wish Lists</h1>
+      <button id="wlCreateBtn" onclick="wlCreateList()" class="hidden bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors">
+        <i class="fas fa-plus mr-1"></i> New List
+      </button>
+    </div>
+  </div>
+
+  <div class="flex min-h-0">
+    <aside class="w-56 flex-shrink-0 bg-white border-r border-gray-200 p-4 sticky top-0 self-start">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">My Account</p>
+      <nav class="space-y-0.5">
+        <a href="account-details.html" class="panel-nav-link"><i class="fas fa-user text-cyan-400 w-4 text-center"></i>My Profile</a>
+        <a href="order-history.html" class="panel-nav-link"><i class="fas fa-box text-cyan-400 w-4 text-center"></i>Order History</a>
+        <a href="returns-history.html" class="panel-nav-link"><i class="fas fa-exchange-alt text-cyan-400 w-4 text-center"></i>Returns History</a>
+        <a href="wish-lists.html" class="panel-nav-link active"><i class="fas fa-heart text-cyan-400 w-4 text-center"></i>Wish Lists</a>
+        <a href="build-lists.html" class="panel-nav-link"><i class="fas fa-list text-cyan-400 w-4 text-center"></i>My Build Lists</a>
+        <a href="build-showcase.html" class="panel-nav-link"><i class="fas fa-award text-cyan-400 w-4 text-center"></i>Build Showcase</a>
+        <a href="email-notifications.html" class="panel-nav-link"><i class="fas fa-bell text-cyan-400 w-4 text-center"></i>Notifications</a>
+      </nav>
+    </aside>
+
+    <div class="flex-1 p-6">
+      <!-- Auth gate -->
+      <div id="wlAuthGate" class="hidden text-center py-16 bg-white border border-gray-200 rounded-lg">
+        <i class="fas fa-lock text-4xl text-gray-300 mb-4 block"></i>
+        <p class="text-lg font-semibold text-gray-700 mb-1">Sign in to view your wish lists</p>
+        <p class="text-sm text-gray-400 mb-5">Save hardware you love and get price drop alerts.</p>
+        <a href="login-register.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-6 py-2.5 rounded-md transition-colors">Sign In / Register</a>
+      </div>
+
+      <!-- Content -->
+      <div id="wlContent" class="hidden">
+        <div class="text-center py-14 bg-white border border-gray-200 rounded-lg">
+          <i class="fas fa-heart text-5xl text-pink-200 mb-3 block"></i>
+          <p class="font-semibold text-gray-600 mb-1">Your wish lists are empty</p>
+          <p class="text-sm text-gray-400 mb-5">Browse the marketplace and click the <i class="fas fa-heart text-pink-400"></i> icon on any product to save it here.</p>
+          <a href="marketplace.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Browse Marketplace</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  (function() {
+    var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
+    if (!isLoggedIn) {
+      document.getElementById('wlAuthGate').classList.remove('hidden');
+    } else {
+      document.getElementById('wlContent').classList.remove('hidden');
+      document.getElementById('wlCreateBtn').classList.remove('hidden');
+    }
+  })();
+  function wlCreateList() {
+    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Wish list creation coming soon!', 'info');
+    else alert('Wish list creation coming soon!');
+  }
+</script>
+</body>
+</html>

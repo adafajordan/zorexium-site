@@ -1,0 +1,400 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login / Register - Zorexium Labs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+    .lr-tab-btn { padding: 10px 24px; font-size: 15px; font-weight: 600; border-bottom: 3px solid transparent; color: #6b7280; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .lr-tab-btn.active { color: #0891b2; border-bottom-color: #22d3ee; }
+    .lr-input { width: 100%; border: 1px solid #d1d5db; border-radius: 6px; padding: 10px 14px; font-size: 14px; color: #111827; background: #f9fafb; transition: border-color 0.15s, box-shadow 0.15s; }
+    .lr-input:focus { outline: none; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,0.12); background: #fff; }
+    .lr-btn-primary { width: 100%; background: #22d3ee; color: #fff; font-weight: 700; padding: 11px; border-radius: 6px; font-size: 15px; cursor: pointer; border: none; transition: background 0.15s; }
+    .lr-btn-primary:hover { background: #0891b2; }
+    .lr-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+    .lr-divider::before, .lr-divider::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+    .lr-social-btn { display: flex; align-items: center; justify-content: center; gap-8px; gap: 8px; width: 100%; padding: 9px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-weight: 500; color: #374151; background: #fff; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+    .lr-social-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+    .lr-feature-card { background: #f0fdff; border: 1px solid #a5f3fc; border-radius: 8px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
+    .lr-strength-bar { height: 4px; border-radius: 2px; flex: 1; background: #e5e7eb; transition: background 0.3s; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Top Navigation (stripped by SPA router) -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="px-6">
+    <div class="flex items-center h-20 gap-6">
+      <a href="index.html" class="flex items-center gap-3 no-underline">
+        <i class="fas fa-microchip text-cyan-400 text-4xl"></i>
+        <div class="flex flex-col">
+          <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
+          <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main class="flex-1 bg-gray-50">
+
+  <div class="flex flex-col md:flex-row min-h-0" style="min-height:calc(100vh - 80px)">
+
+    <!-- Left: branding / benefits panel -->
+    <div class="hidden md:flex flex-col justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white w-80 flex-shrink-0 p-8">
+      <div class="mb-8">
+        <i class="fas fa-microchip text-cyan-400 text-4xl mb-3"></i>
+        <h2 class="text-2xl font-bold mb-1">ZOREXIUM <span class="text-cyan-400">LABS</span></h2>
+        <p class="text-gray-400 text-sm">The trusted marketplace for hardware enthusiasts.</p>
+      </div>
+
+      <div class="space-y-4">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-cyan-500 bg-opacity-20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="fas fa-shield-alt text-cyan-400 text-sm"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-sm">Marketplace Guarantee</p>
+            <p class="text-gray-400 text-xs">Every purchase is protected by our buyer guarantee.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-cyan-500 bg-opacity-20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="fas fa-check-circle text-cyan-400 text-sm"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-sm">Verified Sellers</p>
+            <p class="text-gray-400 text-xs">Shop with confidence from lab-verified hardware vendors.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-cyan-500 bg-opacity-20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="fas fa-heart text-cyan-400 text-sm"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-sm">Wish Lists &amp; Build Lists</p>
+            <p class="text-gray-400 text-xs">Save your dream components and share your builds.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-cyan-500 bg-opacity-20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="fas fa-bell text-cyan-400 text-sm"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-sm">Price Drop Alerts</p>
+            <p class="text-gray-400 text-xs">Get notified when items on your Wish List go on sale.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-cyan-500 bg-opacity-20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <i class="fas fa-store text-cyan-400 text-sm"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-sm">Sell Your Hardware</p>
+            <p class="text-gray-400 text-xs">Set up your seller account and reach thousands of buyers.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 pt-6 border-t border-gray-700 text-xs text-gray-500">
+        By signing in you agree to our <a href="terms-of-service.html" class="text-cyan-400 hover:underline">Terms of Service</a>
+        and <a href="privacy-policy.html" class="text-cyan-400 hover:underline">Privacy Policy</a>.
+      </div>
+    </div>
+
+    <!-- Right: login / register form -->
+    <div class="flex-1 flex items-center justify-center p-6 md:p-12">
+      <div class="w-full max-w-md">
+
+        <!-- Tab bar -->
+        <div class="flex border-b border-gray-200 mb-6">
+          <button id="lrTabLogin" class="lr-tab-btn active" onclick="lrShowTab('login')">Sign In</button>
+          <button id="lrTabRegister" class="lr-tab-btn" onclick="lrShowTab('register')">Create Account</button>
+        </div>
+
+        <!-- ── LOGIN FORM ── -->
+        <div id="lrPanelLogin">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Welcome back</h2>
+          <p class="text-sm text-gray-500 mb-6">Sign in to access your orders, wish lists, and more.</p>
+
+          <div id="lrLoginError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600 flex items-center gap-2">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="lrLoginErrorMsg">Invalid email or password.</span>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email address or username</label>
+              <input id="lrLoginEmail" type="text" placeholder="you@example.com" class="lr-input" autocomplete="username">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Password
+                <a href="signup-login.html?forgot=1" class="float-right text-cyan-600 hover:text-cyan-700 font-normal text-xs">Forgot password?</a>
+              </label>
+              <div class="relative">
+                <input id="lrLoginPassword" type="password" placeholder="Your password" class="lr-input pr-10" autocomplete="current-password"
+                  onkeypress="if(event.key==='Enter') lrDoLogin()">
+                <button type="button" onclick="lrTogglePassword('lrLoginPassword', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" style="top:50%;transform:translateY(-50%);right:12px;">
+                  <i class="fas fa-eye text-sm"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <input id="lrRememberMe" type="checkbox" class="rounded border-gray-300 text-cyan-500">
+              <label for="lrRememberMe" class="text-sm text-gray-600">Remember me on this device</label>
+            </div>
+            <button onclick="lrDoLogin()" class="lr-btn-primary">
+              <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+            </button>
+          </div>
+
+          <div class="lr-divider text-xs text-gray-400">or</div>
+
+          <div class="space-y-2">
+            <button class="lr-social-btn" onclick="lrNotImplemented()">
+              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.06-.92-.15-1.17z" fill="#4285F4"/><path d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.76-2.7.76-2.08 0-3.84-1.4-4.47-3.29H1.87v2.07A8 8 0 0 0 8.98 17z" fill="#34A853"/><path d="M4.51 10.52A4.8 4.8 0 0 1 4.26 9c0-.53.09-1.04.25-1.52V5.41H1.87A8 8 0 0 0 1 9c0 1.29.31 2.5.87 3.59l2.64-2.07z" fill="#FBBC04"/><path d="M8.98 3.58c1.16 0 2.2.4 3.02 1.19l2.26-2.26C12.95.89 11.14.2 8.98.2A8 8 0 0 0 1.87 5.41l2.64 2.07C5.14 5 6.9 3.58 8.98 3.58z" fill="#EA4335"/></svg>
+              Continue with Google
+            </button>
+          </div>
+
+          <p class="text-center text-sm text-gray-500 mt-5">
+            New to Zorexium?
+            <button onclick="lrShowTab('register')" class="text-cyan-600 hover:text-cyan-700 font-semibold">Create an account</button>
+          </p>
+        </div>
+
+        <!-- ── REGISTER FORM ── -->
+        <div id="lrPanelRegister" class="hidden">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Create your account</h2>
+          <p class="text-sm text-gray-500 mb-6">Join thousands of hardware enthusiasts on Zorexium Labs.</p>
+
+          <div id="lrRegError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600 flex items-center gap-2">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="lrRegErrorMsg">Please check your information.</span>
+          </div>
+          <div id="lrRegSuccess" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-700 flex items-center gap-2">
+            <i class="fas fa-check-circle"></i>
+            Account created! Please check your email to verify.
+          </div>
+
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">First name</label>
+                <input id="lrRegFirst" type="text" placeholder="Alex" class="lr-input" autocomplete="given-name">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Last name</label>
+                <input id="lrRegLast" type="text" placeholder="Chen" class="lr-input" autocomplete="family-name">
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+              <input id="lrRegEmail" type="email" placeholder="you@example.com" class="lr-input" autocomplete="email">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input id="lrRegUsername" type="text" placeholder="coolbuilder42" class="lr-input" autocomplete="username">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <div class="relative">
+                <input id="lrRegPassword" type="password" placeholder="Min. 8 characters" class="lr-input pr-10" autocomplete="new-password"
+                  oninput="lrCheckStrength(this.value)">
+                <button type="button" onclick="lrTogglePassword('lrRegPassword', this)" class="absolute right-3 text-gray-400 hover:text-gray-600" style="top:50%;transform:translateY(-50%);right:12px;">
+                  <i class="fas fa-eye text-sm"></i>
+                </button>
+              </div>
+              <!-- Password strength meter -->
+              <div class="flex gap-1 mt-2" id="lrStrengthBars">
+                <div class="lr-strength-bar" id="lrBar1"></div>
+                <div class="lr-strength-bar" id="lrBar2"></div>
+                <div class="lr-strength-bar" id="lrBar3"></div>
+                <div class="lr-strength-bar" id="lrBar4"></div>
+              </div>
+              <p id="lrStrengthLabel" class="text-xs text-gray-400 mt-1"></p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Confirm password</label>
+              <input id="lrRegPasswordConfirm" type="password" placeholder="Repeat your password" class="lr-input" autocomplete="new-password">
+            </div>
+            <div class="flex items-start gap-2">
+              <input id="lrAgreeTerms" type="checkbox" class="rounded border-gray-300 text-cyan-500 mt-0.5">
+              <label for="lrAgreeTerms" class="text-sm text-gray-600">
+                I agree to the <a href="terms-of-service.html" class="text-cyan-600 hover:underline">Terms of Service</a>
+                and <a href="privacy-policy.html" class="text-cyan-600 hover:underline">Privacy Policy</a>.
+              </label>
+            </div>
+            <button onclick="lrDoRegister()" class="lr-btn-primary">
+              <i class="fas fa-user-plus mr-2"></i>Create Account
+            </button>
+          </div>
+
+          <p class="text-center text-sm text-gray-500 mt-5">
+            Already have an account?
+            <button onclick="lrShowTab('login')" class="text-cyan-600 hover:text-cyan-700 font-semibold">Sign in</button>
+          </p>
+        </div>
+
+      </div><!-- end card -->
+    </div><!-- end right panel -->
+
+  </div><!-- end flex row -->
+
+</main>
+
+<script>
+  var LR_BACKEND = 'https://zorexium-backend.onrender.com';
+
+  function lrShowTab(tab) {
+    var isLogin = (tab === 'login');
+    document.getElementById('lrPanelLogin').classList.toggle('hidden', !isLogin);
+    document.getElementById('lrPanelRegister').classList.toggle('hidden', isLogin);
+    document.getElementById('lrTabLogin').classList.toggle('active', isLogin);
+    document.getElementById('lrTabRegister').classList.toggle('active', !isLogin);
+  }
+
+  function lrTogglePassword(inputId, btn) {
+    var inp = document.getElementById(inputId);
+    var isPassword = inp.type === 'password';
+    inp.type = isPassword ? 'text' : 'password';
+    btn.querySelector('i').className = isPassword ? 'fas fa-eye-slash text-sm' : 'fas fa-eye text-sm';
+  }
+
+  function lrCheckStrength(pw) {
+    var score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    var colors = ['#ef4444', '#f97316', '#eab308', '#22c55e'];
+    var labels = ['Weak', 'Fair', 'Good', 'Strong'];
+    for (var i = 1; i <= 4; i++) {
+      var bar = document.getElementById('lrBar' + i);
+      bar.style.background = i <= score ? colors[score - 1] : '#e5e7eb';
+    }
+    var labelEl = document.getElementById('lrStrengthLabel');
+    labelEl.textContent = score > 0 ? labels[score - 1] : '';
+    labelEl.style.color = score > 0 ? colors[score - 1] : '#9ca3af';
+  }
+
+  async function lrDoLogin() {
+    var email = (document.getElementById('lrLoginEmail').value || '').trim();
+    var password = document.getElementById('lrLoginPassword').value;
+    var errEl = document.getElementById('lrLoginError');
+    var errMsg = document.getElementById('lrLoginErrorMsg');
+    errEl.classList.add('hidden');
+    if (!email || !password) {
+      errMsg.textContent = 'Please enter your email/username and password.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    try {
+      var res = await fetch(LR_BACKEND + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email, password: password })
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        errMsg.textContent = data.error || 'Invalid email or password.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (data.token) {
+        try {
+          localStorage.setItem('authToken', data.token);
+          var userInfo = data.user
+            ? { email: data.user.email, username: data.user.firstName || data.user.email }
+            : { email: email, username: email };
+          localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+        } catch (ex) {}
+      }
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Signed in successfully!', 'success');
+      window.location.href = 'index.html';
+    } catch (err) {
+      errMsg.textContent = 'Login failed. Please check your connection and try again.';
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  async function lrDoRegister() {
+    var first = (document.getElementById('lrRegFirst').value || '').trim();
+    var last = (document.getElementById('lrRegLast').value || '').trim();
+    var email = (document.getElementById('lrRegEmail').value || '').trim();
+    var username = (document.getElementById('lrRegUsername').value || '').trim();
+    var password = document.getElementById('lrRegPassword').value;
+    var confirm = document.getElementById('lrRegPasswordConfirm').value;
+    var agreed = document.getElementById('lrAgreeTerms').checked;
+    var errEl = document.getElementById('lrRegError');
+    var errMsg = document.getElementById('lrRegErrorMsg');
+    errEl.classList.add('hidden');
+    document.getElementById('lrRegSuccess').classList.add('hidden');
+
+    if (!first || !email || !username || !password) {
+      errMsg.textContent = 'Please fill in all required fields.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (password !== confirm) {
+      errMsg.textContent = 'Passwords do not match.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (password.length < 8) {
+      errMsg.textContent = 'Password must be at least 8 characters.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (!agreed) {
+      errMsg.textContent = 'Please agree to the Terms of Service to continue.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    try {
+      var res = await fetch(LR_BACKEND + '/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ firstName: first, lastName: last, email: email, username: username, password: password })
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        errMsg.textContent = data.error || 'Registration failed. Please try again.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      document.getElementById('lrRegSuccess').classList.remove('hidden');
+      setTimeout(function() { lrShowTab('login'); }, 2500);
+    } catch (err) {
+      errMsg.textContent = 'Registration failed. Please check your connection and try again.';
+      errEl.classList.remove('hidden');
+    }
+  }
+
+  function lrNotImplemented() {
+    if (typeof ZrxNotify !== 'undefined') {
+      ZrxNotify.showNotification('Social login coming soon!', 'info');
+    } else {
+      alert('Social login coming soon!');
+    }
+  }
+
+  // Pre-fill tab from URL param (?tab=register)
+  (function() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'register' || params.get('register') === '1') {
+        lrShowTab('register');
+      }
+    } catch (e) {}
+  })();
+</script>
+</body>
+</html>

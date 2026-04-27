@@ -61,6 +61,17 @@
         'sellers-guidelines.html',
         'community-guidelines.html',
         'trust-center.html',
+        // New dedicated panel pages
+        'help-center.html',
+        'login-register.html',
+        'signup-login.html',
+        'about.html',
+        'order-history.html',
+        'returns-history.html',
+        'wish-lists.html',
+        'email-notifications.html',
+        'build-lists.html',
+        'build-showcase.html',
     ];
 
     /**
