@@ -291,7 +291,7 @@
           <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Orders</span>
         </div>
         <nav>
-          <a href="order-history.html" class="tyo-nav-link active"><i class="fas fa-box-open w-4 text-center text-cyan-500"></i>Order History</a>
+          <a href="track-your-order.html" class="tyo-nav-link active"><i class="fas fa-box-open w-4 text-center text-cyan-500"></i>Order History</a>
           <a href="#" class="tyo-nav-link"><i class="fas fa-file-alt w-4 text-center text-gray-400"></i>Digital Orders</a>
           <a href="#" class="tyo-nav-link"><i class="fas fa-sync-alt w-4 text-center text-gray-400"></i>Subscription Orders</a>
           <a href="returns-history.html" class="tyo-nav-link"><i class="fas fa-exchange-alt w-4 text-center text-gray-400"></i>Return Status / History</a>
@@ -575,7 +575,8 @@
         if (!profile) return;
         // Update username with real firstName if available
         if (nameEl && (profile.firstName || profile.lastName)) {
-          nameEl.textContent = (profile.firstName || '') + (profile.lastName ? ' ' + profile.lastName : '') || nameEl.textContent;
+          var fullName = ((profile.firstName || '') + (profile.lastName ? ' ' + profile.lastName : '')).trim();
+          if (fullName) nameEl.textContent = fullName;
         }
         var daysEl = document.getElementById('tyoMemberDays');
         if (daysEl && profile.createdAt) {
