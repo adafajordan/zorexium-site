@@ -205,15 +205,15 @@
         // When filterHomeProducts is available (home panel is shown) intercept
         // category/subcategory link clicks and filter the home grid in-place
         // instead of loading the full marketplace page.
-        if (href.indexOf('marketplace.html?category=') !== -1 &&
+        if (href.includes('marketplace.html?category=') &&
                 typeof window.filterHomeProducts === 'function') {
-            var qStart = href.indexOf('?');
-            var params = new URLSearchParams(qStart !== -1 ? href.slice(qStart + 1) : '');
+            var params = new URLSearchParams(href.split('?')[1] || '');
             var categoryKey = params.get('category') || '';
             if (categoryKey) {
                 var subKey = params.get('sub') || '';
                 var subSpan = link.querySelector('span.text-xs');
-                var label = (subSpan ? subSpan.textContent : link.textContent).trim() || categoryKey;
+                var subSpanText = subSpan ? subSpan.textContent.trim() : '';
+                var label = (subSpanText || link.textContent.trim()) || categoryKey;
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 window.filterHomeProducts(categoryKey, subKey, label);
