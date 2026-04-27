@@ -8,22 +8,55 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
-    .hc-nav-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #374151; cursor: pointer; transition: background 0.15s, color 0.15s; }
-    .hc-nav-link:hover, .hc-nav-link.active { background: #ecfeff; color: #0891b2; }
-    .hc-nav-link.active { font-weight: 600; border-left: 3px solid #22d3ee; border-radius: 0 6px 6px 0; }
-    .hc-article-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
-    .hc-article-card:hover { box-shadow: 0 4px 16px rgba(34,211,238,0.12); border-color: #22d3ee; }
-    .hc-topic-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; cursor: pointer; transition: all 0.15s; text-align: center; }
-    .hc-topic-card:hover { background: #ecfeff; border-color: #22d3ee; }
-    .hc-search input { border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px 16px 12px 46px; font-size: 16px; width: 100%; transition: border-color 0.15s; }
-    .hc-search input:focus { outline: none; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,0.12); }
-    .faq-item { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
-    .faq-question { padding: 14px 16px; background: #f9fafb; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 500; font-size: 14px; }
-    .faq-answer { padding: 14px 16px; font-size: 14px; color: #4b5563; background: #fff; border-top: 1px solid #e5e7eb; display: none; }
-    .faq-item.open .faq-answer { display: block; }
-    .faq-item.open .faq-chevron { transform: rotate(180deg); }
-    .faq-chevron { transition: transform 0.2s; color: #9ca3af; }
+    body { font-family: 'Inter', sans-serif; background-color: #f9fafb; color: #111827; }
+    /* Quick action cards */
+    .hc-action-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 16px 18px; cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s;
+      display: flex; align-items: flex-start; gap: 14px; text-decoration: none; color: inherit;
+    }
+    .hc-action-card:hover { box-shadow: 0 4px 16px rgba(34,211,238,0.14); border-color: #22d3ee; }
+    .hc-action-icon {
+      width: 40px; height: 40px; border-radius: 8px; background: #ecfeff;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    /* Help topics grid */
+    .hc-topic-col { break-inside: avoid; }
+    .hc-topic-header {
+      font-size: 12px; font-weight: 700; color: #0891b2;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 2px solid #22d3ee; padding-bottom: 6px; margin-bottom: 8px;
+    }
+    .hc-topic-list { list-style: none; padding: 0; margin: 0 0 4px 0; }
+    .hc-topic-list li { padding: 3px 0; }
+    .hc-topic-list li a {
+      font-size: 13px; color: #374151; text-decoration: none;
+      display: inline-flex; align-items: baseline; gap: 5px;
+      transition: color 0.15s;
+    }
+    .hc-topic-list li a::before { content: '\2022'; color: #22d3ee; font-size: 14px; flex-shrink: 0; }
+    .hc-topic-list li a:hover { color: #0891b2; text-decoration: underline; }
+    /* Search */
+    .hc-search-wrap { position: relative; max-width: 600px; margin: 0 auto; }
+    .hc-search-input {
+      border: 2px solid #e5e7eb; border-radius: 8px;
+      padding: 13px 44px 13px 46px; font-size: 15px; width: 100%;
+      transition: border-color 0.15s; background: #fff;
+    }
+    .hc-search-input:focus { outline: none; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,0.12); }
+    #hcSearchResults {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      margin-top: 6px; overflow: hidden; max-width: 600px; margin-left: auto; margin-right: auto;
+    }
+    .hc-search-result-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+      width: 100%; text-align: left; border-bottom: 1px solid #f3f4f6;
+      background: #fff; cursor: pointer; transition: background 0.1s;
+      text-decoration: none; color: inherit;
+    }
+    .hc-search-result-item:last-child { border-bottom: none; }
+    .hc-search-result-item:hover { background: #f0fdff; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -43,486 +76,309 @@
   </div>
 </header>
 
-<main class="flex-1 bg-gray-50">
+<main class="flex-1">
 
-  <!-- Hero Search Banner -->
-  <div class="bg-white border-b border-gray-200 px-6 py-8">
-    <div class="max-w-3xl mx-auto text-center">
-      <h1 class="text-2xl font-bold text-gray-900 mb-1">
-        <i class="fas fa-question-circle text-cyan-500 mr-2"></i>Help Center
-      </h1>
-      <p class="text-gray-500 text-sm mb-5">How can we help you today?</p>
-      <div class="hc-search relative">
-        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style="top:50%;transform:translateY(-50%);left:14px;"></i>
-        <input id="hcSearchInput" type="text" placeholder="Search articles, FAQs, and guides…"
-          oninput="hcSearch(this.value)">
+  <!-- Hero / Search Banner -->
+  <div class="bg-gradient-to-b from-cyan-50 to-white border-b border-gray-200 px-6 py-10">
+    <div class="max-w-2xl mx-auto text-center">
+      <h1 class="text-3xl font-bold text-gray-900 mb-6">How can we help?</h1>
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2"
+         style="max-width:600px;margin-left:auto;margin-right:auto;text-align:left;">Search For</p>
+      <div class="hc-search-wrap">
+        <i class="fas fa-search text-gray-400"
+           style="position:absolute;left:14px;top:50%;transform:translateY(-50%);pointer-events:none;"></i>
+        <input id="hcSearchInput" type="text" class="hc-search-input"
+               placeholder="Search the knowledge base..."
+               oninput="hcHandleSearch(this.value)" autocomplete="off">
+        <i id="hcSearchSpinner" class="fas fa-spinner fa-spin text-cyan-400"
+           style="position:absolute;right:14px;top:50%;transform:translateY(-50%);display:none;"></i>
       </div>
-      <div id="hcSearchResults" class="hidden mt-4 text-left space-y-2 max-w-xl mx-auto"></div>
+      <p id="hcSearchingText" class="hidden mt-2 text-sm text-cyan-600 font-medium">
+        <i class="fas fa-circle-notch fa-spin mr-1"></i>Searching...
+      </p>
+      <div id="hcSearchResults" class="hidden mt-1 text-left"></div>
     </div>
   </div>
 
-  <!-- Panel body: inner sidebar + content -->
-  <div class="flex min-h-0" style="min-height:calc(100vh - 250px)">
+  <div class="max-w-5xl mx-auto px-4 py-8">
 
-    <!-- Inner sidebar (category nav) -->
-    <aside class="w-56 flex-shrink-0 bg-white border-r border-gray-200 p-4 sticky top-0 self-start">
-      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Topics</p>
-      <nav class="space-y-0.5" id="hcSideNav">
-        <button onclick="hcShowSection('getting-started')" class="hc-nav-link active w-full text-left" data-section="getting-started">
-          <i class="fas fa-rocket text-cyan-400 w-4 text-center"></i> Getting Started
-        </button>
-        <button onclick="hcShowSection('orders')" class="hc-nav-link w-full text-left" data-section="orders">
-          <i class="fas fa-box text-cyan-400 w-4 text-center"></i> Orders &amp; Shipping
-        </button>
-        <button onclick="hcShowSection('returns')" class="hc-nav-link w-full text-left" data-section="returns">
-          <i class="fas fa-undo-alt text-cyan-400 w-4 text-center"></i> Returns &amp; Refunds
-        </button>
-        <button onclick="hcShowSection('account')" class="hc-nav-link w-full text-left" data-section="account">
-          <i class="fas fa-user-circle text-cyan-400 w-4 text-center"></i> Account &amp; Security
-        </button>
-        <button onclick="hcShowSection('payments')" class="hc-nav-link w-full text-left" data-section="payments">
-          <i class="fas fa-credit-card text-cyan-400 w-4 text-center"></i> Payments &amp; Billing
-        </button>
-        <button onclick="hcShowSection('sellers')" class="hc-nav-link w-full text-left" data-section="sellers">
-          <i class="fas fa-store text-cyan-400 w-4 text-center"></i> Sellers
-        </button>
-        <button onclick="hcShowSection('technical')" class="hc-nav-link w-full text-left" data-section="technical">
-          <i class="fas fa-tools text-cyan-400 w-4 text-center"></i> Technical Support
-        </button>
-        <button onclick="hcShowSection('contact')" class="hc-nav-link w-full text-left" data-section="contact">
-          <i class="fas fa-headset text-cyan-400 w-4 text-center"></i> Contact Us
-        </button>
-      </nav>
+    <!-- Quick Actions -->
+    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Quick Actions</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
 
-      <div class="mt-6 pt-4 border-t border-gray-100">
-        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 pl-1">Community</p>
-        <a href="community-hub.html" class="hc-nav-link text-sm">
-          <i class="fas fa-comments text-cyan-400 w-4 text-center"></i> Community Hub
-        </a>
-        <a href="faq.html" class="hc-nav-link text-sm">
-          <i class="fas fa-list text-cyan-400 w-4 text-center"></i> FAQ
-        </a>
-      </div>
-    </aside>
-
-    <!-- Main content area -->
-    <div class="flex-1 p-6 overflow-y-auto">
-
-      <!-- Getting Started section -->
-      <div id="hcSection-getting-started" class="hc-section">
-        <div class="flex items-center gap-2 mb-1">
-          <nav class="text-xs text-gray-400">
-            <a href="index.html" class="hover:text-cyan-500">Home</a>
-            <span class="mx-1">/</span>
-            <span class="text-gray-600">Help Center</span>
-            <span class="mx-1">/</span>
-            <span class="text-cyan-600">Getting Started</span>
-          </nav>
+      <a href="order-history.html" class="hc-action-card">
+        <div class="hc-action-icon"><i class="fas fa-box text-cyan-500 text-lg"></i></div>
+        <div>
+          <p class="font-semibold text-gray-800 text-sm mb-0.5">My Orders</p>
+          <p class="text-xs text-gray-500">View order details or locate an invoice</p>
         </div>
+      </a>
 
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-rocket text-cyan-500 mr-2"></i>Getting Started
-        </h2>
-
-        <!-- Popular topics grid -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <div class="hc-topic-card" onclick="hcShowSection('orders')">
-            <i class="fas fa-box text-cyan-500 text-2xl mb-2"></i>
-            <p class="text-sm font-medium text-gray-700">Track My Order</p>
-          </div>
-          <div class="hc-topic-card" onclick="hcShowSection('returns')">
-            <i class="fas fa-undo-alt text-cyan-500 text-2xl mb-2"></i>
-            <p class="text-sm font-medium text-gray-700">Start a Return</p>
-          </div>
-          <div class="hc-topic-card" onclick="hcShowSection('account')">
-            <i class="fas fa-user-lock text-cyan-500 text-2xl mb-2"></i>
-            <p class="text-sm font-medium text-gray-700">Account &amp; Password</p>
-          </div>
-          <div class="hc-topic-card" onclick="hcShowSection('payments')">
-            <i class="fas fa-credit-card text-cyan-500 text-2xl mb-2"></i>
-            <p class="text-sm font-medium text-gray-700">Payment Methods</p>
-          </div>
+      <a href="track-your-order.html" class="hc-action-card">
+        <div class="hc-action-icon"><i class="fas fa-shipping-fast text-cyan-500 text-lg"></i></div>
+        <div>
+          <p class="font-semibold text-gray-800 text-sm mb-0.5">Track Packages</p>
+          <p class="text-xs text-gray-500">Track where your package is and get estimated delivery date</p>
         </div>
+      </a>
 
-        <!-- Featured articles -->
-        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Featured Articles</h3>
-        <div class="space-y-3">
-          <div class="hc-article-card">
-            <div class="flex items-start gap-3">
-              <i class="fas fa-file-alt text-cyan-400 mt-1 text-lg"></i>
-              <div>
-                <p class="font-semibold text-gray-800 text-sm">How to create your Zorexium account</p>
-                <p class="text-xs text-gray-500 mt-1">Learn how to sign up, verify your email, and set up two-factor authentication for maximum security.</p>
-                <span class="text-xs text-cyan-600 mt-2 inline-block">Read article →</span>
-              </div>
-            </div>
-          </div>
-          <div class="hc-article-card">
-            <div class="flex items-start gap-3">
-              <i class="fas fa-file-alt text-cyan-400 mt-1 text-lg"></i>
-              <div>
-                <p class="font-semibold text-gray-800 text-sm">How to place your first order</p>
-                <p class="text-xs text-gray-500 mt-1">Step-by-step guide to browsing the marketplace, adding items to your cart, and completing checkout.</p>
-                <span class="text-xs text-cyan-600 mt-2 inline-block">Read article →</span>
-              </div>
-            </div>
-          </div>
-          <div class="hc-article-card">
-            <div class="flex items-start gap-3">
-              <i class="fas fa-file-alt text-cyan-400 mt-1 text-lg"></i>
-              <div>
-                <p class="font-semibold text-gray-800 text-sm">Understanding the Marketplace Guarantee</p>
-                <p class="text-xs text-gray-500 mt-1">Learn what buyer protections you have and how the Zorexium purchase guarantee works.</p>
-                <span class="text-xs text-cyan-600 mt-2 inline-block">Read article →</span>
-              </div>
-            </div>
-          </div>
-          <div class="hc-article-card">
-            <div class="flex items-start gap-3">
-              <i class="fas fa-file-alt text-cyan-400 mt-1 text-lg"></i>
-              <div>
-                <p class="font-semibold text-gray-800 text-sm">Zorexium Verified Labs – what it means</p>
-                <p class="text-xs text-gray-500 mt-1">Understand the Verified Labs badge and how Zorexium vets hardware sellers and listings.</p>
-                <span class="text-xs text-cyan-600 mt-2 inline-block">Read article →</span>
-              </div>
-            </div>
-          </div>
+      <a href="order-history.html" class="hc-action-card">
+        <div class="hc-action-icon"><i class="fas fa-times-circle text-cyan-500 text-lg"></i></div>
+        <div>
+          <p class="font-semibold text-gray-800 text-sm mb-0.5">Cancel Order</p>
+          <p class="text-xs text-gray-500">You can request a cancellation if your order has not been packaged for shipment</p>
         </div>
+      </a>
+
+      <a href="returns-history.html" class="hc-action-card">
+        <div class="hc-action-icon"><i class="fas fa-undo-alt text-cyan-500 text-lg"></i></div>
+        <div>
+          <p class="font-semibold text-gray-800 text-sm mb-0.5">Returns</p>
+          <p class="text-xs text-gray-500">Return an item or check return status</p>
+        </div>
+      </a>
+
+      <a href="contact-support.html" class="hc-action-card">
+        <div class="hc-action-icon"><i class="fas fa-headset text-cyan-500 text-lg"></i></div>
+        <div>
+          <p class="font-semibold text-gray-800 text-sm mb-0.5">Get Product Help</p>
+          <p class="text-xs text-gray-500">Contact seller or reach out to product manufacturer</p>
+        </div>
+      </a>
+
+      <a href="account-details.html" class="hc-action-card">
+        <div class="hc-action-icon"><i class="fas fa-user-circle text-cyan-500 text-lg"></i></div>
+        <div>
+          <p class="font-semibold text-gray-800 text-sm mb-0.5">My Account</p>
+          <p class="text-xs text-gray-500">Update payment info, shipping address, or your account email/password</p>
+        </div>
+      </a>
+
+    </div><!-- end quick actions -->
+
+    <!-- Help Topics -->
+    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Help Topics</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+
+      <!-- Ordering -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Ordering</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">Order Status &amp; History</a></li>
+          <li><a href="#">Order processing time</a></li>
+          <li><a href="#">Editing an order</a></li>
+          <li><a href="#">Order verification</a></li>
+        </ul>
       </div>
 
-      <!-- Orders & Shipping section -->
-      <div id="hcSection-orders" class="hc-section hidden">
-        <nav class="text-xs text-gray-400 mb-2">
-          <a href="index.html" class="hover:text-cyan-500">Home</a>
-          <span class="mx-1">/</span>
-          <a href="help-center.html" class="hover:text-cyan-500">Help Center</a>
-          <span class="mx-1">/</span>
-          <span class="text-cyan-600">Orders &amp; Shipping</span>
-        </nav>
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-box text-cyan-500 mr-2"></i>Orders &amp; Shipping
-        </h2>
-        <div class="space-y-2 mb-6">
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">How do I track my order? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">After your order ships, you'll receive a confirmation email with a tracking number. You can also visit <a href="track-your-order.html" class="text-cyan-600 underline">Track an Order</a> and enter your order number and email address to view real-time shipping updates.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">How long does shipping take? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Standard shipping takes 3–5 business days. Expedited (2-day) and overnight options are available at checkout depending on your location and the seller's dispatch settings.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">Can I change or cancel my order after placing it? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Orders may be canceled within 30 minutes of placement if the seller hasn't yet processed them. Go to Order History in your account, select the order, and click "Cancel Order." Once an order is dispatched, you'll need to start a return.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">My package is marked delivered but I haven't received it. <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Please check with neighbors or your building mailroom. If the item is still not found after 24 hours, contact our support team with your order number and we will open an investigation with the carrier.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">Do you ship internationally? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">International shipping availability depends on the individual seller. Filter the marketplace by "Ships Internationally" to find eligible listings. Customs and import duties are the buyer's responsibility.</div>
-          </div>
-        </div>
-        <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4 flex items-center gap-4">
-          <i class="fas fa-headset text-cyan-500 text-2xl"></i>
-          <div>
-            <p class="font-semibold text-gray-800 text-sm">Still need help with your order?</p>
-            <p class="text-xs text-gray-500 mb-2">Our support team is available Mon–Fri, 9 AM–6 PM EST.</p>
-            <a href="contact-support.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold px-4 py-2 rounded-md transition-colors">Contact Support</a>
-          </div>
-        </div>
+      <!-- Pricing/Promos -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Pricing/Promos</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">Different price than advertised</a></li>
+          <li><a href="#">Using a promo code</a></li>
+          <li><a href="#">Price Match</a></li>
+          <li><a href="#">Subscribing to the Newegg newsletter</a></li>
+        </ul>
       </div>
 
-      <!-- Returns & Refunds section -->
-      <div id="hcSection-returns" class="hc-section hidden">
-        <nav class="text-xs text-gray-400 mb-2">
-          <a href="index.html" class="hover:text-cyan-500">Home</a>
-          <span class="mx-1">/</span>
-          <a href="help-center.html" class="hover:text-cyan-500">Help Center</a>
-          <span class="mx-1">/</span>
-          <span class="text-cyan-600">Returns &amp; Refunds</span>
-        </nav>
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-undo-alt text-cyan-500 mr-2"></i>Returns &amp; Refunds
-        </h2>
-        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-5 flex items-start gap-3">
-          <i class="fas fa-info-circle text-cyan-500 mt-0.5"></i>
-          <p class="text-sm text-gray-600">Most items sold on Zorexium can be returned within <strong>30 days</strong> of delivery. Conditions apply. <a href="return-refund-policy.html" class="text-cyan-600 underline">View full policy.</a></p>
-        </div>
-        <div class="space-y-2 mb-6">
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">How do I start a return? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Go to Account → Order History, find the order, and click "Start Return." Select the items to return, choose a reason, and print the prepaid return label. Pack and ship within 7 days.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">When will I receive my refund? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Refunds are processed within 2–3 business days of the seller receiving the item. Depending on your payment method, funds may take an additional 3–5 business days to appear in your account.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">What items are not returnable? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Software, digital licenses, opened thermal paste, and custom-built PCs are generally non-returnable unless defective. Check the individual listing for seller-specific return policies.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">The item I received is damaged or incorrect. <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">If you received a damaged or incorrect item, contact support immediately. Include your order number, photos of the damage or mismatch, and we'll prioritize a resolution under the Marketplace Guarantee.</div>
-          </div>
-        </div>
-        <a href="return-refund-policy.html" class="inline-flex items-center gap-2 bg-white border border-gray-300 hover:border-cyan-400 text-gray-700 hover:text-cyan-600 text-sm font-medium px-4 py-2 rounded-md transition-colors">
-          <i class="fas fa-file-alt"></i> View Full Return Policy
-        </a>
+      <!-- Returns (RMA) -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Returns (RMA)</p>
+        <ul class="hc-topic-list">
+          <li><a href="return-refund-policy.html">Return policy</a></li>
+          <li><a href="returns-history.html">Returning an item</a></li>
+          <li><a href="#">Editing or canceling a return</a></li>
+          <li><a href="#">Return address</a></li>
+        </ul>
       </div>
 
-      <!-- Account & Security section -->
-      <div id="hcSection-account" class="hc-section hidden">
-        <nav class="text-xs text-gray-400 mb-2">
-          <a href="index.html" class="hover:text-cyan-500">Home</a>
-          <span class="mx-1">/</span>
-          <a href="help-center.html" class="hover:text-cyan-500">Help Center</a>
-          <span class="mx-1">/</span>
-          <span class="text-cyan-600">Account &amp; Security</span>
-        </nav>
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-user-circle text-cyan-500 mr-2"></i>Account &amp; Security
-        </h2>
-        <div class="space-y-2">
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">How do I reset my password? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Click "Forgot account?" on the login page or visit <a href="login-register.html" class="text-cyan-600 underline">Login/Register</a> and use the "Forgot Password" link. You'll receive a reset link to your registered email within a few minutes.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">How do I enable two-factor authentication? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Go to Account → Security Settings. Enable 2FA with an authenticator app (Google Authenticator or Authy) for the best protection. We also support SMS 2FA.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">How do I change my email address? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Visit <a href="account-details.html" class="text-cyan-600 underline">My Profile</a> → Edit Profile. You'll need to verify both your old and new email addresses before the change takes effect.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">I think my account was compromised. What do I do? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Change your password immediately via the "Forgot Password" flow (which also invalidates all active sessions). Then contact support so we can review recent account activity and secure your account.</div>
-          </div>
-        </div>
+      <!-- Payment -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Payment</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">Resolving a declined payment</a></li>
+          <li><a href="#">U.S. Payment Methods</a></li>
+          <li><a href="#">Split payment methods</a></li>
+        </ul>
       </div>
 
-      <!-- Payments & Billing section -->
-      <div id="hcSection-payments" class="hc-section hidden">
-        <nav class="text-xs text-gray-400 mb-2">
-          <a href="index.html" class="hover:text-cyan-500">Home</a>
-          <span class="mx-1">/</span>
-          <a href="help-center.html" class="hover:text-cyan-500">Help Center</a>
-          <span class="mx-1">/</span>
-          <span class="text-cyan-600">Payments &amp; Billing</span>
-        </nav>
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-credit-card text-cyan-500 mr-2"></i>Payments &amp; Billing
-        </h2>
-        <div class="space-y-2">
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">What payment methods are accepted? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Zorexium accepts Visa, Mastercard, American Express, Discover, PayPal, and Zorexium Gift Cards. Cryptocurrency payments are available on select listings.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">Why was my payment declined? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Payment may be declined due to incorrect card details, insufficient funds, or bank security holds. Try a different payment method or contact your bank. Our systems never store full card numbers.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question">Is it safe to save my card on Zorexium? <i class="fas fa-chevron-down faq-chevron"></i></div>
-            <div class="faq-answer">Yes. Card data is tokenized via our PCI-compliant payment processor and never stored on Zorexium servers. You can manage saved payment methods in Account → Payment Methods at any time.</div>
-          </div>
-        </div>
+      <!-- Shipping -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Shipping</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">U.S. Shipping Policy</a></li>
+          <li><a href="#">Reporting a delivery issue</a></li>
+          <li><a href="track-your-order.html">How to track a package</a></li>
+          <li><a href="#">Calculating the shipping cost</a></li>
+        </ul>
       </div>
 
-      <!-- Sellers section -->
-      <div id="hcSection-sellers" class="hc-section hidden">
-        <nav class="text-xs text-gray-400 mb-2">
-          <a href="index.html" class="hover:text-cyan-500">Home</a>
-          <span class="mx-1">/</span>
-          <a href="help-center.html" class="hover:text-cyan-500">Help Center</a>
-          <span class="mx-1">/</span>
-          <span class="text-cyan-600">Sellers</span>
-        </nav>
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-store text-cyan-500 mr-2"></i>Seller Support
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          <a href="sell-on-zorexium.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-store text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">Start Selling</p>
-              <p class="text-xs text-gray-500">How to set up your seller account</p>
-            </div>
-          </a>
-          <a href="seller-dashboard.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-tachometer-alt text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">Seller Portal</p>
-              <p class="text-xs text-gray-500">Manage your listings and payouts</p>
-            </div>
-          </a>
-          <a href="listing-wizard.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-tools text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">Listing Tools</p>
-              <p class="text-xs text-gray-500">Create and optimize listings</p>
-            </div>
-          </a>
-          <a href="sellers-guidelines.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-book text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">Seller Guidelines</p>
-              <p class="text-xs text-gray-500">Policies and best practices</p>
-            </div>
-          </a>
-        </div>
+      <!-- Products -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Products</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">Product specifications and details</a></li>
+          <li><a href="#">Discontinued, deactivated or currently unavailable items</a></li>
+          <li><a href="#">Product Warranties</a></li>
+          <li><a href="#">Product disclaimers</a></li>
+        </ul>
       </div>
 
-      <!-- Technical Support section -->
-      <div id="hcSection-technical" class="hc-section hidden">
-        <nav class="text-xs text-gray-400 mb-2">
-          <a href="index.html" class="hover:text-cyan-500">Home</a>
-          <span class="mx-1">/</span>
-          <a href="help-center.html" class="hover:text-cyan-500">Help Center</a>
-          <span class="mx-1">/</span>
-          <span class="text-cyan-600">Technical Support</span>
-        </nav>
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-tools text-cyan-500 mr-2"></i>Technical Support
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          <a href="troubleshooting-support.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-wrench text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">Troubleshooting Guide</p>
-              <p class="text-xs text-gray-500">Diagnose common hardware issues</p>
-            </div>
-          </a>
-          <a href="hardware-compatibility.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-puzzle-piece text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">Hardware Compatibility</p>
-              <p class="text-xs text-gray-500">Check component compatibility</p>
-            </div>
-          </a>
-          <a href="api-documentation.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-code text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">API Documentation</p>
-              <p class="text-xs text-gray-500">Integrate with Zorexium APIs</p>
-            </div>
-          </a>
-          <a href="getting-started.html" class="hc-article-card flex items-center gap-3 no-underline">
-            <i class="fas fa-book-open text-cyan-500 text-xl"></i>
-            <div>
-              <p class="font-semibold text-gray-800 text-sm">Platform Guide</p>
-              <p class="text-xs text-gray-500">Comprehensive setup documentation</p>
-            </div>
-          </a>
-        </div>
+      <!-- Account -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Account</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">Benefits of a Zorexium Account</a></li>
+          <li><a href="#">Report Suspicious Activity</a></li>
+          <li><a href="#">Problems logging in</a></li>
+          <li><a href="#">Changing your password</a></li>
+        </ul>
       </div>
 
-      <!-- Contact Us section -->
-      <div id="hcSection-contact" class="hc-section hidden">
-        <nav class="text-xs text-gray-400 mb-2">
-          <a href="index.html" class="hover:text-cyan-500">Home</a>
-          <span class="mx-1">/</span>
-          <a href="help-center.html" class="hover:text-cyan-500">Help Center</a>
-          <span class="mx-1">/</span>
-          <span class="text-cyan-600">Contact Us</span>
-        </nav>
-        <h2 class="text-xl font-bold text-gray-900 mb-4 mt-2">
-          <i class="fas fa-headset text-cyan-500 mr-2"></i>Contact Us
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-white border border-gray-200 rounded-lg p-5 text-center">
-            <i class="fas fa-comment-alt text-cyan-500 text-3xl mb-3"></i>
-            <p class="font-semibold text-gray-800 text-sm mb-1">Live Chat</p>
-            <p class="text-xs text-gray-500 mb-3">Mon–Fri, 9 AM – 6 PM EST</p>
-            <button class="w-full bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold px-3 py-2 rounded-md transition-colors">
-              Start Chat
-            </button>
-          </div>
-          <div class="bg-white border border-gray-200 rounded-lg p-5 text-center">
-            <i class="fas fa-envelope text-cyan-500 text-3xl mb-3"></i>
-            <p class="font-semibold text-gray-800 text-sm mb-1">Email Support</p>
-            <p class="text-xs text-gray-500 mb-3">Response within 24 hours</p>
-            <a href="contact-support.html" class="block w-full bg-white border border-cyan-400 hover:bg-cyan-50 text-cyan-600 text-xs font-semibold px-3 py-2 rounded-md transition-colors">
-              Send Email
-            </a>
-          </div>
-          <div class="bg-white border border-gray-200 rounded-lg p-5 text-center">
-            <i class="fas fa-phone-alt text-cyan-500 text-3xl mb-3"></i>
-            <p class="font-semibold text-gray-800 text-sm mb-1">Phone Support</p>
-            <p class="text-xs text-gray-500 mb-3">Premium &amp; Business accounts</p>
-            <button class="w-full bg-white border border-gray-300 text-gray-500 text-xs font-semibold px-3 py-2 rounded-md cursor-not-allowed opacity-60">
-              Upgrade to Access
-            </button>
-          </div>
-        </div>
-        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-start gap-3">
-          <i class="fas fa-clock text-cyan-400 mt-0.5"></i>
-          <div>
-            <p class="font-semibold text-gray-800 text-sm">Support Hours</p>
-            <p class="text-xs text-gray-500">Monday – Friday: 9:00 AM – 6:00 PM EST<br>Saturday: 10:00 AM – 3:00 PM EST<br>Sunday: Closed (email responses next business day)</p>
-          </div>
-        </div>
+      <!-- Website -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Website</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">How to place an order</a></li>
+          <li><a href="privacy-policy.html">Zorexium.com website security</a></li>
+          <li><a href="#">Time sync error</a></li>
+        </ul>
       </div>
 
-    </div><!-- end main content -->
-  </div><!-- end panel body -->
+      <!-- Newegg Global -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Newegg Global</p>
+        <ul class="hc-topic-list">
+          <li><a href="track-your-order.html">Checking the status of an order on the app</a></li>
+          <li><a href="returns-history.html">How to return an item</a></li>
+          <li><a href="#">International payment methods</a></li>
+        </ul>
+      </div>
+
+      <!-- Contact -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Contact</p>
+        <ul class="hc-topic-list">
+          <li><a href="contact-support.html">Contacting a Marketplace seller</a></li>
+          <li><a href="contact-support.html">Contacting the manufacturer</a></li>
+          <li><a href="privacy-policy.html">Messaging Privacy Policy</a></li>
+          <li><a href="#">Newegg Messaging Terms &amp; Conditions</a></li>
+        </ul>
+      </div>
+
+      <!-- Report a Security Issue -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Report a Security Issue</p>
+        <ul class="hc-topic-list">
+          <li><a href="trust-center.html">Vulnerability Reporting</a></li>
+        </ul>
+      </div>
+
+      <!-- Will Call -->
+      <div class="hc-topic-col">
+        <p class="hc-topic-header">Will Call</p>
+        <ul class="hc-topic-list">
+          <li><a href="#">Will Call pickup information</a></li>
+          <li><a href="#">Will Call hours and locations</a></li>
+        </ul>
+      </div>
+
+    </div><!-- end help topics grid -->
+
+  </div><!-- end max-w-5xl -->
 
 </main>
 
 <script>
-  function hcShowSection(name) {
-    document.querySelectorAll('.hc-section').forEach(function(s) { s.classList.add('hidden'); });
-    var target = document.getElementById('hcSection-' + name);
-    if (target) target.classList.remove('hidden');
-    document.querySelectorAll('#hcSideNav button[data-section]').forEach(function(btn) {
-      btn.classList.toggle('active', btn.dataset.section === name);
-    });
-    document.getElementById('hcSearchResults').classList.add('hidden');
-  }
+  var hcSearchTimer = null;
 
-  function toggleFaq(item) {
-    item.classList.toggle('open');
+  function hcHandleSearch(query) {
+    var spinnerEl = document.getElementById('hcSearchSpinner');
+    var searchingEl = document.getElementById('hcSearchingText');
+    var resultsEl = document.getElementById('hcSearchResults');
+
+    clearTimeout(hcSearchTimer);
+
+    if (!query || query.length < 2) {
+      spinnerEl.style.display = 'none';
+      searchingEl.classList.add('hidden');
+      resultsEl.classList.add('hidden');
+      resultsEl.innerHTML = '';
+      return;
+    }
+
+    spinnerEl.style.display = 'block';
+    searchingEl.classList.remove('hidden');
+    resultsEl.classList.add('hidden');
+
+    hcSearchTimer = setTimeout(function () {
+      spinnerEl.style.display = 'none';
+      searchingEl.classList.add('hidden');
+      hcRunSearch(query);
+    }, 350);
   }
 
   var HC_ARTICLES = [
-    { title: 'How to track my order', section: 'orders' },
-    { title: 'How long does shipping take?', section: 'orders' },
-    { title: 'Can I cancel my order?', section: 'orders' },
-    { title: 'Package marked delivered but not received', section: 'orders' },
-    { title: 'How to start a return', section: 'returns' },
-    { title: 'When will I receive my refund?', section: 'returns' },
-    { title: 'Non-returnable items', section: 'returns' },
-    { title: 'Damaged or incorrect item received', section: 'returns' },
-    { title: 'How to reset my password', section: 'account' },
-    { title: 'Enable two-factor authentication', section: 'account' },
-    { title: 'Change my email address', section: 'account' },
-    { title: 'Compromised account help', section: 'account' },
-    { title: 'Accepted payment methods', section: 'payments' },
-    { title: 'Payment declined', section: 'payments' },
-    { title: 'Save card on Zorexium', section: 'payments' },
-    { title: 'Getting started guide', section: 'getting-started' },
-    { title: 'Create your Zorexium account', section: 'getting-started' },
-    { title: 'Marketplace Guarantee explained', section: 'getting-started' },
+    { title: 'Order Status & History', category: 'Ordering', href: '#' },
+    { title: 'Order processing time', category: 'Ordering', href: '#' },
+    { title: 'Editing an order', category: 'Ordering', href: '#' },
+    { title: 'Order verification', category: 'Ordering', href: '#' },
+    { title: 'Different price than advertised', category: 'Pricing/Promos', href: '#' },
+    { title: 'Using a promo code', category: 'Pricing/Promos', href: '#' },
+    { title: 'Price Match', category: 'Pricing/Promos', href: '#' },
+    { title: 'Subscribing to the Newegg newsletter', category: 'Pricing/Promos', href: '#' },
+    { title: 'Return policy', category: 'Returns (RMA)', href: 'return-refund-policy.html' },
+    { title: 'Returning an item', category: 'Returns (RMA)', href: 'returns-history.html' },
+    { title: 'Editing or canceling a return', category: 'Returns (RMA)', href: '#' },
+    { title: 'Return address', category: 'Returns (RMA)', href: '#' },
+    { title: 'Resolving a declined payment', category: 'Payment', href: '#' },
+    { title: 'U.S. Payment Methods', category: 'Payment', href: '#' },
+    { title: 'Split payment methods', category: 'Payment', href: '#' },
+    { title: 'U.S. Shipping Policy', category: 'Shipping', href: '#' },
+    { title: 'Reporting a delivery issue', category: 'Shipping', href: '#' },
+    { title: 'How to track a package', category: 'Shipping', href: 'track-your-order.html' },
+    { title: 'Calculating the shipping cost', category: 'Shipping', href: '#' },
+    { title: 'Product specifications and details', category: 'Products', href: '#' },
+    { title: 'Discontinued, deactivated or currently unavailable items', category: 'Products', href: '#' },
+    { title: 'Product Warranties', category: 'Products', href: '#' },
+    { title: 'Product disclaimers', category: 'Products', href: '#' },
+    { title: 'Benefits of a Zorexium Account', category: 'Account', href: '#' },
+    { title: 'Report Suspicious Activity', category: 'Account', href: '#' },
+    { title: 'Problems logging in', category: 'Account', href: '#' },
+    { title: 'Changing your password', category: 'Account', href: '#' },
+    { title: 'How to place an order', category: 'Website', href: '#' },
+    { title: 'Zorexium.com website security', category: 'Website', href: 'privacy-policy.html' },
+    { title: 'Time sync error', category: 'Website', href: '#' },
+    { title: 'Checking the status of an order on the app', category: 'Newegg Global', href: 'track-your-order.html' },
+    { title: 'How to return an item', category: 'Newegg Global', href: 'returns-history.html' },
+    { title: 'International payment methods', category: 'Newegg Global', href: '#' },
+    { title: 'Contacting a Marketplace seller', category: 'Contact', href: 'contact-support.html' },
+    { title: 'Contacting the manufacturer', category: 'Contact', href: 'contact-support.html' },
+    { title: 'Messaging Privacy Policy', category: 'Contact', href: 'privacy-policy.html' },
+    { title: 'Newegg Messaging Terms & Conditions', category: 'Contact', href: '#' },
+    { title: 'Vulnerability Reporting', category: 'Report a Security Issue', href: 'trust-center.html' }
   ];
 
-  function hcSearch(query) {
+  function hcRunSearch(query) {
     var resultsEl = document.getElementById('hcSearchResults');
-    if (!query || query.length < 2) { resultsEl.classList.add('hidden'); return; }
     var q = query.toLowerCase();
-    var matches = HC_ARTICLES.filter(function(a) { return a.title.toLowerCase().indexOf(q) !== -1; });
+    var matches = HC_ARTICLES.filter(function (a) {
+      return a.title.toLowerCase().indexOf(q) !== -1 ||
+             a.category.toLowerCase().indexOf(q) !== -1;
+    });
     if (matches.length === 0) {
-      resultsEl.innerHTML = '<p class="text-sm text-gray-400 text-center py-2">No results found. Try different keywords.</p>';
+      resultsEl.innerHTML =
+        '<p class="text-sm text-gray-400 text-center py-4">No results found. Try different keywords.</p>';
     } else {
-      resultsEl.innerHTML = matches.slice(0, 6).map(function(a) {
-        return '<button onclick="hcShowSection(\'' + a.section + '\')" class="w-full text-left hc-article-card flex items-center gap-3 py-3">' +
-          '<i class="fas fa-file-alt text-cyan-400"></i>' +
-          '<div><p class="text-sm font-medium text-gray-800">' + a.title + '</p>' +
-          '<p class="text-xs text-cyan-500 capitalize">' + a.section.replace(/-/g,' ') + '</p></div>' +
-          '</button>';
+      resultsEl.innerHTML = matches.slice(0, 8).map(function (a) {
+        return '<a href="' + a.href + '" class="hc-search-result-item">' +
+          '<i class="fas fa-file-alt text-cyan-400 flex-shrink-0"></i>' +
+          '<div>' +
+            '<p class="text-sm font-medium text-gray-800">' + a.title + '</p>' +
+            '<p class="text-xs text-cyan-600">' + a.category + '</p>' +
+          '</div>' +
+          '</a>';
       }).join('');
     }
     resultsEl.classList.remove('hidden');
