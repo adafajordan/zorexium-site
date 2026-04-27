@@ -33,6 +33,8 @@
       background: linear-gradient(135deg, #ffb300, #ff7a00) !important;
       color: white !important;
     }
+    /* Step header circle base size */
+    .step-header-num { width: 2.5rem; height: 2.5rem; }
     /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
     .marketplace-mega-menu {
         position: fixed !important;
@@ -273,18 +275,17 @@
     <div class="flex gap-6 items-start">
 
       <!-- Left Sidebar: Step Navigation (desktop only) -->
-      <div class="w-64 flex-shrink-0 hidden lg:block">
+      <div class="w-56 flex-shrink-0 hidden lg:block">
         <div class="sticky top-28 bg-[#171c24] rounded-xl overflow-hidden shadow-lg">
           <div class="px-5 py-4 border-b border-white/10">
             <p class="text-xs font-bold text-amber-400 uppercase tracking-widest">Listing Steps</p>
           </div>
-          <div id="stepNavList" class="divide-y divide-white/5"></div>
-          <div class="px-5 py-4 border-t border-white/10">
-            <div class="text-xs text-gray-400 mb-1.5 font-medium">Progress</div>
+          <div class="px-5 py-5">
+            <div class="text-xs text-gray-400 mb-2 font-medium">Progress</div>
             <div class="bg-white/10 rounded-full h-1.5">
               <div id="progressBar" class="h-1.5 rounded-full transition-all duration-300" style="width:0%;background:linear-gradient(90deg,#ffb300,#ff7a00)"></div>
             </div>
-            <p id="progressText" class="text-xs text-gray-400 mt-1.5">Step 1 of 7</p>
+            <p id="progressText" class="text-xs text-gray-400 mt-2">Step 1 of 7</p>
           </div>
         </div>
       </div>
@@ -305,10 +306,10 @@
 
         <!-- ===== STEP 1: Product Details ===== -->
         <div id="step1" class="wizard-step active bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <div class="w-8 h-8 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+          <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200 rounded-t-xl">
+            <div class="w-10 h-10 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Product Details</h2>
+              <h2 class="text-lg font-bold text-gray-900">Product Details</h2>
               <p class="text-xs text-gray-500">Core product information and identification</p>
             </div>
           </div>
@@ -423,17 +424,17 @@
               <div id="variationsContainer" class="space-y-2"></div>
             </div>
           </div>
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-end">
+          <div class="px-6 py-4 border-t border-gray-200 rounded-b-xl flex justify-end">
             <button onclick="nextStep()" class="btn-primary">Next: Images <i class="fas fa-arrow-right text-xs"></i></button>
           </div>
         </div>
 
         <!-- ===== STEP 2: Images ===== -->
         <div id="step2" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <div class="w-8 h-8 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+          <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200 rounded-t-xl">
+            <div class="w-10 h-10 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Images</h2>
+              <h2 class="text-lg font-bold text-gray-900">Images</h2>
               <p class="text-xs text-gray-500">Upload high-quality product photos (at least 1 required)</p>
             </div>
           </div>
@@ -463,7 +464,7 @@
             <div id="imageGrid" class="grid grid-cols-3 sm:grid-cols-5 gap-3"></div>
             <p class="text-xs text-gray-400"><i class="fas fa-hand-pointer mr-1"></i>Drag images in the grid to reorder. The first image is your main thumbnail.</p>
           </div>
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+          <div class="px-6 py-4 border-t border-gray-200 rounded-b-xl flex justify-between">
             <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
             <button onclick="nextStep()" class="btn-primary">Next: Pricing &amp; Inventory <i class="fas fa-arrow-right text-xs"></i></button>
           </div>
@@ -471,10 +472,10 @@
 
         <!-- ===== STEP 3: Pricing & Inventory ===== -->
         <div id="step3" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <div class="w-8 h-8 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+          <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200 rounded-t-xl">
+            <div class="w-10 h-10 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Pricing &amp; Inventory</h2>
+              <h2 class="text-lg font-bold text-gray-900">Pricing &amp; Inventory</h2>
               <p class="text-xs text-gray-500">Set pricing, stock levels, and order quantity limits</p>
             </div>
           </div>
@@ -537,7 +538,7 @@
               </div>
             </div>
           </div>
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+          <div class="px-6 py-4 border-t border-gray-200 rounded-b-xl flex justify-between">
             <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
             <button onclick="nextStep()" class="btn-primary">Next: Shipping <i class="fas fa-arrow-right text-xs"></i></button>
           </div>
@@ -545,10 +546,10 @@
 
         <!-- ===== STEP 4: Shipping & Fulfillment ===== -->
         <div id="step4" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <div class="w-8 h-8 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+          <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200 rounded-t-xl">
+            <div class="w-10 h-10 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Shipping &amp; Fulfillment</h2>
+              <h2 class="text-lg font-bold text-gray-900">Shipping &amp; Fulfillment</h2>
               <p class="text-xs text-gray-500">Package dimensions, weight, shipping options, and returns</p>
             </div>
           </div>
@@ -654,7 +655,7 @@
               </div>
             </div>
           </div>
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+          <div class="px-6 py-4 border-t border-gray-200 rounded-b-xl flex justify-between">
             <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
             <button onclick="nextStep()" class="btn-primary">Next: Description <i class="fas fa-arrow-right text-xs"></i></button>
           </div>
@@ -662,10 +663,10 @@
 
         <!-- ===== STEP 5: Description & Rich Content ===== -->
         <div id="step5" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <div class="w-8 h-8 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">5</div>
+          <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200 rounded-t-xl">
+            <div class="w-10 h-10 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">5</div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Description &amp; Rich Content</h2>
+              <h2 class="text-lg font-bold text-gray-900">Description &amp; Rich Content</h2>
               <p class="text-xs text-gray-500">Detailed descriptions, feature highlights, media, and documents</p>
             </div>
           </div>
@@ -744,7 +745,7 @@
               <div id="docsPreview" class="mt-2 space-y-1"></div>
             </div>
           </div>
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+          <div class="px-6 py-4 border-t border-gray-200 rounded-b-xl flex justify-between">
             <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
             <button onclick="nextStep()" class="btn-primary">Next: Compliance <i class="fas fa-arrow-right text-xs"></i></button>
           </div>
@@ -752,10 +753,10 @@
 
         <!-- ===== STEP 6: Compliance & Policies ===== -->
         <div id="step6" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <div class="w-8 h-8 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">6</div>
+          <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200 rounded-t-xl">
+            <div class="w-10 h-10 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">6</div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Compliance &amp; Policies</h2>
+              <h2 class="text-lg font-bold text-gray-900">Compliance &amp; Policies</h2>
               <p class="text-xs text-gray-500">Safety certifications, warranty info, and legal requirements</p>
             </div>
           </div>
@@ -862,7 +863,7 @@
               </label>
             </div>
           </div>
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+          <div class="px-6 py-4 border-t border-gray-200 rounded-b-xl flex justify-between">
             <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
             <button onclick="nextStep()" class="btn-primary">Review &amp; Publish <i class="fas fa-arrow-right text-xs"></i></button>
           </div>
@@ -870,17 +871,17 @@
 
         <!-- ===== STEP 7: Review & Publish ===== -->
         <div id="step7" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
-          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
-            <div class="w-8 h-8 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">7</div>
+          <div class="flex items-center gap-3 px-6 py-5 border-b border-gray-200 rounded-t-xl">
+            <div class="w-10 h-10 step-header-num bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">7</div>
             <div>
-              <h2 class="text-base font-bold text-gray-900">Review &amp; Publish</h2>
+              <h2 class="text-lg font-bold text-gray-900">Review &amp; Publish</h2>
               <p class="text-xs text-gray-500">Review your complete listing before publishing</p>
             </div>
           </div>
           <div class="p-6" id="reviewContent">
             <!-- Populated by buildReviewSection() -->
           </div>
-          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+          <div class="px-6 py-4 border-t border-gray-200 rounded-b-xl">
             <div class="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
               <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back to Compliance</button>
               <div class="flex flex-col sm:flex-row gap-3">
@@ -935,42 +936,11 @@
 
   // ── Sidebar nav ─────────────────────────────────────────────────────────────
   function buildStepNav() {
-    const container = document.getElementById('stepNavList');
-    if (!container) return;
-    container.innerHTML = STEP_DEFS.map(s => `
-      <button onclick="jumpToStep(${s.id})" id="stepNavBtn${s.id}"
-        class="w-full text-left px-4 py-3 flex items-center gap-3 text-sm transition-colors border-l-4 ${s.id === 1 ? 'bg-white/10 text-amber-400 font-semibold border-amber-400' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border-transparent'}">
-        <div id="stepNavIcon${s.id}"
-          class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${s.id === 1 ? 'text-white' : 'bg-white/10 text-gray-400'}" style="${s.id === 1 ? 'background:linear-gradient(135deg,#ffb300,#ff7a00)' : ''}">
-          ${s.id}
-        </div>
-        <span class="text-left leading-tight">${s.label}</span>
-      </button>
-    `).join('');
+    // Sidebar shows only progress indicator (no step list)
+    updateStepNav(currentStep);
   }
 
   function updateStepNav(step) {
-    STEP_DEFS.forEach(s => {
-      const btn  = document.getElementById('stepNavBtn'  + s.id);
-      const icon = document.getElementById('stepNavIcon' + s.id);
-      if (!btn || !icon) return;
-      if (s.id < step) {
-        btn.className  = 'w-full text-left px-4 py-3 flex items-center gap-3 text-sm transition-colors border-l-4 text-green-400 hover:bg-white/5 border-green-500';
-        icon.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 bg-green-500 text-white';
-        icon.removeAttribute('style');
-        icon.innerHTML = '<i class="fas fa-check"></i>';
-      } else if (s.id === step) {
-        btn.className  = 'w-full text-left px-4 py-3 flex items-center gap-3 text-sm transition-colors border-l-4 bg-white/10 text-amber-400 font-semibold border-amber-400';
-        icon.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white';
-        icon.setAttribute('style', 'background:linear-gradient(135deg,#ffb300,#ff7a00)');
-        icon.innerHTML = s.id;
-      } else {
-        btn.className  = 'w-full text-left px-4 py-3 flex items-center gap-3 text-sm transition-colors border-l-4 text-gray-400 hover:bg-white/5 hover:text-gray-200 border-transparent';
-        icon.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 bg-white/10 text-gray-400';
-        icon.removeAttribute('style');
-        icon.innerHTML = s.id;
-      }
-    });
 
     const pct = Math.round(((step - 1) / totalSteps) * 100);
     const bar  = document.getElementById('progressBar');
