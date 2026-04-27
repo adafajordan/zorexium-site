@@ -8,32 +8,41 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+    body { font-family: 'Inter', sans-serif; background-color: #f9fafb; color: #111827; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .form-input { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #1f2937; padding: 12px 16px; border-radius: 6px; width: 100%; margin-bottom: 12px; }
-    .form-input:focus { outline: none; border-color: #65a30d; }
-    .btn-primary { background-color: #65a30d; color: white; padding: 12px 24px; border-radius: 6px; font-weight: 600; transition: all 0.2s; }
+    /* Wizard styles */
+    .wiz-label { display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.375rem; }
+    .wiz-input { display: block; width: 100%; background-color: #ffffff; border: 1px solid #d1d5db; color: #1f2937; padding: 0.5rem 0.75rem; border-radius: 0.5rem; font-size: 0.875rem; transition: border-color 0.15s, box-shadow 0.15s; }
+    .wiz-input:focus { outline: none; border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
+    .wiz-input.error { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+    select.wiz-input { padding-right: 2rem; appearance: auto; }
+    textarea.wiz-input { resize: vertical; }
+    .wiz-help { font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem; }
+    .btn-primary { background-color: #65a30d; color: white; padding: 0.625rem 1.25rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem; cursor: pointer; border: none; }
     .btn-primary:hover { background-color: #4d7c0f; }
-    .step-section { display: none; }
-    .step-section.active { display: block; }
-    .image-preview { width: 120px; height: 120px; border-radius: 8px; object-fit: cover; }
-  
-        /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
-        .marketplace-mega-menu {
-            position: fixed !important;
-            left: 0 !important;
-            right: 0 !important;
-            top: 96px !important;
-            width: 100vw !important;
-            max-width: none !important;
-            border-radius: 0 !important;
-            transform: translateY(-4px);
-        }
-        .nav-dropdown-trigger:hover .marketplace-mega-menu,
-        .nav-dropdown-trigger.active .marketplace-mega-menu {
-            transform: translateY(0);
-        }
+    .btn-secondary { background-color: #ffffff; color: #374151; border: 1px solid #d1d5db; padding: 0.625rem 1.25rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.375rem; cursor: pointer; }
+    .btn-secondary:hover { background-color: #f3f4f6; border-color: #9ca3af; }
+    .wizard-step { display: none; }
+    .wizard-step.active { display: block; }
+    .rich-btn { padding: 0.25rem 0.5rem; background: #fff; border: 1px solid #d1d5db; border-radius: 0.25rem; color: #374151; cursor: pointer; font-size: 0.8rem; transition: background 0.15s; }
+    .rich-btn:hover { background: #e5e7eb; }
+    [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; }
+    /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
+    .marketplace-mega-menu {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: 96px !important;
+        width: 100vw !important;
+        max-width: none !important;
+        border-radius: 0 !important;
+        transform: translateY(-4px);
+    }
+    .nav-dropdown-trigger:hover .marketplace-mega-menu,
+    .nav-dropdown-trigger.active .marketplace-mega-menu {
+        transform: translateY(0);
+    }
     </style>
   <script src="open-links-new-tab.js"></script>
   <script src="cookie-consent.js"></script>
@@ -241,174 +250,650 @@
 
 
 <!-- Main Content -->
-<main class="flex-1 max-w-4xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
-  <div class="mb-12">
-    <h1 class="text-4xl font-bold text-gray-900 mb-2">Create Product Listing</h1>
-    <p class="text-gray-400">Step-by-step wizard to list your hardware</p>
-  </div>
+<div class="flex-1 bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-  <!-- Progress Bar -->
-  <div class="bg-white border border-gray-200 rounded-lg p-6 mb-12">
-    <div class="flex justify-between mb-6">
-      <div class="text-center flex-1">
-        <div id="step1Indicator" class="w-10 h-10 mx-auto bg-cyan-500 text-white rounded-full flex items-center justify-center font-bold mb-2">1</div>
-        <p class="text-base text-gray-400">Basic Info</p>
-      </div>
-      <div class="flex-1 flex items-center justify-center mb-12"><div class="h-1 flex-1 bg-gray-700"></div></div>
-      <div class="text-center flex-1">
-        <div id="step2Indicator" class="w-10 h-10 mx-auto bg-gray-700 text-white rounded-full flex items-center justify-center font-bold mb-2">2</div>
-        <p class="text-base text-gray-400">Specifications</p>
-      </div>
-      <div class="flex-1 flex items-center justify-center mb-12"><div class="h-1 flex-1 bg-gray-700"></div></div>
-      <div class="text-center flex-1">
-        <div id="step3Indicator" class="w-10 h-10 mx-auto bg-gray-700 text-white rounded-full flex items-center justify-center font-bold mb-2">3</div>
-        <p class="text-base text-gray-400">Images & Finish</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Step 1: Basic Info -->
-  <div id="step1" class="step-section active bg-[#20232a] border border-gray-700 rounded-lg p-6 mb-8">
-    <h2 class="text-3xl font-bold text-gray-900 mb-8">Product Details</h2>
-    
-    <div class="mb-8">
-      <label class="block text-white font-semibold mb-2">Product Name *</label>
-      <input type="text" id="productName" class="form-input" placeholder="e.g., NVIDIA RTX 4090" maxlength="100" required>
+    <!-- Page Header -->
+    <div class="mb-6">
+      <nav class="text-sm text-gray-500 mb-2 flex items-center gap-1.5">
+        <a href="seller-dashboard.html" class="hover:text-cyan-600">Seller Dashboard</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-gray-800 font-medium">Create Product Listing</span>
+      </nav>
+      <h1 class="text-2xl font-bold text-gray-900">Create Product Listing</h1>
+      <p class="text-gray-500 mt-0.5 text-sm">Complete all sections to publish your product on the Zorexium marketplace.</p>
     </div>
 
-    <div class="mb-8">
-      <label class="block text-white font-semibold mb-2">Product Description *</label>
-      <textarea id="productDescription" class="form-input" placeholder="Detailed description of your product..." rows="4" maxlength="1000" required></textarea>
-    </div>
+    <!-- Wizard Layout -->
+    <div class="flex gap-6 items-start">
 
-    <div class="grid grid-cols-2 gap-6 mb-8">
-      <div>
-        <label class="block text-white font-semibold mb-2">Price ($) *</label>
-        <input type="number" id="productPrice" class="form-input" placeholder="999.99" min="0" step="0.01" required>
-      </div>
-      <div>
-        <label class="block text-white font-semibold mb-2">Quantity Available *</label>
-        <input type="number" id="productQuantity" class="form-input" placeholder="1" min="1" required>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-6 mb-8">
-      <div>
-        <label class="block text-white font-semibold mb-2">Product Condition *</label>
-        <select id="productCondition" class="form-input" required>
-          <option value="">Select condition...</option>
-          <option value="New">New</option>
-          <option value="Like New">Like New</option>
-          <option value="Barely Used">Barely Used</option>
-          <option value="Used">Used</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-white font-semibold mb-2">Product Category *</label>
-        <input type="text" id="productCategory" class="form-input" placeholder="e.g., Graphics Cards" maxlength="50" required>
-        <p class="text-gray-400 text-sm mt-1">Create or select a category for your product</p>
-      </div>
-    </div>
-
-    <div class="flex gap-3 justify-end">
-      <button onclick="goToStep(2)" class="btn-primary">Next: Specifications →</button>
-    </div>
-  </div>
-
-  <!-- Step 2: Specifications -->
-  <div id="step2" class="step-section bg-[#20232a] border border-gray-700 rounded-lg p-6 mb-8">
-    <h2 class="text-3xl font-bold text-gray-900 mb-8">Hardware Specifications</h2>
-    <p class="text-gray-400 mb-8">Add detailed specs that buyers care about. Leave blank if not applicable.</p>
-
-    <div class="grid grid-cols-2 gap-6 mb-8">
-      <div>
-        <label class="block text-white font-semibold mb-2">Memory (VRAM/RAM) GB</label>
-        <input type="number" id="specMemory" class="form-input" placeholder="e.g., 24" min="0" step="0.5">
-      </div>
-      <div>
-        <label class="block text-white font-semibold mb-2">Memory Type</label>
-        <input type="text" id="specMemoryType" class="form-input" placeholder="e.g., GDDR6X, DDR4" maxlength="50">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-6 mb-8">
-      <div>
-        <label class="block text-white font-semibold mb-2">CUDA/GPU Cores</label>
-        <input type="number" id="specCores" class="form-input" placeholder="e.g., 16384" min="0">
-      </div>
-      <div>
-        <label class="block text-white font-semibold mb-2">Base Clock (MHz)</label>
-        <input type="number" id="specBaseClock" class="form-input" placeholder="e.g., 2505" min="0" step="1">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-6 mb-8">
-      <div>
-        <label class="block text-white font-semibold mb-2">Boost Clock (MHz)</label>
-        <input type="number" id="specBoostClock" class="form-input" placeholder="e.g., 2805" min="0" step="1">
-      </div>
-      <div>
-        <label class="block text-white font-semibold mb-2">TDP (Watts)</label>
-        <input type="number" id="specTDP" class="form-input" placeholder="e.g., 450" min="0" step="1">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-6 mb-8">
-      <div>
-        <label class="block text-white font-semibold mb-2">Memory Bus Width (bits)</label>
-        <input type="number" id="specBusWidth" class="form-input" placeholder="e.g., 384" min="0" step="1">
-      </div>
-      <div>
-        <label class="block text-white font-semibold mb-2">Interface/Connector</label>
-        <input type="text" id="specInterface" class="form-input" placeholder="e.g., PCIe 4.0 x16" maxlength="50">
-      </div>
-    </div>
-
-    <div class="mb-8">
-      <label class="block text-white font-semibold mb-2">Additional Specifications</label>
-      <textarea id="specAdditional" class="form-input" placeholder="Any other important specs..." rows="3" maxlength="500"></textarea>
-    </div>
-
-    <div class="flex gap-3 justify-between">
-      <button onclick="goToStep(1)" class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-semibold">← Back: Basic Info</button>
-      <button onclick="goToStep(3)" class="btn-primary">Next: Images →</button>
-    </div>
-  </div>
-
-  <!-- Step 3: Images & Finish -->
-  <div id="step3" class="step-section bg-[#20232a] border border-gray-700 rounded-lg p-6 mb-8">
-    <h2 class="text-3xl font-bold text-gray-900 mb-8">Product Images</h2>
-
-    <div class="mb-8">
-      <label class="block text-white font-semibold mb-2">Primary Product Image *</label>
-      <div class="mb-6">
-        <label class="flex items-center justify-center w-full p-6 bg-[#2a2e38] border-2 border-dashed border-gray-600 rounded-lg cursor-pointer hover:border-cyan-400 transition">
-          <div class="text-center">
-            <i class="fas fa-cloud-upload-alt text-4xl text-gray-500 mb-2 block"></i>
-            <p class="text-gray-300 font-semibold">Click to upload or drag & drop</p>
-            <p class="text-gray-500 text-base">PNG, JPG, GIF up to 10MB</p>
+      <!-- Left Sidebar: Step Navigation (desktop only) -->
+      <div class="w-60 flex-shrink-0 hidden lg:block">
+        <div class="sticky top-28 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <div class="px-4 py-3 bg-cyan-50 border-b border-gray-200">
+            <p class="text-xs font-bold text-cyan-700 uppercase tracking-wider">Listing Steps</p>
           </div>
-          <input type="file" id="productImageFile" class="hidden" accept="image/*" onchange="handleImageUpload(event)">
-        </label>
+          <div id="stepNavList" class="divide-y divide-gray-100"></div>
+          <div class="px-4 py-3 border-t border-gray-200 bg-gray-50">
+            <div class="text-xs text-gray-500 mb-1 font-medium">Progress</div>
+            <div class="bg-gray-200 rounded-full h-1.5">
+              <div id="progressBar" class="bg-cyan-500 h-1.5 rounded-full transition-all duration-300" style="width:0%"></div>
+            </div>
+            <p id="progressText" class="text-xs text-gray-500 mt-1">Step 1 of 7</p>
+          </div>
+        </div>
       </div>
-      <div id="imagePreviewContainer" class="hidden">
-        <img id="imagePreview" class="image-preview mb-6">
-        <button type="button" onclick="removeImage()" class="text-red-400 hover:text-red-300 text-base">Remove Image</button>
-      </div>
-    </div>
 
-    <div class="mb-8 p-4 bg-blue-900 bg-opacity-30 border border-blue-700 rounded">
-      <p class="text-blue-200 text-base"><i class="fas fa-info-circle mr-2"></i> Tip: Use high-quality images showing the product from multiple angles for better sales</p>
-    </div>
+      <!-- Main Content Area -->
+      <div class="flex-1 min-w-0">
 
-    <div class="flex gap-3 justify-between mb-12">
-      <button onclick="goToStep(2)" class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-semibold">← Back: Specs</button>
-      <button onclick="publishListing()" class="btn-primary flex items-center gap-3">
-        <i class="fas fa-check"></i> Publish Listing
-      </button>
-    </div>
-  </div>
-</main>
+        <!-- Mobile Step Indicator -->
+        <div class="lg:hidden mb-4 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <span id="mobileStepLabel" class="text-sm font-semibold text-gray-900">Step 1: Product Details</span>
+            <span id="mobileStepCount" class="text-sm text-gray-500 font-medium">1 / 7</span>
+          </div>
+          <div class="bg-gray-200 rounded-full h-1.5">
+            <div id="progressBarMobile" class="bg-cyan-500 h-1.5 rounded-full transition-all duration-300" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- ===== STEP 1: Product Details ===== -->
+        <div id="step1" class="wizard-step active bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <div class="w-8 h-8 bg-cyan-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Product Details</h2>
+              <p class="text-xs text-gray-500">Core product information and identification</p>
+            </div>
+          </div>
+          <div class="p-6 space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div class="md:col-span-2">
+                <label class="wiz-label">Product Name <span class="text-red-500">*</span></label>
+                <input type="text" id="productName" class="wiz-input" placeholder="e.g., ASUS ROG Strix GeForce RTX 4090 OC Edition 24GB" maxlength="200">
+                <p class="wiz-help">Be specific — include brand, model name, and key specs (max 200 chars)</p>
+              </div>
+              <div>
+                <label class="wiz-label">Brand <span class="text-red-500">*</span></label>
+                <input type="text" id="productBrand" class="wiz-input" placeholder="e.g., ASUS, NVIDIA, Corsair">
+              </div>
+              <div>
+                <label class="wiz-label">Model / Part Number</label>
+                <input type="text" id="productModel" class="wiz-input" placeholder="e.g., ROG-STRIX-RTX4090-O24G-GAMING">
+              </div>
+              <div>
+                <label class="wiz-label">Product Type <span class="text-red-500">*</span></label>
+                <select id="productType" class="wiz-input">
+                  <option value="">Select product type...</option>
+                  <option value="New">New</option>
+                  <option value="Refurbished">Manufacturer Refurbished</option>
+                  <option value="Open Box">Open Box</option>
+                  <option value="Used - Like New">Used – Like New</option>
+                  <option value="Used - Good">Used – Good</option>
+                  <option value="Used - Acceptable">Used – Acceptable</option>
+                </select>
+              </div>
+              <div>
+                <label class="wiz-label">Product Condition <span class="text-red-500">*</span></label>
+                <select id="productCondition" class="wiz-input">
+                  <option value="">Select condition...</option>
+                  <option value="New">New (factory sealed)</option>
+                  <option value="Like New">Like New (opened, unused)</option>
+                  <option value="Excellent">Excellent (minor signs of use)</option>
+                  <option value="Good">Good (normal signs of use)</option>
+                  <option value="Acceptable">Acceptable (heavy use, fully functional)</option>
+                </select>
+              </div>
+              <div>
+                <label class="wiz-label">Primary Category <span class="text-red-500">*</span></label>
+                <select id="productCategory" class="wiz-input">
+                  <option value="">Select category...</option>
+                  <option value="processors">Processors / CPUs</option>
+                  <option value="graphics-cards">Graphics Cards / GPUs</option>
+                  <option value="motherboards">Motherboards</option>
+                  <option value="memory-ram">Memory / RAM</option>
+                  <option value="internal-ssds">Internal SSDs</option>
+                  <option value="hard-drives">Hard Drives (HDD)</option>
+                  <option value="external-storage">External Storage</option>
+                  <option value="cooling-solutions">Cooling Solutions</option>
+                  <option value="power-supply">Power Supplies (PSU)</option>
+                  <option value="pc-cases">PC Cases / Chassis</option>
+                  <option value="monitors">Monitors / Displays</option>
+                  <option value="mechanical-keyboards">Keyboards</option>
+                  <option value="precision-mice">Mice &amp; Input Devices</option>
+                  <option value="networking-gear">Networking / Wi-Fi</option>
+                  <option value="gaming-desktops">Gaming Desktops</option>
+                  <option value="laptops">Laptops</option>
+                  <option value="server-solutions">Servers / Workstations</option>
+                  <option value="smart-security">Smart Security / IoT</option>
+                  <option value="accessories">Accessories &amp; Cables</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="wiz-label">Subcategory</label>
+                <input type="text" id="productSubcategory" class="wiz-input" placeholder="e.g., Desktop Gaming Cards, NVMe M.2 Gen5">
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div>
+              <label class="wiz-label">Tags / Keywords</label>
+              <input type="text" id="productTags" class="wiz-input" placeholder="e.g., RTX, 4K gaming, ray tracing, DLSS 3 (comma separated)">
+              <p class="wiz-help">Helps buyers find your product through search</p>
+            </div>
+
+            <!-- Product Attributes -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <label class="wiz-label mb-0">Product Attributes</label>
+                  <p class="wiz-help">Specific properties like Interface, Socket Type, Form Factor, Chipset, etc.</p>
+                </div>
+                <button type="button" onclick="addAttribute()" class="text-xs text-cyan-600 hover:text-cyan-700 font-semibold flex items-center gap-1 flex-shrink-0 ml-4 px-3 py-1.5 border border-cyan-200 rounded-lg hover:bg-cyan-50">
+                  <i class="fas fa-plus"></i> Add Attribute
+                </button>
+              </div>
+              <div id="attributesContainer" class="space-y-2">
+                <div class="attribute-row grid grid-cols-9 gap-2">
+                  <input type="text" placeholder="Name (e.g., Interface)" class="wiz-input col-span-4 attr-name">
+                  <input type="text" placeholder="Value (e.g., PCIe 5.0 x16)" class="wiz-input col-span-4 attr-value">
+                  <button type="button" onclick="removeAttribute(this)" class="text-gray-400 hover:text-red-500 flex items-center justify-center col-span-1"><i class="fas fa-times text-sm"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Variations -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <label class="wiz-label mb-0">Product Variations <span class="text-gray-400 font-normal">(optional)</span></label>
+                  <p class="wiz-help">Add variants like different storage capacities, colors, or bundle options</p>
+                </div>
+                <button type="button" onclick="addVariation()" class="text-xs text-cyan-600 hover:text-cyan-700 font-semibold flex items-center gap-1 flex-shrink-0 ml-4 px-3 py-1.5 border border-cyan-200 rounded-lg hover:bg-cyan-50">
+                  <i class="fas fa-plus"></i> Add Variation
+                </button>
+              </div>
+              <div id="variationsContainer" class="space-y-2"></div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-end">
+            <button onclick="nextStep()" class="btn-primary">Next: Images <i class="fas fa-arrow-right text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- ===== STEP 2: Images ===== -->
+        <div id="step2" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Images</h2>
+              <p class="text-xs text-gray-500">Upload high-quality product photos (at least 1 required)</p>
+            </div>
+          </div>
+          <div class="p-6 space-y-5">
+            <!-- Guidelines -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 class="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2"><i class="fas fa-info-circle"></i> Image Guidelines</h3>
+              <ul class="text-sm text-blue-700 space-y-1">
+                <li><i class="fas fa-check text-xs mr-1.5 text-blue-500"></i>Minimum 800×800px; 1200×1200px or higher recommended</li>
+                <li><i class="fas fa-check text-xs mr-1.5 text-blue-500"></i>First/main image should have a white or neutral background</li>
+                <li><i class="fas fa-check text-xs mr-1.5 text-blue-500"></i>Max file size: 10MB per image — JPG, PNG, or WEBP</li>
+                <li><i class="fas fa-check text-xs mr-1.5 text-blue-500"></i>Up to 9 images; drag to reorder — the first image is your main thumbnail</li>
+                <li><i class="fas fa-check text-xs mr-1.5 text-blue-500"></i>No watermarks, text overlays, or promotional banners on images</li>
+              </ul>
+            </div>
+            <!-- Drop zone -->
+            <div id="imageDropZone"
+                 class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-cyan-400 hover:bg-cyan-50 transition-all"
+                 onclick="document.getElementById('bulkImageInput').click()"
+                 ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+              <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3 block"></i>
+              <p class="text-gray-600 font-semibold">Click to upload or drag &amp; drop images here</p>
+              <p class="text-gray-400 text-sm mt-1">JPG, PNG, WEBP &mdash; max 10MB each &mdash; up to 9 images</p>
+              <input type="file" id="bulkImageInput" class="hidden" accept="image/jpeg,image/png,image/webp" multiple onchange="handleBulkImageUpload(event)">
+            </div>
+            <!-- Image Grid -->
+            <div id="imageGrid" class="grid grid-cols-3 sm:grid-cols-5 gap-3"></div>
+            <p class="text-xs text-gray-400"><i class="fas fa-hand-pointer mr-1"></i>Drag images in the grid to reorder. The first image is your main thumbnail.</p>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+            <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
+            <button onclick="nextStep()" class="btn-primary">Next: Pricing &amp; Inventory <i class="fas fa-arrow-right text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- ===== STEP 3: Pricing & Inventory ===== -->
+        <div id="step3" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Pricing &amp; Inventory</h2>
+              <p class="text-xs text-gray-500">Set pricing, stock levels, and order quantity limits</p>
+            </div>
+          </div>
+          <div class="p-6 space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label class="wiz-label">SKU (Stock Keeping Unit) <span class="text-red-500">*</span></label>
+                <div class="flex gap-2">
+                  <input type="text" id="productSku" class="wiz-input flex-1" placeholder="e.g., ROG-RTX4090-24G-BLK">
+                  <button type="button" onclick="generateSku()" class="px-3 py-2 bg-gray-100 border border-gray-300 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 whitespace-nowrap transition-colors">Auto-generate</button>
+                </div>
+                <p class="wiz-help">Unique internal identifier for inventory tracking</p>
+              </div>
+              <div>
+                <label class="wiz-label">GTIN / UPC / EAN <span class="text-gray-400 font-normal">(optional)</span></label>
+                <input type="text" id="productGtin" class="wiz-input" placeholder="e.g., 195553535213">
+                <p class="wiz-help">Global trade item number if applicable</p>
+              </div>
+              <div>
+                <label class="wiz-label">Base Price (USD) <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm">$</span>
+                  <input type="number" id="productPrice" class="wiz-input pl-7" placeholder="999.99" min="0" step="0.01" oninput="updateDiscountPercent()">
+                </div>
+              </div>
+              <div>
+                <label class="wiz-label">Sale / Discounted Price (USD) <span class="text-gray-400 font-normal">(optional)</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm">$</span>
+                  <input type="number" id="productSalePrice" class="wiz-input pl-7" placeholder="Leave blank if no sale price" min="0" step="0.01" oninput="updateDiscountPercent()">
+                </div>
+              </div>
+              <div>
+                <label class="wiz-label">Discount %</label>
+                <input type="text" id="discountPercent" class="wiz-input bg-gray-50 text-gray-600" placeholder="Auto-calculated from prices" readonly>
+              </div>
+              <div>
+                <label class="wiz-label">Stock Quantity <span class="text-red-500">*</span></label>
+                <input type="number" id="productQuantity" class="wiz-input" placeholder="e.g., 50" min="0">
+              </div>
+              <div>
+                <label class="wiz-label">Minimum Order Quantity</label>
+                <input type="number" id="minQty" class="wiz-input" placeholder="1 (default)" min="1">
+              </div>
+              <div>
+                <label class="wiz-label">Maximum Order Quantity <span class="text-gray-400 font-normal">(optional)</span></label>
+                <input type="number" id="maxQty" class="wiz-input" placeholder="Leave blank for unlimited" min="1">
+              </div>
+              <div>
+                <label class="wiz-label">Low Stock Alert Threshold</label>
+                <input type="number" id="lowStockThreshold" class="wiz-input" placeholder="e.g., 5" min="0">
+                <p class="wiz-help">Get notified when stock falls below this number</p>
+              </div>
+              <div class="flex items-start gap-3 pt-5">
+                <input type="checkbox" id="trackInventory" class="mt-0.5 w-4 h-4 text-cyan-500 rounded border-gray-300 flex-shrink-0">
+                <div>
+                  <label for="trackInventory" class="text-sm font-semibold text-gray-700 cursor-pointer block">Enable inventory tracking</label>
+                  <p class="text-xs text-gray-500">Automatically reduce stock count when orders are placed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+            <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
+            <button onclick="nextStep()" class="btn-primary">Next: Shipping <i class="fas fa-arrow-right text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- ===== STEP 4: Shipping & Fulfillment ===== -->
+        <div id="step4" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">4</div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Shipping &amp; Fulfillment</h2>
+              <p class="text-xs text-gray-500">Package dimensions, weight, shipping options, and returns</p>
+            </div>
+          </div>
+          <div class="p-6 space-y-6">
+            <div>
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Package Dimensions &amp; Weight</h3>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label class="wiz-label">Length (in)</label>
+                  <input type="number" id="pkgLength" class="wiz-input" placeholder="0.0" min="0" step="0.1">
+                </div>
+                <div>
+                  <label class="wiz-label">Width (in)</label>
+                  <input type="number" id="pkgWidth" class="wiz-input" placeholder="0.0" min="0" step="0.1">
+                </div>
+                <div>
+                  <label class="wiz-label">Height (in)</label>
+                  <input type="number" id="pkgHeight" class="wiz-input" placeholder="0.0" min="0" step="0.1">
+                </div>
+                <div>
+                  <label class="wiz-label">Weight (lbs)</label>
+                  <input type="number" id="pkgWeight" class="wiz-input" placeholder="0.0" min="0" step="0.1">
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Shipping Options</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="wiz-label">Shipping Class <span class="text-red-500">*</span></label>
+                  <select id="shippingClass" class="wiz-input">
+                    <option value="">Select shipping class...</option>
+                    <option value="Standard">Standard Shipping (5–7 business days)</option>
+                    <option value="Expedited">Expedited Shipping (2–3 business days)</option>
+                    <option value="Overnight">Overnight Shipping (next business day)</option>
+                    <option value="Freight">Freight (large/heavy items)</option>
+                    <option value="LocalPickup">Local Pickup Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="wiz-label">Handling Time</label>
+                  <select id="handlingTime" class="wiz-input">
+                    <option value="1">Ships within 1 business day</option>
+                    <option value="2">Ships within 2 business days</option>
+                    <option value="3">Ships within 3 business days</option>
+                    <option value="5">Ships within 5 business days</option>
+                    <option value="7">Ships within 7 business days</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="wiz-label">Carriers Offered</label>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="carrier" value="FedEx" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700 font-medium">FedEx</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="carrier" value="UPS" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700 font-medium">UPS</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="carrier" value="USPS" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700 font-medium">USPS</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="carrier" value="DHL" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700 font-medium">DHL</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-3">
+              <input type="checkbox" id="freeShipping" class="mt-0.5 w-4 h-4 text-cyan-500 rounded border-gray-300 flex-shrink-0">
+              <div>
+                <label for="freeShipping" class="text-sm font-semibold text-gray-700 cursor-pointer block">Offer Free Shipping</label>
+                <p class="text-xs text-gray-500">Free shipping significantly improves conversion rates and search ranking</p>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Returns Policy</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="wiz-label">Return Eligibility <span class="text-red-500">*</span></label>
+                  <select id="returnEligible" class="wiz-input">
+                    <option value="yes">Returnable</option>
+                    <option value="no">No Returns Accepted</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="wiz-label">Return Window</label>
+                  <select id="returnWindow" class="wiz-input">
+                    <option value="15">15 days from delivery</option>
+                    <option value="30">30 days from delivery</option>
+                    <option value="60">60 days from delivery</option>
+                    <option value="90">90 days from delivery</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+            <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
+            <button onclick="nextStep()" class="btn-primary">Next: Description <i class="fas fa-arrow-right text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- ===== STEP 5: Description & Rich Content ===== -->
+        <div id="step5" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">5</div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Description &amp; Rich Content</h2>
+              <p class="text-xs text-gray-500">Detailed descriptions, feature highlights, media, and documents</p>
+            </div>
+          </div>
+          <div class="p-6 space-y-6">
+            <div>
+              <label class="wiz-label">Short Description <span class="text-red-500">*</span></label>
+              <textarea id="shortDescription" class="wiz-input" rows="3" maxlength="500"
+                placeholder="A concise summary shown in product cards and search results (max 500 chars)"
+                oninput="updateCharCount(this,'shortDescCount',500)"></textarea>
+              <div class="flex justify-between mt-1">
+                <p class="wiz-help">This appears in product listings and category pages</p>
+                <p class="text-xs text-gray-500"><span id="shortDescCount">0</span> / 500</p>
+              </div>
+            </div>
+
+            <div>
+              <label class="wiz-label">Full Product Description <span class="text-red-500">*</span></label>
+              <!-- Rich Text Toolbar -->
+              <div class="flex flex-wrap gap-1 p-2 bg-gray-100 border border-gray-300 border-b-0 rounded-t-lg">
+                <button type="button" onclick="applyFormat('bold')" class="rich-btn" title="Bold"><i class="fas fa-bold"></i></button>
+                <button type="button" onclick="applyFormat('italic')" class="rich-btn" title="Italic"><i class="fas fa-italic"></i></button>
+                <button type="button" onclick="applyFormat('underline')" class="rich-btn" title="Underline"><i class="fas fa-underline"></i></button>
+                <span class="border-l border-gray-300 mx-1"></span>
+                <button type="button" onclick="applyFormat('insertUnorderedList')" class="rich-btn" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+                <button type="button" onclick="applyFormat('insertOrderedList')" class="rich-btn" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+                <span class="border-l border-gray-300 mx-1"></span>
+                <button type="button" onclick="applyFormat('justifyLeft')" class="rich-btn" title="Align left"><i class="fas fa-align-left"></i></button>
+                <button type="button" onclick="applyFormat('justifyCenter')" class="rich-btn" title="Center"><i class="fas fa-align-center"></i></button>
+                <span class="border-l border-gray-300 mx-1"></span>
+                <button type="button" onclick="applyHeading('h2')" class="rich-btn font-bold text-xs" title="Heading 2">H2</button>
+                <button type="button" onclick="applyHeading('h3')" class="rich-btn font-bold text-xs" title="Heading 3">H3</button>
+                <button type="button" onclick="applyFormat('removeFormat')" class="rich-btn text-gray-400" title="Clear formatting"><i class="fas fa-eraser"></i></button>
+              </div>
+              <div id="richTextEditor" contenteditable="true"
+                class="min-h-[180px] p-4 bg-white border border-gray-300 rounded-b-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                placeholder="Write a detailed product description — include key features, use cases, compatibility, and anything buyers need to know..."></div>
+            </div>
+
+            <!-- Feature Bullets -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div>
+                  <label class="wiz-label mb-0">Key Feature Bullets</label>
+                  <p class="wiz-help">Up to 10 feature highlights shown prominently on the product page</p>
+                </div>
+                <button type="button" onclick="addFeatureBullet()" class="text-xs text-cyan-600 hover:text-cyan-700 font-semibold flex items-center gap-1 flex-shrink-0 ml-4 px-3 py-1.5 border border-cyan-200 rounded-lg hover:bg-cyan-50">
+                  <i class="fas fa-plus"></i> Add Bullet
+                </button>
+              </div>
+              <div id="featureBulletsContainer" class="space-y-2">
+                <div class="bullet-row flex gap-2 items-center">
+                  <span class="text-cyan-500 flex-shrink-0 w-4 text-center"><i class="fas fa-circle text-xs"></i></span>
+                  <input type="text" placeholder="e.g., 24GB GDDR6X with 384-bit memory bus" class="wiz-input flex-1 feature-bullet">
+                  <button type="button" onclick="removeFeatureBullet(this)" class="text-gray-400 hover:text-red-500 flex-shrink-0"><i class="fas fa-times text-sm"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Video URL -->
+            <div>
+              <label class="wiz-label">Product Video URL <span class="text-gray-400 font-normal">(optional)</span></label>
+              <input type="url" id="productVideo" class="wiz-input" placeholder="https://www.youtube.com/watch?v=...">
+              <p class="wiz-help">YouTube or Vimeo link for a product demo, review, or unboxing video</p>
+            </div>
+
+            <!-- Downloadable Documents -->
+            <div>
+              <label class="wiz-label">Downloadable Documents <span class="text-gray-400 font-normal">(optional)</span></label>
+              <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-cyan-400 hover:bg-cyan-50 transition-all"
+                   onclick="document.getElementById('docsInput').click()">
+                <i class="fas fa-file-alt text-gray-400 text-2xl mb-2 block"></i>
+                <p class="text-sm text-gray-600 font-medium">Click to upload manuals, spec sheets, or guides</p>
+                <p class="text-xs text-gray-400 mt-1">PDF, DOC, TXT — max 25MB each</p>
+                <input type="file" id="docsInput" class="hidden" accept=".pdf,.doc,.docx,.txt" multiple onchange="handleDocsUpload(event)">
+              </div>
+              <div id="docsPreview" class="mt-2 space-y-1"></div>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+            <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
+            <button onclick="nextStep()" class="btn-primary">Next: Compliance <i class="fas fa-arrow-right text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- ===== STEP 6: Compliance & Policies ===== -->
+        <div id="step6" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">6</div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Compliance &amp; Policies</h2>
+              <p class="text-xs text-gray-500">Safety certifications, warranty info, and legal requirements</p>
+            </div>
+          </div>
+          <div class="p-6 space-y-6">
+            <div>
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Safety &amp; Compliance Certifications</h3>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="FCC" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">FCC</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="CE" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">CE (EU)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="UL" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">UL Listed</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="RoHS" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">RoHS</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="ENERGY_STAR" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">ENERGY STAR</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="MIL_SPEC" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">MIL-SPEC</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="IC" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">IC (Canada)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                  <input type="checkbox" name="cert" value="None" class="w-4 h-4 text-cyan-500 rounded border-gray-300">
+                  <span class="text-sm text-gray-700">None / N/A</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Warranty</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="wiz-label">Warranty Type <span class="text-red-500">*</span></label>
+                  <select id="warrantyType" class="wiz-input">
+                    <option value="None">No Warranty</option>
+                    <option value="Manufacturer">Manufacturer Warranty</option>
+                    <option value="Seller">Seller Warranty</option>
+                    <option value="Extended">Extended Warranty Available</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="wiz-label">Warranty Duration</label>
+                  <select id="warrantyDuration" class="wiz-input">
+                    <option value="">N/A</option>
+                    <option value="90 days">90 Days</option>
+                    <option value="1 year">1 Year</option>
+                    <option value="2 years">2 Years</option>
+                    <option value="3 years">3 Years</option>
+                    <option value="Lifetime">Lifetime</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Legal &amp; Restrictions</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="wiz-label">Age Restriction</label>
+                  <select id="ageRestriction" class="wiz-input">
+                    <option value="none">No Age Restriction</option>
+                    <option value="18+">18+ Only</option>
+                    <option value="21+">21+ Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="wiz-label">Country of Origin</label>
+                  <input type="text" id="countryOfOrigin" class="wiz-input" placeholder="e.g., Taiwan, China, United States">
+                </div>
+                <div>
+                  <label class="wiz-label">Contains Hazardous Materials?</label>
+                  <select id="hazardous" class="wiz-input">
+                    <option value="no">No</option>
+                    <option value="yes">Yes (battery, chemicals, compressed gas, etc.)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="wiz-label">Legal Disclaimer / Seller Notes <span class="text-gray-400 font-normal">(optional)</span></label>
+              <textarea id="legalDisclaimer" class="wiz-input" rows="3"
+                placeholder="Any mandatory legal notices, product limitations, or seller-specific disclaimers..."></textarea>
+            </div>
+
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="termsConfirm" class="mt-0.5 w-4 h-4 text-cyan-500 rounded border-gray-300 flex-shrink-0">
+                <span class="text-sm text-gray-700 leading-relaxed">I confirm that this product listing complies with all applicable laws and regulations, Zorexium's <a href="sellers-guidelines.html" class="text-cyan-600 hover:underline font-medium" target="_blank">Seller Guidelines</a>, and <a href="terms-of-service.html" class="text-cyan-600 hover:underline font-medium" target="_blank">Terms of Service</a>. I certify that all information provided is accurate, complete, and not misleading. <span class="text-red-500 font-semibold">*</span></span>
+              </label>
+            </div>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between">
+            <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back</button>
+            <button onclick="nextStep()" class="btn-primary">Review &amp; Publish <i class="fas fa-arrow-right text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- ===== STEP 7: Review & Publish ===== -->
+        <div id="step7" class="wizard-step bg-white border border-gray-200 rounded-xl shadow-sm">
+          <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+            <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">7</div>
+            <div>
+              <h2 class="text-base font-bold text-gray-900">Review &amp; Publish</h2>
+              <p class="text-xs text-gray-500">Review your complete listing before publishing</p>
+            </div>
+          </div>
+          <div class="p-6" id="reviewContent">
+            <!-- Populated by buildReviewSection() -->
+          </div>
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+            <div class="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+              <button onclick="prevStep()" class="btn-secondary"><i class="fas fa-arrow-left text-xs"></i> Back to Compliance</button>
+              <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="saveDraft()" class="btn-secondary">
+                  <i class="fas fa-save"></i> Save as Draft
+                </button>
+                <button onclick="publishListing()" class="btn-primary text-sm px-5 py-2.5">
+                  <i class="fas fa-rocket"></i> Publish Listing
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end main content area -->
+    </div><!-- end wizard layout -->
+  </div><!-- end container -->
+</div><!-- end bg-gray-50 -->
 
 <!-- Footer -->
 
@@ -421,243 +906,649 @@
 
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  // Auth is handled via HTTP-only cookies (ZrxSession)
   let currentStep = 1;
-  let imageData = null;
+  const totalSteps = 7;
+  let uploadedImages = []; // [{dataUrl, name}]
+  let uploadedDocs   = []; // [{name, size}]
+  let dragSrcIndex   = null;
   let editingProductId = null;
   let _sellerData = null;
 
-  async function init() {
-    if (!ZrxSession.isLoggedIn()) {
-      window.location.href = 'seller-signup.html';
-      return;
-    }
+  const STEP_DEFS = [
+    { id: 1, label: 'Product Details',       icon: 'fa-tag' },
+    { id: 2, label: 'Images',                icon: 'fa-images' },
+    { id: 3, label: 'Pricing & Inventory',   icon: 'fa-dollar-sign' },
+    { id: 4, label: 'Shipping & Fulfillment',icon: 'fa-truck' },
+    { id: 5, label: 'Description & Content', icon: 'fa-align-left' },
+    { id: 6, label: 'Compliance & Policies', icon: 'fa-shield-alt' },
+    { id: 7, label: 'Review & Publish',      icon: 'fa-check-circle' },
+  ];
 
-    try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
-        credentials: 'include'
-      });
-      if (!res.ok) {
-        window.location.href = 'seller-signup.html';
-        return;
-      }
-      _sellerData = await res.json();
-    } catch (e) {
-      window.location.href = 'seller-signup.html';
-      return;
-    }
-
-    // All registered sellers (business and individual) can create listings
-
-    updateCartBadge();
-
-    // Check if editing existing product
-    const editProductId = sessionStorage.getItem('editProductId');
-    if (editProductId) {
-      loadProductForEdit(editProductId);
-      sessionStorage.removeItem('editProductId');
-    }
+  // ── Sidebar nav ─────────────────────────────────────────────────────────────
+  function buildStepNav() {
+    const container = document.getElementById('stepNavList');
+    if (!container) return;
+    container.innerHTML = STEP_DEFS.map(s => `
+      <button onclick="jumpToStep(${s.id})" id="stepNavBtn${s.id}"
+        class="w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm transition-colors border-l-4 ${s.id === 1 ? 'bg-cyan-50 text-cyan-700 font-semibold border-cyan-500' : 'text-gray-500 hover:bg-gray-50 border-transparent'}">
+        <div id="stepNavIcon${s.id}"
+          class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${s.id === 1 ? 'bg-cyan-500 text-white' : 'bg-gray-200 text-gray-500'}">
+          ${s.id}
+        </div>
+        <span class="text-left leading-tight">${s.label}</span>
+      </button>
+    `).join('');
   }
 
-  async function loadProductForEdit(productId) {
-    try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId));
-      if (!res.ok) return;
-      const product = await res.json();
-
-      editingProductId = String(product._id || product.id);
-
-      document.getElementById('productName').value = product.name || '';
-      document.getElementById('productDescription').value = product.description || '';
-      document.getElementById('productPrice').value = product.price || '';
-      document.getElementById('productQuantity').value = product.quantity || 1;
-      document.getElementById('productCondition').value = product.condition || '';
-      document.getElementById('productCategory').value = product.category || '';
-
-      const specs = product.specifications || product.specs || {};
-      document.getElementById('specMemory').value = specs.memory || '';
-      document.getElementById('specMemoryType').value = specs.memoryType || '';
-      document.getElementById('specCores').value = specs.cores || '';
-      document.getElementById('specBaseClock').value = specs.baseClock || '';
-      document.getElementById('specBoostClock').value = specs.boostClock || '';
-      document.getElementById('specTDP').value = specs.tdp || '';
-      document.getElementById('specBusWidth').value = specs.busWidth || '';
-      document.getElementById('specInterface').value = specs.interface || '';
-      document.getElementById('specAdditional').value = specs.additional || '';
-
-      if (product.image) {
-        imageData = product.image;
-        document.getElementById('imagePreview').src = imageData;
-        document.getElementById('imagePreviewContainer').classList.remove('hidden');
+  function updateStepNav(step) {
+    STEP_DEFS.forEach(s => {
+      const btn  = document.getElementById('stepNavBtn'  + s.id);
+      const icon = document.getElementById('stepNavIcon' + s.id);
+      if (!btn || !icon) return;
+      if (s.id < step) {
+        btn.className  = 'w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm transition-colors border-l-4 text-green-700 hover:bg-gray-50 border-green-500';
+        icon.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 bg-green-500 text-white';
+        icon.innerHTML = '<i class="fas fa-check"></i>';
+      } else if (s.id === step) {
+        btn.className  = 'w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm transition-colors border-l-4 bg-cyan-50 text-cyan-700 font-semibold border-cyan-500';
+        icon.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 bg-cyan-500 text-white';
+        icon.innerHTML = s.id;
+      } else {
+        btn.className  = 'w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm transition-colors border-l-4 text-gray-500 hover:bg-gray-50 border-transparent';
+        icon.className = 'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 bg-gray-200 text-gray-500';
+        icon.innerHTML = s.id;
       }
-    } catch (e) {
-      console.error('Failed to load product for edit:', e);
-    }
+    });
+
+    const pct = Math.round(((step - 1) / totalSteps) * 100);
+    const bar  = document.getElementById('progressBar');
+    const barM = document.getElementById('progressBarMobile');
+    const txt  = document.getElementById('progressText');
+    const lbl  = document.getElementById('mobileStepLabel');
+    const cnt  = document.getElementById('mobileStepCount');
+    if (bar)  bar.style.width  = pct + '%';
+    if (barM) barM.style.width = pct + '%';
+    if (txt)  txt.textContent  = 'Step ' + step + ' of ' + totalSteps;
+    if (lbl)  lbl.textContent  = 'Step ' + step + ': ' + STEP_DEFS[step - 1].label;
+    if (cnt)  cnt.textContent  = step + ' / ' + totalSteps;
   }
 
-  function goToStep(step) {
-    // Validate current step before moving
-    if (currentStep === 1 && !validateStep1()) return;
-    if (currentStep === 2 && !validateStep2()) return;
-
-    document.getElementById('step' + currentStep).classList.remove('active');
-    document.getElementById('step' + step).classList.add('active');
-    document.getElementById('step' + currentStep + 'Indicator').classList.remove('bg-cyan-500');
-    document.getElementById('step' + currentStep + 'Indicator').classList.add('bg-gray-700');
-    document.getElementById('step' + step + 'Indicator').classList.remove('bg-gray-700');
-    document.getElementById('step' + step + 'Indicator').classList.add('bg-cyan-500');
+  // ── Navigation ───────────────────────────────────────────────────────────────
+  function showStep(step) {
+    for (let i = 1; i <= totalSteps; i++) {
+      const el = document.getElementById('step' + i);
+      if (el) {
+        el.classList.toggle('active', i === step);
+        el.classList.toggle('hidden', false); // remove hidden class added by default
+        el.style.display = (i === step) ? '' : 'none';
+      }
+    }
+    updateStepNav(step);
     currentStep = step;
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (step === totalSteps) buildReviewSection();
   }
 
-  function validateStep1() {
-    const name = document.getElementById('productName').value.trim();
-    const description = document.getElementById('productDescription').value.trim();
-    const price = document.getElementById('productPrice').value;
-    const condition = document.getElementById('productCondition').value;
-    const category = document.getElementById('productCategory').value.trim();
+  function nextStep() {
+    if (!validateCurrentStep()) return;
+    if (currentStep < totalSteps) showStep(currentStep + 1);
+  }
 
-    if (!name || !description || !price || !condition || !category) {
-      ZrxNotify.showNotification('Please fill in all required fields on this step', 'error');
-      return false;
+  function prevStep() {
+    if (currentStep > 1) showStep(currentStep - 1);
+  }
+
+  function jumpToStep(step) {
+    if (step > currentStep) {
+      const saved = currentStep;
+      for (let i = currentStep; i < step; i++) {
+        currentStep = i;
+        if (!validateCurrentStep(true)) { currentStep = saved; return; }
+      }
+      currentStep = saved;
+    }
+    showStep(step);
+  }
+
+  // ── Validation ────────────────────────────────────────────────────────────────
+  function validateCurrentStep(silent = false) {
+    const show = (msg) => { if (!silent) ZrxNotify.showNotification(msg, 'error'); };
+    if (currentStep === 1) {
+      if (!document.getElementById('productName').value.trim())    { show('Product name is required.');           return false; }
+      if (!document.getElementById('productBrand').value.trim())   { show('Brand is required.');                  return false; }
+      if (!document.getElementById('productType').value)           { show('Product type is required.');           return false; }
+      if (!document.getElementById('productCondition').value)      { show('Product condition is required.');      return false; }
+      if (!document.getElementById('productCategory').value)       { show('Please select a product category.');   return false; }
+    }
+    if (currentStep === 2) {
+      if (uploadedImages.length === 0) { show('Please upload at least one product image.'); return false; }
+    }
+    if (currentStep === 3) {
+      if (!document.getElementById('productSku').value.trim())     { show('SKU is required.'); return false; }
+      const price = parseFloat(document.getElementById('productPrice').value);
+      if (!price || price <= 0)                                     { show('A valid price greater than $0 is required.'); return false; }
+      const qty = document.getElementById('productQuantity').value;
+      if (qty === '' || parseInt(qty) < 0)                         { show('Stock quantity is required.'); return false; }
+    }
+    if (currentStep === 4) {
+      if (!document.getElementById('shippingClass').value)         { show('Please select a shipping class.'); return false; }
+    }
+    if (currentStep === 5) {
+      if (!document.getElementById('shortDescription').value.trim())                { show('Short description is required.'); return false; }
+      if (!document.getElementById('richTextEditor').innerText.trim())              { show('Full product description is required.'); return false; }
+    }
+    if (currentStep === 6) {
+      if (!document.getElementById('termsConfirm').checked) { show('You must confirm compliance with Zorexium\'s Terms of Service.'); return false; }
     }
     return true;
   }
 
-  function validateStep2() {
-    return true; // Specs are optional
+  // ── Attributes ────────────────────────────────────────────────────────────────
+  function addAttribute() {
+    const container = document.getElementById('attributesContainer');
+    const row = document.createElement('div');
+    row.className = 'attribute-row grid grid-cols-9 gap-2';
+    row.innerHTML = `
+      <input type="text" placeholder="Name (e.g., Socket)" class="wiz-input col-span-4 attr-name">
+      <input type="text" placeholder="Value (e.g., LGA1700)" class="wiz-input col-span-4 attr-value">
+      <button type="button" onclick="removeAttribute(this)" class="text-gray-400 hover:text-red-500 flex items-center justify-center col-span-1"><i class="fas fa-times text-sm"></i></button>
+    `;
+    container.appendChild(row);
   }
 
-  function handleImageUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+  function removeAttribute(btn) { btn.closest('.attribute-row').remove(); }
 
-    if (file.size > 10 * 1024 * 1024) {
-      ZrxNotify.showNotification('File is too large. Maximum 10MB.', 'error');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      imageData = e.target.result;
-      document.getElementById('imagePreview').src = imageData;
-      document.getElementById('imagePreviewContainer').classList.remove('hidden');
-    };
-    reader.readAsDataURL(file);
+  // ── Variations ────────────────────────────────────────────────────────────────
+  function addVariation() {
+    const container = document.getElementById('variationsContainer');
+    const row = document.createElement('div');
+    row.className = 'variation-row bg-gray-50 border border-gray-200 rounded-lg p-3 grid grid-cols-7 gap-2 items-end';
+    row.innerHTML = `
+      <input type="text" placeholder="Type (e.g., Color)" class="wiz-input col-span-2 var-type">
+      <input type="text" placeholder="Value (e.g., Black)" class="wiz-input col-span-2 var-value">
+      <div class="relative col-span-2"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold">$</span><input type="number" placeholder="Price adj." class="wiz-input pl-7 var-price" step="0.01"></div>
+      <button type="button" onclick="this.closest('.variation-row').remove()" class="text-gray-400 hover:text-red-500 h-9 flex items-center justify-center col-span-1"><i class="fas fa-trash text-sm"></i></button>
+    `;
+    container.appendChild(row);
   }
 
-  function removeImage() {
-    imageData = null;
-    document.getElementById('productImageFile').value = '';
-    document.getElementById('imagePreviewContainer').classList.add('hidden');
+  // ── Image handling ────────────────────────────────────────────────────────────
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('imageDropZone').classList.add('border-cyan-500', 'bg-cyan-50');
+  }
+  function handleDragLeave() {
+    document.getElementById('imageDropZone').classList.remove('border-cyan-500', 'bg-cyan-50');
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    handleDragLeave();
+    processImageFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+  }
+  function handleBulkImageUpload(event) {
+    processImageFiles(Array.from(event.target.files));
+    event.target.value = '';
+  }
+  function processImageFiles(files) {
+    files.forEach(file => {
+      if (uploadedImages.length >= 9) { ZrxNotify.showNotification('Maximum 9 images allowed.', 'error'); return; }
+      if (file.size > 10 * 1024 * 1024) { ZrxNotify.showNotification(file.name + ' exceeds 10MB limit.', 'error'); return; }
+      const reader = new FileReader();
+      reader.onload = (e) => { uploadedImages.push({ dataUrl: e.target.result, name: file.name }); renderImageGrid(); };
+      reader.readAsDataURL(file);
+    });
+  }
+  function renderImageGrid() {
+    const grid = document.getElementById('imageGrid');
+    if (!grid) return;
+    grid.innerHTML = uploadedImages.map((img, i) => `
+      <div class="relative group border-2 rounded-lg overflow-hidden ${i === 0 ? 'border-cyan-500' : 'border-gray-200'}"
+           draggable="true" ondragstart="imgDragStart(event,${i})" ondragover="imgDragOver(event)" ondrop="imgDrop(event,${i})">
+        <img src="${img.dataUrl}" class="w-full aspect-square object-cover select-none" alt="${img.name}">
+        ${i === 0 ? '<span class="absolute top-1 left-1 bg-cyan-500 text-white text-xs px-1.5 py-0.5 rounded font-semibold leading-none">MAIN</span>' : ''}
+        <button onclick="removeImageAt(${i})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 items-center justify-center hidden group-hover:flex text-xs border-0"><i class="fas fa-times"></i></button>
+      </div>
+    `).join('');
+  }
+  function imgDragStart(e, i) { dragSrcIndex = i; }
+  function imgDragOver(e)     { e.preventDefault(); }
+  function imgDrop(e, targetIndex) {
+    e.preventDefault();
+    if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+    const moved = uploadedImages.splice(dragSrcIndex, 1)[0];
+    uploadedImages.splice(targetIndex, 0, moved);
+    dragSrcIndex = null;
+    renderImageGrid();
+  }
+  function removeImageAt(i) { uploadedImages.splice(i, 1); renderImageGrid(); }
+
+  // ── Pricing ───────────────────────────────────────────────────────────────────
+  function updateDiscountPercent() {
+    const base = parseFloat(document.getElementById('productPrice').value) || 0;
+    const sale = parseFloat(document.getElementById('productSalePrice').value) || 0;
+    const el   = document.getElementById('discountPercent');
+    if (!el) return;
+    el.value = (base > 0 && sale > 0 && sale < base) ? ((base - sale) / base * 100).toFixed(1) + '% off' : '';
+  }
+  function generateSku() {
+    const brand  = (document.getElementById('productBrand').value || 'ZRX').replace(/\s+/g,'').substring(0,4).toUpperCase();
+    const random = Math.random().toString(36).substring(2,7).toUpperCase();
+    document.getElementById('productSku').value = brand + '-' + random;
   }
 
-  function publishListing() {
-    if (!validateStep1()) return;
+  // ── Rich text editor ──────────────────────────────────────────────────────────
+  function applyFormat(command)  { document.getElementById('richTextEditor').focus(); document.execCommand(command, false, null); }
+  function applyHeading(tag)     { document.getElementById('richTextEditor').focus(); document.execCommand('formatBlock', false, tag); }
+  function updateCharCount(el, countId, max) {
+    const c = document.getElementById(countId);
+    if (c) c.textContent = el.value.length;
+  }
 
-    if (!ZrxSession.isLoggedIn()) {
-      ZrxNotify.showNotification('You must be logged in to create listings', 'error');
-      return;
-    }
+  // ── Feature bullets ───────────────────────────────────────────────────────────
+  function addFeatureBullet() {
+    const container = document.getElementById('featureBulletsContainer');
+    if (container.children.length >= 10) { ZrxNotify.showNotification('Maximum 10 feature bullets allowed.', 'error'); return; }
+    const row = document.createElement('div');
+    row.className = 'bullet-row flex gap-2 items-center';
+    row.innerHTML = `
+      <span class="text-cyan-500 flex-shrink-0 w-4 text-center"><i class="fas fa-circle text-xs"></i></span>
+      <input type="text" placeholder="Enter a key feature or highlight..." class="wiz-input flex-1 feature-bullet">
+      <button type="button" onclick="removeFeatureBullet(this)" class="text-gray-400 hover:text-red-500 flex-shrink-0"><i class="fas fa-times text-sm"></i></button>
+    `;
+    container.appendChild(row);
+  }
+  function removeFeatureBullet(btn) { btn.closest('.bullet-row').remove(); }
+
+  // ── Document upload ───────────────────────────────────────────────────────────
+  function handleDocsUpload(event) {
+    Array.from(event.target.files).forEach(file => {
+      if (file.size > 25 * 1024 * 1024) { ZrxNotify.showNotification(file.name + ' exceeds 25MB limit.', 'error'); return; }
+      uploadedDocs.push({ name: file.name, size: (file.size / 1024).toFixed(0) + ' KB' });
+    });
+    renderDocsPreview();
+    event.target.value = '';
+  }
+  function renderDocsPreview() {
+    const container = document.getElementById('docsPreview');
+    if (!container) return;
+    container.innerHTML = uploadedDocs.map((d, i) => `
+      <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-file-alt text-cyan-400"></i>
+          <span class="text-sm text-gray-700">${d.name}</span>
+          <span class="text-xs text-gray-400">(${d.size})</span>
+        </div>
+        <button onclick="removeDoc(${i})" class="text-gray-400 hover:text-red-500 border-0 bg-transparent cursor-pointer"><i class="fas fa-times text-sm"></i></button>
+      </div>
+    `).join('');
+  }
+  function removeDoc(i) { uploadedDocs.splice(i, 1); renderDocsPreview(); }
+
+  // ── Review section builder ────────────────────────────────────────────────────
+  function buildReviewSection() {
+    const container = document.getElementById('reviewContent');
+    if (!container) return;
+
+    const attrs = Array.from(document.querySelectorAll('.attribute-row')).map(row => {
+      const n = row.querySelector('.attr-name')?.value || '';
+      const v = row.querySelector('.attr-value')?.value || '';
+      return n && v ? `<span class="inline-flex gap-1"><strong class="text-gray-600">${n}:</strong> ${v}</span>` : '';
+    }).filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+    const vars = Array.from(document.querySelectorAll('.variation-row')).map(row => {
+      const t = row.querySelector('.var-type')?.value || '';
+      const v = row.querySelector('.var-value')?.value || '';
+      const p = row.querySelector('.var-price')?.value || '';
+      return t && v ? `${t}: ${v}${p ? ' (+$' + p + ')' : ''}` : '';
+    }).filter(Boolean);
+
+    const features = Array.from(document.querySelectorAll('.feature-bullet')).map(el => el.value).filter(Boolean);
+    const certs    = Array.from(document.querySelectorAll('input[name="cert"]:checked')).map(el => el.value);
+    const carriers = Array.from(document.querySelectorAll('input[name="carrier"]:checked')).map(el => el.value);
+    const richHtml = document.getElementById('richTextEditor')?.innerHTML || '';
+
+    function val(id) { return document.getElementById(id)?.value || ''; }
+    function chk(id) { return document.getElementById(id)?.checked; }
+
+    const sections = [
+      {
+        title: 'Product Details', step: 1, icon: 'fa-tag',
+        items: [
+          { label: 'Product Name',   value: val('productName'),       required: true },
+          { label: 'Brand',          value: val('productBrand'),      required: true },
+          { label: 'Model / Part #', value: val('productModel') },
+          { label: 'Product Type',   value: val('productType'),       required: true },
+          { label: 'Condition',      value: val('productCondition'),  required: true },
+          { label: 'Category',       value: val('productCategory'),   required: true },
+          { label: 'Subcategory',    value: val('productSubcategory') },
+          { label: 'Tags',           value: val('productTags') },
+          { label: 'Attributes',     value: attrs, html: true },
+          { label: 'Variations',     value: vars.join(', ') },
+        ]
+      },
+      {
+        title: 'Images', step: 2, icon: 'fa-images',
+        items: [{ label: 'Images Uploaded', value: uploadedImages.length + ' image(s)', required: true, ok: uploadedImages.length > 0 }],
+        extra: uploadedImages.length > 0
+          ? '<div class="flex flex-wrap gap-2 mt-2">' +
+              uploadedImages.slice(0, 6).map(img => `<img src="${img.dataUrl}" class="w-12 h-12 object-cover rounded border border-gray-200">`).join('') +
+              (uploadedImages.length > 6 ? `<span class="text-xs text-gray-500 self-center">+${uploadedImages.length - 6} more</span>` : '') +
+            '</div>'
+          : ''
+      },
+      {
+        title: 'Pricing & Inventory', step: 3, icon: 'fa-dollar-sign',
+        items: [
+          { label: 'SKU',           value: val('productSku'),                                                     required: true },
+          { label: 'Price',         value: val('productPrice') ? '$' + parseFloat(val('productPrice')).toFixed(2) : '', required: true },
+          { label: 'Sale Price',    value: val('productSalePrice') ? '$' + parseFloat(val('productSalePrice')).toFixed(2) : '' },
+          { label: 'GTIN',          value: val('productGtin') },
+          { label: 'Stock Qty',     value: val('productQuantity'),                                                required: true },
+          { label: 'Min Order Qty', value: val('minQty') || '1' },
+          { label: 'Max Order Qty', value: val('maxQty') || 'Unlimited' },
+        ]
+      },
+      {
+        title: 'Shipping & Fulfillment', step: 4, icon: 'fa-truck',
+        items: [
+          { label: 'Shipping Class', value: val('shippingClass'),                                                                required: true },
+          { label: 'Handling Time',  value: val('handlingTime') + ' business day(s)' },
+          { label: 'Carriers',       value: carriers.join(', ') || 'Not specified' },
+          { label: 'Free Shipping',  value: chk('freeShipping') ? 'Yes ✓' : 'No' },
+          { label: 'Pkg Dimensions', value: [val('pkgLength'), val('pkgWidth'), val('pkgHeight')].filter(Boolean).join(' × ') + (val('pkgLength') ? ' in' : '') },
+          { label: 'Weight',         value: val('pkgWeight') ? val('pkgWeight') + ' lbs' : '' },
+          { label: 'Returns',        value: val('returnEligible') === 'yes' ? 'Returnable (' + val('returnWindow') + ' days)' : 'No Returns' },
+        ]
+      },
+      {
+        title: 'Description & Content', step: 5, icon: 'fa-align-left',
+        items: [
+          { label: 'Short Description', value: val('shortDescription').substring(0, 90) + (val('shortDescription').length > 90 ? '…' : ''), required: true },
+          { label: 'Full Description',  value: richHtml ? 'Provided ✓' : '',                                                                  required: true, ok: !!richHtml },
+          { label: 'Feature Bullets',   value: features.length + ' bullet(s)' },
+          { label: 'Video URL',         value: val('productVideo') },
+          { label: 'Documents',         value: uploadedDocs.length + ' file(s)' },
+        ]
+      },
+      {
+        title: 'Compliance & Policies', step: 6, icon: 'fa-shield-alt',
+        items: [
+          { label: 'Certifications',  value: certs.join(', ') || 'None' },
+          { label: 'Warranty',        value: val('warrantyType') + (val('warrantyDuration') ? ' – ' + val('warrantyDuration') : '') },
+          { label: 'Age Restriction', value: val('ageRestriction') },
+          { label: 'Country of Origin', value: val('countryOfOrigin') },
+          { label: 'Terms Confirmed', value: chk('termsConfirm') ? 'Yes ✓' : 'Not confirmed', required: true, ok: chk('termsConfirm') },
+        ]
+      }
+    ];
+
+    const errors = [];
+    let html = '<div class="space-y-4">';
+
+    sections.forEach(section => {
+      const hasIssues = section.items.some(it => it.required && (it.ok === false || (it.ok === undefined && !it.value)));
+      if (hasIssues) errors.push({ title: section.title, step: section.step });
+
+      html += `
+        <div class="border border-gray-200 rounded-xl overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <div class="flex items-center gap-2">
+              <i class="fas ${section.icon} text-cyan-500 w-4 text-center"></i>
+              <span class="font-semibold text-gray-800 text-sm">${section.title}</span>
+              ${hasIssues
+                ? '<span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium ml-2">Needs attention</span>'
+                : '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium ml-2">Complete</span>'}
+            </div>
+            <button onclick="jumpToStep(${section.step})" class="text-xs text-cyan-600 hover:text-cyan-700 font-semibold flex items-center gap-1 border-0 bg-transparent cursor-pointer">
+              <i class="fas fa-pencil-alt"></i> Edit
+            </button>
+          </div>
+          <div class="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5">
+            ${section.items.map(it => {
+              const missing = it.required && (it.ok === false || (it.ok === undefined && !it.value));
+              return `<div class="flex gap-2 py-1">
+                <span class="text-xs font-medium text-gray-500 w-32 flex-shrink-0">${it.label}:</span>
+                ${it.html
+                  ? `<div class="text-xs text-gray-700 flex-1">${it.value || '<span class="text-gray-400">—</span>'}</div>`
+                  : `<span class="text-xs flex-1 ${missing ? 'text-red-600 font-semibold' : 'text-gray-800'}">${it.value || (missing ? '⚠ Required' : '—')}</span>`}
+              </div>`;
+            }).join('')}
+          </div>
+          ${section.extra ? `<div class="px-4 pb-3">${section.extra}</div>` : ''}
+        </div>
+      `;
+    });
+
+    html += '</div>';
+
+    const banner = errors.length > 0
+      ? `<div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+           <i class="fas fa-exclamation-triangle text-red-500 mt-0.5 flex-shrink-0"></i>
+           <div>
+             <p class="text-sm font-semibold text-red-700 mb-0.5">Some required fields are missing</p>
+             <p class="text-sm text-red-600">Please complete: ${errors.map(e => `<strong>${e.title}</strong>`).join(', ')}</p>
+           </div>
+         </div>`
+      : `<div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+           <i class="fas fa-check-circle text-green-500 mt-0.5 flex-shrink-0"></i>
+           <div>
+             <p class="text-sm font-semibold text-green-700 mb-0.5">All sections are complete!</p>
+             <p class="text-sm text-green-600">Your listing is ready. Publish it live or save as a draft to review later.</p>
+           </div>
+         </div>`;
+
+    container.innerHTML = banner + html;
+  }
+
+  // ── Payload builder ───────────────────────────────────────────────────────────
+  function buildProductPayload(draft = false) {
+    const attrs = {};
+    document.querySelectorAll('.attribute-row').forEach(row => {
+      const n = row.querySelector('.attr-name')?.value?.trim();
+      const v = row.querySelector('.attr-value')?.value?.trim();
+      if (n && v) attrs[n] = v;
+    });
+    const features  = Array.from(document.querySelectorAll('.feature-bullet')).map(el => el.value.trim()).filter(Boolean);
+    const certs     = Array.from(document.querySelectorAll('input[name="cert"]:checked')).map(el => el.value);
+    const carriers  = Array.from(document.querySelectorAll('input[name="carrier"]:checked')).map(el => el.value);
+    const variations= Array.from(document.querySelectorAll('.variation-row')).map(row => ({
+      type: row.querySelector('.var-type')?.value || '',
+      value: row.querySelector('.var-value')?.value || '',
+      priceAdjustment: parseFloat(row.querySelector('.var-price')?.value) || 0
+    })).filter(v => v.type && v.value);
+
+    function val(id) { return document.getElementById(id)?.value?.trim() || ''; }
 
     const _user = ZrxSession.getUser();
     const sellerUsername = (_user && (_user.username || _user.email)) || '';
-    const shopName = _sellerData ? _sellerData.shopName : (sellerUsername || '');
+    const shopName = _sellerData ? _sellerData.shopName : sellerUsername;
 
-    const product = {
-      name: document.getElementById('productName').value.trim(),
-      description: document.getElementById('productDescription').value.trim(),
-      price: parseFloat(document.getElementById('productPrice').value),
-      quantity: parseInt(document.getElementById('productQuantity').value),
-      condition: document.getElementById('productCondition').value,
-      category: document.getElementById('productCategory').value.trim(),
-      image: imageData,
-      specifications: {
-        memory: document.getElementById('specMemory').value,
-        memoryType: document.getElementById('specMemoryType').value,
-        cores: document.getElementById('specCores').value,
-        baseClock: document.getElementById('specBaseClock').value,
-        boostClock: document.getElementById('specBoostClock').value,
-        tdp: document.getElementById('specTDP').value,
-        busWidth: document.getElementById('specBusWidth').value,
-        interface: document.getElementById('specInterface').value,
-        additional: document.getElementById('specAdditional').value
+    return {
+      name:         val('productName'),
+      brand:        val('productBrand'),
+      model:        val('productModel'),
+      productType:  val('productType'),
+      condition:    val('productCondition'),
+      category:     val('productCategory'),
+      subcategory:  val('productSubcategory'),
+      tags:         val('productTags'),
+      attributes:   attrs,
+      variations,
+
+      images: uploadedImages.map(img => img.dataUrl),
+      image:  uploadedImages.length > 0 ? uploadedImages[0].dataUrl : null,
+
+      sku:               val('productSku'),
+      gtin:              val('productGtin'),
+      price:             parseFloat(document.getElementById('productPrice')?.value) || 0,
+      salePrice:         parseFloat(document.getElementById('productSalePrice')?.value) || null,
+      quantity:          parseInt(document.getElementById('productQuantity')?.value) || 0,
+      minQty:            parseInt(document.getElementById('minQty')?.value) || 1,
+      maxQty:            parseInt(document.getElementById('maxQty')?.value) || null,
+      lowStockThreshold: parseInt(document.getElementById('lowStockThreshold')?.value) || null,
+      trackInventory:    document.getElementById('trackInventory')?.checked || false,
+
+      shipping: {
+        weight:     parseFloat(document.getElementById('pkgWeight')?.value) || 0,
+        dimensions: {
+          length: parseFloat(document.getElementById('pkgLength')?.value) || 0,
+          width:  parseFloat(document.getElementById('pkgWidth')?.value)  || 0,
+          height: parseFloat(document.getElementById('pkgHeight')?.value) || 0,
+        },
+        shippingClass: val('shippingClass'),
+        handlingTime:  parseInt(document.getElementById('handlingTime')?.value) || 1,
+        carriers,
+        freeShipping:  document.getElementById('freeShipping')?.checked || false,
+        returnEligible:document.getElementById('returnEligible')?.value === 'yes',
+        returnWindow:  parseInt(document.getElementById('returnWindow')?.value) || 30,
       },
-      sellerName: shopName,
-      sellerUsername: sellerUsername
-    };
 
-    if (editingProductId) {
-      // Update existing product
-      ZrxSession.fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(editingProductId), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(product)
-      })
-      .then(res => { if (!res.ok) throw new Error(res.statusText); return res.json(); })
-      .then(data => {
-        if (data.error) {
-          ZrxNotify.showNotification('Error updating product: ' + data.error, 'error');
-        } else {
-          ZrxNotify.showNotification('Product listing updated successfully!', 'success');
-          window.location.href = 'seller-dashboard.html';
-        }
-      })
-      .catch(err => ZrxNotify.showNotification('Failed to update listing: ' + err.message, 'error'));
-    } else {
-      // Create new product
-      ZrxSession.fetch(BACKEND_URL + '/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(product)
-      })
-      .then(res => { if (!res.ok) throw new Error(res.statusText); return res.json(); })
-      .then(data => {
-        if (data.error) {
-          ZrxNotify.showNotification('Error saving product: ' + data.error, 'error');
-        } else {
-          ZrxNotify.showNotification('Product listing published successfully!', 'success');
-          window.location.href = 'seller-dashboard.html';
-        }
-      })
-      .catch(err => ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'));
-    }
+      shortDescription: val('shortDescription'),
+      description:      document.getElementById('richTextEditor')?.innerHTML.trim() || '',
+      features,
+      videoUrl:         val('productVideo'),
+      documents:        uploadedDocs.map(d => d.name),
+
+      compliance: {
+        certifications:  certs,
+        warrantyType:    val('warrantyType'),
+        warrantyDuration:val('warrantyDuration'),
+        ageRestriction:  val('ageRestriction'),
+        hazardous:       document.getElementById('hazardous')?.value === 'yes',
+        countryOfOrigin: val('countryOfOrigin'),
+        legalDisclaimer: val('legalDisclaimer'),
+      },
+
+      status:          draft ? 'draft' : 'active',
+      sellerName:      shopName,
+      sellerUsername,
+    };
   }
 
-  async function updateCartBadge() {
-    const badge = document.getElementById('cartBadge');
-    if (!badge) return;
-    if (!ZrxSession.isLoggedIn()) {
-      badge.classList.add('hidden');
-      return;
-    }
+  // ── Save Draft ────────────────────────────────────────────────────────────────
+  async function saveDraft() {
+    if (!ZrxSession.isLoggedIn()) { ZrxNotify.showNotification('You must be logged in.', 'error'); return; }
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+      const url    = editingProductId ? BACKEND_URL + '/api/products/' + encodeURIComponent(editingProductId) : BACKEND_URL + '/api/products';
+      const method = editingProductId ? 'PUT' : 'POST';
+      const res    = await ZrxSession.fetch(url, { method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildProductPayload(true)) });
+      const data   = await res.json();
+      if (!res.ok || data.error) { ZrxNotify.showNotification('Error saving draft: ' + (data.error || res.statusText), 'error'); return; }
+      ZrxNotify.showNotification('Draft saved successfully!', 'success');
+    } catch (err) { ZrxNotify.showNotification('Failed to save draft: ' + err.message, 'error'); }
+  }
+
+  // ── Publish ───────────────────────────────────────────────────────────────────
+  async function publishListing() {
+    // Validate all steps
+    const saved = currentStep;
+    for (let i = 1; i <= 6; i++) {
+      currentStep = i;
+      if (!validateCurrentStep(true)) {
+        currentStep = saved;
+        ZrxNotify.showNotification('Please complete all required fields. Highlighted sections need attention.', 'error');
+        buildReviewSection();
+        return;
+      }
+    }
+    currentStep = saved;
+    if (!ZrxSession.isLoggedIn()) { ZrxNotify.showNotification('You must be logged in.', 'error'); return; }
+    try {
+      const url    = editingProductId ? BACKEND_URL + '/api/products/' + encodeURIComponent(editingProductId) : BACKEND_URL + '/api/products';
+      const method = editingProductId ? 'PUT' : 'POST';
+      const res    = await ZrxSession.fetch(url, { method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildProductPayload(false)) });
+      const data   = await res.json();
+      if (!res.ok || data.error) { ZrxNotify.showNotification('Error publishing: ' + (data.error || res.statusText), 'error'); return; }
+      ZrxNotify.showNotification('Product listing published successfully!', 'success');
+      setTimeout(() => { window.location.href = 'seller-dashboard.html'; }, 1500);
+    } catch (err) { ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'); }
+  }
+
+  // ── Cart Badge ────────────────────────────────────────────────────────────────
+  async function updateCartBadge() {
+    if (!ZrxSession.isLoggedIn()) return;
+    try {
+      const res  = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (res.ok) {
-        const data = await res.json();
+        const data  = await res.json();
         const count = (data.items || []).length;
-        badge.textContent = count;
-        badge.classList.toggle('hidden', count === 0);
+        const badge = document.getElementById('cartBadgeHeader');
+        if (badge) { badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
       }
     } catch (_) {}
   }
 
+  // ── Nav dropdowns ─────────────────────────────────────────────────────────────
   function toggleDropdown(id) {
     var el = document.getElementById(id);
     if (!el) return;
-    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) {
-      if (d.id !== id) d.classList.remove('active');
-    });
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { if (d.id !== id) d.classList.remove('active'); });
     el.classList.toggle('active');
   }
-
   document.addEventListener('click', function(e) {
     document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
       if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
     });
   });
+
+  // ── Load for edit ─────────────────────────────────────────────────────────────
+  async function loadProductForEdit(productId) {
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId));
+      if (!res.ok) return;
+      const p = await res.json();
+      editingProductId = String(p._id || p.id);
+
+      function set(id, v) { const el = document.getElementById(id); if (el) el.value = v || ''; }
+      set('productName',        p.name);
+      set('productBrand',       p.brand);
+      set('productModel',       p.model);
+      set('productType',        p.productType);
+      set('productCondition',   p.condition);
+      set('productCategory',    p.category);
+      set('productSubcategory', p.subcategory);
+      set('productTags',        p.tags);
+      set('productSku',         p.sku);
+      set('productPrice',       p.price);
+      set('productSalePrice',   p.salePrice);
+      set('productQuantity',    p.quantity);
+      set('shortDescription',   p.shortDescription);
+
+      if (document.getElementById('richTextEditor')) document.getElementById('richTextEditor').innerHTML = p.description || '';
+
+      if (Array.isArray(p.images) && p.images.length) {
+        uploadedImages = p.images.map((url, i) => ({ dataUrl: url, name: 'image_' + i }));
+      } else if (p.image) {
+        uploadedImages = [{ dataUrl: p.image, name: 'image_0' }];
+      }
+      renderImageGrid();
+
+      if (p.compliance) {
+        set('warrantyType',    p.compliance.warrantyType);
+        set('warrantyDuration',p.compliance.warrantyDuration);
+        set('ageRestriction',  p.compliance.ageRestriction);
+        set('countryOfOrigin', p.compliance.countryOfOrigin);
+        set('legalDisclaimer', p.compliance.legalDisclaimer);
+      }
+    } catch (e) { console.error('Failed to load product for edit:', e); }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────────
+  async function init() {
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'seller-signup.html'; return; }
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', { credentials: 'include' });
+      if (!res.ok) { window.location.href = 'seller-signup.html'; return; }
+      _sellerData = await res.json();
+    } catch (e) { window.location.href = 'seller-signup.html'; return; }
+
+    buildStepNav();
+    showStep(1);
+    updateCartBadge();
+
+    const editProductId = sessionStorage.getItem('editProductId');
+    if (editProductId) { loadProductForEdit(editProductId); sessionStorage.removeItem('editProductId'); }
+  }
 
   window.addEventListener('load', init);
 </script>
