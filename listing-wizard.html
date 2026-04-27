@@ -30,6 +30,9 @@
     [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; }
     /* Reusable orange gradient */
     .bg-orange-gradient { background: linear-gradient(90deg, #ffb300, #ff7a00); }
+    /* Sidebar background — centralised so theme updates are easy */
+    :root { --sidebar-bg: #171c24; }
+    .wizard-sidebar-bg { background-color: var(--sidebar-bg); }
     /* Active step panel header circle — higher specificity overrides Tailwind bg-gray-200 */
     .wizard-step.active .step-header-num {
       background: linear-gradient(135deg, #ffb300, #ff7a00);
@@ -278,7 +281,7 @@
 
       <!-- Left Sidebar: Step Navigation (desktop only) -->
       <div class="w-56 flex-shrink-0 hidden lg:block">
-        <div class="sticky top-28 bg-[#171c24] rounded-xl overflow-hidden shadow-lg">
+        <div class="sticky top-28 wizard-sidebar-bg rounded-xl overflow-hidden shadow-lg">
           <div class="px-5 py-4 border-b border-white/10">
             <p class="text-xs font-bold text-amber-400 uppercase tracking-widest">Listing Steps</p>
           </div>
@@ -937,7 +940,7 @@
   ];
 
   // ── Sidebar nav ─────────────────────────────────────────────────────────────
-  function updateStepNav(step) {
+  function updateProgressBar(step) {
 
     const pct = Math.round(((step - 1) / totalSteps) * 100);
     const bar  = document.getElementById('progressBar');
@@ -962,7 +965,7 @@
         el.style.display = (i === step) ? '' : 'none';
       }
     }
-    updateStepNav(step);
+    updateProgressBar(step);
     currentStep = step;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (step === totalSteps) buildReviewSection();
@@ -1521,7 +1524,7 @@
       _sellerData = await res.json();
     } catch (e) { window.location.href = 'seller-signup.html'; return; }
 
-    updateStepNav(1);
+    updateProgressBar(1);
     showStep(1);
     updateCartBadge();
 
