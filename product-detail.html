@@ -504,20 +504,26 @@
 
   async function goToCheckout() {
     await addToCart();
-    window.location.href = 'shopping-cart.html';
+    var url = 'shopping-cart.html';
+    if (window.ZrxSpa && ZrxSpa.navigate(url)) return;
+    window.location.href = url;
   }
 
   function contactSeller() {
     if (!ZrxSession.isLoggedIn()) {
       ZrxNotify.showNotification('Please log in to contact the seller', 'info');
-      window.location.href = 'signup-login.html';
+      var loginUrl = 'signup-login.html';
+      if (window.ZrxSpa && ZrxSpa.navigate(loginUrl)) return;
+      window.location.href = loginUrl;
       return;
     }
     if (!currentProduct || !currentProduct.sellerId) {
       ZrxNotify.showNotification('Seller information not available', 'error');
       return;
     }
-    window.location.href = 'messages.html?with=' + encodeURIComponent(currentProduct.sellerId);
+    var url = 'messages.html?with=' + encodeURIComponent(currentProduct.sellerId);
+    if (window.ZrxSpa && ZrxSpa.navigate(url)) return;
+    window.location.href = url;
   }
 
   function closeContactModal() {
@@ -551,7 +557,9 @@
       if (res.ok) {
         ZrxNotify.showNotification('Message sent!', 'success');
         closeContactModal();
-        window.location.href = 'messages.html?with=' + encodeURIComponent(sellerId);
+        var msgUrl = 'messages.html?with=' + encodeURIComponent(sellerId);
+        if (window.ZrxSpa && ZrxSpa.navigate(msgUrl)) return;
+        window.location.href = msgUrl;
       } else {
         const data = await res.json();
         ZrxNotify.showNotification(data.error || 'Failed to send message', 'error');
