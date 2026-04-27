@@ -556,7 +556,8 @@
         <!-- Main Content Area – SPA panel -->
         <main id="spaMain" class="flex-1 p-8 overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-xl font-semibold text-gray-800">Best Picks</h2>
+                <h2 id="homePageTitle" class="text-xl font-semibold text-gray-800">Best Picks</h2>
+                <span id="homeResultCount" class="text-sm text-gray-500 font-medium hidden"></span>
             </div>
             <div id="homeProductsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="col-span-4 text-center py-16 text-gray-400">
@@ -754,6 +755,7 @@
         (function() {
             var BACKEND_URL = 'https://zorexium-backend.onrender.com';
             var homeProductsList = [];
+            window._allHomeProducts = [];
 
             function escAttr(str) {
                 return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -768,12 +770,12 @@
                 if (!products || products.length === 0) {
                     grid.classList.add('hidden');
                     if (emptyState) emptyState.classList.remove('hidden');
-                    if (countEl) countEl.textContent = '0';
+                    if (countEl) { countEl.textContent = '0 products'; countEl.classList.remove('hidden'); }
                     return;
                 }
                 grid.classList.remove('hidden');
                 if (emptyState) emptyState.classList.add('hidden');
-                if (countEl) countEl.textContent = products.length;
+                if (countEl) { countEl.textContent = products.length + (products.length === 1 ? ' product' : ' products'); countEl.classList.remove('hidden'); }
                 grid.innerHTML = products.map(function(product, i) {
                     var id = product._id || '';
                     var name = product.name || 'Unnamed Product';
@@ -829,18 +831,69 @@
             fetch(BACKEND_URL + '/api/products')
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
-                    renderHomeProducts(Array.isArray(data) ? data : []);
+                    var all = Array.isArray(data) ? data : [];
+                    window._allHomeProducts = all;
+                    renderHomeProducts(all);
+                    // Hide the count on the initial "Best Picks" view
+                    var countEl = document.getElementById('homeResultCount');
+                    if (countEl) countEl.classList.add('hidden');
                 })
                 .catch(function(err) {
                     console.error('Error loading products:', err);
                     var grid = document.getElementById('homeProductsGrid');
                     if (grid) grid.innerHTML = '<div class="col-span-4 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4 block"></i><p class="text-red-400">Failed to load products. Please refresh the page.</p></div>';
                 });
+
+            // Expose a filter function for subcategory clicks
+            window.filterHomeProducts = function(categoryKey, subKey, label) {
+                var titleEl = document.getElementById('homePageTitle');
+                if (titleEl) titleEl.textContent = 'All ' + label;
+
+                var all = window._allHomeProducts || [];
+                var catNorm = categoryKey.toLowerCase();
+                var subNorm = subKey ? subKey.toLowerCase() : '';
+
+                // Try subcategory match first; fall back to category-only if nothing matches
+                var filtered = subNorm
+                    ? all.filter(function(p) { return (p.subcategory || p.sub || '').toLowerCase().trim() === subNorm; })
+                    : [];
+                if (filtered.length === 0) {
+                    filtered = all.filter(function(p) { return (p.category || '').toLowerCase().trim() === catNorm; });
+                }
+
+                renderHomeProducts(filtered);
+                // Scroll main area to top
+                var main = document.getElementById('spaMain');
+                if (main) main.scrollTop = 0;
+            };
         })();
         </script>
 
 <script src="profile-picture.js"></script>
 <script src="spa-router.js"></script>
+<script>
+// Intercept subcategory link clicks in sidebar and header mega-menu
+// Filters the home page products instead of navigating to marketplace.html
+document.addEventListener('click', function(e) {
+    var link = e.target.closest('a[href*="marketplace.html?category="]');
+    if (!link) return;
+    var href = link.getAttribute('href') || '';
+    // Only intercept if the filter function is available
+    if (typeof window.filterHomeProducts !== 'function') return;
+    var params = new URLSearchParams(href.replace(/^[^?]*\?/, ''));
+    var categoryKey = params.get('category') || '';
+    var subKey = params.get('sub') || '';
+    if (!categoryKey) return;
+    e.preventDefault();
+    // For header mega-menu links the subcategory label is in the .text-xs span;
+    // for sidebar links it is the entire link text.
+    var subSpan = link.querySelector('span.text-xs');
+    var label = (subSpan ? subSpan.textContent : link.textContent).trim() || categoryKey;
+    window.filterHomeProducts(categoryKey, subKey, label);
+    // Close any open dropdowns
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
+});
+</script>
 </body>
 </html>
 
