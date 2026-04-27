@@ -9,8 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
-        input, textarea { background-color: #0f172a; border-color: #334155; color: #e2e8f0; }
-        input:focus, textarea:focus { border-color: #65a30d; outline: none; }
+        .satisfaction-opt input[type="radio"]:checked + .satisfaction-label {
+            background: #22d3ee;
+            border-color: #22d3ee;
+            color: #fff;
+        }
             .nav-dropdown {
             opacity: 0;
             visibility: hidden;
@@ -242,96 +245,100 @@
     </header>
 
 
-    <main class="flex-1 max-w-4xl mx-auto px-6 sm:px-8 lg:px-10 py-16">
-        <h1 class="text-5xl font-bold text-gray-900 mb-2">Contact Support</h1>
-        <p class="text-gray-400 mb-12">We're here to help. Get in touch with our support team.</p>
+    <main class="flex-1 max-w-3xl mx-auto px-6 sm:px-8 lg:px-10 py-16">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">Feedback for Zorexium</h1>
 
-        <div class="grid md:grid-cols-2 gap-10 mb-12">
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-8">Support Channels</h2>
-                <div class="space-y-4">
-                    <div class="bg-[#131620] p-4 rounded-lg border border-gray-800">
-                        <h3 class="text-white font-semibold mb-2 flex items-center gap-3"><i class="fas fa-envelope text-cyan-400"></i> Email</h3>
-                        <p class="text-gray-300">support@zorexium.labs</p>
-                        <p class="text-gray-500 text-base mt-1">Response time: 24 hours</p>
-                    </div>
-                    <div class="bg-[#131620] p-4 rounded-lg border border-gray-800">
-                        <h3 class="text-white font-semibold mb-2 flex items-center gap-3"><i class="fas fa-comments text-cyan-400"></i> Live Chat</h3>
-                        <p class="text-gray-300">Available Monday-Friday, 9am-6pm EST</p>
-                        <p class="text-gray-500 text-base mt-1">Click the chat icon in the bottom right</p>
-                    </div>
-                    <div class="bg-[#131620] p-4 rounded-lg border border-gray-800">
-                        <h3 class="text-white font-semibold mb-2 flex items-center gap-3"><i class="fas fa-ticket-alt text-cyan-400"></i> Support Tickets</h3>
-                        <p class="text-gray-300">Submit a ticket through your account</p>
-                        <p class="text-gray-500 text-base mt-1">Track status and get updates</p>
-                    </div>
-                    <div class="bg-[#131620] p-4 rounded-lg border border-gray-800">
-                        <h3 class="text-white font-semibold mb-2 flex items-center gap-3"><i class="fas fa-users text-cyan-400"></i> Community</h3>
-                        <a href="community-hub.html" class="text-cyan-400 hover:text-cyan-300">Join our community forum</a>
-                        <p class="text-gray-500 text-base mt-1">Get help from other users</p>
-                    </div>
-                </div>
-            </section>
-
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-8">Quick Contact Form</h2>
-                <form class="space-y-4">
-                    <div>
-                        <label class="block text-base font-medium text-gray-300 mb-2">Name</label>
-                        <input type="text" placeholder="Your name" class="w-full px-6 py-3 rounded border">
-                    </div>
-                    <div>
-                        <label class="block text-base font-medium text-gray-300 mb-2">Email</label>
-                        <input type="email" placeholder="your@email.com" class="w-full px-6 py-3 rounded border">
-                    </div>
-                    <div>
-                        <label class="block text-base font-medium text-gray-300 mb-2">Topic</label>
-                        <select class="w-full px-6 py-3 rounded border bg-[#0f172a] text-gray-300">
-                            <option>General Inquiry</option>
-                            <option>Technical Support</option>
-                            <option>Billing Question</option>
-                            <option>Return/Refund</option>
-                            <option>Report Issue</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-base font-medium text-gray-300 mb-2">Message</label>
-                        <textarea placeholder="Describe your issue..." rows="4" class="w-full px-6 py-3 rounded border"></textarea>
-                    </div>
-                    <button type="submit" class="w-full bg-gradient-to-r from-cyan-500 to-lime-500 text-white font-semibold py-3 rounded hover:from-cyan-600 hover:to-lime-600">Send Message</button>
-                </form>
-            </section>
+        <!-- Immediate assistance banner -->
+        <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-10 flex items-center gap-4">
+            <i class="fas fa-comment-dots text-cyan-500 text-2xl flex-shrink-0"></i>
+            <p class="text-gray-700 text-sm">For immediate assistance, <a href="messages.html" class="text-cyan-600 font-semibold hover:underline">Start a chat with our customer service team</a>.</p>
         </div>
 
-        <section>
-            <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Response Times & Hours</h2>
-            <div class="bg-[#131620] p-6 rounded-lg border border-gray-800">
-                <ul class="space-y-2 text-gray-300">
-                    <li><strong>Email:</strong> 24-48 hour response time</li>
-                    <li><strong>Live Chat:</strong> Monday-Friday, 9am-6pm EST</li>
-                    <li><strong>Support Tickets:</strong> 24 hour initial response</li>
-                    <li><strong>Urgent Issues:</strong> Premium support for priority handling</li>
-                </ul>
-            </div>
-        </section>
+        <form id="feedbackForm" class="space-y-8" onsubmit="submitFeedback(event)">
 
-        <section class="mt-12">
-            <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Helpful Resources</h2>
-            <div class="grid md:grid-cols-3 gap-6">
-                <a href="faq.html" class="bg-[#131620] p-4 rounded-lg border border-gray-800 hover:border-cyan-500/50 transition">
-                    <h3 class="text-white font-semibold mb-2"><i class="fas fa-question-circle text-cyan-400 mr-2"></i>FAQ</h3>
-                    <p class="text-gray-400 text-base">Browse common questions and answers</p>
-                </a>
-                <a href="hardware-compatibility.html" class="bg-[#131620] p-4 rounded-lg border border-gray-800 hover:border-cyan-500/50 transition">
-                    <h3 class="text-white font-semibold mb-2"><i class="fas fa-microchip text-cyan-400 mr-2"></i>Hardware Help</h3>
-                    <p class="text-gray-400 text-base">Check compatibility and troubleshooting</p>
-                </a>
-                <a href="getting-started.html" class="bg-[#131620] p-4 rounded-lg border border-gray-800 hover:border-cyan-500/50 transition">
-                    <h3 class="text-white font-semibold mb-2"><i class="fas fa-book text-cyan-400 mr-2"></i>Getting Started</h3>
-                    <p class="text-gray-400 text-base">Learn how to use our platform</p>
-                </a>
+            <!-- Page comments section -->
+            <fieldset class="border border-gray-200 rounded-lg p-6">
+                <legend class="text-base font-semibold text-gray-900 px-2">Page comments</legend>
+
+                <!-- Visit purpose -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">What was the purpose of your visit?</label>
+                    <select id="feedbackPurpose" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                        <option value="">Please choose one...</option>
+                        <option>Find product information</option>
+                        <option>Make a purchase</option>
+                        <option>Track an order</option>
+                        <option>Get support or help</option>
+                        <option>Browse / explore</option>
+                        <option>Sell hardware</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+
+                <!-- Comments textarea -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Please enter your comments about this page</label>
+                    <textarea id="feedbackComments" rows="5" maxlength="1000"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"
+                        placeholder="Share your thoughts..."
+                        oninput="updateCommentCount(this)"></textarea>
+                    <p class="text-right text-xs text-gray-400 mt-1"><span id="commentCount">0</span> / 1000</p>
+                </div>
+
+                <!-- Optional email -->
+                <div class="mb-6">
+                    <p class="text-sm text-gray-600 mb-3">If you would like a response from Zorexium, please provide your email address.</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                    <input id="feedbackEmail" type="email" placeholder="you@example.com"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                </div>
+
+                <!-- Satisfaction rating -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">How satisfied were you with your visit?</label>
+                    <div class="flex flex-wrap gap-2" id="satisfactionGroup">
+                        <label class="satisfaction-opt flex flex-col items-center gap-1 cursor-pointer">
+                            <input type="radio" name="satisfaction" value="very-dissatisfied" class="sr-only">
+                            <span class="px-3 py-2 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition select-none satisfaction-label">😞 Very dissatisfied</span>
+                        </label>
+                        <label class="satisfaction-opt flex flex-col items-center gap-1 cursor-pointer">
+                            <input type="radio" name="satisfaction" value="dissatisfied" class="sr-only">
+                            <span class="px-3 py-2 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition select-none satisfaction-label">😕 Dissatisfied</span>
+                        </label>
+                        <label class="satisfaction-opt flex flex-col items-center gap-1 cursor-pointer">
+                            <input type="radio" name="satisfaction" value="neutral" class="sr-only">
+                            <span class="px-3 py-2 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition select-none satisfaction-label">😐 Neutral</span>
+                        </label>
+                        <label class="satisfaction-opt flex flex-col items-center gap-1 cursor-pointer">
+                            <input type="radio" name="satisfaction" value="satisfied" class="sr-only">
+                            <span class="px-3 py-2 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition select-none satisfaction-label">😊 Satisfied</span>
+                        </label>
+                        <label class="satisfaction-opt flex flex-col items-center gap-1 cursor-pointer">
+                            <input type="radio" name="satisfaction" value="very-satisfied" class="sr-only">
+                            <span class="px-3 py-2 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-100 transition select-none satisfaction-label">😄 Very satisfied</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Screenshot -->
+                <div class="flex items-center gap-3">
+                    <input id="feedbackScreenshot" type="checkbox" class="rounded border-gray-300 text-cyan-500">
+                    <label for="feedbackScreenshot" class="text-sm text-gray-700">Include screenshot</label>
+                </div>
+            </fieldset>
+
+            <!-- Success / error messages -->
+            <div id="feedbackSuccess" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+                <i class="fas fa-check-circle"></i> Thank you! Your feedback has been submitted.
             </div>
-        </section>
+            <div id="feedbackError" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 flex items-center gap-2">
+                <i class="fas fa-exclamation-circle"></i> <span id="feedbackErrorMsg">Something went wrong. Please try again.</span>
+            </div>
+
+            <div>
+                <button type="submit" class="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-md transition">Submit</button>
+            </div>
+        </form>
     </main>
 
     <!-- Chat Bubble -->
@@ -343,6 +350,36 @@
 
     <!-- Dropdown toggle script: supports hover (CSS) and click (JS) -->
     <script>
+        function updateCommentCount(el) {
+            document.getElementById('commentCount').textContent = el.value.length;
+        }
+
+        function submitFeedback(e) {
+            e.preventDefault();
+            var errEl = document.getElementById('feedbackError');
+            var errMsg = document.getElementById('feedbackErrorMsg');
+            var successEl = document.getElementById('feedbackSuccess');
+            errEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
+            var purpose = document.getElementById('feedbackPurpose').value;
+            var comments = document.getElementById('feedbackComments').value.trim();
+            if (!purpose) {
+                errMsg.textContent = 'Please select the purpose of your visit.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            if (!comments) {
+                errMsg.textContent = 'Please enter your comments.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            // Show success (feedback submission is client-side only)
+            successEl.classList.remove('hidden');
+            document.getElementById('feedbackForm').reset();
+            document.getElementById('commentCount').textContent = '0';
+        }
+
         function toggleDropdown(id) {
             var el = document.getElementById(id);
             if (!el) return;
