@@ -28,10 +28,12 @@
     .rich-btn { padding: 0.25rem 0.5rem; background: #fff; border: 1px solid #d1d5db; border-radius: 0.25rem; color: #374151; cursor: pointer; font-size: 0.8rem; transition: background 0.15s; }
     .rich-btn:hover { background: #e5e7eb; }
     [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; }
-    /* Active step panel header circle */
+    /* Reusable orange gradient */
+    .bg-orange-gradient { background: linear-gradient(90deg, #ffb300, #ff7a00); }
+    /* Active step panel header circle — higher specificity overrides Tailwind bg-gray-200 */
     .wizard-step.active .step-header-num {
-      background: linear-gradient(135deg, #ffb300, #ff7a00) !important;
-      color: white !important;
+      background: linear-gradient(135deg, #ffb300, #ff7a00);
+      color: white;
     }
     /* Step header circle base size */
     .step-header-num { width: 2.5rem; height: 2.5rem; }
@@ -283,7 +285,7 @@
           <div class="px-5 py-5">
             <div class="text-xs text-gray-400 mb-2 font-medium">Progress</div>
             <div class="bg-white/10 rounded-full h-1.5">
-              <div id="progressBar" class="h-1.5 rounded-full transition-all duration-300" style="width:0%;background:linear-gradient(90deg,#ffb300,#ff7a00)"></div>
+              <div id="progressBar" class="bg-orange-gradient h-1.5 rounded-full transition-all duration-300" style="width:0%"></div>
             </div>
             <p id="progressText" class="text-xs text-gray-400 mt-2">Step 1 of 7</p>
           </div>
@@ -300,7 +302,7 @@
             <span id="mobileStepCount" class="text-sm text-gray-500 font-medium">1 / 7</span>
           </div>
           <div class="bg-gray-200 rounded-full h-1.5">
-            <div id="progressBarMobile" class="h-1.5 rounded-full transition-all duration-300" style="width:0%;background:linear-gradient(90deg,#ffb300,#ff7a00)"></div>
+            <div id="progressBarMobile" class="bg-orange-gradient h-1.5 rounded-full transition-all duration-300" style="width:0%"></div>
           </div>
         </div>
 
@@ -935,11 +937,6 @@
   ];
 
   // ── Sidebar nav ─────────────────────────────────────────────────────────────
-  function buildStepNav() {
-    // Sidebar shows only progress indicator (no step list)
-    updateStepNav(currentStep);
-  }
-
   function updateStepNav(step) {
 
     const pct = Math.round(((step - 1) / totalSteps) * 100);
@@ -1087,7 +1084,7 @@
       <div class="relative group border-2 rounded-lg overflow-hidden ${i === 0 ? 'border-amber-500' : 'border-gray-200'}"
            draggable="true" ondragstart="imgDragStart(event,${i})" ondragover="imgDragOver(event)" ondrop="imgDrop(event,${i})">
         <img src="${img.dataUrl}" class="w-full aspect-square object-cover select-none" alt="${img.name}">
-        ${i === 0 ? '<span class="absolute top-1 left-1 text-white text-xs px-1.5 py-0.5 rounded font-semibold leading-none" style="background:linear-gradient(90deg,#ffb300,#ff7a00)">MAIN</span>' : ''}
+        ${i === 0 ? '<span class="absolute top-1 left-1 bg-orange-gradient text-white text-xs px-1.5 py-0.5 rounded font-semibold leading-none">MAIN</span>' : ''}
         <button onclick="removeImageAt(${i})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 items-center justify-center hidden group-hover:flex text-xs border-0"><i class="fas fa-times"></i></button>
       </div>
     `).join('');
@@ -1524,7 +1521,7 @@
       _sellerData = await res.json();
     } catch (e) { window.location.href = 'seller-signup.html'; return; }
 
-    buildStepNav();
+    updateStepNav(1);
     showStep(1);
     updateCartBadge();
 
