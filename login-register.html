@@ -20,7 +20,8 @@
     .lr-social-btn { display: flex; align-items: center; justify-content: center; gap-8px; gap: 8px; width: 100%; padding: 9px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-weight: 500; color: #374151; background: #fff; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
     .lr-social-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
     .lr-feature-card { background: #f0fdff; border: 1px solid #a5f3fc; border-radius: 8px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
-    .lr-strength-bar { height: 4px; border-radius: 2px; flex: 1; background: #e5e7eb; transition: background 0.3s; }
+    .lr-btn-secondary { width: 100%; background: #6b7280; color: #fff; font-weight: 700; padding: 11px; border-radius: 6px; font-size: 15px; cursor: pointer; border: none; transition: background 0.15s; }
+    .lr-btn-secondary:hover { background: #4b5563; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -118,19 +119,30 @@
 
         <!-- ── LOGIN FORM ── -->
         <div id="lrPanelLogin">
-          <h2 class="text-xl font-bold text-gray-900 mb-1">Welcome back</h2>
-          <p class="text-sm text-gray-500 mb-6">Sign in to access your orders, wish lists, and more.</p>
+          <h2 class="text-xl font-bold text-gray-900 mb-6">Sign In</h2>
 
           <div id="lrLoginError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600 flex items-center gap-2">
             <i class="fas fa-exclamation-circle"></i>
             <span id="lrLoginErrorMsg">Invalid email or password.</span>
           </div>
 
-          <div class="space-y-4">
+          <!-- Step 1: Email entry -->
+          <div id="lrStepEmail" class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email address or username</label>
-              <input id="lrLoginEmail" type="text" placeholder="you@example.com" class="lr-input" autocomplete="username">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+              <input id="lrLoginEmail" type="email" placeholder="you@example.com" class="lr-input" autocomplete="email"
+                onkeypress="if(event.key==='Enter') lrContinueWithEmail()">
             </div>
+            <button onclick="lrContinueWithEmail()" class="lr-btn-primary">
+              Sign In
+            </button>
+            <button onclick="lrRequestOTC()" class="lr-btn-secondary">
+              Get One-Time Sign In Code
+            </button>
+          </div>
+
+          <!-- Step 2a: Password entry (shown after email step) -->
+          <div id="lrStepPassword" class="hidden space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Password
@@ -139,33 +151,50 @@
               <div class="relative">
                 <input id="lrLoginPassword" type="password" placeholder="Your password" class="lr-input pr-10" autocomplete="current-password"
                   onkeypress="if(event.key==='Enter') lrDoLogin()">
-                <button type="button" onclick="lrTogglePassword('lrLoginPassword', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" style="top:50%;transform:translateY(-50%);right:12px;">
+                <button type="button" onclick="lrTogglePassword('lrLoginPassword', this)" class="absolute right-3 text-gray-400 hover:text-gray-600" style="top:50%;transform:translateY(-50%);right:12px;">
                   <i class="fas fa-eye text-sm"></i>
                 </button>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <input id="lrRememberMe" type="checkbox" class="rounded border-gray-300 text-cyan-500">
-              <label for="lrRememberMe" class="text-sm text-gray-600">Remember me on this device</label>
-            </div>
             <button onclick="lrDoLogin()" class="lr-btn-primary">
-              <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+              Sign In
             </button>
+            <button onclick="lrBackToEmail()" class="w-full text-sm text-cyan-600 hover:text-cyan-700 text-center mt-1">← Use a different email</button>
           </div>
 
-          <div class="lr-divider text-xs text-gray-400">or</div>
-
-          <div class="space-y-2">
-            <button class="lr-social-btn" onclick="lrNotImplemented()">
-              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.06-.92-.15-1.17z" fill="#4285F4"/><path d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.76-2.7.76-2.08 0-3.84-1.4-4.47-3.29H1.87v2.07A8 8 0 0 0 8.98 17z" fill="#34A853"/><path d="M4.51 10.52A4.8 4.8 0 0 1 4.26 9c0-.53.09-1.04.25-1.52V5.41H1.87A8 8 0 0 0 1 9c0 1.29.31 2.5.87 3.59l2.64-2.07z" fill="#FBBC04"/><path d="M8.98 3.58c1.16 0 2.2.4 3.02 1.19l2.26-2.26C12.95.89 11.14.2 8.98.2A8 8 0 0 0 1.87 5.41l2.64 2.07C5.14 5 6.9 3.58 8.98 3.58z" fill="#EA4335"/></svg>
-              Continue with Google
+          <!-- Step 2b: One-time code entry (shown after requesting OTC) -->
+          <div id="lrStepOTC" class="hidden space-y-4">
+            <div id="lrOTCSent" class="mb-2 p-3 bg-cyan-50 border border-cyan-200 rounded-md text-sm text-cyan-700">
+              <i class="fas fa-envelope mr-1"></i> A one-time code has been sent to your email.
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">What's the One-Time Code?</label>
+              <input id="lrOTCInput" type="text" placeholder="Enter your code" class="lr-input" autocomplete="one-time-code"
+                onkeypress="if(event.key==='Enter') lrDoOTCLogin()">
+            </div>
+            <button onclick="lrDoOTCLogin()" class="lr-btn-primary">
+              Sign In
             </button>
+            <button onclick="lrBackToEmail()" class="w-full text-sm text-cyan-600 hover:text-cyan-700 text-center mt-1">← Use a different email</button>
           </div>
 
           <p class="text-center text-sm text-gray-500 mt-5">
             New to Zorexium?
-            <button onclick="lrShowTab('register')" class="text-cyan-600 hover:text-cyan-700 font-semibold">Create an account</button>
+            <button onclick="lrShowTab('register')" class="text-cyan-600 hover:text-cyan-700 font-semibold">Sign Up</button>
           </p>
+
+          <div class="lr-divider text-xs text-gray-400 mt-4">OR</div>
+
+          <div class="space-y-2">
+            <button class="lr-social-btn" onclick="lrNotImplemented()">
+              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.06-.92-.15-1.17z" fill="#4285F4"/><path d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.76-2.7.76-2.08 0-3.84-1.4-4.47-3.29H1.87v2.07A8 8 0 0 0 8.98 17z" fill="#34A853"/><path d="M4.51 10.52A4.8 4.8 0 0 1 4.26 9c0-.53.09-1.04.25-1.52V5.41H1.87A8 8 0 0 0 1 9c0 1.29.31 2.5.87 3.59l2.64-2.07z" fill="#FBBC04"/><path d="M8.98 3.58c1.16 0 2.2.4 3.02 1.19l2.26-2.26C12.95.89 11.14.2 8.98.2A8 8 0 0 0 1.87 5.41l2.64 2.07C5.14 5 6.9 3.58 8.98 3.58z" fill="#EA4335"/></svg>
+              Sign in with Google
+            </button>
+            <button class="lr-social-btn" onclick="lrNotImplemented()">
+              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path d="M12.26 0c.27 1.52-.44 3.02-1.32 4.06-.9 1.05-2.33 1.87-3.72 1.76-.3-1.46.44-2.99 1.28-3.97C9.39.79 10.87-.02 12.26 0zm3.94 13.3c-.59.86-1.2 1.69-2.14 1.7-.92.01-1.22-.55-2.27-.55-1.06 0-1.39.53-2.27.56-.91.03-1.6-.89-2.2-1.75C5.79 11.04 5.25 8.07 6.4 6.1c.57-.97 1.6-1.58 2.67-1.6 1.04-.02 2.02.7 2.65.7.62 0 1.79-.86 3.01-.73.51.02 1.95.21 2.87 1.58-.07.04-1.71 1-1.69 2.99.02 2.36 2.08 3.15 2.1 3.16-.02.06-.34 1.08-1.01 2.1z" fill="#000"/></svg>
+              Sign in with Apple
+            </button>
+          </div>
         </div>
 
         <!-- ── REGISTER FORM ── -->
@@ -266,6 +295,82 @@
     btn.querySelector('i').className = isPassword ? 'fas fa-eye-slash text-sm' : 'fas fa-eye text-sm';
   }
 
+  function lrBackToEmail() {
+    document.getElementById('lrStepEmail').classList.remove('hidden');
+    document.getElementById('lrStepPassword').classList.add('hidden');
+    document.getElementById('lrStepOTC').classList.add('hidden');
+    document.getElementById('lrLoginError').classList.add('hidden');
+  }
+
+  function lrContinueWithEmail() {
+    var email = (document.getElementById('lrLoginEmail').value || '').trim();
+    var errEl = document.getElementById('lrLoginError');
+    var errMsg = document.getElementById('lrLoginErrorMsg');
+    errEl.classList.add('hidden');
+    if (!email) {
+      errMsg.textContent = 'Please enter your email address.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    document.getElementById('lrStepEmail').classList.add('hidden');
+    document.getElementById('lrStepPassword').classList.remove('hidden');
+  }
+
+  function lrRequestOTC() {
+    var email = (document.getElementById('lrLoginEmail').value || '').trim();
+    var errEl = document.getElementById('lrLoginError');
+    var errMsg = document.getElementById('lrLoginErrorMsg');
+    errEl.classList.add('hidden');
+    if (!email) {
+      errMsg.textContent = 'Please enter your email address.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    document.getElementById('lrStepEmail').classList.add('hidden');
+    document.getElementById('lrStepOTC').classList.remove('hidden');
+  }
+
+  async function lrDoOTCLogin() {
+    var email = (document.getElementById('lrLoginEmail').value || '').trim();
+    var code = (document.getElementById('lrOTCInput').value || '').trim();
+    var errEl = document.getElementById('lrLoginError');
+    var errMsg = document.getElementById('lrLoginErrorMsg');
+    errEl.classList.add('hidden');
+    if (!code) {
+      errMsg.textContent = 'Please enter the one-time code.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    try {
+      var res = await fetch(LR_BACKEND + '/api/auth/otc-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email, code: code })
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        errMsg.textContent = data.error || 'Invalid code. Please try again.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (data.token) {
+        try {
+          localStorage.setItem('authToken', data.token);
+          var userInfo = data.user
+            ? { email: data.user.email, username: data.user.firstName || data.user.email }
+            : { email: email, username: email };
+          localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+        } catch (ex) {}
+      }
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Signed in successfully!', 'success');
+      window.location.href = 'index.html';
+    } catch (err) {
+      errMsg.textContent = 'Sign in failed. Please check your connection and try again.';
+      errEl.classList.remove('hidden');
+    }
+  }
+
   function lrCheckStrength(pw) {
     var score = 0;
     if (pw.length >= 8) score++;
@@ -290,7 +395,7 @@
     var errMsg = document.getElementById('lrLoginErrorMsg');
     errEl.classList.add('hidden');
     if (!email || !password) {
-      errMsg.textContent = 'Please enter your email/username and password.';
+      errMsg.textContent = 'Please enter your email and password.';
       errEl.classList.remove('hidden');
       return;
     }
