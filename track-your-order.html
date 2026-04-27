@@ -31,6 +31,15 @@
         .nav-dropdown-trigger.active .marketplace-mega-menu {
             transform: translateY(0);
         }
+    .tyo-nav-link { display: flex; align-items: center; gap: 8px; padding: 9px 16px; font-size: 14px; color: #374151; transition: background 0.12s, color 0.12s; }
+    .tyo-nav-link:hover { background: #f9fafb; color: #0891b2; }
+    .tyo-nav-link.active { background: #ecfeff; color: #0e7490; font-weight: 600; }
+    .order-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+    .order-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-delivered { background: #dcfce7; color: #15803d; }
+    .status-shipped { background: #dbeafe; color: #1d4ed8; }
+    .status-processing { background: #fef9c3; color: #a16207; }
+    .status-cancelled { background: #fee2e2; color: #b91c1c; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -255,10 +264,164 @@
 </div>
 
 <!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
-  <div class="text-center py-12">
-    <h1 class="text-5xl font-bold text-gray-900 mb-6">Track Your Order</h1>
-    <p class="text-gray-400 text-xl">Monitor and track the status of your orders in real-time.</p>
+<main class="flex-1 bg-gray-50">
+
+  <!-- Page sub-header -->
+  <div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="text-xs text-gray-400">
+      <a href="index.html" class="hover:text-cyan-500">Home</a><span class="mx-1">/</span>
+      <span class="text-cyan-600">Order History</span>
+    </nav>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-5 items-start">
+
+    <!-- ── Left Sidebar ── -->
+    <aside class="w-60 flex-shrink-0">
+
+      <!-- User greeting (logged-in only) -->
+      <div id="tyoUserGreeting" class="hidden bg-white border border-gray-200 rounded-lg px-4 py-3 mb-3">
+        <p class="text-sm font-bold text-gray-800">Hi, <span id="tyoUsername">there</span></p>
+        <p id="tyoMemberDays" class="text-xs text-gray-500 mt-0.5"></p>
+      </div>
+
+      <!-- Orders section -->
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Orders</span>
+        </div>
+        <nav>
+          <a href="order-history.html" class="tyo-nav-link active"><i class="fas fa-box-open w-4 text-center text-cyan-500"></i>Order History</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-file-alt w-4 text-center text-gray-400"></i>Digital Orders</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-sync-alt w-4 text-center text-gray-400"></i>Subscription Orders</a>
+          <a href="returns-history.html" class="tyo-nav-link"><i class="fas fa-exchange-alt w-4 text-center text-gray-400"></i>Return Status / History</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-store w-4 text-center text-gray-400"></i>Marketplace Claim History</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-random w-4 text-center text-gray-400"></i>Trade-in Orders</a>
+        </nav>
+      </div>
+
+      <!-- Offers section -->
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Offers</span>
+        </div>
+        <nav>
+          <a href="deals-promotions.html" class="tyo-nav-link"><i class="fas fa-tag w-4 text-center text-gray-400"></i>Deals &amp; Promotions</a>
+        </nav>
+      </div>
+
+      <!-- Manage Account section -->
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Manage Account</span>
+        </div>
+        <nav>
+          <a href="account-details.html" class="tyo-nav-link"><i class="fas fa-cog w-4 text-center text-gray-400"></i>Account Settings</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-star w-4 text-center text-gray-400"></i>Zorexium+</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-address-book w-4 text-center text-gray-400"></i>Address Book</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-credit-card w-4 text-center text-gray-400"></i>Payment Options</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-coins w-4 text-center text-gray-400"></i>EggPoints</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-gift w-4 text-center text-gray-400"></i>Gift Cards</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-graduation-cap w-4 text-center text-gray-400"></i>Academic Info</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-star-half-alt w-4 text-center text-gray-400"></i>Manage Reviews</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-file-invoice w-4 text-center text-gray-400"></i>Tax Exemption Application</a>
+        </nav>
+      </div>
+
+      <!-- Notifications section -->
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Notifications</span>
+        </div>
+        <nav>
+          <a href="messages.html" class="tyo-nav-link"><i class="fas fa-envelope w-4 text-center text-gray-400"></i>Message Center</a>
+          <a href="email-notifications.html" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Email Notifications</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-mobile-alt w-4 text-center text-gray-400"></i>Mobile Text Alert</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Auto Notify</a>
+          <a href="#" class="tyo-nav-link"><i class="fas fa-chart-line w-4 text-center text-gray-400"></i>Price Alerts</a>
+        </nav>
+      </div>
+
+      <!-- Sign Out -->
+      <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <a href="#" id="tyoSignOut" class="tyo-nav-link text-red-600 hover:bg-red-50 hover:text-red-700">
+          <i class="fas fa-sign-out-alt w-4 text-center"></i>Sign Out
+        </a>
+      </div>
+
+    </aside>
+
+    <!-- ── Main Content Area ── -->
+    <div class="flex-1 min-w-0">
+
+      <!-- Order History header card -->
+      <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4">
+        <div class="flex items-center justify-between mb-1">
+          <h1 class="text-xl font-bold text-gray-900">Order History</h1>
+          <a href="#" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium">Find A Guest Order</a>
+        </div>
+        <p class="text-sm text-gray-500">Check the status of your order, review your order history, leave a review for your purchases and request a return.</p>
+      </div>
+
+      <!-- Search + Filter bar -->
+      <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4">
+        <div class="flex flex-wrap gap-2 items-center mb-3">
+          <input id="tyoSearchInput" type="text" placeholder="Search by Product, Order # or Invoice # in all orders"
+            class="flex-1 min-w-0 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+          <button onclick="tyoSearch()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors whitespace-nowrap">Search Orders</button>
+        </div>
+        <div class="flex flex-wrap gap-4 items-center text-sm text-gray-600">
+          <div class="flex items-center gap-2">
+            <label class="font-medium whitespace-nowrap">Find Orders Within:</label>
+            <select id="tyoDateFilter" onchange="tyoRenderOrders()" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <option value="all">All Time</option>
+              <option value="30" selected>Recent Orders</option>
+              <option value="90">Last 3 Months</option>
+              <option value="180">Last 6 Months</option>
+              <option value="365">Last Year</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="font-medium whitespace-nowrap">Recent Orders</label>
+            <select id="tyoSortFilter" onchange="tyoRenderOrders()" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <option value="recent">Most Recent</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2 ml-auto">
+            <label class="font-medium whitespace-nowrap">View:</label>
+            <select id="tyoViewFilter" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <option value="orders">Orders</option>
+              <option value="invoices">Invoices</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Text alert sign-up banner -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4 flex items-center gap-3 text-sm">
+        <i class="fas fa-mobile-alt text-blue-500 text-lg flex-shrink-0"></i>
+        <span class="text-blue-700">Stay connected with order and delivery update via text alert.</span>
+        <a href="#" class="ml-auto text-cyan-600 hover:text-cyan-700 font-semibold whitespace-nowrap">Sign Up</a>
+      </div>
+
+      <!-- Auth gate (not logged in) -->
+      <div id="tyoAuthGate" class="hidden bg-white border border-gray-200 rounded-lg text-center py-16">
+        <i class="fas fa-lock text-4xl text-gray-300 mb-4 block"></i>
+        <p class="text-lg font-semibold text-gray-700 mb-1">Sign in to view your orders</p>
+        <p class="text-sm text-gray-400 mb-5">Your order history is tied to your Zorexium account.</p>
+        <a href="signup-login.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-6 py-2.5 rounded-md transition-colors">Sign In / Register</a>
+      </div>
+
+      <!-- Order list -->
+      <div id="tyoOrderList" class="space-y-3">
+        <div class="bg-white border border-gray-200 rounded-lg text-center py-12 text-gray-400">
+          <i class="fas fa-spinner fa-spin text-3xl mb-3 block text-cyan-400"></i>
+          <p class="text-sm">Loading your orders…</p>
+        </div>
+      </div>
+
+    </div>
   </div>
 </main>
 
@@ -385,6 +548,169 @@
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
         })();
     </script>
+
+<script>
+// ── Order History page logic ──
+(function () {
+  var BACKEND = 'https://zorexium-backend.onrender.com';
+  var _allOrders = [];
+
+  var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
+  var listEl  = document.getElementById('tyoOrderList');
+  var gateEl  = document.getElementById('tyoAuthGate');
+  var greetEl = document.getElementById('tyoUserGreeting');
+
+  // ── User greeting ──
+  if (isLoggedIn) {
+    if (greetEl) greetEl.classList.remove('hidden');
+    var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
+    var nameEl = document.getElementById('tyoUsername');
+    if (nameEl && user) nameEl.textContent = user.username || user.email || 'there';
+
+    // Member days: fetch profile for createdAt
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND + '/api/user/profile', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (profile) {
+        if (!profile) return;
+        // Update username with real firstName if available
+        if (nameEl && (profile.firstName || profile.lastName)) {
+          nameEl.textContent = (profile.firstName || '') + (profile.lastName ? ' ' + profile.lastName : '') || nameEl.textContent;
+        }
+        var daysEl = document.getElementById('tyoMemberDays');
+        if (daysEl && profile.createdAt) {
+          var days = Math.max(0, Math.floor((Date.now() - new Date(profile.createdAt).getTime()) / 86400000));
+          daysEl.textContent = 'Thanks for being a Zorexium customer for ' + days + ' day' + (days === 1 ? '' : 's');
+        }
+      })
+      .catch(function () {});
+  } else {
+    if (gateEl) gateEl.classList.remove('hidden');
+    if (listEl) listEl.innerHTML = '';
+    return;
+  }
+
+  // ── Sign Out link ──
+  var signOutEl = document.getElementById('tyoSignOut');
+  if (signOutEl) {
+    signOutEl.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (typeof ZrxSession !== 'undefined') {
+        ZrxSession.logout(function () { window.location.href = 'index.html'; });
+      }
+    });
+  }
+
+  // ── Status helpers ──
+  function statusClass(s) {
+    if (!s) return 'status-processing';
+    var l = s.toLowerCase();
+    if (l.includes('deliver') || l.includes('complet')) return 'status-delivered';
+    if (l.includes('ship') || l.includes('transit')) return 'status-shipped';
+    if (l.includes('cancel')) return 'status-cancelled';
+    return 'status-processing';
+  }
+  function statusIcon(s) {
+    if (!s) return 'fas fa-clock';
+    var l = s.toLowerCase();
+    if (l.includes('deliver') || l.includes('complet')) return 'fas fa-check-circle';
+    if (l.includes('ship') || l.includes('transit')) return 'fas fa-truck';
+    if (l.includes('cancel')) return 'fas fa-times-circle';
+    return 'fas fa-clock';
+  }
+
+  // ── Render orders ──
+  window.tyoRenderOrders = function () {
+    if (!listEl) return;
+    var query   = (document.getElementById('tyoSearchInput') ? document.getElementById('tyoSearchInput').value.trim().toLowerCase() : '');
+    var dayVal  = document.getElementById('tyoDateFilter') ? document.getElementById('tyoDateFilter').value : 'all';
+    var sort    = document.getElementById('tyoSortFilter') ? document.getElementById('tyoSortFilter').value : 'recent';
+    var cutoff  = dayVal !== 'all' ? Date.now() - parseInt(dayVal, 10) * 86400000 : 0;
+
+    var filtered = _allOrders.filter(function (o) {
+      if (cutoff && o.createdAt && new Date(o.createdAt).getTime() < cutoff) return false;
+      if (query) {
+        var id = ((o._id || o.orderId || '') + '').toLowerCase();
+        var items = (o.items || []).map(function (i) { return (i.name || '').toLowerCase(); }).join(' ');
+        if (!id.includes(query) && !items.includes(query)) return false;
+      }
+      return true;
+    });
+
+    if (sort === 'oldest') {
+      filtered.sort(function (a, b) { return new Date(a.createdAt || 0) - new Date(b.createdAt || 0); });
+    } else {
+      filtered.sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+    }
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14">' +
+        '<i class="fas fa-box-open text-5xl text-gray-200 mb-3 block"></i>' +
+        '<p class="font-semibold text-gray-600 mb-1">No orders found</p>' +
+        '<p class="text-sm text-gray-400 mb-5">Try adjusting your search or date filter.</p>' +
+        '<a href="marketplace.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Shop Now</a>' +
+        '</div>';
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(function (o) {
+      var status = o.status || 'Processing';
+      var sc = statusClass(status);
+      var si = statusIcon(status);
+      var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '';
+      var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '';
+      var items = (o.items || []).slice(0, 3).map(function (i) {
+        return '<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5 mr-1">' + (i.name || 'Item') + '</span>';
+      }).join('');
+      return '<div class="order-card flex flex-wrap gap-4 items-center">' +
+        '<div class="flex-1 min-w-0">' +
+        '<div class="flex items-center gap-2 mb-1">' +
+        '<span class="font-semibold text-sm text-gray-800">Order #' + ((o._id || o.orderId || '---') + '').slice(-8).toUpperCase() + '</span>' +
+        '<span class="order-status ' + sc + '"><i class="' + si + '"></i> ' + status + '</span>' +
+        '</div>' +
+        '<div class="text-xs text-gray-400 mb-2">' + date + (total ? ' &middot; ' + total : '') + '</div>' +
+        '<div>' + (items || '<span class="text-xs text-gray-400">No items listed</span>') + '</div>' +
+        '</div>' +
+        '<div class="flex gap-2 flex-shrink-0">' +
+        '<a href="track-your-order.html?order=' + encodeURIComponent(o._id || '') + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
+        '<a href="returns-history.html" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Return</a>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  };
+
+  // ── Search button ──
+  window.tyoSearch = function () { tyoRenderOrders(); };
+  var searchInput = document.getElementById('tyoSearchInput');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') tyoRenderOrders(); });
+  }
+
+  // ── Load orders from API ──
+  var fetchFn2 = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+  fetchFn2(BACKEND + '/api/orders/my', { credentials: 'include' })
+    .then(function (r) { return r.ok ? r.json() : []; })
+    .then(function (orders) {
+      _allOrders = orders || [];
+      if (_allOrders.length === 0) {
+        listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14">' +
+          '<i class="fas fa-box-open text-5xl text-gray-200 mb-3 block"></i>' +
+          '<p class="font-semibold text-gray-600 mb-1">No orders yet</p>' +
+          '<p class="text-sm text-gray-400 mb-5">Discover hardware on the marketplace and place your first order.</p>' +
+          '<a href="marketplace.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Shop Now</a>' +
+          '</div>';
+        return;
+      }
+      tyoRenderOrders();
+    })
+    .catch(function () {
+      listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-10 text-gray-400">' +
+        '<i class="fas fa-exclamation-triangle text-3xl mb-3 block text-red-400"></i>' +
+        '<p class="text-sm">Could not load orders. Please try again later.</p>' +
+        '</div>';
+    });
+})();
+</script>
 </body>
 </html>
 
