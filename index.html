@@ -553,8 +553,8 @@
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <main class="flex-1 p-8">
+        <!-- Main Content Area – SPA panel -->
+        <main id="spaMain" class="flex-1 p-8 overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-semibold text-gray-800">Best Picks</h2>
             </div>
@@ -743,12 +743,11 @@
             document.body.innerHTML = document.body.innerHTML.replace(/dokan/gi, '');
         })();
 
-        // Home page search function
+        // Home page search function – navigate via SPA
         function searchMarketplace() {
             const query = document.getElementById('homeSearch').value.trim();
-            if (query.length > 0) {
-                window.location.href = 'marketplace.html?search=' + encodeURIComponent(query);
-            }
+            const dest = 'marketplace.html' + (query.length > 0 ? '?search=' + encodeURIComponent(query) : '');
+            if (window.ZrxSpa) { ZrxSpa.navigate(dest); } else { window.location.href = dest; }
         }
 
         // Load and render all marketplace products on home page
@@ -786,7 +785,7 @@
                     var rating = product.rating ? parseFloat(product.rating).toFixed(1) : '5.0';
                     var detailUrl = 'product-detail.html?id=' + encodeURIComponent(id);
                     return '<div class="product-card">' +
-                        '<img src="' + escAttr(img) + '" alt="' + escAttr(name) + '" class="product-image" onclick="window.location.href=' + "'" + detailUrl + "'" + '">' +
+                        '<img src="' + escAttr(img) + '" alt="' + escAttr(name) + '" class="product-image" onclick="if(window.ZrxSpa){ZrxSpa.navigate(\'' + detailUrl + '\')}else{window.location.href=\'' + detailUrl + '\'}">' +
                         '<div class="p-4 flex flex-col items-start text-left gap-2">' +
                         '<h3 class="text-gray-900 line-clamp-2">' + escAttr(name) + '</h3>' +
                         '<p class="text-black text-2xl">$' + escAttr(price) + '</p>' +
@@ -841,6 +840,7 @@
         </script>
 
 <script src="profile-picture.js"></script>
+<script src="spa-router.js"></script>
 </body>
 </html>
 

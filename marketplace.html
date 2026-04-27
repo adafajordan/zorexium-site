@@ -458,7 +458,9 @@
   }
 
   function viewProduct(productId) {
-    window.location.href = 'product-detail.html?id=' + encodeURIComponent(productId);
+    var url = 'product-detail.html?id=' + encodeURIComponent(productId);
+    if (window.ZrxSpa && ZrxSpa.navigate(url)) return;
+    window.location.href = url;
   }
 
   async function addToCart(productId, name, price, image) {
@@ -510,7 +512,9 @@
   }
 
   function checkSellerAndRedirect() {
-    window.location.href = 'seller-signup.html';
+    var url = 'seller-signup.html';
+    if (window.ZrxSpa && ZrxSpa.navigate(url)) return;
+    window.location.href = url;
   }
 
   async function updateCartBadge() {
