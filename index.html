@@ -775,7 +775,7 @@
                 }
                 grid.classList.remove('hidden');
                 if (emptyState) emptyState.classList.add('hidden');
-                if (countEl) { countEl.textContent = products.length + (products.length === 1 ? ' product' : ' products'); countEl.classList.remove('hidden'); }
+                if (countEl) { countEl.textContent = products.length + (products.length === 1 ? ' Product' : ' Products'); countEl.classList.remove('hidden'); }
                 grid.innerHTML = products.map(function(product, i) {
                     var id = product._id || '';
                     var name = product.name || 'Unnamed Product';
@@ -847,7 +847,7 @@
             // Expose a filter function for subcategory clicks
             window.filterHomeProducts = function(categoryKey, subKey, label) {
                 var titleEl = document.getElementById('homePageTitle');
-                if (titleEl) titleEl.textContent = 'All ' + label;
+                if (titleEl) titleEl.textContent = label;
 
                 var all = window._allHomeProducts || [];
                 var catNorm = categoryKey.toLowerCase();
@@ -871,29 +871,6 @@
 
 <script src="profile-picture.js"></script>
 <script src="spa-router.js"></script>
-<script>
-// Intercept subcategory link clicks in sidebar and header mega-menu
-// Filters the home page products instead of navigating to marketplace.html
-document.addEventListener('click', function(e) {
-    var link = e.target.closest('a[href*="marketplace.html?category="]');
-    if (!link) return;
-    var href = link.getAttribute('href') || '';
-    // Only intercept if the filter function is available
-    if (typeof window.filterHomeProducts !== 'function') return;
-    var params = new URLSearchParams(href.replace(/^[^?]*\?/, ''));
-    var categoryKey = params.get('category') || '';
-    var subKey = params.get('sub') || '';
-    if (!categoryKey) return;
-    e.preventDefault();
-    // For header mega-menu links the subcategory label is in the .text-xs span;
-    // for sidebar links it is the entire link text.
-    var subSpan = link.querySelector('span.text-xs');
-    var label = (subSpan ? subSpan.textContent : link.textContent).trim() || categoryKey;
-    window.filterHomeProducts(categoryKey, subKey, label);
-    // Close any open dropdowns
-    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
-});
-</script>
 </body>
 </html>
 
