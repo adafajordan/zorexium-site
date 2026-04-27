@@ -201,6 +201,27 @@
 
         var href = link.getAttribute('href') || '';
 
+        // ── Home-page subcategory interception ─────────────────────────────────
+        // When filterHomeProducts is available (home panel is shown) intercept
+        // category/subcategory link clicks and filter the home grid in-place
+        // instead of loading the full marketplace page.
+        if (href.includes('marketplace.html?category=') &&
+                typeof window.filterHomeProducts === 'function') {
+            var params = new URLSearchParams(href.split('?')[1] || '');
+            var categoryKey = params.get('category') || '';
+            if (categoryKey) {
+                var subKey = params.get('sub') || '';
+                var subSpan = link.querySelector('span.text-xs');
+                var subSpanText = subSpan ? subSpan.textContent.trim() : '';
+                var label = (subSpanText || link.textContent.trim()) || categoryKey;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                window.filterHomeProducts(categoryKey, subKey, label);
+                document.querySelectorAll('.nav-dropdown-trigger').forEach(function (d) { d.classList.remove('active'); });
+                return;
+            }
+        }
+
         // Skip: anchors, mailto, tel, javascript, empty
         if (!href || /^(#|mailto:|tel:|javascript:)/i.test(href.trim())) return;
 
