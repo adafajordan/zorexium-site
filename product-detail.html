@@ -338,7 +338,7 @@
             <i class="fas fa-undo-alt text-xs"></i> Free 30-day Returns
           </p>
           <p class="text-gray-500 text-xs mt-1">
-            or as low as <span class="font-semibold text-gray-700">$23/mo</span> with financing.
+            or as low as <span data-financing-monthly class="font-semibold text-gray-700">$23/mo</span> with financing.
             <a href="#" class="text-cyan-600 hover:underline">Prequalify Now</a>
           </p>
         </div>
@@ -586,6 +586,8 @@
 
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const HOT_SELLER_THRESHOLD = 200;
+  const SIMILAR_PRODUCT_NAME_MAX = 60;
   let currentProduct = null;
   let currentProductId = null;
 
@@ -641,7 +643,7 @@
 
     // Hot seller badge
     var hotBadge = document.getElementById('sellerHotBadge');
-    if (hotBadge && totalSales && parseInt(totalSales) > 200) hotBadge.classList.remove('hidden');
+    if (hotBadge && totalSales && parseInt(totalSales) > HOT_SELLER_THRESHOLD) hotBadge.classList.remove('hidden');
 
     // Meet Your Seller section
     var meetSection = document.getElementById('meetSellerSection');
@@ -706,30 +708,41 @@
         var pid = p._id ? String(p._id) : String(p.id || '');
         var img = p.image || 'https://placehold.co/200x150/f3f4f6/9ca3af?text=Product';
         var price = '$' + parseFloat(p.price || 0).toFixed(2);
-        var name = (p.name || 'Product').substring(0, 60) + (p.name && p.name.length > 60 ? '...' : '');
+        var displayName = (p.name || 'Product');
+        if (displayName.length > SIMILAR_PRODUCT_NAME_MAX) displayName = displayName.substring(0, SIMILAR_PRODUCT_NAME_MAX) + '...';
         var condition = p.condition || '';
         html += '<a href="product-detail.html?id=' + encodeURIComponent(pid) + '" '
           + 'class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col bg-white">'
           + '<div class="bg-gray-50 flex items-center justify-center" style="height:120px">'
-          + '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(name) + '" class="max-h-28 max-w-full object-contain p-2">'
+          + '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(displayName) + '" class="max-h-28 max-w-full object-contain p-2">'
           + '</div>'
           + '<div class="p-2 flex flex-col flex-1 gap-1">'
           + (condition ? '<span class="text-xs text-amber-600 font-medium capitalize">' + escapeHtml(condition) + '</span>' : '')
-          + '<p class="text-xs text-gray-800 leading-snug flex-1">' + escapeHtml(name) + '</p>'
+          + '<p class="text-xs text-gray-800 leading-snug flex-1">' + escapeHtml(displayName) + '</p>'
           + '<p class="text-sm font-bold text-gray-900 mt-1">' + price + '</p>'
-          + '<button onclick="event.preventDefault();addSimilarToCart(\'' + escapeHtml(pid) + '\',\'' + escapeHtml(p.name || '') + '\',' + parseFloat(p.price || 0) + ',\'' + escapeHtml(img) + '\')" '
-          + 'class="mt-1 w-full py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold rounded transition-colors">'
+          + '<button class="similar-add-to-cart mt-1 w-full py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold rounded transition-colors" '
+          + 'data-pid="' + escapeHtml(pid) + '" '
+          + 'data-name="' + escapeHtml(p.name || '') + '" '
+          + 'data-price="' + parseFloat(p.price || 0) + '" '
+          + 'data-image="' + escapeHtml(img) + '">'
           + 'Add to cart</button>'
           + '</div>'
           + '</a>';
       });
       grid.innerHTML = html;
+
+      // Attach cart handlers via event delegation (avoids inline onclick XSS)
+      grid.addEventListener('click', function(e) {
+        var btn = e.target.closest('.similar-add-to-cart');
+        if (!btn) return;
+        e.preventDefault();
+        addSimilarToCart(btn.dataset.pid, btn.dataset.name, parseFloat(btn.dataset.price), btn.dataset.image);
+      });
       section.classList.remove('hidden');
     } catch (e) {}
   }
 
   async function addSimilarToCart(pid, name, price, image) {
-    var tempProduct = { id: pid, name: name, price: price, image: image };
     if (ZrxSession.isLoggedIn()) {
       try {
         var cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
@@ -755,10 +768,13 @@
   }
 
   function copyShareLink() {
-    try {
-      navigator.clipboard.writeText(window.location.href);
-      ZrxNotify.showNotification('Link copied to clipboard!', 'success');
-    } catch (e) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(window.location.href).then(function() {
+        ZrxNotify.showNotification('Link copied to clipboard!', 'success');
+      }).catch(function() {
+        ZrxNotify.showNotification('Copy this URL: ' + window.location.href, 'info');
+      });
+    } else {
       ZrxNotify.showNotification('Copy this URL: ' + window.location.href, 'info');
     }
   }
@@ -806,8 +822,8 @@
           document.getElementById('productName').innerText = currentProduct.name;
           document.getElementById('breadcrumbName').innerText = currentProduct.name;
 
-          // Brand (first word of category or name)
-          var brand = (currentProduct.category || currentProduct.name || '').split(' ')[0] || 'Zorexium';
+          // Brand: use explicit brand field if available, else first word of product name
+          var brand = product.brand || (currentProduct.name || '').split(/\s+/)[0] || 'Zorexium';
           document.getElementById('productBrand').innerText = brand.toUpperCase();
 
           // Breadcrumb category link
@@ -819,7 +835,11 @@
           document.getElementById('productId').innerText = currentProduct.id;
 
           // Price
-          document.getElementById('productPrice').innerText = '$' + parseFloat(currentProduct.price).toFixed(2);
+          var priceNum = parseFloat(currentProduct.price);
+          document.getElementById('productPrice').innerText = '$' + priceNum.toFixed(2);
+          var monthlyEst = Math.ceil(priceNum / 12);
+          var financeEl = document.querySelector('[data-financing-monthly]');
+          if (financeEl) financeEl.innerText = '$' + monthlyEst + '/mo';
 
           // Condition badge
           var condBadge = document.getElementById('productConditionBadge');
