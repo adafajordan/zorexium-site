@@ -126,6 +126,14 @@ var prefsRateLimit = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
+var publicApiRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
 // ── CORS Middleware ────────────────────────────────────────────────────────────
 // Only allow credentialed requests from explicitly trusted origins.
 var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
@@ -293,11 +301,23 @@ app.post('/api/auth/logout', authRateLimit, function(req, res) {
 
 // ── PRODUCTS ────────────────────────────────────────────────────────────────────
 
-app.get('/api/products', async function(req, res) {
+app.get('/api/products', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
-    const products = await db.collection('products').find().toArray();
+    const query = {};
+    const brand = req.query.brand;
+    if (brand) {
+      // Escape all special regex characters before building the pattern
+      const escapedBrand = brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const brandRe = new RegExp(escapedBrand, 'i');
+      query.$or = [
+        { brand: brandRe },
+        { sellerName: brandRe },
+        { name: brandRe }
+      ];
+    }
+    const products = await db.collection('products').find(query).toArray();
     res.json(products);
   } catch (error) {
     console.error('Error fetching products:', error);
