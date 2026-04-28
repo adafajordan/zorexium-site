@@ -245,77 +245,315 @@
 
 
 <!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-    <!-- Product Image -->
-    <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6 flex items-center justify-center min-h-96">
-      <img id="productImage" src="" alt="Product" class="w-full h-auto rounded-lg">
+<main class="flex-1 bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+    <!-- Breadcrumb -->
+    <nav class="flex items-center flex-wrap gap-1.5 text-sm text-gray-500 mb-3">
+      <a href="index.html" class="hover:text-cyan-600">Home</a>
+      <span class="text-gray-300">/</span>
+      <a href="marketplace.html" class="hover:text-cyan-600">Marketplace</a>
+      <span class="text-gray-300">/</span>
+      <a id="breadcrumbCategory" href="marketplace.html" class="hover:text-cyan-600">Category</a>
+      <span class="text-gray-300">/</span>
+      <span id="breadcrumbName" class="text-gray-700 truncate max-w-xs">Product</span>
+    </nav>
+
+    <!-- Brand + Item# -->
+    <div class="flex items-center gap-3 mb-1">
+      <span id="productBrand" class="text-cyan-600 font-bold text-sm uppercase tracking-wide">Brand</span>
+      <span class="text-gray-300">|</span>
+      <span class="text-gray-500 text-xs">Item#: <span id="productId" class="font-mono text-gray-700">-</span></span>
     </div>
 
-    <!-- Product Info -->
-    <div class="flex flex-col gap-8">
-      <!-- Title & Price -->
-      <div>
-        <h1 id="productName" class="text-5xl font-bold text-gray-900 mb-2">Loading...</h1>
-        <p id="productPrice" class="text-4xl font-bold text-cyan-400 mb-6">$0.00</p>
-        <p id="productDescription" class="text-gray-400 text-xl">Loading product details...</p>
-      </div>
+    <!-- Product Title -->
+    <h1 id="productName" class="text-lg sm:text-xl font-bold text-gray-900 mb-4 leading-snug">Loading...</h1>
 
-      <!-- Seller Info -->
-      <div class="bg-[#20232a] border border-gray-700 rounded-lg p-4">
-        <p class="text-gray-500 text-base mb-2">Sold by</p>
-        <div class="flex items-center justify-between">
-          <a id="sellerLink" href="#" class="text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-3">
-            <i class="fas fa-store"></i>
-            <span id="sellerName">Unknown Seller</span>
-          </a>
-          <button onclick="contactSeller()" class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold">
-            <i class="fas fa-envelope"></i> Contact Seller
-          </button>
+    <!-- Main 2-column layout -->
+    <div class="flex flex-col lg:flex-row gap-6">
+
+      <!-- LEFT: Images + action links -->
+      <div class="lg:w-72 xl:w-80 flex-shrink-0">
+        <!-- Main Image -->
+        <div class="border border-gray-200 rounded-lg p-4 flex items-center justify-center bg-white" style="min-height:280px">
+          <img id="productImage" src="" alt="Product"
+            class="max-w-full max-h-64 object-contain cursor-zoom-in rounded">
         </div>
+        <!-- Thumbnails (up to 4) -->
+        <div id="thumbnailRow" class="flex gap-2 mt-2 overflow-x-auto pb-1"></div>
+
+        <!-- Action links -->
+        <ul class="mt-4 divide-y divide-gray-100 text-sm border border-gray-100 rounded-lg overflow-hidden">
+          <li>
+            <button onclick="toggleWishlist()" class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
+              <i class="far fa-heart w-4 text-center text-gray-400"></i> Add to wish list
+            </button>
+          </li>
+          <li>
+            <button class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
+              <i class="fas fa-exchange-alt w-4 text-center text-gray-400"></i> Compare
+            </button>
+          </li>
+          <li>
+            <button class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
+              <i class="fas fa-bell w-4 text-center text-gray-400"></i> Price alert
+            </button>
+          </li>
+          <li>
+            <button onclick="copyShareLink()" class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
+              <i class="fas fa-share-alt w-4 text-center text-gray-400"></i> Share
+            </button>
+          </li>
+          <li>
+            <button class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-red-500 transition-colors text-left">
+              <i class="fas fa-flag w-4 text-center text-gray-400"></i> Report a listing
+            </button>
+          </li>
+        </ul>
       </div>
 
-      <!-- Quantity & Actions -->
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <div class="mb-8">
-          <label class="block text-gray-900 text-base font-semibold mb-2">Quantity</label>
-          <div class="flex items-center gap-6">
-            <button onclick="decreaseQty()" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded">−</button>
-            <input type="number" id="quantity" value="1" min="1" class="w-16 bg-gray-800 text-white text-center px-3 py-3 rounded border border-gray-700" onchange="validateQty()">
-            <button onclick="increaseQty()" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded">+</button>
+      <!-- RIGHT: Product info + buy box -->
+      <div class="flex-1 min-w-0">
+
+        <!-- Condition + rating row -->
+        <div class="flex flex-wrap items-center gap-3 mb-3">
+          <span id="productConditionBadge"
+            class="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-xs font-semibold uppercase tracking-wide">
+            New
+          </span>
+          <div class="flex items-center gap-1 text-sm text-gray-600">
+            <i class="fas fa-star text-yellow-400 text-xs"></i>
+            <span id="sellerRatingVal" class="font-medium">—</span>
+            <span class="text-gray-400 text-xs">(<span id="sellerRatingCount">—</span> seller ratings)</span>
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="space-y-3">
-          <button onclick="addToCart()" class="w-full px-8 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg flex items-center justify-center gap-3">
-            <i class="fas fa-shopping-cart"></i> Add to Cart
+        <!-- Price block -->
+        <div class="mb-4">
+          <div class="flex items-baseline gap-3">
+            <span id="productPrice" class="text-3xl font-bold text-gray-900">$0.00</span>
+            <span id="productOriginalPrice" class="hidden text-lg text-gray-400 line-through">$0.00</span>
+          </div>
+          <p class="text-green-600 text-sm font-medium mt-1 flex items-center gap-1">
+            <i class="fas fa-undo-alt text-xs"></i> Free 30-day Returns
+          </p>
+          <p class="text-gray-500 text-xs mt-1">
+            or as low as <span data-financing-monthly class="font-semibold text-gray-700">$23/mo</span> with financing.
+            <a href="#" class="text-cyan-600 hover:underline">Prequalify Now</a>
+          </p>
+        </div>
+
+        <!-- Quantity + Add to Cart -->
+        <div class="flex flex-wrap items-stretch gap-2 mb-4">
+          <div class="flex items-center border border-gray-300 rounded overflow-hidden">
+            <button onclick="decreaseQty()"
+              class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold leading-none select-none">−</button>
+            <input type="number" id="quantity" value="1" min="1" onchange="validateQty()"
+              class="w-12 text-center border-0 outline-none py-2 text-sm text-gray-900 bg-white">
+            <button onclick="increaseQty()"
+              class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold leading-none select-none">+</button>
+          </div>
+          <button onclick="addToCart()"
+            class="flex-1 min-w-32 px-5 py-2 bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold rounded text-sm flex items-center justify-center gap-2 transition-colors">
+            <i class="fas fa-shopping-cart"></i> Add to cart
           </button>
-          <button onclick="goToCheckout()" class="w-full px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+          <button onclick="goToCheckout()"
+            class="flex-1 min-w-28 px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded text-sm transition-colors">
             Buy Now
           </button>
         </div>
-      </div>
 
-      <!-- Product Details -->
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-xl font-semibold text-gray-900 mb-6">Product Details</h3>
-        <div class="space-y-3 text-base">
-          <div class="flex justify-between">
-            <span class="text-gray-400">Product ID:</span>
-            <span id="productId" class="text-gray-900 font-mono">-</span>
+        <!-- Shipping info -->
+        <div class="border border-gray-200 rounded-lg p-4 mb-4 text-sm space-y-2">
+          <div class="flex items-center gap-2 font-semibold text-gray-800">
+            <i class="fas fa-shipping-fast text-cyan-500"></i> Free Shipping
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">Condition:</span>
-            <span class="text-gray-900">New</span>
+          <div class="flex items-center gap-2 text-gray-500">
+            <i class="fas fa-map-marker-alt text-gray-300 w-4 text-center"></i>
+            <a href="#" class="text-cyan-600 hover:underline">Select delivery location</a>
           </div>
-          <div class="flex justify-between">
-            <span class="text-gray-400">In Stock:</span>
-            <span class="text-green-400 font-semibold">Yes</span>
+          <div class="flex items-center gap-2 text-gray-500">
+            <i class="fas fa-clock text-gray-300 w-4 text-center"></i>
+            Fastest delivery in 3 days
           </div>
+        </div>
+
+        <!-- Seller info -->
+        <div class="border border-gray-200 rounded-lg p-4 mb-4 text-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-gray-400 text-xs mb-0.5">Sold by</p>
+              <a id="sellerLink" href="#"
+                class="text-cyan-600 hover:text-cyan-700 font-semibold inline-flex items-center gap-1.5">
+                <i class="fas fa-store text-xs"></i>
+                <span id="sellerName">Loading...</span>
+              </a>
+              <div class="flex items-center gap-1 mt-1 text-gray-500 text-xs">
+                <i class="fas fa-star text-yellow-400"></i>
+                <span id="sellerRatingVal2">—</span>
+                <span>(<span id="sellerRatingCount2">—</span> ratings)</span>
+                <span id="sellerHotBadge" class="hidden ml-2 px-1.5 py-0.5 bg-red-100 text-red-600 border border-red-200 rounded font-semibold text-xs">🔥 Hot Seller</span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">
+                Shipped by <span id="shippedBy" class="font-medium text-gray-600">Seller</span>
+              </p>
+            </div>
+            <button onclick="contactSeller()"
+              class="flex-shrink-0 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded text-xs font-semibold transition-colors">
+              Contact Seller
+            </button>
+          </div>
+        </div>
+
+        <!-- More Buying Options snippet (top 3 sellers) -->
+        <div id="otherSellersSnippet" class="border border-gray-200 rounded-lg p-4 mb-4 hidden">
+          <p class="text-sm font-semibold text-gray-900 mb-3">
+            <span id="otherSellersCount">—</span> Refurbished from
+            <span id="otherSellersLowPrice" class="text-cyan-600">—</span>
+          </p>
+          <div id="topSellersList" class="space-y-3 text-sm"></div>
+          <a href="#moreBuyingOptions"
+            class="text-cyan-600 hover:underline text-xs mt-3 inline-block">
+            Compare offers from more sellers ›
+          </a>
+        </div>
+
+      </div>
+    </div><!-- /main 2-col -->
+
+    <!-- ── Meet Your Seller ────────────────────────────────────────────────── -->
+    <div id="meetSellerSection" class="mt-8 border border-gray-200 rounded-lg p-5 hidden">
+      <h3 class="text-base font-bold text-gray-900 mb-3">Meet Your Seller</h3>
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+          <img id="sellerAvatar" src="" alt="Seller" class="w-full h-full object-cover hidden">
+          <i id="sellerAvatarIcon" class="fas fa-store text-2xl text-gray-400"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p id="meetSellerName" class="font-semibold text-gray-900 text-sm"></p>
+          <div class="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+            <i class="fas fa-star text-yellow-400"></i>
+            <span id="meetSellerRating">—</span>
+            <span>(<span id="meetSellerRatingCount">—</span> ratings)</span>
+          </div>
+          <p id="meetSellerDesc" class="text-xs text-gray-500 mt-1 truncate"></p>
+        </div>
+        <div class="flex flex-col gap-2 flex-shrink-0">
+          <a id="meetSellerStoreLink" href="#"
+            class="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded hover:bg-gray-50 transition-colors text-center">
+            See Seller Store
+          </a>
+          <button onclick="contactSeller()"
+            class="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white text-xs rounded transition-colors">
+            Contact
+          </button>
         </div>
       </div>
     </div>
+
+    <!-- ── Tabs ───────────────────────────────────────────────────────────── -->
+    <div class="mt-8 border-b border-gray-200">
+      <div class="flex overflow-x-auto">
+        <button onclick="switchTab('overview')" id="tab-overview"
+          class="tab-btn px-5 py-3 text-sm font-medium border-b-2 border-cyan-500 text-cyan-600 whitespace-nowrap">
+          Overview
+        </button>
+        <button onclick="switchTab('specs')" id="tab-specs"
+          class="tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">
+          Specs
+        </button>
+        <button onclick="switchTab('reviews')" id="tab-reviews"
+          class="tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">
+          Reviews
+        </button>
+        <button onclick="switchTab('qa')" id="tab-qa"
+          class="tab-btn px-5 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-900 whitespace-nowrap">
+          Q &amp; A
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab: Overview -->
+    <div id="tabContent-overview" class="py-6">
+      <p id="productDescription"
+        class="text-gray-700 text-sm leading-relaxed whitespace-pre-line max-w-3xl">
+        Loading product details...
+      </p>
+    </div>
+
+    <!-- Tab: Specs -->
+    <div id="tabContent-specs" class="py-6 hidden">
+      <div id="specsTable" class="max-w-2xl divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden text-sm">
+        <p class="px-4 py-3 text-gray-500">Specifications not available.</p>
+      </div>
+    </div>
+
+    <!-- Tab: Reviews -->
+    <div id="tabContent-reviews" class="py-6 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900">Customer Reviews</h3>
+        <button class="px-4 py-2 border border-cyan-500 text-cyan-600 text-sm rounded hover:bg-cyan-50 transition-colors">
+          Write A Review
+        </button>
+      </div>
+      <p class="text-gray-500 text-sm">No reviews yet. Be the first to write one!</p>
+    </div>
+
+    <!-- Tab: Q&A -->
+    <div id="tabContent-qa" class="py-6 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-semibold text-gray-900">Questions &amp; Answers</h3>
+        <button class="px-4 py-2 border border-cyan-500 text-cyan-600 text-sm rounded hover:bg-cyan-50 transition-colors">
+          Ask a Question
+        </button>
+      </div>
+      <p class="text-gray-500 text-sm">No questions yet. Have a question? Ask!</p>
+    </div>
+
+    <!-- ── Similar Products ──────────────────────────────────────────────── -->
+    <div id="similarSection" class="mt-10 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-bold text-gray-900">Similar Products</h2>
+        <a href="marketplace.html" class="text-cyan-600 hover:underline text-sm">Shop All Products</a>
+      </div>
+      <div id="similarProductsGrid"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- ── Warranty & Returns ────────────────────────────────────────────── -->
+    <div class="mt-10 border border-gray-200 rounded-lg p-5">
+      <h3 class="font-bold text-gray-900 mb-4">Warranty &amp; Returns</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+        <div>
+          <p class="font-semibold text-gray-700 mb-1">Warranty</p>
+          <p class="text-gray-500">Please contact the Seller directly for warranty information.</p>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-700 mb-1">Return Policies</p>
+          <p class="text-gray-500">Return for refund within: <strong class="text-gray-700">30 days</strong></p>
+          <p class="text-gray-500 mt-0.5">Return for replacement within: <strong class="text-gray-700">30 days</strong></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── More Buying Options ───────────────────────────────────────────── -->
+    <div id="moreBuyingOptions" class="mt-10 hidden">
+      <h3 class="font-bold text-gray-900 mb-4">More Buying Options</h3>
+      <div class="border border-gray-200 rounded-lg overflow-hidden text-sm">
+        <!-- Header row -->
+        <div class="hidden sm:grid grid-cols-5 gap-3 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <span>Condition</span>
+          <span>Shipping</span>
+          <span>Seller</span>
+          <span>Price + Shipping</span>
+          <span></span>
+        </div>
+        <div id="moreBuyingOptionsList" class="divide-y divide-gray-100"></div>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -348,30 +586,208 @@
 
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const HOT_SELLER_THRESHOLD = 200;
+  const SIMILAR_PRODUCT_NAME_MAX = 60;
   let currentProduct = null;
   let currentProductId = null;
 
-  async function getSellerInfo(sellerId) {
+  // ── Tab management ────────────────────────────────────────────────────────
+  function switchTab(name) {
+    ['overview', 'specs', 'reviews', 'qa'].forEach(function(t) {
+      var btn = document.getElementById('tab-' + t);
+      var content = document.getElementById('tabContent-' + t);
+      var active = (t === name);
+      if (btn) {
+        btn.classList.toggle('border-cyan-500', active);
+        btn.classList.toggle('text-cyan-600', active);
+        btn.classList.toggle('border-transparent', !active);
+        btn.classList.toggle('text-gray-500', !active);
+      }
+      if (content) content.classList.toggle('hidden', !active);
+    });
+  }
+
+  // ── Seller info helpers ───────────────────────────────────────────────────
+  async function getSellerProfile(sellerId) {
     if (!sellerId) return null;
     try {
       const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(sellerId));
-      if (res.ok) {
-        const seller = await res.json();
-        return seller.shopName || seller.sellerName || null;
-      }
+      if (res.ok) return await res.json();
     } catch (e) {}
     return null;
   }
 
-  function init() {
-    const params = new URLSearchParams(window.location.search);
-    currentProductId = params.get('id') || sessionStorage.getItem('viewingProductId');
+  function populateSellerUI(seller, product) {
+    var name = (seller && seller.shopName) || product.sellerName || product.sellerId || 'Zorexium Seller';
+    var rating = seller && seller.rating ? seller.rating.toFixed(1) : null;
+    var totalSales = seller && seller.totalSales ? seller.totalSales : null;
+    var desc = (seller && seller.shopDescription) || '';
+    var profileImg = (seller && seller.profileImage) || '';
 
+    // Seller name + link
+    document.getElementById('sellerName').innerText = name;
+    document.getElementById('sellerLink').href = 'seller-profile.html?id=' + encodeURIComponent(product.sellerId || '');
+    document.getElementById('shippedBy').innerText = name;
+
+    // Ratings (both appearances)
+    var ratingText = rating || '—';
+    var countText = totalSales ? totalSales.toLocaleString() : '—';
+    ['sellerRatingVal', 'sellerRatingVal2'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerText = ratingText;
+    });
+    ['sellerRatingCount', 'sellerRatingCount2'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.innerText = countText;
+    });
+
+    // Hot seller badge
+    var hotBadge = document.getElementById('sellerHotBadge');
+    if (hotBadge && totalSales && parseInt(totalSales) > HOT_SELLER_THRESHOLD) hotBadge.classList.remove('hidden');
+
+    // Meet Your Seller section
+    var meetSection = document.getElementById('meetSellerSection');
+    if (meetSection) {
+      meetSection.classList.remove('hidden');
+      document.getElementById('meetSellerName').innerText = name;
+      document.getElementById('meetSellerRating').innerText = ratingText;
+      document.getElementById('meetSellerRatingCount').innerText = countText;
+      document.getElementById('meetSellerDesc').innerText = desc;
+      document.getElementById('meetSellerStoreLink').href = 'seller-profile.html?id=' + encodeURIComponent(product.sellerId || '');
+      if (profileImg) {
+        var avatar = document.getElementById('sellerAvatar');
+        var icon = document.getElementById('sellerAvatarIcon');
+        avatar.src = profileImg;
+        avatar.classList.remove('hidden');
+        icon.classList.add('hidden');
+      }
+    }
+  }
+
+  // ── Specs table ───────────────────────────────────────────────────────────
+  function buildSpecsTable(specifications) {
+    var container = document.getElementById('specsTable');
+    if (!container) return;
+    var entries = specifications && typeof specifications === 'object' ? Object.entries(specifications) : [];
+    if (entries.length === 0) {
+      container.innerHTML = '<p class="px-4 py-3 text-gray-500 text-sm">Specifications not available.</p>';
+      return;
+    }
+    var html = '';
+    entries.forEach(function(pair) {
+      html += '<div class="flex px-4 py-2 even:bg-gray-50 gap-4">'
+        + '<span class="w-40 flex-shrink-0 text-gray-500 text-sm">' + escapeHtml(String(pair[0])) + '</span>'
+        + '<span class="text-gray-900 text-sm">' + escapeHtml(String(pair[1])) + '</span>'
+        + '</div>';
+    });
+    container.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ── Similar products ──────────────────────────────────────────────────────
+  async function loadSimilarProducts(category, excludeId) {
+    try {
+      var res = await fetch(BACKEND_URL + '/api/products');
+      if (!res.ok) return;
+      var allProducts = await res.json();
+      var similar = allProducts.filter(function(p) {
+        var pid = p._id ? String(p._id) : String(p.id || '');
+        return pid !== String(excludeId) && p.category === category;
+      }).slice(0, 10);
+      if (similar.length === 0) return;
+
+      var grid = document.getElementById('similarProductsGrid');
+      var section = document.getElementById('similarSection');
+      if (!grid || !section) return;
+
+      var html = '';
+      similar.forEach(function(p) {
+        var pid = p._id ? String(p._id) : String(p.id || '');
+        var img = p.image || 'https://placehold.co/200x150/f3f4f6/9ca3af?text=Product';
+        var price = '$' + parseFloat(p.price || 0).toFixed(2);
+        var displayName = (p.name || 'Product');
+        if (displayName.length > SIMILAR_PRODUCT_NAME_MAX) displayName = displayName.substring(0, SIMILAR_PRODUCT_NAME_MAX) + '...';
+        var condition = p.condition || '';
+        html += '<a href="product-detail.html?id=' + encodeURIComponent(pid) + '" '
+          + 'class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col bg-white">'
+          + '<div class="bg-gray-50 flex items-center justify-center" style="height:120px">'
+          + '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(displayName) + '" class="max-h-28 max-w-full object-contain p-2">'
+          + '</div>'
+          + '<div class="p-2 flex flex-col flex-1 gap-1">'
+          + (condition ? '<span class="text-xs text-amber-600 font-medium capitalize">' + escapeHtml(condition) + '</span>' : '')
+          + '<p class="text-xs text-gray-800 leading-snug flex-1">' + escapeHtml(displayName) + '</p>'
+          + '<p class="text-sm font-bold text-gray-900 mt-1">' + price + '</p>'
+          + '<button class="similar-add-to-cart mt-1 w-full py-1.5 bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs font-bold rounded transition-colors" '
+          + 'data-pid="' + escapeHtml(pid) + '" '
+          + 'data-name="' + escapeHtml(p.name || '') + '" '
+          + 'data-price="' + parseFloat(p.price || 0) + '" '
+          + 'data-image="' + escapeHtml(img) + '">'
+          + 'Add to cart</button>'
+          + '</div>'
+          + '</a>';
+      });
+      grid.innerHTML = html;
+
+      // Attach cart handlers via event delegation (avoids inline onclick XSS)
+      grid.addEventListener('click', function(e) {
+        var btn = e.target.closest('.similar-add-to-cart');
+        if (!btn) return;
+        e.preventDefault();
+        addSimilarToCart(btn.dataset.pid, btn.dataset.name, parseFloat(btn.dataset.price), btn.dataset.image);
+      });
+      section.classList.remove('hidden');
+    } catch (e) {}
+  }
+
+  async function addSimilarToCart(pid, name, price, image) {
+    if (ZrxSession.isLoggedIn()) {
+      try {
+        var cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        var items = [];
+        if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
+        var existing = items.find(function(i) { return String(i.id) === String(pid); });
+        if (existing) { existing.quantity += 1; } else { items.push({ id: pid, name: name, price: price, quantity: 1, image: image }); }
+        await ZrxSession.fetch(BACKEND_URL + '/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: items }) });
+      } catch (_) { ZrxNotify.showNotification('Failed to add to cart', 'error'); return; }
+    } else {
+      var guestCart = [];
+      try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) {}
+      var ex = guestCart.find(function(i) { return String(i.id) === String(pid); });
+      if (ex) { ex.quantity += 1; } else { guestCart.push({ id: pid, name: name, price: price, quantity: 1, image: image }); }
+      try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (_) {}
+    }
+    ZrxNotify.showNotification('Added to cart!', 'success');
+  }
+
+  // ── Utility ───────────────────────────────────────────────────────────────
+  function toggleWishlist() {
+    ZrxNotify.showNotification('Added to wish list!', 'success');
+  }
+
+  function copyShareLink() {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(window.location.href).then(function() {
+        ZrxNotify.showNotification('Link copied to clipboard!', 'success');
+      }).catch(function() {
+        ZrxNotify.showNotification('Copy this URL: ' + window.location.href, 'info');
+      });
+    } else {
+      ZrxNotify.showNotification('Copy this URL: ' + window.location.href, 'info');
+    }
+  }
+
+  // ── Core product loading ──────────────────────────────────────────────────
+  function init() {
+    var params = new URLSearchParams(window.location.search);
+    currentProductId = params.get('id') || sessionStorage.getItem('viewingProductId');
     try { sessionStorage.removeItem('viewingProductId'); } catch(e) {}
 
     if (!currentProductId) {
       document.getElementById('productName').innerText = 'Product Not Found';
-      document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or may have been removed. Return to the marketplace to view available products.';
+      document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or may have been removed.';
       document.getElementById('productPrice').innerText = 'N/A';
       updateCartBadge();
       return;
@@ -382,16 +798,12 @@
   }
 
   async function loadProduct() {
-    // load product silently (no console output)
-    if (!currentProductId) {
-      return;
-    }
+    if (!currentProductId) return;
 
-    // Try backend API first (source of truth for MongoDB products)
     try {
-      const res = await fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(currentProductId));
+      var res = await fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(currentProductId));
       if (res.ok) {
-        const product = await res.json();
+        var product = await res.json();
         if (product && (product._id || product.id)) {
           currentProduct = {
             id: product._id ? String(product._id) : String(product.id),
@@ -399,58 +811,103 @@
             price: product.price || 0,
             description: product.description || '',
             image: product.image || '',
-            condition: product.condition || 'used',
-            sellerId: product.sellerId || ''
+            condition: product.condition || 'new',
+            sellerId: product.sellerId || '',
+            category: product.category || '',
+            specifications: product.specifications || {}
           };
+
+          // Title + meta
+          document.title = currentProduct.name + ' | Zorexium Labs';
           document.getElementById('productName').innerText = currentProduct.name;
-          document.getElementById('productPrice').innerText = '$' + parseFloat(currentProduct.price).toFixed(2);
-          document.getElementById('productDescription').innerText = currentProduct.description || 'No description available';
-          document.getElementById('productImage').src = currentProduct.image || 'https://via.placeholder.com/400x300?text=Product';
-          document.getElementById('productId').innerText = currentProductId;
-          const sellerDisplayName = await getSellerInfo(product.sellerId) || product.sellerName || product.sellerId || 'Zorexium Seller';
-          document.getElementById('sellerName').innerText = sellerDisplayName;
-          document.getElementById('sellerLink').href = 'seller-profile.html?id=' + encodeURIComponent(product.sellerId || '');
+          document.getElementById('breadcrumbName').innerText = currentProduct.name;
+
+          // Brand: use explicit brand field if available, else first word of product name
+          var brand = product.brand || (currentProduct.name || '').split(/\s+/)[0] || 'Zorexium';
+          document.getElementById('productBrand').innerText = brand.toUpperCase();
+
+          // Breadcrumb category link
+          var catEl = document.getElementById('breadcrumbCategory');
+          catEl.innerText = currentProduct.category || 'Products';
+          catEl.href = 'marketplace.html?category=' + encodeURIComponent(currentProduct.category || '');
+
+          // Item#
+          document.getElementById('productId').innerText = currentProduct.id;
+
+          // Price
+          var priceNum = parseFloat(currentProduct.price);
+          document.getElementById('productPrice').innerText = '$' + priceNum.toFixed(2);
+          var monthlyEst = Math.ceil(priceNum / 12);
+          var financeEl = document.querySelector('[data-financing-monthly]');
+          if (financeEl) financeEl.innerText = '$' + monthlyEst + '/mo';
+
+          // Condition badge
+          var condBadge = document.getElementById('productConditionBadge');
+          var condText = (currentProduct.condition || 'new');
+          condBadge.innerText = condText.charAt(0).toUpperCase() + condText.slice(1);
+          if (condText === 'refurbished' || condText === 'used') {
+            condBadge.className = 'px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-semibold uppercase tracking-wide';
+          }
+
+          // Image
+          var img = document.getElementById('productImage');
+          if (currentProduct.image) {
+            img.src = currentProduct.image;
+            img.onerror = function() { img.src = 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product'; };
+          } else {
+            img.src = 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product';
+          }
+
+          // Description (Overview tab)
+          document.getElementById('productDescription').innerText = currentProduct.description || 'No description available.';
+
+          // Specs tab
+          buildSpecsTable(currentProduct.specifications);
+
+          // Seller info
+          var seller = await getSellerProfile(product.sellerId);
+          populateSellerUI(seller, product);
+
+          // Similar products
+          if (currentProduct.category) loadSimilarProducts(currentProduct.category, currentProduct.id);
+
           return;
         }
       }
-    } catch (e) {
-      console.error('Failed to fetch product from backend:', e);
-    }
+    } catch (e) {}
 
     document.getElementById('productName').innerText = 'Product Not Found';
-    document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or has been removed. Please return to the marketplace to view available products.';
+    document.getElementById('productDescription').innerText = 'The product you are looking for does not exist or has been removed.';
     document.getElementById('productPrice').innerText = 'N/A';
   }
 
+  // ── Quantity controls ─────────────────────────────────────────────────────
   function increaseQty() {
-    const qty = document.getElementById('quantity');
+    var qty = document.getElementById('quantity');
     qty.value = parseInt(qty.value) + 1;
   }
 
   function decreaseQty() {
-    const qty = document.getElementById('quantity');
-    if (parseInt(qty.value) > 1) {
-      qty.value = parseInt(qty.value) - 1;
-    }
+    var qty = document.getElementById('quantity');
+    if (parseInt(qty.value) > 1) qty.value = parseInt(qty.value) - 1;
   }
 
   function validateQty() {
-    const qty = document.getElementById('quantity');
+    var qty = document.getElementById('quantity');
     if (parseInt(qty.value) < 1) qty.value = 1;
   }
 
+  // ── Cart ──────────────────────────────────────────────────────────────────
   async function addToCart() {
-    const quantity = parseInt(document.getElementById('quantity').value);
+    if (!currentProduct) { ZrxNotify.showNotification('Product not loaded yet.', 'error'); return; }
+    var quantity = parseInt(document.getElementById('quantity').value);
 
     if (ZrxSession.isLoggedIn()) {
       try {
-        const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
-        let items = [];
-        if (cartRes.ok) {
-          const data = await cartRes.json();
-          items = data.items || [];
-        }
-        const existingItem = items.find(item => String(item.id) === String(currentProductId));
+        var cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        var items = [];
+        if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
+        var existingItem = items.find(function(item) { return String(item.id) === String(currentProductId); });
         if (existingItem) {
           existingItem.quantity += quantity;
         } else {
@@ -459,7 +916,7 @@
             name: currentProduct.name,
             price: currentProduct.price,
             quantity: quantity,
-            image: currentProduct.image || 'https://via.placeholder.com/400x300?text=Product',
+            image: currentProduct.image || 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product',
             sellerName: document.getElementById('sellerName').innerText
           });
         }
@@ -467,37 +924,33 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ items })
+          body: JSON.stringify({ items: items })
         });
-        const count = items.length;
-        const badge = document.getElementById('cartBadge');
-        badge.textContent = count;
-        badge.classList.toggle('hidden', count === 0);
+        var badge = document.getElementById('cartBadgeHeader');
+        if (badge) { badge.textContent = items.length; badge.classList.toggle('hidden', items.length === 0); }
       } catch (_) {
         ZrxNotify.showNotification('Failed to add to cart', 'error');
         return;
       }
     } else {
-      // Guest: use localStorage
-      let guestCart = [];
+      var guestCart = [];
       try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) {}
-      const existingItem = guestCart.find(item => String(item.id) === String(currentProductId));
-      if (existingItem) {
-        existingItem.quantity += quantity;
+      var existingGuest = guestCart.find(function(item) { return String(item.id) === String(currentProductId); });
+      if (existingGuest) {
+        existingGuest.quantity += quantity;
       } else {
         guestCart.push({
           id: currentProductId,
           name: currentProduct.name,
           price: currentProduct.price,
           quantity: quantity,
-          image: currentProduct.image || 'https://via.placeholder.com/400x300?text=Product',
+          image: currentProduct.image || 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product',
           sellerName: document.getElementById('sellerName').innerText
         });
       }
       try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (_) {}
-      const badge = document.getElementById('cartBadge');
-      badge.textContent = guestCart.length;
-      badge.classList.toggle('hidden', guestCart.length === 0);
+      var badge2 = document.getElementById('cartBadgeHeader');
+      if (badge2) { badge2.textContent = guestCart.length; badge2.classList.toggle('hidden', guestCart.length === 0); }
     }
     ZrxNotify.showNotification(quantity + ' item(s) added to cart!', 'success');
   }
@@ -509,6 +962,7 @@
     window.location.href = url;
   }
 
+  // ── Contact seller ────────────────────────────────────────────────────────
   function contactSeller() {
     if (!ZrxSession.isLoggedIn()) {
       ZrxNotify.showNotification('Please log in to contact the seller', 'info');
@@ -537,31 +991,25 @@
       ZrxNotify.showNotification('Please log in to send a message', 'info');
       return;
     }
+    var subject = document.getElementById('messageSubject').value.trim();
+    var body = document.getElementById('messageBody').value.trim();
+    if (!subject || !body) { ZrxNotify.showNotification('Please fill in all fields', 'error'); return; }
 
-    const subject = document.getElementById('messageSubject').value.trim();
-    const body = document.getElementById('messageBody').value.trim();
-
-    if (!subject || !body) {
-      ZrxNotify.showNotification('Please fill in all fields', 'error');
-      return;
-    }
-
-    const sellerId = currentProduct.sellerId;
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ toUserId: sellerId, subject, body })
+        body: JSON.stringify({ toUserId: currentProduct.sellerId, subject: subject, body: body })
       });
       if (res.ok) {
         ZrxNotify.showNotification('Message sent!', 'success');
         closeContactModal();
-        var msgUrl = 'messages.html?with=' + encodeURIComponent(sellerId);
+        var msgUrl = 'messages.html?with=' + encodeURIComponent(currentProduct.sellerId);
         if (window.ZrxSpa && ZrxSpa.navigate(msgUrl)) return;
         window.location.href = msgUrl;
       } else {
-        const data = await res.json();
+        var data = await res.json();
         ZrxNotify.showNotification(data.error || 'Failed to send message', 'error');
       }
     } catch (_) {
@@ -569,15 +1017,16 @@
     }
   }
 
+  // ── Cart badge ────────────────────────────────────────────────────────────
   async function updateCartBadge() {
-    const badge = document.getElementById('cartBadge');
+    var badge = document.getElementById('cartBadgeHeader');
     if (!badge) return;
     if (ZrxSession.isLoggedIn()) {
       try {
-        const res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        var res = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
         if (res.ok) {
-          const data = await res.json();
-          const count = (data.items || []).length;
+          var data = await res.json();
+          var count = (data.items || []).length;
           badge.textContent = count;
           badge.classList.toggle('hidden', count === 0);
           return;
@@ -585,8 +1034,8 @@
       } catch (_) {}
     } else {
       try {
-        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
-        const count = guestCart.length;
+        var guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
+        var count = guestCart.length;
         badge.textContent = count;
         badge.classList.toggle('hidden', count === 0);
         return;
@@ -595,7 +1044,6 @@
     badge.classList.add('hidden');
   }
 
-  // Initialize on page load
   window.addEventListener('load', init);
 </script>
 <script src="notifications.js"></script>
