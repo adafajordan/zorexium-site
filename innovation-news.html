@@ -418,7 +418,7 @@
                 </p>
               </div>
             </div>
-            ${isOwner ? `<button onclick="deletePost('${post._id}', event)" class="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 ml-2" title="Delete post"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+            ${isOwner ? `<button onclick="deletePost('${post._id}', event)" class="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 ml-2" title="Delete post" aria-label="Delete post"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
           </div>
           <p class="text-gray-700 text-sm leading-relaxed mb-3">${escapeHtml(post.content)}</p>
           ${renderPostMedia(post)}

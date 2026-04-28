@@ -270,7 +270,7 @@
         <div class="px-3 py-2 border-b border-gray-100">
           <div class="relative">
             <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-            <input type="text" id="convSearch" placeholder="Search conversations..." oninput="filterConversations()"
+            <input type="text" id="convSearch" placeholder="Search conversations..." oninput="filterConversations()" aria-label="Search conversations"
               class="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent">
           </div>
         </div>
@@ -314,7 +314,7 @@
           <div class="flex gap-3 items-end">
             <textarea id="msgBody" placeholder="Type your message…" rows="2"
               class="flex-1 bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent resize-none"
-              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCurrentMessage();}"></textarea>
+              onkeydown="handleMessageKeydown(event)"></textarea>
             <button onclick="sendCurrentMessage()"
               class="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors flex items-center gap-2 text-sm flex-shrink-0">
               <i class="fas fa-paper-plane"></i>
@@ -639,6 +639,13 @@
     });
 
     container.scrollTop = container.scrollHeight;
+  }
+
+  function handleMessageKeydown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendCurrentMessage();
+    }
   }
 
   async function sendCurrentMessage() {
