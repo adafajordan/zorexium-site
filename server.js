@@ -762,8 +762,9 @@ app.post('/api/posts', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { title, content, boardType, imageUrl } = req.body;
-  if (!title || !content || !boardType) {
-    return res.status(400).json({ error: 'title, content, and boardType are required' });
+  const resolvedBoardType = (boardType && typeof boardType === 'string' && boardType.trim()) ? boardType.trim() : 'general';
+  if (!title || !content) {
+    return res.status(400).json({ error: 'title and content are required' });
   }
   if (typeof title !== 'string' || title.length < 1 || title.length > 200) {
     return res.status(400).json({ error: 'Invalid title' });
@@ -771,7 +772,7 @@ app.post('/api/posts', verifyToken, async function(req, res) {
   if (typeof content !== 'string' || content.length < 1 || content.length > 5000) {
     return res.status(400).json({ error: 'Invalid content' });
   }
-  if (typeof boardType !== 'string' || boardType.length > 64) {
+  if (resolvedBoardType.length > 64) {
     return res.status(400).json({ error: 'Invalid boardType' });
   }
   if (imageUrl !== undefined && imageUrl !== null && imageUrl !== '') {
@@ -804,7 +805,7 @@ app.post('/api/posts', verifyToken, async function(req, res) {
       username,
       title,
       content,
-      boardType,
+      boardType: resolvedBoardType,
       createdAt: new Date(),
       replies: [],
       likes: []
@@ -820,18 +821,19 @@ app.post('/api/posts', verifyToken, async function(req, res) {
   }
 });
 
-// GET /api/posts – fetch posts by boardType (public)
+// GET /api/posts – fetch posts, optionally filtered by boardType (public)
 app.get('/api/posts', async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { boardType } = req.query;
-  if (!boardType || typeof boardType !== 'string' || boardType.length > 64) {
-    return res.status(400).json({ error: 'boardType query parameter is required' });
+  if (boardType !== undefined && (typeof boardType !== 'string' || boardType.length > 64)) {
+    return res.status(400).json({ error: 'Invalid boardType' });
   }
 
   try {
+    const query = boardType ? { boardType: { $eq: String(boardType) } } : {};
     const posts = await db.collection('posts')
-      .find({ boardType })
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray();
 

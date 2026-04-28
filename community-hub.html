@@ -8,14 +8,15 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #111827; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .post-card { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px; transition: all 0.2s; }
-    .post-card:hover { border-color: #65a30d; box-shadow: 0 0 12px rgba(101, 163, 13, 0.1); }
-    .form-input { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #1f2937; padding: 10px 12px; border-radius: 6px; width: 100%; }
+    .form-input { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #1f2937; padding: 8px 12px; border-radius: 6px; width: 100%; }
     .form-input:focus { outline: none; border-color: #65a30d; }
-  
+    .sort-btn.active-sort { background-color: #f3f4f6; color: #111827; font-weight: 600; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
         /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
         .marketplace-mega-menu {
             position: fixed !important;
@@ -235,249 +236,186 @@
     </header>
 
 
-<!-- Sub-header / Search -->
-<div class="bg-gray-50 py-6">
-  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row items-center justify-between gap-6">
-    <a href="community-hub.html" class="text-gray-900 font-medium text-xl hidden md:block">Community Hub</a>
-    <div class="flex-1 w-full max-w-3xl relative">
-      <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
-        <input type="text" id="forumSearch" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" placeholder="Search posts and discussions..." onkeyup="filterPosts()">
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"><i class="fas fa-microphone text-gray-500"></i></div>
+<!-- Sub-header -->
+<div class="bg-white border-b border-gray-200">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+    <div class="flex-1 relative">
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <i class="fas fa-search text-gray-400 text-sm"></i>
       </div>
+      <input type="text" id="forumSearch" class="block w-full pl-9 pr-4 py-2 border border-gray-200 rounded-full bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 text-sm transition-colors" placeholder="Search z/TechTalk…" onkeyup="applyAndRender()">
     </div>
-    <div class="flex items-center gap-3">
-      <span class="text-gray-500 text-base hidden md:block">Search</span>
-    </div>
+    <button onclick="togglePostForm()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-colors">
+      <i class="fas fa-pen text-xs"></i> Create Post
+    </button>
   </div>
 </div>
 
 <!-- Main Content -->
-<main class="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+<main class="flex-1 bg-gray-100 py-5">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-  <!-- Welcome banner -->
-  <div id="welcomeBanner" class="bg-gradient-to-r from-cyan-50 to-lime-50 border border-cyan-200 rounded-xl p-6 mb-8">
-    <h2 class="text-2xl font-bold text-gray-900 mb-1" id="welcomeGreeting">Welcome to the Zorexium Gamer Community!</h2>
-    <p class="text-gray-600 text-base">Your place to talk PC building, gaming, and tech! We're a friendly, moderated space with daily check-ins.
-      <a href="getting-started.html" class="text-cyan-600 font-semibold hover:underline ml-1">Click here to start →</a>
-    </p>
-  </div>
-
-  <div id="notLoggedIn" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 hidden">
-    <p class="text-blue-800"><i class="fas fa-info-circle mr-2"></i> <a href="login-register.html" class="underline font-semibold">Sign up or log in</a> to create posts and participate in discussions.</p>
-  </div>
-
-  <!-- Forum navigation bar -->
-  <div class="flex flex-wrap items-center justify-between gap-3 mb-6 border-b border-gray-200 pb-4">
-    <div class="flex items-center gap-1">
-      <button onclick="showView('all')" id="viewBtnAll" class="view-btn px-4 py-2 rounded-md text-sm font-semibold bg-gray-900 text-white">All categories</button>
-      <button onclick="showView('hot')" id="viewBtnHot" class="view-btn px-4 py-2 rounded-md text-sm font-semibold text-gray-600 hover:bg-gray-100">
-        <i class="fas fa-fire text-orange-500 mr-1"></i> Hot
-      </button>
-      <button onclick="showView('latest')" id="viewBtnLatest" class="view-btn px-4 py-2 rounded-md text-sm font-semibold text-gray-600 hover:bg-gray-100">
-        <i class="fas fa-clock text-cyan-500 mr-1"></i> Latest
-      </button>
-    </div>
-    <button onclick="handleNewPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2">
-      <i class="fas fa-pen"></i> Make a post
-    </button>
-  </div>
-
-  <!-- New Post Form (hidden by default) -->
-  <div id="newPostForm" class="post-card hidden mb-8">
-    <h3 class="text-gray-900 font-semibold mb-4 text-lg">Create New Post</h3>
-    <div class="mb-4">
-      <label class="text-sm text-gray-500 mb-1 block">Category</label>
-      <select id="postCategory" class="form-input mb-3 text-sm">
-        <option value="pc-building">PC Building</option>
-        <option value="gaming">Gaming</option>
-        <option value="welcome">Welcome</option>
-        <option value="announcements">Announcements</option>
-        <option value="official-brand">Official Brand</option>
-        <option value="system-help">System Help</option>
-      </select>
-      <input type="text" id="postTitle" class="form-input mb-3" placeholder="Post title..." maxlength="100">
-      <textarea id="postContent" class="form-input" placeholder="Share your thoughts..." rows="4" maxlength="1000"></textarea>
-      <div class="mt-3">
-        <label class="text-sm text-gray-500">Attach files / photos</label>
-        <input id="postFilesInput" type="file" accept="*/*" multiple class="w-full mt-2">
-        <div id="postFilesPreview" class="mt-3 flex flex-wrap gap-3 text-sm text-gray-300"></div>
-        <input type="url" id="postImageUrl" class="form-input mt-3" placeholder="Photo or link URL (optional)..." maxlength="2000">
-      </div>
-    </div>
-    <div class="flex gap-3">
-      <button onclick="publishPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-6 py-2.5 rounded text-sm font-medium">Publish</button>
-      <button onclick="cancelPost()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2.5 rounded text-sm font-medium">Cancel</button>
-    </div>
-  </div>
-
-  <!-- Categories View -->
-  <div id="categoriesView">
-    <!-- Categories header row -->
-    <div class="grid grid-cols-12 text-xs font-bold text-gray-500 uppercase tracking-wider px-4 mb-2">
-      <div class="col-span-7">Category</div>
-      <div class="col-span-2 text-center hidden sm:block">Topics</div>
-      <div class="col-span-3 hidden sm:block">Latest</div>
+    <!-- Not logged in notice -->
+    <div id="notLoggedIn" class="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 mb-4 hidden">
+      <p class="text-blue-800 text-sm"><i class="fas fa-info-circle mr-2"></i> <a href="login-register.html" class="underline font-semibold">Sign up or log in</a> to post and leave comments.</p>
     </div>
 
-    <!-- Category cards -->
-    <div class="space-y-3">
+    <div class="flex gap-6 items-start">
 
-      <!-- PC Building -->
-      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('pc-building')">
-        <div class="grid grid-cols-12 items-center gap-4">
-          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-microchip text-cyan-600 text-xl"></i>
-            </div>
+      <!-- ── Main Feed Column ─────────────────────────────────────────── -->
+      <div class="flex-1 min-w-0">
+
+        <!-- Create Post Bar -->
+        <div class="bg-white border border-gray-200 rounded-md flex items-center gap-2 p-2 mb-3 cursor-pointer hover:border-gray-400 transition-colors" onclick="togglePostForm()">
+          <div class="w-10 h-10 rounded-sm bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200">
+            <i class="fas fa-user text-gray-400 text-lg"></i>
+          </div>
+          <div class="flex-1 bg-gray-100 hover:bg-white border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-400 pointer-events-none select-none">
+            Create Post
+          </div>
+          <button class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="Add image">
+            <i class="fas fa-image"></i>
+          </button>
+          <button class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded" title="Add link">
+            <i class="fas fa-link"></i>
+          </button>
+        </div>
+
+        <!-- New Post Form (hidden by default) -->
+        <div id="newPostForm" class="hidden bg-white border border-gray-200 rounded-md mb-3">
+          <div class="border-b border-gray-100 px-4 py-3">
+            <span class="font-bold text-gray-900">Create a Post</span>
+          </div>
+          <div class="p-4 space-y-3">
+            <!-- Flair picker -->
             <div>
-              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">PC Building</h3>
-              <p class="text-gray-500 text-sm mt-0.5">Get Help Choosing Parts right here.</p>
+              <label class="block text-xs font-semibold text-gray-500 uppercase mb-1.5 tracking-wide">Topic Flair <span class="text-gray-300 font-normal normal-case">(optional)</span></label>
+              <div id="flairPicker" class="flex flex-wrap gap-1.5">
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-cyan-400 hover:text-cyan-600 transition-colors" data-flair="">None</button>
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors" data-flair="hardware">Hardware</button>
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-green-400 hover:text-green-600 transition-colors" data-flair="gaming">Gaming</button>
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-yellow-400 hover:text-yellow-600 transition-colors" data-flair="ai-ml">AI &amp; ML</button>
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-purple-400 hover:text-purple-600 transition-colors" data-flair="programming">Programming</button>
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-red-400 hover:text-red-600 transition-colors" data-flair="cybersecurity">Cybersecurity</button>
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition-colors" data-flair="networking">Networking</button>
+                <button type="button" class="flair-btn px-3 py-1 rounded-full text-xs font-medium border border-gray-300 text-gray-600 hover:border-gray-500 hover:text-gray-800 transition-colors" data-flair="software">Software</button>
+              </div>
+              <input type="hidden" id="postFlair" value="">
             </div>
-          </div>
-          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
-            <span class="text-gray-900 font-semibold text-base" id="count-pc-building">26</span>
-            <p class="text-xs text-gray-400">Topics</p>
-          </div>
-          <div class="col-span-8 sm:col-span-3 hidden sm:block">
-            <p class="text-xs text-gray-400 truncate">Latest discussions about builds &amp; parts</p>
+            <input type="text" id="postTitle" class="form-input" placeholder="Title" maxlength="200">
+            <textarea id="postContent" class="form-input" placeholder="Text (optional)" rows="4" maxlength="5000"></textarea>
+            <input type="url" id="postImageUrl" class="form-input" placeholder="Image or link URL (optional)" maxlength="2000">
+            <div class="flex justify-end gap-3 pt-1">
+              <button onclick="cancelPost()" class="px-4 py-1.5 rounded-full border border-gray-300 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onclick="publishPost()" class="px-4 py-1.5 rounded-full bg-[#65a30d] hover:bg-[#4d7c0f] text-white text-sm font-semibold transition-colors">Post</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Gaming -->
-      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('gaming')">
-        <div class="grid grid-cols-12 items-center gap-4">
-          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-gamepad text-purple-600 text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Gaming</h3>
-              <p class="text-gray-500 text-sm mt-0.5">Your HQ for all the latest gaming topics.</p>
-            </div>
-          </div>
-          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
-            <span class="text-gray-900 font-semibold text-base" id="count-gaming">9</span>
-            <p class="text-xs text-gray-400">Topics</p>
-          </div>
-          <div class="col-span-8 sm:col-span-3 hidden sm:block">
-            <p class="text-xs text-gray-400 truncate">Game reviews, tips &amp; esports news</p>
+        <!-- Sort Bar -->
+        <div class="bg-white border border-gray-200 rounded-md px-4 py-2 flex items-center gap-1 mb-3">
+          <button onclick="setSortMode('hot')" id="sortBtnHot" class="sort-btn active-sort flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold text-gray-500 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-fire text-orange-500"></i> Hot
+          </button>
+          <button onclick="setSortMode('new')" id="sortBtnNew" class="sort-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold text-gray-500 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-certificate text-blue-400"></i> New
+          </button>
+          <button onclick="setSortMode('top')" id="sortBtnTop" class="sort-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold text-gray-500 hover:bg-gray-100 transition-colors">
+            <i class="fas fa-chart-bar text-cyan-500"></i> Top
+          </button>
+          <div class="flex-1"></div>
+          <div id="activeFlairFilter" class="hidden items-center gap-1 text-xs">
+            <span id="activeFlairLabel" class="px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 font-medium"></span>
+            <button onclick="clearFlairFilter()" class="text-gray-400 hover:text-gray-600 ml-0.5" title="Clear filter"><i class="fas fa-times-circle"></i></button>
           </div>
         </div>
-      </div>
 
-      <!-- Welcome -->
-      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('welcome')">
-        <div class="grid grid-cols-12 items-center gap-4">
-          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-hands text-green-600 text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Welcome</h3>
-              <p class="text-gray-500 text-sm mt-0.5">Welcome! This is a site to talk about some of the latest news and build a community here with… you!</p>
-            </div>
-          </div>
-          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
-            <span class="text-gray-900 font-semibold text-base" id="count-welcome">10</span>
-            <p class="text-xs text-gray-400">Topics</p>
-          </div>
-          <div class="col-span-8 sm:col-span-3 hidden sm:block">
-            <p class="text-xs text-gray-400 truncate">Introductions &amp; community posts</p>
+        <!-- Posts feed -->
+        <div id="postsFeed">
+          <div class="text-center py-16 bg-white border border-gray-200 rounded-md">
+            <div class="inline-block w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-400 text-sm">Loading posts…</p>
           </div>
         </div>
+
       </div>
 
-      <!-- Announcements -->
-      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('announcements')">
-        <div class="grid grid-cols-12 items-center gap-4">
-          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-bullhorn text-yellow-600 text-xl"></i>
+      <!-- ── Sidebar ──────────────────────────────────────────────────── -->
+      <div class="hidden lg:block w-72 flex-shrink-0 space-y-3">
+
+        <!-- Community Info Card -->
+        <div class="bg-white border border-gray-200 rounded-md overflow-hidden">
+          <div class="h-14 bg-gradient-to-r from-cyan-400 to-lime-400"></div>
+          <div class="px-4 pb-4 pt-2">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-12 h-12 rounded-full bg-cyan-500 flex items-center justify-center border-4 border-white -mt-8 shadow">
+                <i class="fas fa-microchip text-white text-lg"></i>
+              </div>
             </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Announcements</h3>
-              <p class="text-gray-500 text-sm mt-0.5">This is your go to spot for all the latest updates, news, and important info about the community.</p>
+            <h2 class="font-bold text-gray-900 text-base">z/TechTalk</h2>
+            <p class="text-xs text-gray-500 mt-1 leading-relaxed">Your open forum for all things tech — hardware builds, gaming, AI, software, cybersecurity, and more. No gatekeeping, just good discussion.</p>
+            <div class="flex gap-6 my-3">
+              <div>
+                <p class="font-bold text-gray-900 text-base leading-none" id="sidebarTotalPosts">—</p>
+                <p class="text-xs text-gray-500 mt-0.5">Posts</p>
+              </div>
+              <div>
+                <p class="font-bold text-gray-900 text-base leading-none">🟢</p>
+                <p class="text-xs text-gray-500 mt-0.5">Active</p>
+              </div>
             </div>
-          </div>
-          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
-            <span class="text-gray-900 font-semibold text-base" id="count-announcements">2</span>
-            <p class="text-xs text-gray-400">Topics</p>
-          </div>
-          <div class="col-span-8 sm:col-span-3 hidden sm:block">
-            <p class="text-xs text-gray-400 truncate">Official Zorexium updates</p>
+            <div class="text-xs text-gray-400 border-t border-gray-100 pt-3 mb-3 space-y-1.5">
+              <p class="flex items-center gap-1.5"><i class="fas fa-calendar-alt text-cyan-500 w-4"></i> Created April 2024</p>
+              <p class="flex items-center gap-1.5"><i class="fas fa-globe text-cyan-500 w-4"></i> Public Community</p>
+            </div>
+            <button onclick="togglePostForm()" class="w-full bg-[#65a30d] hover:bg-[#4d7c0f] text-white py-2 rounded-full text-sm font-bold transition-colors">Create Post</button>
+            <a href="community-guidelines.html" class="block w-full text-center mt-2 border border-gray-300 hover:bg-gray-50 text-gray-700 py-1.5 rounded-full text-xs font-semibold transition-colors">Community Rules</a>
           </div>
         </div>
-      </div>
 
-      <!-- Official Brand -->
-      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('official-brand')">
-        <div class="grid grid-cols-12 items-center gap-4">
-          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-certificate text-blue-600 text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Official Brand</h3>
-              <p class="text-gray-500 text-sm mt-0.5">This category is for official posts from brands—product highlights, launches, Q&amp;A threads, and more.</p>
-            </div>
-          </div>
-          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
-            <span class="text-gray-900 font-semibold text-base" id="count-official-brand">5</span>
-            <p class="text-xs text-gray-400">Topics</p>
-          </div>
-          <div class="col-span-8 sm:col-span-3 hidden sm:block">
-            <p class="text-xs text-gray-400 truncate">Brand spotlights &amp; product launches</p>
+        <!-- Browse by Topic -->
+        <div class="bg-white border border-gray-200 rounded-md p-4">
+          <h3 class="font-bold text-gray-900 text-sm mb-3 uppercase tracking-wide">Browse by Topic</h3>
+          <div class="space-y-0.5">
+            <button onclick="setFlairFilter('')" data-filter="" class="sidebar-flair-btn bg-gray-100 font-semibold text-gray-900 w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-gray-500 flex-shrink-0"></span> All Posts
+            </button>
+            <button onclick="setFlairFilter('hardware')" data-filter="hardware" class="sidebar-flair-btn w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span> Hardware
+            </button>
+            <button onclick="setFlairFilter('gaming')" data-filter="gaming" class="sidebar-flair-btn w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span> Gaming
+            </button>
+            <button onclick="setFlairFilter('ai-ml')" data-filter="ai-ml" class="sidebar-flair-btn w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0"></span> AI &amp; ML
+            </button>
+            <button onclick="setFlairFilter('programming')" data-filter="programming" class="sidebar-flair-btn w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"></span> Programming
+            </button>
+            <button onclick="setFlairFilter('cybersecurity')" data-filter="cybersecurity" class="sidebar-flair-btn w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span> Cybersecurity
+            </button>
+            <button onclick="setFlairFilter('networking')" data-filter="networking" class="sidebar-flair-btn w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"></span> Networking
+            </button>
+            <button onclick="setFlairFilter('software')" data-filter="software" class="sidebar-flair-btn w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors">
+              <span class="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0"></span> Software
+            </button>
           </div>
         </div>
-      </div>
 
-      <!-- System Help -->
-      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('system-help')">
-        <div class="grid grid-cols-12 items-center gap-4">
-          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
-            <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
-              <i class="fas fa-life-ring text-red-500 text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">System Help</h3>
-              <p class="text-gray-500 text-sm mt-0.5">Discussion about this site, its organization, how it works, and how we can improve it.</p>
-            </div>
-          </div>
-          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
-            <span class="text-gray-900 font-semibold text-base" id="count-system-help">2</span>
-            <p class="text-xs text-gray-400">Topics</p>
-          </div>
-          <div class="col-span-8 sm:col-span-3 hidden sm:block">
-            <p class="text-xs text-gray-400 truncate">Site feedback &amp; support topics</p>
-          </div>
+        <!-- Footer links -->
+        <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 px-1">
+          <a href="community-guidelines.html" class="hover:text-gray-600">Community Rules</a>
+          <a href="terms-of-service.html" class="hover:text-gray-600">Terms</a>
+          <a href="privacy-policy.html" class="hover:text-gray-600">Privacy</a>
+          <a href="faq.html" class="hover:text-gray-600">FAQ</a>
+          <span class="w-full mt-1 text-gray-300">Zorexium Labs © 2024</span>
         </div>
+
       </div>
-
-    </div>
-
-    <!-- Footer links -->
-    <div class="flex flex-wrap gap-5 mt-10 pt-6 border-t border-gray-200 text-sm text-gray-500">
-      <a href="community-guidelines.html" class="hover:text-cyan-600 hover:underline">Community Rules</a>
-      <a href="terms-of-service.html" class="hover:text-cyan-600 hover:underline">Terms of Service</a>
-      <a href="faq.html" class="hover:text-cyan-600 hover:underline">FAQs</a>
-      <a href="privacy-policy.html" class="hover:text-cyan-600 hover:underline">Privacy</a>
     </div>
   </div>
-
-  <!-- Posts Feed View (shown when a category is selected or Hot/Latest is clicked) -->
-  <div id="postsFeedView" class="hidden">
-    <div class="flex items-center gap-3 mb-6">
-      <button onclick="backToCategories()" class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-medium">
-        <i class="fas fa-arrow-left"></i> All categories
-      </button>
-      <span class="text-gray-300">•</span>
-      <h2 id="feedTitle" class="text-lg font-bold text-gray-900"></h2>
-    </div>
-    <div id="postsFeed"></div>
-  </div>
-
 </main>
 
     <!-- Chat Bubble -->
@@ -488,146 +426,103 @@
     </div>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  let currentBoardType = '';
-  let posts = [];
+  let allPosts = [];
+  let sortMode = 'hot';
+  let flairFilter = '';
+  let selectedFlair = '';
 
-  const CATEGORY_LABELS = {
-    'pc-building': 'PC Building',
-    'gaming': 'Gaming',
-    'welcome': 'Welcome',
-    'announcements': 'Announcements',
-    'official-brand': 'Official Brand',
-    'system-help': 'System Help',
-    'hot': 'Hot Topics',
-    'latest': 'Latest Posts'
+  const FLAIR_CONFIG = {
+    'hardware':      { label: 'Hardware',      color: 'bg-blue-100 text-blue-700' },
+    'gaming':        { label: 'Gaming',         color: 'bg-green-100 text-green-700' },
+    'ai-ml':         { label: 'AI & ML',        color: 'bg-yellow-100 text-yellow-700' },
+    'programming':   { label: 'Programming',    color: 'bg-purple-100 text-purple-700' },
+    'cybersecurity': { label: 'Cybersecurity',  color: 'bg-red-100 text-red-700' },
+    'networking':    { label: 'Networking',      color: 'bg-orange-100 text-orange-700' },
+    'software':      { label: 'Software',        color: 'bg-gray-100 text-gray-700' },
+    'pc-building':   { label: 'PC Building',     color: 'bg-cyan-100 text-cyan-700' },
+    'welcome':       { label: 'Welcome',          color: 'bg-teal-100 text-teal-700' },
+    'announcements': { label: 'Announcements',   color: 'bg-amber-100 text-amber-700' },
+    'official-brand':{ label: 'Official',        color: 'bg-blue-100 text-blue-800' },
+    'system-help':   { label: 'System Help',     color: 'bg-rose-100 text-rose-700' }
   };
 
   function init() {
     updateUI();
-    const filesInput = document.getElementById('postFilesInput');
-    if (filesInput) {
-      filesInput.addEventListener('change', function(){
-        const preview = document.getElementById('postFilesPreview'); preview.innerHTML = '';
-        Array.from(this.files).forEach(f=>{
-          if (f.type && f.type.startsWith('image/')){
-            const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.className='w-24 h-16 object-cover rounded'; preview.appendChild(img);
-          } else {
-            const d = document.createElement('div'); d.textContent = f.name; d.className='px-3 py-1 bg-gray-200 rounded text-gray-700 text-xs'; preview.appendChild(d);
-          }
-        });
-      });
-    }
+    loadPosts();
+    setupFlairPicker();
   }
 
-  function checkAuth() {
-    if (!ZrxSession.isLoggedIn()) {
-      window.location.href = 'login-register.html';
-      return false;
-    }
-    return true;
+  function setupFlairPicker() {
+    document.querySelectorAll('.flair-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.flair-btn').forEach(function(b) {
+          b.classList.remove('border-cyan-500', 'text-cyan-600', 'bg-cyan-50');
+        });
+        this.classList.add('border-cyan-500', 'text-cyan-600', 'bg-cyan-50');
+        selectedFlair = this.dataset.flair;
+        document.getElementById('postFlair').value = selectedFlair;
+      });
+    });
+    var noneBtn = document.querySelector('.flair-btn[data-flair=""]');
+    if (noneBtn) noneBtn.classList.add('border-cyan-500', 'text-cyan-600', 'bg-cyan-50');
   }
 
   function updateUI() {
-    const loggedIn = ZrxSession.isLoggedIn();
-    const notLoggedIn = document.getElementById('notLoggedIn');
-    const greeting = document.getElementById('welcomeGreeting');
-    if (loggedIn) {
-      if (notLoggedIn) notLoggedIn.classList.add('hidden');
-      if (greeting) {
-        const user = ZrxSession.getUser();
-        const name = (user && (user.username || user.email)) ? (user.username || user.email).split('@')[0] : null;
-        if (name) greeting.textContent = 'Welcome back, ' + name + '!';
-      }
-    } else {
-      if (notLoggedIn) notLoggedIn.classList.remove('hidden');
+    var loggedIn = ZrxSession.isLoggedIn();
+    var notLoggedIn = document.getElementById('notLoggedIn');
+    if (notLoggedIn) {
+      notLoggedIn.classList.toggle('hidden', loggedIn);
     }
   }
 
-  function showView(type) {
-    document.querySelectorAll('.view-btn').forEach(b => {
-      b.classList.remove('bg-gray-900', 'text-white');
-      b.classList.add('text-gray-600');
-    });
-    const activeBtn = document.getElementById('viewBtn' + type.charAt(0).toUpperCase() + type.slice(1));
-    if (activeBtn) { activeBtn.classList.add('bg-gray-900', 'text-white'); activeBtn.classList.remove('text-gray-600'); }
-
-    if (type === 'all') {
-      backToCategories();
-    } else {
-      openCategory(type);
+  function togglePostForm() {
+    if (!ZrxSession.isLoggedIn()) {
+      window.location.href = 'login-register.html';
+      return;
     }
-  }
-
-  function openCategory(category) {
-    currentBoardType = category;
-    document.getElementById('categoriesView').classList.add('hidden');
-    document.getElementById('postsFeedView').classList.remove('hidden');
-    const titleEl = document.getElementById('feedTitle');
-    if (titleEl) titleEl.textContent = CATEGORY_LABELS[category] || category;
-    loadPosts(category);
-  }
-
-  function backToCategories() {
-    currentBoardType = '';
-    document.getElementById('postsFeedView').classList.add('hidden');
-    document.getElementById('categoriesView').classList.remove('hidden');
-    document.getElementById('newPostForm').classList.add('hidden');
-    document.querySelectorAll('.view-btn').forEach(b => {
-      b.classList.remove('bg-gray-900', 'text-white');
-      b.classList.add('text-gray-600');
-    });
-    const allBtn = document.getElementById('viewBtnAll');
-    if (allBtn) { allBtn.classList.add('bg-gray-900', 'text-white'); allBtn.classList.remove('text-gray-600'); }
-  }
-
-  function handleNewPost() {
-    if (!checkAuth()) return;
-    if (document.getElementById('categoriesView').classList.contains('hidden') === false) {
-      // Open a default category first
-      openCategory('pc-building');
-      document.getElementById('postCategory').value = 'pc-building';
+    var form = document.getElementById('newPostForm');
+    form.classList.toggle('hidden');
+    if (!form.classList.contains('hidden')) {
+      document.getElementById('postTitle').focus();
     }
-    document.getElementById('newPostForm').classList.toggle('hidden');
-  }
-
-  function logout() {
-    ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
-      ZrxSession.logout(function() { window.location.reload(); });
-    });
   }
 
   async function publishPost() {
     if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
-    const title = document.getElementById('postTitle').value.trim();
-    const content = document.getElementById('postContent').value.trim();
-    const imageUrl = document.getElementById('postImageUrl').value.trim();
-    const category = document.getElementById('postCategory').value || currentBoardType || 'pc-building';
-    if (!title || !content) {
-      ZrxNotify.showNotification('Please fill in both title and content!', 'error');
+    var title = document.getElementById('postTitle').value.trim();
+    var content = document.getElementById('postContent').value.trim();
+    var imageUrl = document.getElementById('postImageUrl').value.trim();
+    var flair = document.getElementById('postFlair').value || 'general';
+    if (!title) {
+      ZrxNotify.showNotification('Please enter a post title!', 'error');
+      return;
+    }
+    if (!content) {
+      ZrxNotify.showNotification('Please enter some content!', 'error');
       return;
     }
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts', {
+      var body = { title: title, content: content, boardType: flair };
+      if (imageUrl) body.imageUrl = imageUrl;
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ title, content, boardType: category, ...(imageUrl ? { imageUrl } : {}) })
+        body: JSON.stringify(body)
       });
       if (!res.ok) {
-        const err = await res.json();
+        var err = await res.json();
         ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to publish post'), 'error');
         return;
       }
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
-      const imageUrlInput = document.getElementById('postImageUrl');
-      if (imageUrlInput) { imageUrlInput.value = ''; }
-      const filesInput = document.getElementById('postFilesInput');
-      if (filesInput) { filesInput.value = ''; }
-      const preview = document.getElementById('postFilesPreview');
-      if (preview) { preview.innerHTML = ''; }
+      document.getElementById('postImageUrl').value = '';
+      document.getElementById('postFlair').value = '';
+      setupFlairPicker();
       document.getElementById('newPostForm').classList.add('hidden');
-      await loadPosts(category);
+      ZrxNotify.showNotification('Post published!', 'success');
+      await loadPosts();
     } catch (err) {
       console.error(err);
       ZrxNotify.showNotification('Error publishing post. Please try again.', 'error');
@@ -638,113 +533,213 @@
     document.getElementById('newPostForm').classList.add('hidden');
   }
 
-  async function loadPosts(category) {
-    const feed = document.getElementById('postsFeed');
-    feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Loading posts...</p></div>';
-    const boardParam = (category === 'hot' || category === 'latest') ? '' : category;
-    let url = BACKEND_URL + '/api/posts';
-    if (boardParam) url += '?boardType=' + encodeURIComponent(boardParam);
+  async function loadPosts() {
+    var feed = document.getElementById('postsFeed');
+    feed.innerHTML = '<div class="text-center py-16 bg-white border border-gray-200 rounded-md"><div class="inline-block w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mb-4"></div><p class="text-gray-400 text-sm">Loading posts\u2026</p></div>';
     try {
-      const res = await fetch(url);
+      var res = await fetch(BACKEND_URL + '/api/posts');
       if (!res.ok) throw new Error('Failed to fetch posts');
-      posts = await res.json();
-      if (category === 'hot') posts = [...posts].sort((a,b) => (b.likes||[]).length - (a.likes||[]).length).slice(0, 20);
-      if (category === 'latest') posts = [...posts].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 20);
+      allPosts = await res.json();
+      var totalEl = document.getElementById('sidebarTotalPosts');
+      if (totalEl) totalEl.textContent = allPosts.length.toLocaleString();
     } catch (err) {
       console.error(err);
-      feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Failed to load posts. Please try again.</p></div>';
+      feed.innerHTML = '<div class="text-center py-16 bg-white border border-gray-200 rounded-md text-gray-400"><i class="fas fa-exclamation-circle text-3xl mb-3 block"></i><p>Failed to load posts. Please try again.</p></div>';
       return;
     }
-    renderPosts(posts, feed);
+    applyAndRender();
   }
 
-  function getCurrentUserId() {
-    const user = ZrxSession.getUser();
+  function setSortMode(mode) {
+    sortMode = mode;
+    document.querySelectorAll('.sort-btn').forEach(function(b) {
+      b.classList.remove('active-sort', 'bg-gray-100', 'text-gray-900');
+      b.classList.add('text-gray-500');
+    });
+    var btn = document.getElementById('sortBtn' + mode.charAt(0).toUpperCase() + mode.slice(1));
+    if (btn) {
+      btn.classList.add('active-sort');
+      btn.classList.remove('text-gray-500');
+    }
+    applyAndRender();
+  }
+
+  function setFlairFilter(flair) {
+    flairFilter = flair;
+    document.querySelectorAll('.sidebar-flair-btn').forEach(function(b) {
+      var isActive = b.dataset.filter === flair;
+      b.classList.toggle('bg-gray-100', isActive);
+      b.classList.toggle('font-semibold', isActive);
+      b.classList.toggle('text-gray-900', isActive);
+    });
+    var pill = document.getElementById('activeFlairFilter');
+    var label = document.getElementById('activeFlairLabel');
+    if (flair && FLAIR_CONFIG[flair]) {
+      label.textContent = FLAIR_CONFIG[flair].label;
+      pill.classList.remove('hidden');
+      pill.classList.add('flex');
+    } else {
+      pill.classList.add('hidden');
+      pill.classList.remove('flex');
+    }
+    applyAndRender();
+  }
+
+  function clearFlairFilter() {
+    setFlairFilter('');
+  }
+
+  function applyAndRender() {
+    var filtered = allPosts.slice();
+    if (flairFilter) {
+      filtered = filtered.filter(function(p) { return p.boardType === flairFilter; });
+    }
+    var searchInput = document.getElementById('forumSearch');
+    if (searchInput && searchInput.value.trim()) {
+      var q = searchInput.value.trim().toLowerCase();
+      filtered = filtered.filter(function(p) {
+        return (p.title || '').toLowerCase().includes(q) || (p.content || '').toLowerCase().includes(q);
+      });
+    }
+    if (sortMode === 'hot') {
+      filtered.sort(function(a, b) { return (b.likes || []).length - (a.likes || []).length; });
+    } else if (sortMode === 'new') {
+      filtered.sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+    } else if (sortMode === 'top') {
+      filtered.sort(function(a, b) {
+        return ((b.likes || []).length + (b.replies || []).length) - ((a.likes || []).length + (a.replies || []).length);
+      });
+    }
+    renderPosts(filtered);
+  }
+
+  function getCurrentUserEmail() {
+    var user = ZrxSession.getUser();
     return user ? user.email : null;
   }
 
-  function renderPosts(postsToRender, feed) {
-    if (postsToRender.length === 0) {
-      feed.innerHTML = '<div class="text-center py-12"><i class="fas fa-comments text-4xl text-gray-300 mb-4 block"></i><p class="text-gray-500 font-medium">No posts yet. Be the first to post!</p></div>';
+  function timeAgo(date) {
+    var now = new Date();
+    var then = new Date(date);
+    var diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return then.toLocaleDateString();
+  }
+
+  function getFlairBadge(boardType) {
+    if (!boardType || boardType === 'general') return '';
+    var cfg = FLAIR_CONFIG[boardType];
+    var label = cfg ? cfg.label : boardType;
+    var color = cfg ? cfg.color : 'bg-gray-100 text-gray-600';
+    return '<span class="px-2 py-0.5 rounded-full text-xs font-medium ' + color + '">' + escapeHtml(label) + '</span>';
+  }
+
+  function renderPosts(postsToRender) {
+    var feed = document.getElementById('postsFeed');
+    if (!postsToRender || postsToRender.length === 0) {
+      feed.innerHTML = '<div class="text-center py-16 bg-white border border-gray-200 rounded-md"><i class="fas fa-comments text-4xl text-gray-200 mb-4 block"></i><p class="text-gray-500 font-semibold mb-1">No posts yet</p><p class="text-gray-400 text-sm">Be the first to start the conversation!</p></div>';
       return;
     }
-    const currentUserId = getCurrentUserId();
-    feed.innerHTML = postsToRender.map(post => {
-      const replies = post.replies || [];
-      const likes = post.likes || [];
-      const likeCount = likes.length;
-      const liked = !!(currentUserId && likes.includes(currentUserId));
-      const firstReply = replies[0];
-      return `
-        <div class="post-card">
-          <div class="flex justify-between items-start mb-3">
-            <div class="flex items-center gap-3 flex-1">
-              <a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="flex-shrink-0"><img src="${post.profileImage || 'https://placehold.co/40x40/e5e7eb/9ca3af?text=U'}" class="w-10 h-10 rounded-full border border-gray-200 object-cover"></a>
-              <div>
-                <h3 class="text-gray-900 font-semibold text-base">${escapeHtml(post.title)}</h3>
-                <p class="text-gray-400 text-xs"><a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="text-cyan-600 hover:underline">${escapeHtml(post.username || post.email)}</a> &bull; ${new Date(post.createdAt).toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-          <p class="text-gray-600 mb-4 text-sm">${escapeHtml(post.content)}</p>
-          ${renderPostMedia(post)}
-          ${firstReply ? `
-          <div class="bg-gray-50 rounded-lg p-3 mb-3 text-sm border-l-2 border-cyan-400">
-            <div class="flex items-center gap-2 mb-1">
-              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}"><img src="${firstReply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U'}" class="w-5 h-5 rounded-full border border-gray-200 object-cover"></a>
-              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}" class="text-cyan-600 font-semibold hover:underline text-xs">${escapeHtml(firstReply.username || firstReply.email)}</a>
-            </div>
-            <p class="text-gray-600 text-xs">${escapeHtml(firstReply.content)}</p>
-          </div>
-          ` : ''}
-          <div class="flex items-center gap-5 text-sm mt-2">
-            <button onclick="toggleReplies('${post._id}')" class="flex items-center gap-1 text-gray-400 hover:text-cyan-600 transition-colors">
-              <i class="fas fa-comment text-xs"></i>
-              <span>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</span>
-              <i class="fas fa-chevron-down text-xs" id="replies-arrow-${post._id}"></i>
-            </button>
-            <button onclick="toggleLike('${post._id}')" id="like-btn-${post._id}" class="flex items-center gap-1 ${liked ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition-colors">
-              <i id="like-icon-${post._id}" class="${liked ? 'fas fa-heart' : 'far fa-heart'} text-xs"></i>
-              <span id="like-count-${post._id}">${likeCount}</span>
-            </button>
-          </div>
-          <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-100">
-            <div class="mb-4 space-y-2">
-              ${replies.map(reply => `
-                <div class="bg-gray-50 rounded-lg p-3 text-sm">
-                  <div class="flex items-center gap-2 mb-1">
-                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}"><img src="${reply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U'}" class="w-5 h-5 rounded-full border border-gray-200 object-cover"></a>
-                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}" class="text-cyan-600 font-semibold hover:underline text-xs">${escapeHtml(reply.username || reply.email)}</a>
-                  </div>
-                  <p class="text-gray-600 text-xs">${escapeHtml(reply.content)}</p>
-                </div>
-              `).join('')}
-            </div>
-            <div class="flex gap-2">
-              <input type="text" id="replyText-${post._id}" class="form-input flex-1 text-sm py-2" placeholder="Write a reply..." maxlength="500">
-              <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
-            </div>
-          </div>
-        </div>
-      `;
+    var currentUserEmail = getCurrentUserEmail();
+    feed.innerHTML = postsToRender.map(function(post) {
+      var replies = post.replies || [];
+      var likes = post.likes || [];
+      var likeCount = likes.length;
+      var liked = !!(currentUserEmail && likes.includes(currentUserEmail));
+      var isOwner = !!(currentUserEmail && currentUserEmail === post.email);
+      var flairBadge = getFlairBadge(post.boardType);
+      var contentText = (post.content || '');
+      var contentPreview = contentText.length > 300
+        ? escapeHtml(contentText.substring(0, 300)) + '\u2026'
+        : escapeHtml(contentText);
+      var mediaHtml = renderPostMedia(post);
+      var repliesHtml = replies.map(function(reply) {
+        return '<div class="flex gap-2 group">'
+          + '<a href="brand-store.html?seller=' + encodeURIComponent(reply.username || reply.email) + '&email=' + encodeURIComponent(reply.email || '') + '">'
+          + '<img src="' + (reply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U') + '" class="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-0.5 border border-gray-200">'
+          + '</a>'
+          + '<div class="flex-1 min-w-0">'
+          + '<div class="flex items-center gap-1.5 text-xs mb-0.5">'
+          + '<a href="brand-store.html?seller=' + encodeURIComponent(reply.username || reply.email) + '&email=' + encodeURIComponent(reply.email || '') + '" class="text-cyan-600 font-semibold hover:underline">' + escapeHtml(reply.username || reply.email) + '</a>'
+          + '<span class="text-gray-400">' + timeAgo(reply.createdAt) + '</span>'
+          + '</div>'
+          + '<p class="text-sm text-gray-700 leading-relaxed">' + escapeHtml(reply.content) + '</p>'
+          + '</div></div>';
+      }).join('');
+
+      return '<div class="bg-white border border-gray-200 rounded-md hover:border-gray-400 transition-colors mb-2 flex group">'
+        + '<div class="w-10 bg-gray-50 rounded-l-md flex flex-col items-center py-3 gap-0.5 flex-shrink-0">'
+        + '<button onclick="toggleLike(\'' + post._id + '\')" id="like-btn-' + post._id + '" class="w-7 h-7 flex items-center justify-center rounded hover:bg-orange-50 transition-colors ' + (liked ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500') + '" title="Upvote">'
+        + '<i id="like-icon-' + post._id + '" class="fas fa-arrow-up text-sm"></i>'
+        + '</button>'
+        + '<span id="like-count-' + post._id + '" class="text-xs font-bold leading-none ' + (liked ? 'text-orange-500' : 'text-gray-600') + '">' + (likeCount > 0 ? likeCount : '&middot;') + '</span>'
+        + '</div>'
+        + '<div class="flex-1 p-3 min-w-0">'
+        + '<div class="flex items-center gap-1.5 text-xs text-gray-500 mb-1 flex-wrap">'
+        + '<a href="brand-store.html?seller=' + encodeURIComponent(post.username || post.email) + '&email=' + encodeURIComponent(post.email || '') + '" class="flex items-center gap-1 hover:underline">'
+        + '<img src="' + (post.profileImage || 'https://placehold.co/16x16/e5e7eb/9ca3af?text=U') + '" class="w-4 h-4 rounded-full object-cover">'
+        + '<span class="text-cyan-600 font-medium">u/' + escapeHtml(post.username || post.email) + '</span>'
+        + '</a>'
+        + '<span>&bull;</span>'
+        + '<span>' + timeAgo(post.createdAt) + '</span>'
+        + (flairBadge ? '<span>&bull;</span>' + flairBadge : '')
+        + (isOwner ? '<button onclick="deletePost(\'' + post._id + '\', event)" class="ml-auto flex items-center gap-1 text-gray-300 hover:text-red-400 px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity" title="Delete post"><i class="fas fa-trash-alt text-xs"></i></button>' : '')
+        + '</div>'
+        + '<h3 class="text-base font-semibold text-gray-900 leading-snug mb-1.5">' + escapeHtml(post.title) + '</h3>'
+        + (contentPreview ? '<p class="text-sm text-gray-600 mb-2 leading-relaxed line-clamp-3">' + contentPreview + '</p>' : '')
+        + mediaHtml
+        + '<div class="flex items-center gap-0.5 text-xs text-gray-500 mt-2 -ml-1.5">'
+        + '<button onclick="toggleReplies(\'' + post._id + '\')" class="flex items-center gap-1.5 hover:bg-gray-100 px-2.5 py-1.5 rounded font-semibold hover:text-gray-800 transition-colors">'
+        + '<i class="fas fa-comment-alt text-xs"></i>'
+        + '<span>' + replies.length + ' Comment' + (replies.length !== 1 ? 's' : '') + '</span>'
+        + '<i class="fas fa-chevron-down text-xs" id="replies-arrow-' + post._id + '"></i>'
+        + '</button>'
+        + '<button onclick="copyShareLink(\'' + post._id + '\')" class="flex items-center gap-1.5 hover:bg-gray-100 px-2.5 py-1.5 rounded font-semibold hover:text-gray-800 transition-colors">'
+        + '<i class="fas fa-share text-xs"></i> Share'
+        + '</button>'
+        + '</div>'
+        + '<div id="replies-' + post._id + '" class="hidden mt-4 pt-4 border-t border-gray-100">'
+        + (replies.length > 0 ? '<div class="space-y-3 mb-4">' + repliesHtml + '</div>' : '')
+        + '<div class="flex gap-2 items-center">'
+        + '<input type="text" id="replyText-' + post._id + '" class="form-input flex-1 text-sm py-2" placeholder="Add a comment\u2026" maxlength="500">'
+        + '<button onclick="submitReply(\'' + post._id + '\')" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors">Comment</button>'
+        + '</div>'
+        + '</div>'
+        + '</div></div>';
     }).join('');
   }
 
+  function copyShareLink(postId) {
+    var url = window.location.href.split('?')[0] + '?post=' + postId;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url)
+        .then(function() { ZrxNotify.showNotification('Link copied!', 'success'); })
+        .catch(function() {});
+    }
+  }
+
   function toggleReplies(postId) {
-    const section = document.getElementById('replies-' + postId);
-    const arrow = document.getElementById('replies-arrow-' + postId);
+    var section = document.getElementById('replies-' + postId);
+    var arrow = document.getElementById('replies-arrow-' + postId);
+    if (!section) return;
     section.classList.toggle('hidden');
     if (arrow) arrow.className = section.classList.contains('hidden') ? 'fas fa-chevron-down text-xs' : 'fas fa-chevron-up text-xs';
+    if (!section.classList.contains('hidden')) {
+      var input = document.getElementById('replyText-' + postId);
+      if (input) input.focus();
+    }
   }
 
   async function toggleLike(postId) {
     if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
-    const btn = document.getElementById('like-btn-' + postId);
-    const icon = document.getElementById('like-icon-' + postId);
-    const countEl = document.getElementById('like-count-' + postId);
+    var btn = document.getElementById('like-btn-' + postId);
+    var countEl = document.getElementById('like-count-' + postId);
     if (!btn) return;
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/like', {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/like', {
         method: 'POST',
         credentials: 'include'
       });
@@ -752,16 +747,18 @@
         if (res.status === 401) { window.location.href = 'login-register.html'; return; }
         return;
       }
-      const data = await res.json();
-      countEl.textContent = data.likeCount;
+      var data = await res.json();
+      countEl.textContent = data.likeCount > 0 ? data.likeCount : '\u00b7';
       if (data.liked) {
-        icon.className = 'fas fa-heart text-xs';
         btn.classList.remove('text-gray-400');
-        btn.classList.add('text-red-500');
+        btn.classList.add('text-orange-500');
+        countEl.classList.remove('text-gray-600');
+        countEl.classList.add('text-orange-500');
       } else {
-        icon.className = 'far fa-heart text-xs';
-        btn.classList.remove('text-red-500');
+        btn.classList.remove('text-orange-500');
         btn.classList.add('text-gray-400');
+        countEl.classList.remove('text-orange-500');
+        countEl.classList.add('text-gray-600');
       }
     } catch (err) {
       console.error('Error toggling like:', err);
@@ -770,47 +767,61 @@
 
   async function submitReply(postId) {
     if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
-    const replyText = document.getElementById('replyText-' + postId).value.trim();
+    var replyText = document.getElementById('replyText-' + postId).value.trim();
     if (!replyText) return;
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/replies', {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/replies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ content: replyText })
       });
       if (!res.ok) {
-        const err = await res.json();
+        var err = await res.json();
         ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to submit reply'), 'error');
         return;
       }
-      await loadPosts(currentBoardType);
+      await loadPosts();
     } catch (err) {
       console.error(err);
       ZrxNotify.showNotification('Error submitting reply. Please try again.', 'error');
     }
   }
 
-  function filterPosts() {
-    const search = document.getElementById('forumSearch').value.toLowerCase();
-    const feed = document.getElementById('postsFeed');
-    const filtered = posts.filter(p => p.title.toLowerCase().includes(search) || p.content.toLowerCase().includes(search));
-    renderPosts(filtered, feed);
+  async function deletePost(postId, event) {
+    event.stopPropagation();
+    ZrxNotify.showConfirm('Delete this post?', async function() {
+      try {
+        var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (!res.ok) {
+          var err = await res.json();
+          ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to delete post'), 'error');
+          return;
+        }
+        ZrxNotify.showNotification('Post deleted', 'success');
+        await loadPosts();
+      } catch (err) {
+        ZrxNotify.showNotification('Error deleting post.', 'error');
+      }
+    });
   }
 
   function escapeHtml(text) {
-    const div = document.createElement('div');
+    var div = document.createElement('div');
     div.textContent = text || '';
     return div.innerHTML;
   }
 
   function renderPostMedia(post) {
     if (!post.imageUrl || !/^https?:\/\//i.test(post.imageUrl)) return '';
-    const escaped = escapeHtml(post.imageUrl);
+    var escaped = escapeHtml(post.imageUrl);
     if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(post.imageUrl)) {
-      return '<div class="mb-4"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-lg max-h-72 object-contain"></div>';
+      return '<div class="mb-3"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-md max-h-80 object-contain border border-gray-100"></div>';
     }
-    return '<div class="mb-4"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-cyan-600 underline break-all text-sm"><i class="fas fa-link mr-1"></i>' + escaped + '</a></div>';
+    return '<div class="mb-3"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-cyan-600 hover:underline break-all text-sm bg-gray-50 px-3 py-2 rounded-md border border-gray-200"><i class="fas fa-external-link-alt text-xs"></i>' + escaped + '</a></div>';
   }
 
   function toggleDropdown(id) {
@@ -831,6 +842,8 @@
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
+      var form = document.getElementById('newPostForm');
+      if (form) form.classList.add('hidden');
     }
   });
 
