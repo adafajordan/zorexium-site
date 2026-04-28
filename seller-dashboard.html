@@ -154,7 +154,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <!-- Orders & Returns -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
@@ -214,7 +214,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
                             <!-- Orders & Returns -->
@@ -289,9 +289,6 @@
           </button>
           <button onclick="switchTab('settings')" id="nav-settings" class="dash-nav-item w-full text-left">
             <i class="fas fa-cog w-4 text-center text-cyan-500"></i> Settings
-          </button>
-          <button onclick="switchTab('labs')" id="nav-labs" class="dash-nav-item w-full text-left hidden">
-            <i class="fas fa-flask w-4 text-center text-cyan-500"></i> Verified Labs
           </button>
           <div class="pt-2 mt-2 border-t border-gray-100">
             <a href="listing-wizard.html" class="dash-nav-item block">
@@ -567,24 +564,6 @@
           </div>
         </div>
 
-        <!-- ── Verified Labs Tab (business only) ── -->
-        <div id="tab-labs" class="dash-tab">
-          <div class="bg-white border border-gray-200 rounded-xl p-5">
-            <div class="flex items-center justify-between mb-5">
-              <div>
-                <h2 class="text-lg font-semibold text-gray-900">Verified Labs</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Manage your business lab listings</p>
-              </div>
-              <a href="verified-labs.html" class="btn-primary text-sm">
-                <i class="fas fa-plus"></i> Add Lab
-              </a>
-            </div>
-            <div id="labsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <!-- Labs injected here -->
-            </div>
-          </div>
-        </div>
-
       </div><!-- end main content area -->
     </div><!-- end flex layout -->
   </div>
@@ -615,7 +594,6 @@
     if (nav) nav.classList.add('active');
     if (name === 'orders' && _allOrders.length === 0) loadOrders();
     if (name === 'payouts') loadPayouts();
-    if (name === 'labs') loadLabs();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -957,45 +935,6 @@
     }
   }
 
-  // ── Verified Labs ─────────────────────────────────────────────────────────────
-  function loadLabs() {
-    const labsList = document.getElementById('labsList');
-    labsList.innerHTML = '<div class="col-span-full text-center py-8"><i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-3 block"></i><p class="text-gray-500">Loading labs…</p></div>';
-    getUserIdFromSession().then(function(userId) {
-      fetch(BACKEND_URL + '/api/labs')
-        .then(function(res) { return res.ok ? res.json() : []; })
-        .then(function(allLabs) {
-          const myLabs = allLabs.filter(function(l) { return l.userId === userId; });
-          if (!myLabs.length) {
-            labsList.innerHTML = '<div class="col-span-full text-center py-10"><i class="fas fa-flask text-4xl text-gray-300 mb-3 block"></i><p class="text-gray-500 mb-3">No labs added yet</p><a href="verified-labs.html" class="btn-primary text-sm">Add Your First Lab</a></div>';
-            return;
-          }
-          labsList.innerHTML = myLabs.map(function(l) {
-            var labId = l._id ? String(l._id) : '';
-            return '<div class="product-card p-4">' +
-              '<h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">' + escHtml(l.name) + '</h3>' +
-              '<p class="text-gray-500 text-sm mb-1"><i class="fas fa-map-marker-alt text-xs mr-1"></i>' + escHtml(l.location || '') + '</p>' +
-              '<p class="text-gray-400 text-sm mb-3 line-clamp-2">' + escHtml((l.description || '').slice(0, 100)) + '</p>' +
-              '<p class="text-xs text-gray-400 mb-3">Added: ' + fmtDate(l.createdAt) + '</p>' +
-              '<button onclick="deleteLab(\'' + escHtml(labId) + '\')" class="w-full text-xs py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-md font-semibold transition-colors">Delete Lab</button>' +
-              '</div>';
-          }).join('');
-        })
-        .catch(function() { labsList.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400"><p class="text-sm">Failed to load labs.</p></div>'; });
-    });
-  }
-
-  function deleteLab(labId) {
-    if (!labId) return;
-    ZrxNotify.showConfirm('Delete this lab?', function() {
-      ZrxSession.fetch(BACKEND_URL + '/api/labs/' + encodeURIComponent(labId), { method: 'DELETE', credentials: 'include' })
-        .then(function(res) {
-          if (!res.ok) return res.json().then(function(d) { throw new Error(d.error || 'Delete failed'); });
-          loadLabs();
-        })
-        .catch(function(err) { ZrxNotify.showNotification(err.message || 'Failed to delete lab', 'error'); });
-    });
-  }
 
   // ── Misc ──────────────────────────────────────────────────────────────────────
   function logout() {

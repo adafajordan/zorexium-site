@@ -3,12 +3,17 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Return & Refund Policy - Zorexium Labs</title>
+    <title>Return &amp; Refund Policy - Zorexium Labs</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+        .panel-nav-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #374151; transition: background 0.15s, color 0.15s; }
+        .panel-nav-link:hover { background: #ecfeff; color: #0891b2; }
+        .info-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; }
+        .step-card { display: flex; gap: 16px; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .step-num { width: 32px; height: 32px; background: #0891b2; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
             .nav-dropdown {
             opacity: 0;
             visibility: hidden;
@@ -153,7 +158,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <!-- Orders & Returns -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
@@ -213,7 +218,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
                             <!-- Orders & Returns -->
@@ -239,72 +244,407 @@
         </div>
     </header>
 
+<!-- Hero Banner -->
+<div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-6 py-10">
+  <div class="max-w-6xl mx-auto">
+    <nav class="text-xs text-gray-400 mb-3">
+      <a href="index.html" class="hover:text-cyan-400">Home</a>
+      <span class="mx-1">/</span>
+      <span class="text-cyan-400">Return &amp; Refund Policy</span>
+    </nav>
+    <div class="flex items-start gap-4">
+      <div class="text-cyan-400 text-4xl mt-1"><i class="fas fa-undo-alt"></i></div>
+      <div>
+        <h1 class="text-3xl font-bold mb-2">Return &amp; Refund Policy</h1>
+        <p class="text-gray-300 max-w-3xl">We stand behind every transaction on Zorexium Labs. Our return and refund policy is designed to be fair, transparent, and easy to understand. Last updated: February 14, 2026.</p>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <main class="flex-1 max-w-4xl mx-auto px-6 sm:px-8 lg:px-10 py-16">
-        <h1 class="text-5xl font-bold text-gray-900 mb-2">Return & Refund Policy</h1>
-        <p class="text-gray-400 mb-12">Our commitment to customer satisfaction</p>
+<div class="flex min-h-0 bg-gray-50">
+  <!-- Sidebar -->
+  <aside class="w-56 flex-shrink-0 bg-white border-r border-gray-200 p-4" style="position:sticky;top:96px;align-self:flex-start;">
+    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">On This Page</p>
+    <nav class="space-y-0.5">
+      <a href="#guarantee" class="panel-nav-link"><i class="fas fa-star text-cyan-400 w-4 text-center"></i>30-Day Guarantee</a>
+      <a href="#eligible" class="panel-nav-link"><i class="fas fa-tags text-cyan-400 w-4 text-center"></i>Eligible Items</a>
+      <a href="#conditions" class="panel-nav-link"><i class="fas fa-list-check text-cyan-400 w-4 text-center"></i>Return Conditions</a>
+      <a href="#process" class="panel-nav-link"><i class="fas fa-route text-cyan-400 w-4 text-center"></i>Return Process</a>
+      <a href="#refunds" class="panel-nav-link"><i class="fas fa-money-bill-wave text-cyan-400 w-4 text-center"></i>Refund Details</a>
+      <a href="#defective" class="panel-nav-link"><i class="fas fa-exclamation-triangle text-cyan-400 w-4 text-center"></i>Defective Items</a>
+      <a href="#seller-types" class="panel-nav-link"><i class="fas fa-store text-cyan-400 w-4 text-center"></i>Seller Policies</a>
+      <a href="#non-returnable" class="panel-nav-link"><i class="fas fa-times-circle text-cyan-400 w-4 text-center"></i>Non-Returnable</a>
+      <a href="#special-orders" class="panel-nav-link"><i class="fas fa-tools text-cyan-400 w-4 text-center"></i>Special Orders</a>
+      <a href="#escalation" class="panel-nav-link"><i class="fas fa-balance-scale text-cyan-400 w-4 text-center"></i>Disputes</a>
+      <a href="#contact" class="panel-nav-link"><i class="fas fa-envelope text-cyan-400 w-4 text-center"></i>Contact</a>
+    </nav>
+    <div class="mt-5 pt-4 border-t border-gray-100">
+      <a href="marketplace-guarantee.html" class="panel-nav-link text-sm"><i class="fas fa-shield-alt text-cyan-400 w-4 text-center"></i>Marketplace Guarantee</a>
+      <a href="marketplace-settings.html" class="panel-nav-link text-sm"><i class="fas fa-cog text-cyan-400 w-4 text-center"></i>Open a Return</a>
+      <a href="contact-support.html" class="panel-nav-link text-sm"><i class="fas fa-headset text-cyan-400 w-4 text-center"></i>Support</a>
+    </div>
+  </aside>
 
-        <div class="space-y-8 text-gray-300">
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">30-Day Return Guarantee</h2>
-                <p>We stand behind every product sold on Zorexium Labs. If you're not satisfied with your purchase, you have 30 days from the receipt date to return it for a full refund.</p>
-            </section>
+  <!-- Main Content -->
+  <main class="flex-1 p-6 space-y-6 max-w-4xl">
 
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Conditions for Returns</h2>
-                <ul class="list-disc list-inside space-y-2">
-                    <li>Item must be returned within 30 days of purchase</li>
-                    <li>Product must be in original condition with all components</li>
-                    <li>Original packaging and documentation must be included</li>
-                    <li>Proof of purchase (invoice or order confirmation) required</li>
-                    <li>Item must not show signs of abuse or misuse</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Return Process</h2>
-                <div class="bg-[#20232a] rounded-lg p-6 space-y-3">
-                    <div><span class="font-bold text-white">1.</span> Contact the seller or Zorexium Labs support within 30 days</div>
-                    <div><span class="font-bold text-white">2.</span> Receive a return authorization (RMA) number</div>
-                    <div><span class="font-bold text-white">3.</span> Ship the item back with the RMA number clearly labeled</div>
-                    <div><span class="font-bold text-white">4.</span> Item is inspected upon receipt</div>
-                    <div><span class="font-bold text-white">5.</span> Refund processed within 5-7 business days</div>
-                </div>
-            </section>
-
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Refund Details</h2>
-                <p>Refunds include the product purchase price. Original shipping costs are non-refundable. Return shipping costs are the responsibility of the customer unless the item was defective or not as described.</p>
-            </section>
-
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Defective or Damaged Items</h2>
-                <p>If you receive a defective or damaged item, contact us immediately. We will provide a prepaid return label and replace the item at no cost. Full refunds are also available if replacement is not possible.</p>
-            </section>
-
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Non-Returnable Items</h2>
-                <ul class="list-disc list-inside space-y-2">
-                    <li>Opened or used software</li>
-                    <li>Items showing signs of modification</li>
-                    <li>Items purchased more than 30 days ago</li>
-                    <li>Clearance or final sale items (clearly marked)</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Special Orders</h2>
-                <p>Special orders and custom-built systems have different return policies. These will be clearly communicated at the time of purchase.</p>
-            </section>
-
-            <section>
-                <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Questions?</h2>
-                <p>Contact our support team at returns@zorexium.labs or visit our FAQ section for more information.</p>
-            </section>
+    <!-- 30-Day Guarantee -->
+    <div id="guarantee" class="info-card">
+      <div class="flex items-start gap-4 mb-4">
+        <div class="bg-cyan-100 rounded-full p-3 flex-shrink-0">
+          <i class="fas fa-shield-alt text-cyan-600 text-xl"></i>
         </div>
-    </main>
+        <div>
+          <h2 class="text-lg font-bold text-gray-900 mb-1">30-Day Return Guarantee</h2>
+          <p class="text-sm text-gray-600 leading-relaxed">Every purchase on Zorexium Labs is covered by our 30-day return guarantee. If you're not satisfied with your purchase for any covered reason, you can return it within 30 days of receiving it for a full refund of the purchase price.</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="text-center p-4 bg-cyan-50 rounded-lg border border-cyan-100">
+          <p class="text-2xl font-bold text-cyan-600">30</p>
+          <p class="text-xs text-gray-600">days to return after delivery</p>
+        </div>
+        <div class="text-center p-4 bg-cyan-50 rounded-lg border border-cyan-100">
+          <p class="text-2xl font-bold text-cyan-600">3–5</p>
+          <p class="text-xs text-gray-600">business days for refund processing</p>
+        </div>
+        <div class="text-center p-4 bg-cyan-50 rounded-lg border border-cyan-100">
+          <p class="text-2xl font-bold text-cyan-600">100%</p>
+          <p class="text-xs text-gray-600">of purchase price refunded on approved claims</p>
+        </div>
+      </div>
+    </div>
 
-    <!-- Chat Bubble -->
+    <!-- Eligible Items -->
+    <div id="eligible" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-tags text-cyan-500"></i>Eligible Items for Return</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">Most items sold on Zorexium Labs are eligible for return within 30 days. The following categories are covered under standard return conditions:</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-microchip text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">Processors &amp; CPUs</p>
+        </div>
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-tv text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">GPUs &amp; Graphics Cards</p>
+        </div>
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-memory text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">Memory &amp; Storage</p>
+        </div>
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-server text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">Motherboards</p>
+        </div>
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-desktop text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">Complete Systems</p>
+        </div>
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-keyboard text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">Peripherals</p>
+        </div>
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-network-wired text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">Networking Gear</p>
+        </div>
+        <div class="text-center p-3 bg-gray-50 rounded-lg">
+          <i class="fas fa-plug text-cyan-500 text-lg mb-1 block"></i>
+          <p class="text-xs text-gray-700">PSUs &amp; Cooling</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Return Conditions -->
+    <div id="conditions" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-clipboard-list text-cyan-500"></i>Return Conditions</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">To qualify for a return, the following conditions must be met at the time the return is initiated and when the item is received back by the seller:</p>
+      <div class="space-y-2">
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Within the Return Window</p>
+            <p class="text-xs text-gray-500">Return must be initiated within 30 days of the confirmed delivery date</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Original Condition</p>
+            <p class="text-xs text-gray-500">Item must be in the same condition as received—no additional damage, modification, or misuse by the buyer</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Complete Contents</p>
+            <p class="text-xs text-gray-500">All included components, accessories, cables, manuals, and packaging must be returned. Missing items may result in a partial refund.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Original Packaging</p>
+            <p class="text-xs text-gray-500">Where possible, return the item in its original packaging. If original packaging is damaged, use suitable protective packaging to prevent transit damage</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Return Authorization</p>
+            <p class="text-xs text-gray-500">A Return Merchandise Authorization (RMA) number must be obtained from the seller or Zorexium support before shipping the item back</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Return Process -->
+    <div id="process" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-route text-cyan-500"></i>Step-by-Step Return Process</h2>
+      <div class="space-y-3">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Contact the Seller</p>
+            <p class="text-xs text-gray-500">Message the seller through the platform to explain the issue. Sellers have 48 hours to respond and propose a resolution. Many returns are resolved at this step without needing Zorexium involvement.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Initiate a Return via Marketplace Settings</p>
+            <p class="text-xs text-gray-500">If the seller doesn't resolve the issue, go to <a href="marketplace-settings.html" class="text-cyan-600 hover:underline">Marketplace Settings &rarr; Return Status</a> and click &ldquo;Start a Return.&rdquo; Select your order and choose a return reason.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Receive Your RMA Number</p>
+            <p class="text-xs text-gray-500">A Return Merchandise Authorization (RMA) number will be issued within 24 hours. Write this clearly on the outside of the return package.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Ship the Item Back</p>
+            <p class="text-xs text-gray-500">Package the item securely and ship it using a trackable shipping method. Keep a copy of the tracking number. For defective or not-as-described items, a prepaid return label will be provided.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">5</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Item Inspection</p>
+            <p class="text-xs text-gray-500">Upon receipt, the seller (or Zorexium in disputed cases) inspects the item to confirm it matches the return condition requirements. This typically takes 1–2 business days.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">6</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Refund Processed</p>
+            <p class="text-xs text-gray-500">Once inspection is complete and approved, your refund is processed within 3–5 business days to the original payment method.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Refund Details -->
+    <div id="refunds" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-money-bill-wave text-cyan-500"></i>Refund Details</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">When a return is approved, refunds are processed to the original payment method. The following table summarizes what is and isn't included in the refund:</p>
+      <div class="overflow-x-auto mb-4">
+        <table class="w-full text-xs">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="text-left px-3 py-2 font-semibold text-gray-700">Item</th>
+              <th class="text-left px-3 py-2 font-semibold text-gray-700">Defective/Not as Described</th>
+              <th class="text-left px-3 py-2 font-semibold text-gray-700">Change of Mind</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr>
+              <td class="px-3 py-2 text-gray-700">Item Purchase Price</td>
+              <td class="px-3 py-2 text-green-600 font-medium">Fully Refunded</td>
+              <td class="px-3 py-2 text-green-600 font-medium">Fully Refunded</td>
+            </tr>
+            <tr class="bg-gray-50">
+              <td class="px-3 py-2 text-gray-700">Original Shipping Paid by Buyer</td>
+              <td class="px-3 py-2 text-green-600 font-medium">Fully Refunded</td>
+              <td class="px-3 py-2 text-red-500">Non-Refundable</td>
+            </tr>
+            <tr>
+              <td class="px-3 py-2 text-gray-700">Return Shipping Cost</td>
+              <td class="px-3 py-2 text-green-600 font-medium">Prepaid Label Provided</td>
+              <td class="px-3 py-2 text-red-500">Buyer's Responsibility</td>
+            </tr>
+            <tr class="bg-gray-50">
+              <td class="px-3 py-2 text-gray-700">Platform Fees</td>
+              <td class="px-3 py-2 text-green-600 font-medium">Waived</td>
+              <td class="px-3 py-2 text-red-500">Non-Refundable</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bg-blue-50 border border-blue-100 rounded-lg p-4">
+        <p class="text-xs text-blue-800"><i class="fas fa-info-circle mr-1"></i><strong>Processing Times:</strong> Credit/debit card refunds typically appear within 5–10 business days depending on your bank. PayPal refunds are typically instant. Store credit is available immediately. We cannot speed up bank processing times once a refund is issued.</p>
+      </div>
+    </div>
+
+    <!-- Defective Items -->
+    <div id="defective" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-cyan-500"></i>Defective or Damaged Items</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">If you receive an item that is defective, damaged in transit, or materially different from the listing description, you are entitled to additional protections under our Marketplace Guarantee.</p>
+      <div class="space-y-3">
+        <div class="bg-green-50 border border-green-100 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-green-800 mb-2"><i class="fas fa-truck mr-1"></i>Damaged in Transit</h3>
+          <p class="text-xs text-gray-600">Photograph the damage (item and packaging) immediately upon receipt. Contact support within 3 business days. We will provide a prepaid return label and either a replacement or full refund, including original shipping costs.</p>
+        </div>
+        <div class="bg-green-50 border border-green-100 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-green-800 mb-2"><i class="fas fa-tools mr-1"></i>Item is Defective</h3>
+          <p class="text-xs text-gray-600">Document the defect with photos and a written description. You may choose between a full refund, a replacement (if the seller has stock), or a partial refund (if you wish to keep the item). Prepaid return label included.</p>
+        </div>
+        <div class="bg-green-50 border border-green-100 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-green-800 mb-2"><i class="fas fa-file-contract mr-1"></i>Not as Described</h3>
+          <p class="text-xs text-gray-600">If the item received is materially different from the listing (wrong model, missing features, different condition grade), you are entitled to a full refund including original shipping. The seller is liable for return shipping costs.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seller Policies -->
+    <div id="seller-types" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-store text-cyan-500"></i>Individual Seller vs. Business Seller Policies</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">Return policies may vary slightly depending on whether you purchased from an individual seller or a registered business seller. Both are subject to our minimum return standards, but business sellers may offer more flexible policies.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center gap-2">
+            <i class="fas fa-user text-cyan-500"></i>
+            <p class="font-semibold text-sm text-gray-800">Individual Sellers</p>
+          </div>
+          <div class="px-4 py-3 space-y-1">
+            <p class="text-xs text-gray-600">&#8226; Minimum 30-day return window (mandatory)</p>
+            <p class="text-xs text-gray-600">&#8226; Returns accepted for defective/not-as-described items</p>
+            <p class="text-xs text-gray-600">&#8226; Change-of-mind returns at seller's discretion</p>
+            <p class="text-xs text-gray-600">&#8226; Zorexium mediates all disputes</p>
+          </div>
+        </div>
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center gap-2">
+            <i class="fas fa-building text-cyan-500"></i>
+            <p class="font-semibold text-sm text-gray-800">Business Sellers</p>
+          </div>
+          <div class="px-4 py-3 space-y-1">
+            <p class="text-xs text-gray-600">&#8226; 30-day minimum, many offer 45–90 days</p>
+            <p class="text-xs text-gray-600">&#8226; May accept change-of-mind returns</p>
+            <p class="text-xs text-gray-600">&#8226; May offer direct replacement or store credit</p>
+            <p class="text-xs text-gray-600">&#8226; Often have dedicated return portals</p>
+          </div>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-3">Always check the seller's individual return policy on the product listing page before purchasing.</p>
+    </div>
+
+    <!-- Non-Returnable -->
+    <div id="non-returnable" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-times-circle text-cyan-500"></i>Non-Returnable Items</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">The following items are generally not eligible for standard returns. Note that defective items in these categories may still qualify under our Marketplace Guarantee.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+          <i class="fas fa-times text-red-500 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <p class="font-semibold text-xs text-gray-800">Opened Software &amp; Digital Products</p>
+            <p class="text-xs text-gray-500">Software licenses and digital activation codes once revealed or used</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+          <i class="fas fa-times text-red-500 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <p class="font-semibold text-xs text-gray-800">Consumable Items</p>
+            <p class="text-xs text-gray-500">Thermal paste, thermal pads, and similar single-use consumables once opened</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+          <i class="fas fa-times text-red-500 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <p class="font-semibold text-xs text-gray-800">Modified or Overclocked Hardware</p>
+            <p class="text-xs text-gray-500">Items showing signs of physical modification or extreme overclocking beyond safe specifications</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+          <i class="fas fa-times text-red-500 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <p class="font-semibold text-xs text-gray-800">Clearly Marked Final Sale Items</p>
+            <p class="text-xs text-gray-500">Clearance, auction, or items listed as &ldquo;Final Sale&rdquo; in the listing description</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+          <i class="fas fa-times text-red-500 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <p class="font-semibold text-xs text-gray-800">Items Purchased Over 30 Days Ago</p>
+            <p class="text-xs text-gray-500">Returns initiated after the 30-day window unless the item is under an active warranty claim</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+          <i class="fas fa-times text-red-500 mt-0.5 text-xs flex-shrink-0"></i>
+          <div>
+            <p class="font-semibold text-xs text-gray-800">Damaged by Buyer</p>
+            <p class="text-xs text-gray-500">Items that were working as described upon receipt but were subsequently damaged by the buyer</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Special Orders -->
+    <div id="special-orders" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-tools text-cyan-500"></i>Special Orders &amp; Custom Builds</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-3">Custom-configured systems, special order enterprise hardware, and bespoke builds are subject to separate return terms that are clearly communicated at the time of purchase confirmation. These terms will be disclosed in your order confirmation email and the product listing.</p>
+      <p class="text-sm text-gray-600 leading-relaxed mb-3">Generally, custom builds are non-returnable except in cases of:</p>
+      <ul class="text-sm text-gray-600 space-y-1.5 list-disc list-inside mb-3">
+        <li>Dead-on-arrival (DOA) systems failing to boot within the first 7 days</li>
+        <li>Specifications materially different from what was ordered</li>
+        <li>Damage sustained during transit</li>
+      </ul>
+      <p class="text-sm text-gray-600 leading-relaxed">If you have concerns about a special order, contact our support team before initiating a return to discuss your options.</p>
+    </div>
+
+    <!-- Dispute Escalation -->
+    <div id="escalation" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-balance-scale text-cyan-500"></i>Dispute Escalation</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">If you and the seller cannot reach a resolution, or if the seller does not respond within 48 hours of your initial contact, you can escalate your case to Zorexium Labs for formal mediation.</p>
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+        <p class="font-semibold text-sm text-amber-800 mb-2"><i class="fas fa-exclamation-triangle mr-1"></i>Before Escalating</p>
+        <p class="text-xs text-amber-700">Please attempt to resolve the issue directly with the seller first. Most disputes are resolved at this stage and faster than waiting for formal review. Escalation is a last resort.</p>
+      </div>
+      <p class="text-sm text-gray-600 mb-3">To escalate: Go to <a href="marketplace-settings.html" class="text-cyan-600 hover:underline">Marketplace Settings &rarr; Claim History</a> and click &ldquo;Escalate to Zorexium.&rdquo; Our Trust &amp; Safety team will review and respond within 48 hours.</p>
+      <p class="text-sm text-gray-600">Full dispute resolution details are available on our <a href="marketplace-guarantee.html" class="text-cyan-600 hover:underline">Marketplace Guarantee</a> page.</p>
+    </div>
+
+    <!-- Contact -->
+    <div id="contact" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-envelope text-cyan-500"></i>Contact Returns Support</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">Have a question about your return or refund? Our dedicated Returns team is here to help.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-comments text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Live Chat</p>
+          <p class="text-xs text-gray-500 mt-1">Click the chat bubble for instant assistance. Available 24/7.</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-envelope text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Email</p>
+          <p class="text-xs text-gray-500 mt-1"><a href="mailto:returns@zorexium.labs" class="text-cyan-600 hover:underline">returns@zorexium.labs</a><br>Response within 24 hours</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-cog text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Self-Service</p>
+          <p class="text-xs text-gray-500 mt-1"><a href="marketplace-settings.html" class="text-cyan-600 hover:underline">Marketplace Settings</a><br>Track and manage returns 24/7</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Chat Bubble -->
     <div class="fixed bottom-6 right-6 z-50">
         <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
             <i class="fas fa-comment-dots text-3xl"></i>
