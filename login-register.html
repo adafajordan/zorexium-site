@@ -22,24 +22,239 @@
     .lr-feature-card { background: #f0fdff; border: 1px solid #a5f3fc; border-radius: 8px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; }
     .lr-btn-secondary { width: 100%; background: #6b7280; color: #fff; font-weight: 700; padding: 11px; border-radius: 6px; font-size: 15px; cursor: pointer; border: none; transition: background 0.15s; }
     .lr-btn-secondary:hover { background: #4b5563; }
-  </style>
+          /* Dropdown menu styles */
+        .nav-dropdown {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+        }
+        .nav-dropdown-trigger:hover .nav-dropdown,
+        .nav-dropdown-trigger.active .nav-dropdown {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        /* Marketplace mega-menu: full-width fixed panel */
+        .marketplace-mega-menu {
+            position: fixed !important;
+            left: 0 !important;
+            right: 0 !important;
+            top: 96px !important;
+            width: 100vw !important;
+            max-width: none !important;
+            border-radius: 0 !important;
+            transform: translateY(-4px);
+        }
+        .nav-dropdown-trigger:hover .marketplace-mega-menu,
+        .nav-dropdown-trigger.active .marketplace-mega-menu {
+            transform: translateY(0);
+        }
+    </style>
+    <script src="open-links-new-tab.js"></script>
+    <script src="cookie-consent.js"></script>
 </head>
 <body class="min-h-screen flex flex-col">
 
 <!-- Top Navigation (stripped by SPA router) -->
-<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
-  <div class="px-6">
-    <div class="flex items-center h-20 gap-6">
-      <a href="index.html" class="flex items-center gap-3 no-underline">
-        <i class="fas fa-microchip text-cyan-400 text-4xl"></i>
-        <div class="flex flex-col">
-          <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
-          <span class="text-cyan-400 font-medium text-sm tracking-widest leading-none">LABS</span>
+<!-- Top Navigation -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="px-4 sm:px-6">
+            <div class="flex justify-between items-center h-24">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="index.html" class="flex-shrink-0 flex items-center gap-3 no-underline">
+                        <div class="text-cyan-400 text-5xl">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-cyan-400 font-bold text-3xl tracking-wide leading-none">ZOREXIUM</span>
+                            <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-8">
+                    <!-- Marketplace (hover or click to reveal) -->
+                    <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
+                        <a href="index.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Marketplace</a>
+                        <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="nav-dropdown marketplace-mega-menu bg-white border-b border-gray-200 shadow-xl z-50">
+                            <div class="px-8 py-5">
+                                <div class="grid grid-cols-10 gap-x-3 gap-y-1">
+                                    <a href="index.html?category=processors&amp;sub=desktop-hedt" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Processors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop &amp; High-End Desktop (HEDT)</span></a>
+                                    <a href="index.html?category=processors&amp;sub=mobile-laptop" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Processors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mobile &amp; Laptop Replacement Chips</span></a>
+                                    <a href="index.html?category=processors&amp;sub=workstation-threadripper" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Processors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Workstation &amp; Threadrippers</span></a>
+                                    <a href="index.html?category=motherboards&amp;sub=enthusiast-atx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Motherboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Enthusiast (ATX/E-ATX)</span></a>
+                                    <a href="index.html?category=motherboards&amp;sub=compact-itx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Motherboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Compact &amp; Small Form Factor (ITX)</span></a>
+                                    <a href="index.html?category=motherboards&amp;sub=server-workstation" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Motherboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Server &amp; Workstation Boards</span></a>
+                                    <a href="index.html?category=graphics-cards&amp;sub=desktop-gaming" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Graphics Cards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop Gaming Cards</span></a>
+                                    <a href="index.html?category=graphics-cards&amp;sub=professional-ai" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Graphics Cards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Professional &amp; AI Rendering Units</span></a>
+                                    <a href="index.html?category=graphics-cards&amp;sub=egpu-docks" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Graphics Cards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">External GPU Docks</span></a>
+                                    <a href="index.html?category=memory-ram&amp;sub=desktop-ddr5-ddr4" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Memory</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop DDR5/DDR4</span></a>
+                                    <a href="index.html?category=memory-ram&amp;sub=laptop-sodimm" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Memory</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Laptop SODIMM</span></a>
+                                    <a href="index.html?category=memory-ram&amp;sub=ecc-server" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Memory</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">ECC &amp; Server Memory</span></a>
+                                    <a href="index.html?category=internal-ssds&amp;sub=nvme-m2" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Internal SSDs</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">NVMe M.2 (Gen4 &amp; Gen5)</span></a>
+                                    <a href="index.html?category=internal-ssds&amp;sub=sata-25" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Internal SSDs</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">2.5&quot; SATA SSDs</span></a>
+                                    <a href="index.html?category=internal-ssds&amp;sub=enterprise-u2" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Internal SSDs</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Enterprise/U.2 Drives</span></a>
+                                    <a href="index.html?category=hard-drives&amp;sub=nas-raid" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Hard Drives</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">NAS &amp; RAID Optimized</span></a>
+                                    <a href="index.html?category=hard-drives&amp;sub=surveillance" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Hard Drives</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Surveillance Rated</span></a>
+                                    <a href="index.html?category=hard-drives&amp;sub=bulk-desktop" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Hard Drives</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Bulk Desktop Storage</span></a>
+                                    <a href="index.html?category=external-storage&amp;sub=portable-rugged" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">External Storage</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Portable Rugged SSDs</span></a>
+                                    <a href="index.html?category=external-storage&amp;sub=desktop-hubs" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">External Storage</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop Expansion Hubs</span></a>
+                                    <a href="index.html?category=external-storage&amp;sub=flash-media" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">External Storage</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Speed Flash Media</span></a>
+                                    <a href="index.html?category=gaming-desktops&amp;sub=entry-esports" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Gaming Desktops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Entry-Level &amp; Esports</span></a>
+                                    <a href="index.html?category=gaming-desktops&amp;sub=high-end-liquid" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Gaming Desktops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-End Liquid Cooled</span></a>
+                                    <a href="index.html?category=gaming-desktops&amp;sub=sff-builds" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Gaming Desktops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Small Form Factor Builds</span></a>
+                                    <a href="index.html?category=laptops&amp;sub=gaming" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Laptops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Performance Gaming</span></a>
+                                    <a href="index.html?category=laptops&amp;sub=ultrabooks" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Laptops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Thin &amp; Light Ultrabooks</span></a>
+                                    <a href="index.html?category=laptops&amp;sub=mobile-workstations" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Laptops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mobile Workstations</span></a>
+                                    <a href="index.html?category=server-solutions&amp;sub=rackmount-blades" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Servers</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Rackmount Chassis &amp; Blades</span></a>
+                                    <a href="index.html?category=server-solutions&amp;sub=tower-servers" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Servers</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Tower Servers</span></a>
+                                    <a href="index.html?category=server-solutions&amp;sub=edge-computing" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Servers</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Edge Computing Nodes</span></a>
+                                    <a href="index.html?category=monitors&amp;sub=ultrawide-curved" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Monitors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Ultra-Wide &amp; Curved Gaming</span></a>
+                                    <a href="index.html?category=monitors&amp;sub=4k-professional" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Monitors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">4K Professional &amp; Creative</span></a>
+                                    <a href="index.html?category=monitors&amp;sub=portable-usbc" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Monitors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Portable USB-C Displays</span></a>
+                                    <a href="index.html?category=mechanical-keyboards&amp;sub=custom-hotswap" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Keyboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Custom &amp; Hot-Swappable Kits</span></a>
+                                    <a href="index.html?category=mechanical-keyboards&amp;sub=low-profile-wireless" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Keyboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Low-Profile Wireless</span></a>
+                                    <a href="index.html?category=mechanical-keyboards&amp;sub=keycaps-switches" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Keyboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Keycaps &amp; Switches</span></a>
+                                    <a href="index.html?category=precision-mice&amp;sub=ultralight-wireless" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Mice</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Ultra-Lightweight Wireless</span></a>
+                                    <a href="index.html?category=precision-mice&amp;sub=ergonomic-productivity" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Mice</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Ergonomic &amp; Productivity</span></a>
+                                    <a href="index.html?category=precision-mice&amp;sub=flight-sim-racing" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Mice</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Flight &amp; Sim Racing Peripherals</span></a>
+                                    <a href="index.html?category=power-supply&amp;sub=atx3" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Power Supply</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">ATX 3.0 &amp; 3.1 Standards</span></a>
+                                    <a href="index.html?category=power-supply&amp;sub=sfx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Power Supply</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">SFX &amp; Small Form Factor</span></a>
+                                    <a href="index.html?category=cooling-solutions&amp;sub=aio-liquid" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Cooling</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">AIO Liquid Coolers</span></a>
+                                    <a href="index.html?category=cooling-solutions&amp;sub=air-towers" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Cooling</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Performance Air Towers</span></a>
+                                    <a href="index.html?category=cooling-solutions&amp;sub=thermal-paste" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Cooling</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Thermal Pastes &amp; Accessories</span></a>
+                                    <a href="index.html?category=pc-cases&amp;sub=mid-full-tower" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">PC Cases</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mid-Tower &amp; Full-Tower</span></a>
+                                    <a href="index.html?category=pc-cases&amp;sub=mini-itx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">PC Cases</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mini-ITX Enclosures</span></a>
+                                    <a href="index.html?category=pc-cases&amp;sub=open-frame" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">PC Cases</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Open-Frame &amp; Test Benches</span></a>
+                                    <a href="index.html?category=networking-gear&amp;sub=wifi7-mesh" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Networking</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Wi-Fi 7 &amp; Mesh Systems</span></a>
+                                    <a href="index.html?category=networking-gear&amp;sub=high-speed-switches" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Networking</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Speed Switches (10G/25G)</span></a>
+                                    <a href="index.html?category=networking-gear&amp;sub=nas" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Networking</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Network Attached Storage (NAS)</span></a>
+                                    <a href="index.html?category=smart-security&amp;sub=ip-poe-cameras" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Smart Security</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">IP &amp; PoE Cameras</span></a>
+                                    <a href="index.html?category=smart-security&amp;sub=smart-access-locks" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Smart Security</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Smart Access &amp; Locks</span></a>
+                                    <a href="index.html?category=smart-security&amp;sub=environment-sensors" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Smart Security</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Environment Sensors (Smoke/Flood)</span></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Community Hub -->
+                    <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+
+                    <!-- Sell Hardware -->
+                    <a id="sellHardwareLink" href="sell-on-zorexium.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+                </nav>
+
+                <!-- Right Side Actions -->
+                <div class="flex items-center space-x-5">
+                    <!-- Account &amp; Lists hover menu – shown only when NOT logged in (replaces cart icon) -->
+                    <div id="headerAccountListsGuest" class="relative hidden nav-dropdown-trigger">
+                        <button class="flex items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md cursor-pointer">
+                            <i class="fas fa-user text-2xl"></i>
+                            <span class="text-sm font-medium whitespace-nowrap">Account &amp; Lists</span>
+                        </button>
+                        <div class="nav-dropdown absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
+                            <!-- Sign In section -->
+                            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 text-center">
+                                <a href="login-register.html" class="block w-full bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors mb-2">Sign In</a>
+                                <p class="text-xs text-gray-500">New to Zorexium? <a href="login-register.html?tab=register" class="text-cyan-600 hover:text-cyan-700 font-medium">Create account</a></p>
+                            </div>
+                            <!-- Support -->
+                            <div class="px-4 py-2 bg-gray-50 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Support</p></div>
+                            <a href="help-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
+                            <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
+                            <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
+                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
+                            <!-- Orders & Returns -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
+                            <a href="order-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
+                            <a href="returns-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-exchange-alt text-cyan-600 w-4 text-center"></i>Returns History</a>
+                            <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
+                            <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
+                            <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
+                            <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
+                            <!-- Zorexium -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
+                            <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
+                            <a href="blog.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="sell-on-zorexium.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-store text-cyan-600 w-4 text-center"></i>Sell on Zorexium</a>
+                            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tachometer-alt text-cyan-600 w-4 text-center"></i>Seller Portal</a>
+                            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tools text-cyan-600 w-4 text-center"></i>Seller Tools</a>
+                        </div>
+                    </div>
+                    <a id="headerCartLink" href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
+                        <i class="fas fa-shopping-cart text-2xl"></i>
+                        <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                    </a>
+
+                    <!-- Inline login form – shown only when NOT logged in -->
+                    <div id="headerLoginForm" class="hidden items-center gap-2">
+                        <input id="headerLoginEmail" type="text" placeholder="Email or username"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-40">
+                        <input id="headerLoginPassword" type="password" placeholder="Password"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-36">
+                        <button id="headerLoginBtn" type="button"
+                            class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors whitespace-nowrap">
+                            Log In
+                        </button>
+                        <a href="login-register.html?forgot=1" class="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap">Forgot account?</a>
+                    </div>
+
+                    <!-- Account &amp; Lists hover menu – shown only when logged in -->
+                    <div id="headerAccountSection" class="relative hidden nav-dropdown-trigger flex-1">
+                        <button class="flex flex-row items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md cursor-pointer w-full">
+                            <i class="fas fa-user text-xl"></i>
+                            <span class="text-sm font-medium whitespace-nowrap">Account &amp; Lists</span>
+                        </button>
+                        <div class="nav-dropdown absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
+                            <!-- User header -->
+                            <div id="headerUserDropdownHead" class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
+                                <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-10 w-10 rounded-full object-cover border border-gray-300 flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <p id="accountMenuUsername" class="text-sm font-semibold text-gray-900 truncate">Account</p>
+                                    <a href="account-details.html" class="text-xs text-cyan-600 hover:text-cyan-700">My Profile</a>
+                                </div>
+                                <a href="#" id="signOutHeader" class="text-xs text-red-600 hover:text-red-700 whitespace-nowrap ml-2">Sign Out</a>
+                            </div>
+                            <!-- Support -->
+                            <div class="px-4 py-2 bg-gray-50 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Support</p></div>
+                            <a href="help-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
+                            <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
+                            <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
+                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
+                            <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
+                            <!-- Orders & Returns -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
+                            <a href="order-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
+                            <a href="returns-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-exchange-alt text-cyan-600 w-4 text-center"></i>Returns History</a>
+                            <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
+                            <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
+                            <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
+                            <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
+                            <!-- Zorexium -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
+                            <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
+                            <a href="blog.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="sell-on-zorexium.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-store text-cyan-600 w-4 text-center"></i>Sell on Zorexium</a>
+                            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tachometer-alt text-cyan-600 w-4 text-center"></i>Seller Portal</a>
+                            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tools text-cyan-600 w-4 text-center"></i>Seller Tools</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </a>
-    </div>
-  </div>
-</header>
+    </header>
 
 <main class="flex-1 bg-gray-50">
 
@@ -500,6 +715,111 @@
       }
     } catch (e) {}
   })();
+</script>
+
+<script>
+  function toggleDropdown(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) {
+      if (d.id !== id) d.classList.remove('active');
+    });
+    el.classList.toggle('active');
+  }
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
+      if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
+    }
+  });
+</script>
+<script src="notifications.js"></script>
+<script src="session.js"></script>
+<script>
+    // Header account/cart wiring
+    (function(){
+        var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+        var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
+        var loginForm    = document.getElementById('headerLoginForm');
+        var acctSection  = document.getElementById('headerAccountSection');
+        var cartLink     = document.getElementById('headerCartLink');
+        var acctListsGuest = document.getElementById('headerAccountListsGuest');
+        var userDropHead = document.getElementById('headerUserDropdownHead');
+        var verifiedBtn  = document.getElementById('verifiedLabsBtn');
+        if(loggedIn){
+            if(cartLink)   { cartLink.classList.remove('hidden'); }
+            if(acctListsGuest){ acctListsGuest.classList.add('hidden'); }
+            if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
+            if(loginForm)  { loginForm.classList.add('hidden'); }
+            if(userDropHead){ userDropHead.classList.remove('hidden'); }
+            if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
+        } else {
+            if(cartLink)   { cartLink.classList.add('hidden'); }
+            if(acctListsGuest){ acctListsGuest.classList.remove('hidden'); acctListsGuest.classList.add('flex'); }
+            if(acctSection){ acctSection.classList.add('hidden'); acctSection.classList.remove('flex'); }
+            if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
+            if(userDropHead){ userDropHead.classList.add('hidden'); }
+            if(verifiedBtn){ verifiedBtn.classList.add('hidden'); }
+        }
+        var sellHardwareLink = document.getElementById('sellHardwareLink');
+        if(sellHardwareLink && loggedIn){
+            ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller')
+                .then(function(r){ return r.ok ? r.json() : {isSeller:false}; })
+                .then(function(data){ if(data.isSeller) sellHardwareLink.href = 'seller-dashboard.html'; })
+                .catch(function(){});
+        }
+        try{
+            if(loggedIn){
+                fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                    .then(function(r){ return r.ok ? r.json() : null; })
+                    .then(function(data){
+                        var count = (data && data.items) ? data.items.length : 0;
+                        var badge = document.getElementById('cartBadgeHeader');
+                        if(badge){ badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+                    }).catch(function(){});
+            }
+        }catch(e){}
+        var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
+        var userNameEl = document.getElementById('accountMenuUsername');
+        if(userNameEl && user) userNameEl.textContent = user.username || user.email || 'Account';
+        const signOut = document.getElementById('signOutHeader');
+        if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out', 'success'); window.location.href='index.html'; }); });
+        const deactivate = document.getElementById('deactivateHeader');
+        if(deactivate) deactivate.addEventListener('click', function(e){ e.preventDefault(); ZrxNotify.showConfirm('Deactivate account?', function(){ ZrxSession.logout(function(){ ZrxNotify.showNotification('Account deactivated', 'success'); window.location.href='index.html'; }); }); });
+        async function doHeaderLogin(){
+            var email    = document.getElementById('headerLoginEmail').value.trim();
+            var password = document.getElementById('headerLoginPassword').value;
+            if(!email || !password){ ZrxNotify.showNotification('Please enter your email/username and password.', 'error'); return; }
+            try{
+                var res  = await fetch(BACKEND_URL + '/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email: email, password: password })
+                });
+                var data = await res.json();
+                if(!res.ok){ ZrxNotify.showNotification(data.error || 'Invalid email or password.', 'error'); return; }
+                if(data.token){
+                    try{
+                        localStorage.setItem('authToken', data.token);
+                        var userInfo = data.user ? { email: data.user.email, username: data.user.firstName || data.user.email } : { email: email, username: email };
+                        localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+                    }catch(ex){}
+                }
+                window.location.reload();
+            }catch(err){
+                ZrxNotify.showNotification('Login failed. Please check your connection and try again.', 'error');
+            }
+        }
+        var loginBtn = document.getElementById('headerLoginBtn');
+        if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
+        var pwdInput = document.getElementById('headerLoginPassword');
+        if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
+    })();
 </script>
 </body>
 </html>
