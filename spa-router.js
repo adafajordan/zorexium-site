@@ -14,63 +14,15 @@
 
     // ── Configuration ──────────────────────────────────────────────────────────
 
-    /** Page basenames handled by the SPA (rather than full page navigations). */
-    var SPA_PAGES = [
-        'product-detail.html',
-        'checkout.html',
-        'account-details.html',
-        'messages.html',
-        'shopping-cart.html',
-        'seller-dashboard.html',
-        'sell-on-zorexium.html',
-        'brand-store.html',
-        'seller-signup.html',
-        'listing-wizard.html',
-        'marketplace-settings.html',
-        'track-your-order.html',
-        'deals-promotions.html',
-        'faq.html',
-        'contact-support.html',
-        'community-hub.html',
-        'general-discussion.html',
-        'tech-discussions.html',
-        'hardware-reviews.html',
-        'innovation-news.html',
-        'troubleshooting-support.html',
-        'hardware-compatibility.html',
-        'getting-started.html',
-        'api-documentation.html',
-        'verified-labs.html',
-        'trusted-seller.html',
-        'ai-ml-accelerators.html',
-        'compute-graphics.html',
-        'networking-data-flow.html',
-        'storage-memory.html',
-        'trading-floor.html',
-        'admin-payouts.html',
-        'seller-payouts.html',
-        'payment-success.html',
-        'success.html',
-        'fulfillment-testing.html',
-        'sell-hardware.html',
-        'cookie-settings.html',
-        'privacy-policy.html',
-        'terms-of-service.html',
-        'return-refund-policy.html',
-        'sellers-guidelines.html',
-        'community-guidelines.html',
-        'trust-center.html',
-        // New dedicated panel pages
-        'help-center.html',
-        'login-register.html',
-        'about.html',
-        'order-history.html',
-        'returns-history.html',
-        'wish-lists.html',
-        'email-notifications.html',
-        'build-lists.html',
-        'build-showcase.html',
-    ];
+    /**
+     * Page basenames handled by the SPA (rather than full page navigations).
+     *
+     * All pages have been removed from this list so that every navigation link
+     * causes a full-page reload.  Product subcategory filtering (category/sub
+     * query-param links on the home page) is handled separately by the
+     * filterHomeProducts interceptor above and does not rely on this list.
+     */
+    var SPA_PAGES = [];
 
     /**
      * Script src filenames already included in index.html.
