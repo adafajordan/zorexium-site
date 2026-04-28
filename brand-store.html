@@ -383,6 +383,14 @@
   let brandSlug = '';
 
   // ── Init ────────────────────────────────────────────────────────────────────
+  function updateBrandPageTitle(name) {
+    brandName = name;
+    document.title = brandName + ' - Brand Store | Zorexium Labs';
+    document.getElementById('pageTitle').textContent = brandName + ' Brand Store - Zorexium Labs';
+    document.getElementById('brandTitle').textContent = brandName;
+    document.getElementById('brandSubtitle').textContent = 'Shop All ' + brandName + ' Products At Zorexium';
+  }
+
   async function init() {
     const params = new URLSearchParams(window.location.search);
     // Support ?brand=, ?name=, ?id= (sellerId), and ?seller= (email/username)
@@ -394,12 +402,7 @@
     // Store sellerId for use in loadProducts
     window._brandStoreSellerId = sellerId;
 
-    // Update page title and hero
-    document.title = brandName + ' - Brand Store | Zorexium Labs';
-    document.getElementById('pageTitle').textContent = brandName + ' Brand Store - Zorexium Labs';
-    document.getElementById('brandTitle').textContent = brandName;
-    document.getElementById('brandSubtitle').textContent = 'Shop All ' + brandName + ' Products At Zorexium';
-
+    updateBrandPageTitle(brandName);
     updateCartBadge();
     await loadProducts();
   }
@@ -429,12 +432,7 @@
       // If page title is still generic and we now have products, derive seller name
       if ((brandName === 'Brand' || !brandName) && allProducts.length > 0) {
         const derivedName = allProducts[0].sellerName || '';
-        if (derivedName) {
-          brandName = derivedName;
-          document.getElementById('brandTitle').textContent = brandName;
-          document.getElementById('brandSubtitle').textContent = 'Shop All ' + brandName + ' Products At Zorexium';
-          document.title = brandName + ' - Brand Store | Zorexium Labs';
-        }
+        if (derivedName) updateBrandPageTitle(derivedName);
       }
     } catch (e) {
       console.error('Failed to load products:', e);

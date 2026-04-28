@@ -409,7 +409,7 @@
               <p class="text-gray-900 font-semibold text-base">${product.condition || 'New'}</p>
             </div>
             <div class="flex items-center gap-3 text-base">
-              ${product.rating ? `<div class="text-yellow-400"><i class="fas fa-star"></i></div><div class="text-gray-400 text-sm">${parseFloat(product.rating).toFixed(1)}</div>` : ''}
+              ${(function() { var r = parseFloat(product.rating); return (!isNaN(r) && r > 0) ? '<div class="text-yellow-400"><i class="fas fa-star"></i></div><div class="text-gray-400 text-sm">' + r.toFixed(1) + '</div>' : ''; })()}
             </div>
           </div>
           <div class="flex justify-between items-center">

@@ -844,8 +844,9 @@
           document.getElementById('productPrice').innerText = '$' + priceNum.toFixed(2);
           var strikePriceEl = document.getElementById('productStrikePrice');
           if (strikePriceEl) {
-            if (strikePrice && parseFloat(strikePrice) > priceNum) {
-              strikePriceEl.innerText = '$' + parseFloat(strikePrice).toFixed(2);
+            var strikePriceNum = strikePrice != null ? parseFloat(strikePrice) : NaN;
+            if (!isNaN(strikePriceNum) && strikePriceNum > priceNum) {
+              strikePriceEl.innerText = '$' + strikePriceNum.toFixed(2);
               strikePriceEl.classList.remove('hidden');
             } else {
               strikePriceEl.classList.add('hidden');
@@ -875,11 +876,20 @@
           // Image gallery thumbnails (if multiple images stored)
           var galleryEl = document.getElementById('productImageGallery');
           if (galleryEl && currentProduct.images.length > 1) {
-            galleryEl.innerHTML = currentProduct.images.map(function(src, i) {
-              return '<img src="' + src + '" alt="Product image ' + (i + 1) + '" class="w-16 h-16 object-contain border rounded cursor-pointer hover:border-cyan-400 p-1" ' +
-                'onclick="document.getElementById(\'productImage\').src=this.src" ' +
-                'onerror="this.style.display=\'none\'">';
-            }).join('');
+            galleryEl.innerHTML = '';
+            currentProduct.images.forEach(function(src, i) {
+              if (typeof src !== 'string') return;
+              var thumb = document.createElement('img');
+              thumb.src = src;
+              thumb.alt = 'Product image ' + (i + 1);
+              thumb.className = 'w-16 h-16 object-contain border rounded cursor-pointer hover:border-cyan-400 p-1';
+              thumb.addEventListener('click', function() {
+                var mainImg = document.getElementById('productImage');
+                if (mainImg) mainImg.src = src;
+              });
+              thumb.onerror = function() { this.style.display = 'none'; };
+              galleryEl.appendChild(thumb);
+            });
             galleryEl.classList.remove('hidden');
           } else if (galleryEl) {
             galleryEl.classList.add('hidden');

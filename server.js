@@ -373,8 +373,8 @@ app.post('/api/products', verifyToken, async function(req, res) {
       }
     }
 
-    const parsedSalePrice = salePrice != null ? parseFloat(salePrice) : null;
-    const parsedOriginalPrice = originalPrice != null ? parseFloat(originalPrice) : null;
+    const parsedSalePrice = (salePrice != null && salePrice !== '') ? parseFloat(salePrice) : null;
+    const parsedOriginalPrice = (originalPrice != null && originalPrice !== '') ? parseFloat(originalPrice) : null;
 
     const product = {
       name,
