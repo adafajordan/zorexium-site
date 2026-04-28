@@ -16,7 +16,6 @@
 
     /** Page basenames handled by the SPA (rather than full page navigations). */
     var SPA_PAGES = [
-        'marketplace.html',
         'product-detail.html',
         'checkout.html',
         'account-details.html',
@@ -64,7 +63,6 @@
         // New dedicated panel pages
         'help-center.html',
         'login-register.html',
-        'signup-login.html',
         'about.html',
         'order-history.html',
         'returns-history.html',
@@ -205,7 +203,7 @@
         // When filterHomeProducts is available (home panel is shown) intercept
         // category/subcategory link clicks and filter the home grid in-place
         // instead of loading the full marketplace page.
-        if (href.includes('marketplace.html?category=') &&
+        if ((href.includes('index.html?category=') || href.includes('?category=')) &&
                 typeof window.filterHomeProducts === 'function') {
             var params = new URLSearchParams(href.split('?')[1] || '');
             var categoryKey = params.get('category') || '';
