@@ -11,13 +11,9 @@
     body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .form-input { background-color: #f9fafb; border: 1px solid #e5e7eb; color: #1f2937; padding: 12px 16px; border-radius: 6px; width: 100%; margin-bottom: 12px; }
-    .form-input:focus { outline: none; border-color: #65a30d; }
-    .btn-primary { background-color: #65a30d; color: white; padding: 12px 24px; border-radius: 6px; font-weight: 600; transition: all 0.2s; }
-    .btn-primary:hover { background-color: #4d7c0f; }
-    .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; }
-    .alert-error { background-color: #7f1d1d; color: #fca5a5; }
-    .alert-success { background-color: #15803d; color: #86efac; }
+    .form-input { background-color: #ffffff; border: 1px solid #d1d5db; color: #111827; padding: 10px 14px; border-radius: 8px; width: 100%; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .form-input:focus { border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,0.15); }
+    .step-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#22d3ee; color:#0b1a27; font-size:13px; font-weight:700; margin-right:10px; flex-shrink:0; }
   
         /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
         .marketplace-mega-menu {
@@ -167,7 +163,7 @@
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
                             <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
                             <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
-                            <a href="community-hub.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="blog.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
                             <a href="sell-on-zorexium.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-store text-cyan-600 w-4 text-center"></i>Sell on Zorexium</a>
                             <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tachometer-alt text-cyan-600 w-4 text-center"></i>Seller Portal</a>
                             <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tools text-cyan-600 w-4 text-center"></i>Seller Tools</a>
@@ -228,7 +224,7 @@
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
                             <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
                             <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
-                            <a href="community-hub.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="blog.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
                             <a href="sell-on-zorexium.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-store text-cyan-600 w-4 text-center"></i>Sell on Zorexium</a>
                             <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tachometer-alt text-cyan-600 w-4 text-center"></i>Seller Portal</a>
                             <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tools text-cyan-600 w-4 text-center"></i>Seller Tools</a>
@@ -241,100 +237,223 @@
 
 
 <!-- Main Content -->
-<main class="flex-1 max-w-4xl mx-auto px-6 sm:px-8 lg:px-10 py-12 w-full">
-  <div class="mb-12">
-    <h1 class="text-5xl font-bold text-gray-900 mb-2">Become a Seller</h1>
-    <p class="text-gray-400">Start selling high-quality hardware to the Zorexium Labs community</p>
+<main class="flex-1 bg-gray-50">
+
+  <!-- Page Breadcrumb -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-3">
+      <div class="flex items-center gap-2 text-sm text-gray-500">
+        <a href="sell-on-zorexium.html" class="hover:text-cyan-600 transition-colors">Sell on Zorexium</a>
+        <i class="fas fa-chevron-right text-xs text-gray-300"></i>
+        <span class="text-gray-900 font-medium">Seller Application</span>
+      </div>
+    </div>
   </div>
 
-  <div class="bg-[#20232a] border border-gray-700 rounded-lg p-8 max-w-2xl">
-    <div id="errorAlert" class="alert alert-error hidden mb-6"></div>
-    <div id="successAlert" class="alert alert-success hidden mb-6"></div>
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
-    <form onsubmit="handleSellerSignup(event)">
-      <div class="mb-8">
-        <label class="block text-white font-semibold mb-2">Seller Type</label>
-        <div class="flex gap-6">
-          <label class="inline-flex items-center"><input type="radio" name="accountType" value="business" checked class="mr-2">Business</label>
-          <label class="inline-flex items-center"><input type="radio" name="accountType" value="individual" class="mr-2">Individual</label>
-        </div>
-        <p class="text-gray-400 text-base mt-1">Choose whether you register as a business or an individual seller.</p>
-      </div>
-      <div class="mb-8">
-        <label class="block text-white font-semibold mb-2">Shop Name</label>
-        <input type="text" id="shopName" class="form-input" placeholder="Enter your shop name" maxlength="50" required>
-        <p class="text-gray-400 text-base mt-1">This will be your seller name displayed to customers</p>
-      </div>
-
-      <div class="mb-8">
-        <label class="block text-white font-semibold mb-2">Shop Description</label>
-        <textarea id="shopDescription" class="form-input" placeholder="Describe your shop and specialties..." rows="4" maxlength="500" required></textarea>
-        <p class="text-gray-400 text-base mt-1">Tell customers what you specialize in</p>
-      </div>
-
-      <div id="businessFields">
-      <div class="mb-8">
-        <label class="block text-white font-semibold mb-2">Business Email</label>
-        <input type="email" id="businessEmail" class="form-input" placeholder="business@example.com">
-        <p class="text-gray-400 text-base mt-1">For business inquiries and order notifications</p>
-      </div>
-
-      <div class="mb-8">
-        <label class="block text-white font-semibold mb-2">Phone Number</label>
-        <input type="tel" id="phoneNumber" class="form-input" placeholder="+1 (555) 000-0000">
-        <p class="text-gray-400 text-base mt-1">For customer support and verification</p>
-      </div>
-
-      <div class="mb-8">
-        <label class="block text-white font-semibold mb-2">Business Address</label>
-        <input type="text" id="businessAddress" class="form-input" placeholder="Street address">
-        <input type="text" id="businessCity" class="form-input" placeholder="City">
-        <input type="text" id="businessState" class="form-input" placeholder="State/Province">
-        <input type="text" id="businessZip" class="form-input" placeholder="ZIP/Postal Code">
-        <p class="text-gray-400 text-base mt-1">For shipping and verification purposes</p>
-      </div>
-      </div>
-
-      <div id="individualFields" class="hidden">
+      <!-- Form Column -->
+      <div class="lg:col-span-2">
         <div class="mb-8">
-          <label class="block text-white font-semibold mb-2">Full Name</label>
-          <input type="text" id="personalName" class="form-input" placeholder="Your full name">
+          <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Become a Seller</h1>
+          <p class="text-gray-500 text-base">Start selling high-quality hardware to the Zorexium Labs community</p>
         </div>
-        <div class="mb-8">
-          <label class="block text-white font-semibold mb-2">Email</label>
-          <input type="email" id="personalEmail" class="form-input" placeholder="you@example.com">
-        </div>
-        <div class="mb-8">
-          <label class="block text-white font-semibold mb-2">Shipping Address</label>
-          <input type="text" id="shippingAddress" class="form-input" placeholder="Street address">
-          <input type="text" id="shippingCity" class="form-input" placeholder="City">
-          <input type="text" id="shippingState" class="form-input" placeholder="State/Province">
-          <input type="text" id="shippingZip" class="form-input" placeholder="ZIP/Postal Code">
+
+        <div id="errorAlert" class="hidden bg-red-50 border border-red-300 text-red-700 rounded-lg p-4 mb-6 text-sm"></div>
+        <div id="successAlert" class="hidden bg-green-50 border border-green-300 text-green-700 rounded-lg p-4 mb-6 text-sm"></div>
+
+        <form onsubmit="handleSellerSignup(event)" class="space-y-5">
+
+          <!-- Step 1: Seller Type -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-gray-900 mb-1 flex items-center">
+              <span class="step-badge">1</span>Seller Type
+            </h2>
+            <p class="text-gray-500 text-sm mb-4 ml-9">Choose whether you register as a business or an individual seller.</p>
+            <div class="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-cyan-300 transition-colors" id="typeBusinessLabel">
+                <input type="radio" name="accountType" value="business" checked class="mt-0.5 accent-cyan-500" id="typeBusinessRadio">
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">Business</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Registered companies, retailers &amp; hardware brands</p>
+                </div>
+              </label>
+              <label class="flex items-start gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-cyan-300 transition-colors" id="typeIndividualLabel">
+                <input type="radio" name="accountType" value="individual" class="mt-0.5 accent-cyan-500" id="typeIndividualRadio">
+                <div>
+                  <p class="font-semibold text-gray-900 text-sm">Individual</p>
+                  <p class="text-xs text-gray-500 mt-0.5">Personal sellers, hobbyists &amp; part-time resellers</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Step 2: Shop Details -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
+              <span class="step-badge">2</span>Shop Details
+            </h2>
+            <div class="ml-9 space-y-5">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5" for="shopName">Shop Name <span class="text-red-500">*</span></label>
+                <input type="text" id="shopName" class="form-input" placeholder="e.g. TechParts Pro" maxlength="50" required>
+                <p class="text-xs text-gray-400 mt-1">This will be your seller name displayed to all customers (max 50 characters)</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5" for="shopDescription">Shop Description <span class="text-red-500">*</span></label>
+                <textarea id="shopDescription" class="form-input resize-none" placeholder="Tell customers what you specialize in — types of hardware, brands you carry, your return policy, etc." rows="4" maxlength="500" required></textarea>
+                <p class="text-xs text-gray-400 mt-1">Max 500 characters. A strong description builds buyer trust.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Business Info -->
+          <div id="businessFields" class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
+              <span class="step-badge">3</span>Business Information
+            </h2>
+            <div class="ml-9 space-y-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5" for="businessEmail">Business Email <span class="text-red-500">*</span></label>
+                  <input type="email" id="businessEmail" class="form-input" placeholder="sales@yourbusiness.com">
+                  <p class="text-xs text-gray-400 mt-1">For order notifications &amp; inquiries</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5" for="phoneNumber">Phone Number <span class="text-red-500">*</span></label>
+                  <input type="tel" id="phoneNumber" class="form-input" placeholder="+1 (555) 000-0000">
+                  <p class="text-xs text-gray-400 mt-1">For verification &amp; support</p>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Business Address <span class="text-red-500">*</span></label>
+                <input type="text" id="businessAddress" class="form-input mb-3" placeholder="Street address">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <input type="text" id="businessCity" class="form-input" placeholder="City">
+                  <input type="text" id="businessState" class="form-input" placeholder="State / Province">
+                  <input type="text" id="businessZip" class="form-input" placeholder="ZIP / Postal Code">
+                </div>
+                <p class="text-xs text-gray-400 mt-2">Used for shipping, tax, and identity verification</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 (Individual): Personal Info -->
+          <div id="individualFields" class="hidden bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
+              <span class="step-badge">3</span>Personal Information
+            </h2>
+            <div class="ml-9 space-y-5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5" for="personalName">Full Name <span class="text-red-500">*</span></label>
+                  <input type="text" id="personalName" class="form-input" placeholder="Your full name">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1.5" for="personalEmail">Email <span class="text-red-500">*</span></label>
+                  <input type="email" id="personalEmail" class="form-input" placeholder="you@example.com">
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1.5">Shipping / Return Address <span class="text-xs text-gray-400 font-normal">(optional)</span></label>
+                <input type="text" id="shippingAddress" class="form-input mb-3" placeholder="Street address">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <input type="text" id="shippingCity" class="form-input" placeholder="City">
+                  <input type="text" id="shippingState" class="form-input" placeholder="State / Province">
+                  <input type="text" id="shippingZip" class="form-input" placeholder="ZIP / Postal Code">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Agreement -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
+              <span class="step-badge">4</span>Seller Agreement
+            </h2>
+            <div class="ml-9 space-y-4">
+              <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600 space-y-1.5">
+                <p class="font-medium text-gray-700">By registering as a seller, you agree to:</p>
+                <ul class="list-disc list-inside space-y-1 text-gray-500">
+                  <li>Accurately represent all products and their condition</li>
+                  <li>Ship orders within the stated handling time</li>
+                  <li>Maintain responsive customer communication</li>
+                  <li>Comply with all applicable laws and regulations</li>
+                </ul>
+              </div>
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" id="agreeTerms" required class="w-4 h-4 mt-0.5 accent-cyan-500 flex-shrink-0">
+                <span class="text-sm text-gray-700">I have read and agree to the <a href="terms-of-service.html" class="text-cyan-600 hover:text-cyan-700 font-medium">Seller Terms &amp; Conditions</a> and <a href="sellers-guidelines.html" class="text-cyan-600 hover:text-cyan-700 font-medium">Seller Guidelines</a>.</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Submit Buttons -->
+          <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3.5 px-8 rounded-xl text-base transition-colors flex items-center justify-center gap-2">
+              <i class="fas fa-rocket"></i> Submit Application
+            </button>
+            <a href="sell-on-zorexium.html" class="px-8 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-center text-base transition-colors">
+              Cancel
+            </a>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="lg:col-span-1">
+        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm sticky top-28">
+          <h3 class="font-bold text-gray-900 text-lg mb-5">What You'll Get</h3>
+          <ul class="space-y-4">
+            <li class="flex items-start gap-3 text-sm text-gray-600">
+              <i class="fas fa-tachometer-alt text-cyan-500 mt-0.5 w-4 flex-shrink-0"></i>
+              <div><span class="font-semibold text-gray-800">Seller Dashboard</span><br><span class="text-gray-500">Manage products, orders &amp; revenue in one place</span></div>
+            </li>
+            <li class="flex items-start gap-3 text-sm text-gray-600">
+              <i class="fas fa-magic text-cyan-500 mt-0.5 w-4 flex-shrink-0"></i>
+              <div><span class="font-semibold text-gray-800">Listing Wizard</span><br><span class="text-gray-500">Create professional product pages in minutes</span></div>
+            </li>
+            <li class="flex items-start gap-3 text-sm text-gray-600">
+              <i class="fas fa-user-circle text-cyan-500 mt-0.5 w-4 flex-shrink-0"></i>
+              <div><span class="font-semibold text-gray-800">Public Seller Profile</span><br><span class="text-gray-500">Visible to all buyers on the marketplace</span></div>
+            </li>
+            <li class="flex items-start gap-3 text-sm text-gray-600">
+              <i class="fas fa-box text-cyan-500 mt-0.5 w-4 flex-shrink-0"></i>
+              <div><span class="font-semibold text-gray-800">Order Management</span><br><span class="text-gray-500">Track &amp; fulfil orders with ease</span></div>
+            </li>
+            <li class="flex items-start gap-3 text-sm text-gray-600">
+              <i class="fas fa-money-bill-wave text-cyan-500 mt-0.5 w-4 flex-shrink-0"></i>
+              <div><span class="font-semibold text-gray-800">Fast Stripe Payouts</span><br><span class="text-gray-500">Earnings deposited directly to your bank</span></div>
+            </li>
+            <li class="flex items-start gap-3 text-sm text-gray-600">
+              <i class="fas fa-star text-cyan-500 mt-0.5 w-4 flex-shrink-0"></i>
+              <div><span class="font-semibold text-gray-800">Ratings &amp; Reviews</span><br><span class="text-gray-500">Build trust with verified buyer feedback</span></div>
+            </li>
+            <li class="flex items-start gap-3 text-sm text-gray-600">
+              <i class="fas fa-chart-line text-cyan-500 mt-0.5 w-4 flex-shrink-0"></i>
+              <div><span class="font-semibold text-gray-800">Analytics &amp; Insights</span><br><span class="text-gray-500">Real-time sales stats &amp; traffic data</span></div>
+            </li>
+          </ul>
+
+          <div class="mt-6 pt-5 border-t border-gray-100">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="fas fa-shield-alt text-green-500 w-4"></i>
+              <span class="text-sm font-semibold text-gray-800">Seller Protection</span>
+            </div>
+            <p class="text-xs text-gray-500">Payments via Stripe with fraud detection &amp; a dedicated disputes team.</p>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-gray-100">
+            <p class="text-xs text-gray-400 mb-2">Already a seller?</p>
+            <a href="seller-dashboard.html" class="block text-center text-sm font-semibold text-cyan-600 hover:text-cyan-700 border border-cyan-200 hover:border-cyan-400 rounded-lg py-2 transition-colors">
+              Go to Seller Dashboard <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+          </div>
         </div>
       </div>
 
-      <div class="mb-8 p-4 bg-[#2a2e38] border border-gray-600 rounded">
-        <label class="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" id="agreeTerms" required class="w-4 h-4">
-          <span class="text-gray-300">I agree to the <a href="terms-of-service.html" class="text-cyan-400 hover:text-cyan-300">Seller Terms & Conditions</a></span>
-        </label>
-      </div>
-
-      <div class="flex gap-3">
-        <button type="submit" class="btn-primary flex-1">Become a Seller</button>
-        <a href="sell-hardware.html" class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-md font-semibold text-center">Cancel</a>
-      </div>
-    </form>
-
-    <div class="mt-12 pt-8 border-t border-gray-700">
-      <h3 class="text-white font-semibold mb-6">What You'll Get:</h3>
-      <ul class="space-y-3 text-gray-300">
-        <li class="flex gap-3"><i class="fas fa-check text-green-500 mt-1"></i> Seller dashboard to manage products</li>
-        <li class="flex gap-3"><i class="fas fa-check text-green-500 mt-1"></i> Easy product listing with detailed specifications</li>
-        <li class="flex gap-3"><i class="fas fa-check text-green-500 mt-1"></i> Public seller profile visible to all buyers</li>
-        <li class="flex gap-3"><i class="fas fa-check text-green-500 mt-1"></i> Order management and fulfillment tools</li>
-        <li class="flex gap-3"><i class="fas fa-check text-green-500 mt-1"></i> Seller ratings and reviews from customers</li>
-      </ul>
     </div>
   </div>
 </main>
@@ -455,19 +574,31 @@
     });
   });
 
-  // Toggle business/individual fields
+  // Toggle business/individual fields + highlight selected label
+  function updateTypeLabels() {
+    const val = document.querySelector('input[name="accountType"]:checked').value;
+    const bizLabel = document.getElementById('typeBusinessLabel');
+    const indLabel = document.getElementById('typeIndividualLabel');
+    if (bizLabel && indLabel) {
+      bizLabel.classList.toggle('border-cyan-500', val === 'business');
+      bizLabel.classList.toggle('bg-cyan-50', val === 'business');
+      bizLabel.classList.toggle('border-gray-200', val !== 'business');
+      indLabel.classList.toggle('border-cyan-500', val === 'individual');
+      indLabel.classList.toggle('bg-cyan-50', val === 'individual');
+      indLabel.classList.toggle('border-gray-200', val !== 'individual');
+    }
+    if (val === 'business') {
+      document.getElementById('businessFields').classList.remove('hidden');
+      document.getElementById('individualFields').classList.add('hidden');
+    } else {
+      document.getElementById('businessFields').classList.add('hidden');
+      document.getElementById('individualFields').classList.remove('hidden');
+    }
+  }
   document.querySelectorAll('input[name="accountType"]').forEach(function(r){
-    r.addEventListener('change', function(){
-      const val = document.querySelector('input[name="accountType"]:checked').value;
-      if (val === 'business') {
-        document.getElementById('businessFields').classList.remove('hidden');
-        document.getElementById('individualFields').classList.add('hidden');
-      } else {
-        document.getElementById('businessFields').classList.add('hidden');
-        document.getElementById('individualFields').classList.remove('hidden');
-      }
-    });
+    r.addEventListener('change', updateTypeLabels);
   });
+  updateTypeLabels();
 
   // Preselect seller type from URL param if provided (e.g., ?type=business)
   (function preselectFromUrl(){
