@@ -644,8 +644,8 @@
           if (Array.isArray(bp)) {
             sellerData.products = bp.map(function(p) {
               return { id: p._id ? String(p._id) : (p.id || ''), name: p.name || '', description: p.description || '',
-                price: p.price || 0, category: p.category || '', condition: p.condition || 'used',
-                image: p.image || '', specs: p.specifications || p.specs || {} };
+                price: p.price || 0, category: p.category || '', condition: p.condition || 'new',
+                image: p.image || '', specs: p.specifications || {} };
             });
           }
         }

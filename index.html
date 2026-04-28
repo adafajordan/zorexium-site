@@ -855,7 +855,7 @@
                         var items = [];
                         if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
                         var existing = items.find(function(item) { return item.id === productId; });
-                        if (existing) { existing.quantity += 1; } else { items.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
+                        if (existing) { existing.quantity += 1; } else { items.push({ id: productId, name: name, price: price, quantity: 1, image: image, sellerName: product.sellerName || '' }); }
                         await ZrxSession.fetch(BACKEND_URL + '/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: items }) });
                         var badge = document.getElementById('cartBadgeHeader');
                         if (badge) { badge.textContent = items.length; badge.classList.toggle('hidden', items.length === 0); }
@@ -868,7 +868,7 @@
                     var guestCart = [];
                     try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (err) { console.error('Failed to read guest cart:', err); }
                     var existingGuest = guestCart.find(function(item) { return item.id === productId; });
-                    if (existingGuest) { existingGuest.quantity += 1; } else { guestCart.push({ id: productId, name: name, price: price, quantity: 1, image: image }); }
+                    if (existingGuest) { existingGuest.quantity += 1; } else { guestCart.push({ id: productId, name: name, price: price, quantity: 1, image: image, sellerName: product.sellerName || '' }); }
                     try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (err) { console.error('Failed to save guest cart:', err); }
                 }
                 if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');
@@ -920,7 +920,7 @@
 
                 // Try subcategory match first; fall back to category-only if nothing matches
                 var filtered = subNorm
-                    ? all.filter(function(p) { return (p.subcategory || p.sub || '').toLowerCase().trim() === subNorm; })
+                    ? all.filter(function(p) { return (p.subcategory || '').toLowerCase().trim() === subNorm; })
                     : [];
                 if (filtered.length === 0) {
                     filtered = all.filter(function(p) { return (p.category || '').toLowerCase().trim() === catNorm; });
