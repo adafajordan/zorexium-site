@@ -447,26 +447,26 @@
 
         <!-- ── Payouts Tab ── -->
         <div id="tab-payouts" class="dash-tab space-y-5">
-          <!-- Stripe Connect Status -->
+          <!-- Payout Account Status -->
           <div class="bg-white border border-gray-200 rounded-xl p-5">
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h2 class="text-lg font-semibold text-gray-900">Payment Account</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Stripe Connect for receiving payouts</p>
+                <p class="text-sm text-gray-500 mt-0.5">Direct bank transfer for receiving payouts</p>
               </div>
               <div id="stripeStatusBadge" class="text-sm font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600">Not Connected</div>
             </div>
             <div id="stripeConnectSection" class="mt-3">
-              <p class="text-sm text-gray-600 mb-4">Connect your Stripe account to receive payouts from your sales. It only takes a few minutes.</p>
-              <button onclick="startStripeOnboarding()" class="btn-primary text-sm">
-                <i class="fab fa-stripe-s"></i> Connect with Stripe
+              <p class="text-sm text-gray-600 mb-4">Connect your bank account to receive payouts from your sales. It only takes a few minutes.</p>
+              <button onclick="startPayoutOnboarding()" class="btn-primary text-sm">
+                <i class="fas fa-university"></i> Connect Bank Account
               </button>
             </div>
             <div id="stripeConnectedSection" class="hidden mt-3">
               <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <i class="fas fa-check-circle text-green-500 text-xl"></i>
                 <div>
-                  <p class="text-sm font-semibold text-green-800">Stripe account connected</p>
+                  <p class="text-sm font-semibold text-green-800">Bank account connected</p>
                   <p class="text-xs text-green-700 mt-0.5">You are set up to receive payouts from your sales.</p>
                 </div>
               </div>
@@ -881,7 +881,7 @@
           return '<tr class="border-b border-gray-100">' +
             '<td class="px-4 py-3 text-gray-700">' + fmtDate(p.createdAt || p.date) + '</td>' +
             '<td class="px-4 py-3 font-semibold text-gray-900">' + fmtCurrency(p.amount) + '</td>' +
-            '<td class="px-4 py-3 text-gray-600">' + escHtml(p.method || 'Stripe') + '</td>' +
+            '<td class="px-4 py-3 text-gray-600">' + escHtml(p.method || 'Bank Transfer') + '</td>' +
             '<td class="px-4 py-3">' + statusBadge(p.status || 'pending') + '</td>' +
             '</tr>';
         }).join('') +
@@ -891,14 +891,14 @@
     }
   }
 
-  async function startStripeOnboarding() {
+  async function startPayoutOnboarding() {
     try {
       const res = await fetch('/onboard-seller', { method: 'POST' });
       const data = await res.json();
       if (data.url) { window.location.href = data.url; }
-      else { ZrxNotify.showNotification('Failed to start Stripe onboarding: ' + (data.error || 'Unknown error'), 'error'); }
+      else { ZrxNotify.showNotification('Failed to connect payout account: ' + (data.error || 'Unknown error'), 'error'); }
     } catch(_) {
-      ZrxNotify.showNotification('Failed to start Stripe onboarding. Please try again.', 'error');
+      ZrxNotify.showNotification('Failed to connect payout account. Please try again.', 'error');
     }
   }
 

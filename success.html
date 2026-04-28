@@ -91,7 +91,7 @@
                 document.getElementById('seller-status').classList.remove('text-yellow-400');
                 document.getElementById('seller-status').classList.add('text-green-400');
 
-                // Update seller profile on backend with Stripe account ID
+                // Update seller profile on backend with payout account ID
                 // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
                 if (ZrxSession.isLoggedIn()) {
                     try {
@@ -102,7 +102,7 @@
                             body: JSON.stringify({ stripeAccountId: accountId, stripeVerified: true })
                         });
                     } catch (e) {
-                        console.error('Could not update seller stripe info on backend:', e);
+                        console.error('Could not update seller payout info on backend:', e);
                     }
                 }
             } else {
