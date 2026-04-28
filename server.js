@@ -305,7 +305,8 @@ app.get('/api/products', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
-    const query = {};
+    // Fix 3: exclude rejected and draft products from the public listing
+    const query = { status: { $nin: ['rejected', 'draft'] } };
     const brand = req.query.brand;
     if (brand) {
       // Escape all special regex characters before building the pattern
@@ -330,7 +331,15 @@ app.post('/api/products', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const { name, price, category, description, image, condition, specifications, sellerName, sellerUsername } = req.body;
+    // Fix 1: destructure all extended wizard fields in addition to the core fields
+    const {
+      name, price, category, description, image, images,
+      condition, specifications, sellerName, sellerUsername,
+      brand, model, productType, subcategory, tags, attributes, variations,
+      sku, gtin, salePrice, quantity, minQty, maxQty, lowStockThreshold,
+      trackInventory, shipping, shortDescription, features, videoUrl,
+      documents, compliance, status: requestedStatus
+    } = req.body;
 
     if (!name || price === undefined || price === null || !category) {
       return res.status(400).json({ error: 'name, price, and category are required' });
@@ -340,6 +349,12 @@ app.post('/api/products', verifyToken, async function(req, res) {
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       return res.status(400).json({ error: 'price must be a non-negative number' });
     }
+
+    // Fix 2: accept 'draft' from the wizard; resolve status (default to 'pending' if not provided)
+    const validCreateStatuses = ['pending', 'active', 'approved', 'draft'];
+    const resolvedStatus = (typeof requestedStatus === 'string' && validCreateStatuses.includes(requestedStatus))
+      ? requestedStatus
+      : 'pending';
 
     // Resolve display name: use provided sellerName/sellerUsername or fall back to user's firstName from DB
     let resolvedSellerName = (typeof sellerName === 'string' && sellerName.trim()) ? sellerName.trim()
@@ -359,18 +374,46 @@ app.post('/api/products', verifyToken, async function(req, res) {
       }
     }
 
+    // Fix 9: persist the images array; derive single image from it if not explicitly provided
+    const resolvedImages = Array.isArray(images) ? images : [];
+    const resolvedImage = (typeof image === 'string' && image) ? image
+      : (resolvedImages.length > 0 ? resolvedImages[0] : '');
+
     const product = {
       name,
       price: parsedPrice,
       category,
       description: description || '',
-      image: image || '',
-      condition: condition || 'used',
+      shortDescription: shortDescription || '',
+      image: resolvedImage,
+      images: resolvedImages,
+      condition: condition || 'new',
       specifications: specifications || {},
+      // Fix 1: extended fields from listing wizard
+      brand: brand || '',
+      model: model || '',
+      productType: productType || '',
+      subcategory: subcategory || '',
+      tags: tags || '',
+      attributes: attributes || {},
+      variations: Array.isArray(variations) ? variations : [],
+      sku: sku || '',
+      gtin: gtin || '',
+      salePrice: (salePrice !== undefined && salePrice !== null) ? parseFloat(salePrice) || null : null,
+      quantity: parseInt(quantity) || 0,
+      minQty: parseInt(minQty) || 1,
+      maxQty: maxQty !== undefined && maxQty !== null ? parseInt(maxQty) || null : null,
+      lowStockThreshold: lowStockThreshold !== undefined && lowStockThreshold !== null ? parseInt(lowStockThreshold) || null : null,
+      trackInventory: !!trackInventory,
+      shipping: shipping || {},
+      features: Array.isArray(features) ? features : [],
+      videoUrl: videoUrl || '',
+      documents: Array.isArray(documents) ? documents : [],
+      compliance: compliance || {},
       sellerId: req.userId,
       sellerName: resolvedSellerName || null,
       sellerUsername: resolvedSellerUsername || null,
-      status: 'pending',
+      status: resolvedStatus,
       createdAt: new Date()
     };
 
@@ -439,7 +482,15 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
       return res.status(403).json({ error: 'Forbidden: you do not own this product' });
     }
 
-    const { name, price, category, description, image, condition, specifications, status } = req.body;
+    // Fix 1: accept all extended wizard fields; Fix 2: include 'draft' as a valid status
+    const {
+      name, price, category, description, image, images,
+      condition, specifications, status,
+      brand, model, productType, subcategory, tags, attributes, variations,
+      sku, gtin, salePrice, quantity, minQty, maxQty, lowStockThreshold,
+      trackInventory, shipping, shortDescription, features, videoUrl,
+      documents, compliance
+    } = req.body;
 
     const updates = {};
     if (name !== undefined) updates.name = name;
@@ -452,11 +503,39 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
     }
     if (category !== undefined) updates.category = category;
     if (description !== undefined) updates.description = description;
+    if (shortDescription !== undefined) updates.shortDescription = shortDescription;
     if (image !== undefined) updates.image = image;
+    // Fix 9: persist updated images array; keep single image in sync
+    if (images !== undefined) {
+      updates.images = Array.isArray(images) ? images : [];
+      if (image === undefined && updates.images.length > 0) updates.image = updates.images[0];
+    }
     if (condition !== undefined) updates.condition = condition;
     if (specifications !== undefined) updates.specifications = specifications;
+    // Fix 1: extended fields
+    if (brand !== undefined) updates.brand = brand;
+    if (model !== undefined) updates.model = model;
+    if (productType !== undefined) updates.productType = productType;
+    if (subcategory !== undefined) updates.subcategory = subcategory;
+    if (tags !== undefined) updates.tags = tags;
+    if (attributes !== undefined) updates.attributes = attributes;
+    if (variations !== undefined) updates.variations = Array.isArray(variations) ? variations : [];
+    if (sku !== undefined) updates.sku = sku;
+    if (gtin !== undefined) updates.gtin = gtin;
+    if (salePrice !== undefined) updates.salePrice = salePrice !== null ? parseFloat(salePrice) || null : null;
+    if (quantity !== undefined) updates.quantity = parseInt(quantity) || 0;
+    if (minQty !== undefined) updates.minQty = parseInt(minQty) || 1;
+    if (maxQty !== undefined) updates.maxQty = maxQty !== null ? parseInt(maxQty) || null : null;
+    if (lowStockThreshold !== undefined) updates.lowStockThreshold = lowStockThreshold !== null ? parseInt(lowStockThreshold) || null : null;
+    if (trackInventory !== undefined) updates.trackInventory = !!trackInventory;
+    if (shipping !== undefined) updates.shipping = shipping;
+    if (features !== undefined) updates.features = Array.isArray(features) ? features : [];
+    if (videoUrl !== undefined) updates.videoUrl = videoUrl;
+    if (documents !== undefined) updates.documents = Array.isArray(documents) ? documents : [];
+    if (compliance !== undefined) updates.compliance = compliance;
     if (status !== undefined) {
-      const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold'];
+      // Fix 2: 'draft' is now a valid status alongside the original set
+      const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
       }
