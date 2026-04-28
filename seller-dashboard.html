@@ -401,7 +401,7 @@
     const profileParam = _userId
       ? 'id=' + encodeURIComponent(_userId)
       : 'seller=' + encodeURIComponent((ZrxSession.getUser() || {}).email || '');
-    document.getElementById('viewProfileLink').href = 'seller-profile.html?' + profileParam;
+    document.getElementById('viewProfileLink').href = 'brand-store.html?' + profileParam;
 
     // Update stats
     document.getElementById('totalProducts').textContent = sellerData.products.length;
@@ -534,7 +534,7 @@
   function viewPublicProfile(e) {
     e.preventDefault();
     var user = ZrxSession.getUser();
-    window.location.href = 'seller-profile.html?seller=' + encodeURIComponent(user ? user.email : '');
+    window.location.href = 'brand-store.html?seller=' + encodeURIComponent(user ? user.email : '');
   }
 
   function logout() {

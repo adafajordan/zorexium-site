@@ -24,7 +24,7 @@
         'shopping-cart.html',
         'seller-dashboard.html',
         'sell-on-zorexium.html',
-        'seller-profile.html',
+        'brand-store.html',
         'seller-signup.html',
         'listing-wizard.html',
         'marketplace-settings.html',

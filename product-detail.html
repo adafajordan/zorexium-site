@@ -626,7 +626,7 @@
 
     // Seller name + link
     document.getElementById('sellerName').innerText = name;
-    document.getElementById('sellerLink').href = 'seller-profile.html?id=' + encodeURIComponent(product.sellerId || '');
+    document.getElementById('sellerLink').href = 'brand-store.html?id=' + encodeURIComponent(product.sellerId || '');
     document.getElementById('shippedBy').innerText = name;
 
     // Ratings (both appearances)
@@ -653,7 +653,7 @@
       document.getElementById('meetSellerRating').innerText = ratingText;
       document.getElementById('meetSellerRatingCount').innerText = countText;
       document.getElementById('meetSellerDesc').innerText = desc;
-      document.getElementById('meetSellerStoreLink').href = 'seller-profile.html?id=' + encodeURIComponent(product.sellerId || '');
+      document.getElementById('meetSellerStoreLink').href = 'brand-store.html?id=' + encodeURIComponent(product.sellerId || '');
       if (profileImg) {
         var avatar = document.getElementById('sellerAvatar');
         var icon = document.getElementById('sellerAvatarIcon');

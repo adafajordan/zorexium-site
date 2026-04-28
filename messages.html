@@ -402,7 +402,7 @@
       ? profileImage : PLACEHOLDER_IMG;
     const imgHtml = `<img src="${safeSrc}" alt="${safeName}" class="rounded-full object-cover flex-shrink-0" style="width:${s}px;height:${s}px;">`;
     if (userId) {
-      return `<a href="seller-profile.html?id=${encodeURIComponent(userId)}" class="hover:opacity-75 transition-opacity cursor-pointer" title="View seller profile">${imgHtml}</a>`;
+      return `<a href="brand-store.html?id=${encodeURIComponent(userId)}" class="hover:opacity-75 transition-opacity cursor-pointer" title="View seller profile">${imgHtml}</a>`;
     }
     return imgHtml;
   }

@@ -401,10 +401,10 @@
         <div class="post-card">
           <div class="flex justify-between items-start mb-3">
             <div class="flex items-center gap-3 flex-1">
-              <a href="seller-profile.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="flex-shrink-0"><img src="${post.profileImage || 'https://placehold.co/40x40/333/fff?text=U'}" class="w-10 h-10 rounded-full border border-gray-600 object-cover"></a>
+              <a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="flex-shrink-0"><img src="${post.profileImage || 'https://placehold.co/40x40/333/fff?text=U'}" class="w-10 h-10 rounded-full border border-gray-600 object-cover"></a>
               <div>
                 <h3 class="text-gray-900 font-semibold text-xl">${escapeHtml(post.title)}</h3>
-                <p class="text-gray-400 text-sm"><a href="seller-profile.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="text-cyan-400 hover:underline">${escapeHtml(post.username || post.email)}</a> • ${new Date(post.createdAt).toLocaleString()}</p>
+                <p class="text-gray-400 text-sm"><a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="text-cyan-400 hover:underline">${escapeHtml(post.username || post.email)}</a> • ${new Date(post.createdAt).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -413,8 +413,8 @@
           ${firstReply ? `
           <div class="bg-[#2a2e38] rounded p-3 mb-3 text-base border-l-2 border-cyan-600">
             <div class="flex items-center gap-3 mb-1">
-              <a href="seller-profile.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}"><img src="${firstReply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
-              <a href="seller-profile.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(firstReply.username || firstReply.email)}</a>
+              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}"><img src="${firstReply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
+              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(firstReply.username || firstReply.email)}</a>
             </div>
             <p class="text-gray-300">${escapeHtml(firstReply.content)}</p>
           </div>
@@ -434,8 +434,8 @@
               ${replies.map(reply => `
                 <div class="bg-[#2a2e38] rounded p-3 mb-2 text-base">
                   <div class="flex items-center gap-3 mb-1">
-                    <a href="seller-profile.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}"><img src="${reply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
-                    <a href="seller-profile.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(reply.username || reply.email)}</a>
+                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}"><img src="${reply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
+                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(reply.username || reply.email)}</a>
                   </div>
                   <p class="text-gray-300">${escapeHtml(reply.content)}</p>
                 </div>
