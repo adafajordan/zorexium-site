@@ -809,8 +809,11 @@
             id: product._id ? String(product._id) : String(product.id),
             name: product.name || '',
             price: product.price || 0,
+            salePrice: product.salePrice || null,
+            originalPrice: product.originalPrice || null,
             description: product.description || '',
             image: product.image || '',
+            images: Array.isArray(product.images) && product.images.length ? product.images : (product.image ? [product.image] : []),
             condition: product.condition || 'new',
             sellerId: product.sellerId || '',
             category: product.category || '',
@@ -834,9 +837,20 @@
           // Item#
           document.getElementById('productId').innerText = currentProduct.id;
 
-          // Price
-          var priceNum = parseFloat(currentProduct.price);
+          // Price – show salePrice as current price and originalPrice/price as strike-through
+          var displayPrice = currentProduct.salePrice || currentProduct.price;
+          var strikePrice = currentProduct.salePrice ? currentProduct.originalPrice || currentProduct.price : null;
+          var priceNum = parseFloat(displayPrice);
           document.getElementById('productPrice').innerText = '$' + priceNum.toFixed(2);
+          var strikePriceEl = document.getElementById('productStrikePrice');
+          if (strikePriceEl) {
+            if (strikePrice && parseFloat(strikePrice) > priceNum) {
+              strikePriceEl.innerText = '$' + parseFloat(strikePrice).toFixed(2);
+              strikePriceEl.classList.remove('hidden');
+            } else {
+              strikePriceEl.classList.add('hidden');
+            }
+          }
           var monthlyEst = Math.ceil(priceNum / 12);
           var financeEl = document.querySelector('[data-financing-monthly]');
           if (financeEl) financeEl.innerText = '$' + monthlyEst + '/mo';
@@ -849,13 +863,26 @@
             condBadge.className = 'px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs font-semibold uppercase tracking-wide';
           }
 
-          // Image
+          // Primary image
           var img = document.getElementById('productImage');
           if (currentProduct.image) {
             img.src = currentProduct.image;
             img.onerror = function() { img.src = 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product'; };
           } else {
             img.src = 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product';
+          }
+
+          // Image gallery thumbnails (if multiple images stored)
+          var galleryEl = document.getElementById('productImageGallery');
+          if (galleryEl && currentProduct.images.length > 1) {
+            galleryEl.innerHTML = currentProduct.images.map(function(src, i) {
+              return '<img src="' + src + '" alt="Product image ' + (i + 1) + '" class="w-16 h-16 object-contain border rounded cursor-pointer hover:border-cyan-400 p-1" ' +
+                'onclick="document.getElementById(\'productImage\').src=this.src" ' +
+                'onerror="this.style.display=\'none\'">';
+            }).join('');
+            galleryEl.classList.remove('hidden');
+          } else if (galleryEl) {
+            galleryEl.classList.add('hidden');
           }
 
           // Description (Overview tab)

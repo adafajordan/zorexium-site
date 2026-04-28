@@ -317,6 +317,10 @@ app.get('/api/products', publicApiRateLimit, async function(req, res) {
         { name: brandRe }
       ];
     }
+    // By default only return active products; pass ?all=true to override (e.g. for admin/seller views)
+    if (req.query.all !== 'true') {
+      query.status = 'active';
+    }
     const products = await db.collection('products').find(query).toArray();
     res.json(products);
   } catch (error) {
@@ -330,7 +334,13 @@ app.post('/api/products', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const { name, price, category, description, image, condition, specifications, sellerName, sellerUsername } = req.body;
+    const {
+      name, price, category, description, image, condition, specifications, sellerName, sellerUsername,
+      brand, model, productType, subcategory, tags, attributes, variations,
+      images, sku, gtin, salePrice, originalPrice, quantity, minQty, maxQty,
+      lowStockThreshold, trackInventory, shipping, shortDescription, features,
+      videoUrl, documents, compliance, status
+    } = req.body;
 
     if (!name || price === undefined || price === null || !category) {
       return res.status(400).json({ error: 'name, price, and category are required' });
@@ -340,6 +350,10 @@ app.post('/api/products', verifyToken, async function(req, res) {
     if (isNaN(parsedPrice) || parsedPrice < 0) {
       return res.status(400).json({ error: 'price must be a non-negative number' });
     }
+
+    // Validate status if provided; allow draft on POST
+    const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft'];
+    const resolvedStatus = (status && validStatuses.includes(status)) ? status : 'pending';
 
     // Resolve display name: use provided sellerName/sellerUsername or fall back to user's firstName from DB
     let resolvedSellerName = (typeof sellerName === 'string' && sellerName.trim()) ? sellerName.trim()
@@ -359,18 +373,46 @@ app.post('/api/products', verifyToken, async function(req, res) {
       }
     }
 
+    const parsedSalePrice = salePrice != null ? parseFloat(salePrice) : null;
+    const parsedOriginalPrice = originalPrice != null ? parseFloat(originalPrice) : null;
+
     const product = {
       name,
       price: parsedPrice,
+      salePrice: (!isNaN(parsedSalePrice) && parsedSalePrice !== null) ? parsedSalePrice : null,
+      originalPrice: (!isNaN(parsedOriginalPrice) && parsedOriginalPrice !== null) ? parsedOriginalPrice : null,
       category,
+      subcategory: subcategory || '',
       description: description || '',
-      image: image || '',
-      condition: condition || 'used',
+      shortDescription: shortDescription || '',
+      image: image || (Array.isArray(images) && images.length ? images[0] : ''),
+      images: Array.isArray(images) ? images : (image ? [image] : []),
+      condition: condition || 'new',
       specifications: specifications || {},
+      brand: brand || '',
+      model: model || '',
+      productType: productType || '',
+      tags: tags || '',
+      attributes: Array.isArray(attributes) ? attributes : [],
+      variations: Array.isArray(variations) ? variations : [],
+      sku: sku || '',
+      gtin: gtin || '',
+      quantity: parseInt(quantity) || 0,
+      minQty: parseInt(minQty) || 1,
+      maxQty: maxQty != null ? parseInt(maxQty) : null,
+      lowStockThreshold: lowStockThreshold != null ? parseInt(lowStockThreshold) : null,
+      trackInventory: trackInventory === true || trackInventory === 'true',
+      shipping: shipping || {},
+      features: Array.isArray(features) ? features : [],
+      videoUrl: videoUrl || '',
+      documents: Array.isArray(documents) ? documents : [],
+      compliance: compliance || {},
+      rating: null,
+      reviewCount: 0,
       sellerId: req.userId,
       sellerName: resolvedSellerName || null,
       sellerUsername: resolvedSellerUsername || null,
-      status: 'pending',
+      status: resolvedStatus,
       createdAt: new Date()
     };
 
@@ -439,7 +481,13 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
       return res.status(403).json({ error: 'Forbidden: you do not own this product' });
     }
 
-    const { name, price, category, description, image, condition, specifications, status } = req.body;
+    const {
+      name, price, category, description, image, condition, specifications, status,
+      brand, model, productType, subcategory, tags, attributes, variations,
+      images, sku, gtin, salePrice, originalPrice, quantity, minQty, maxQty,
+      lowStockThreshold, trackInventory, shipping, shortDescription, features,
+      videoUrl, documents, compliance
+    } = req.body;
 
     const updates = {};
     if (name !== undefined) updates.name = name;
@@ -450,13 +498,36 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
       }
       updates.price = parsedPrice;
     }
+    if (salePrice !== undefined) updates.salePrice = salePrice != null ? parseFloat(salePrice) : null;
+    if (originalPrice !== undefined) updates.originalPrice = originalPrice != null ? parseFloat(originalPrice) : null;
     if (category !== undefined) updates.category = category;
+    if (subcategory !== undefined) updates.subcategory = subcategory;
     if (description !== undefined) updates.description = description;
+    if (shortDescription !== undefined) updates.shortDescription = shortDescription;
     if (image !== undefined) updates.image = image;
+    if (images !== undefined) updates.images = Array.isArray(images) ? images : [];
     if (condition !== undefined) updates.condition = condition;
     if (specifications !== undefined) updates.specifications = specifications;
+    if (brand !== undefined) updates.brand = brand;
+    if (model !== undefined) updates.model = model;
+    if (productType !== undefined) updates.productType = productType;
+    if (tags !== undefined) updates.tags = tags;
+    if (attributes !== undefined) updates.attributes = Array.isArray(attributes) ? attributes : [];
+    if (variations !== undefined) updates.variations = Array.isArray(variations) ? variations : [];
+    if (sku !== undefined) updates.sku = sku;
+    if (gtin !== undefined) updates.gtin = gtin;
+    if (quantity !== undefined) updates.quantity = parseInt(quantity) || 0;
+    if (minQty !== undefined) updates.minQty = parseInt(minQty) || 1;
+    if (maxQty !== undefined) updates.maxQty = maxQty != null ? parseInt(maxQty) : null;
+    if (lowStockThreshold !== undefined) updates.lowStockThreshold = lowStockThreshold != null ? parseInt(lowStockThreshold) : null;
+    if (trackInventory !== undefined) updates.trackInventory = trackInventory === true || trackInventory === 'true';
+    if (shipping !== undefined) updates.shipping = shipping;
+    if (features !== undefined) updates.features = Array.isArray(features) ? features : [];
+    if (videoUrl !== undefined) updates.videoUrl = videoUrl;
+    if (documents !== undefined) updates.documents = Array.isArray(documents) ? documents : [];
+    if (compliance !== undefined) updates.compliance = compliance;
     if (status !== undefined) {
-      const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold'];
+      const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
       }

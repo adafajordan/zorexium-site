@@ -385,8 +385,14 @@
   // ── Init ────────────────────────────────────────────────────────────────────
   async function init() {
     const params = new URLSearchParams(window.location.search);
-    brandSlug = params.get('brand') || '';
+    // Support ?brand=, ?name=, ?id= (sellerId), and ?seller= (email/username)
+    const sellerId = params.get('id') || '';
+    const sellerParam = params.get('seller') || '';
+    brandSlug = params.get('brand') || sellerParam || '';
     brandName = params.get('name') || toTitleCase(brandSlug.replace(/[-_]/g, ' ')) || 'Brand';
+
+    // Store sellerId for use in loadProducts
+    window._brandStoreSellerId = sellerId;
 
     // Update page title and hero
     document.title = brandName + ' - Brand Store | Zorexium Labs';
@@ -405,13 +411,31 @@
   // ── Load products from backend ───────────────────────────────────────────────
   async function loadProducts() {
     try {
-      const url = brandSlug
-        ? BACKEND_URL + '/api/products?brand=' + encodeURIComponent(brandSlug)
-        : BACKEND_URL + '/api/products';
+      let url;
+      const sellerId = window._brandStoreSellerId || '';
+      if (sellerId) {
+        // Fetch by seller ID using the dedicated seller products endpoint
+        url = BACKEND_URL + '/api/products/seller/' + encodeURIComponent(sellerId);
+      } else if (brandSlug) {
+        url = BACKEND_URL + '/api/products?brand=' + encodeURIComponent(brandSlug);
+      } else {
+        url = BACKEND_URL + '/api/products';
+      }
       const res = await fetch(url);
       if (!res.ok) throw new Error('fetch error');
       const data = await res.json();
       allProducts = Array.isArray(data) ? data : [];
+
+      // If page title is still generic and we now have products, derive seller name
+      if ((brandName === 'Brand' || !brandName) && allProducts.length > 0) {
+        const derivedName = allProducts[0].sellerName || '';
+        if (derivedName) {
+          brandName = derivedName;
+          document.getElementById('brandTitle').textContent = brandName;
+          document.getElementById('brandSubtitle').textContent = 'Shop All ' + brandName + ' Products At Zorexium';
+          document.title = brandName + ' - Brand Store | Zorexium Labs';
+        }
+      }
     } catch (e) {
       console.error('Failed to load products:', e);
       allProducts = [];
