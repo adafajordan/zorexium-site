@@ -13,9 +13,15 @@
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
     .settings-panel { display: none; }
     .settings-panel.active { display: block; }
-    .sub-menu-item { cursor: pointer; padding: 8px 16px; border-radius: 6px; font-size: 14px; color: #9ca3af; transition: background 0.15s, color 0.15s; }
-    .sub-menu-item:hover { background-color: #f9fafb; color: #111827; }
-    .sub-menu-item.active { background-color: rgba(34, 197, 94, 0.12); color: #22c55e; font-weight: 500; }
+    .sub-menu-item { cursor: pointer; padding: 8px 14px; border-radius: 6px; font-size: 14px; color: #374151; transition: background 0.15s, color 0.15s; display: flex; align-items: center; gap: 8px; }
+    .sub-menu-item:hover { background-color: #ecfeff; color: #0891b2; }
+    .sub-menu-item.active { background-color: rgba(8, 145, 178, 0.1); color: #0891b2; font-weight: 600; }
+    .toggle-switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-track { width: 40px; height: 22px; background: #d1d5db; border-radius: 11px; transition: background 0.2s; position: relative; }
+    .toggle-switch input:checked + .toggle-track { background: #0891b2; }
+    .toggle-thumb { position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; background: white; border-radius: 50%; shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.2s; }
+    .toggle-switch input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
   
         /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
         .marketplace-mega-menu {
@@ -151,7 +157,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <!-- Orders & Returns -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
@@ -211,7 +217,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
                             <!-- Orders & Returns -->
@@ -238,440 +244,643 @@
     </header>
 
 
-<!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10 w-full">
-  <div class="mb-8">
-    <h1 class="text-4xl font-bold text-gray-900 mb-1">Marketplace Settings</h1>
-    <p class="text-gray-400">Manage your orders, account, and notification preferences</p>
-  </div>
 
-  <div class="flex gap-8">
+<!-- Hero Banner -->
+<div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-6 py-8">
+  <div class="max-w-7xl mx-auto">
+    <nav class="text-xs text-gray-400 mb-3">
+      <a href="index.html" class="hover:text-cyan-400">Home</a>
+      <span class="mx-1">/</span>
+      <span class="text-cyan-400">Marketplace Settings</span>
+    </nav>
+    <h1 class="text-2xl font-bold">Marketplace Settings</h1>
+    <p class="text-gray-300 text-sm mt-1">Manage your orders, account, notifications, and preferences</p>
+  </div>
+</div>
+
+<!-- Main Content -->
+<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
+  <div class="flex gap-6">
+
     <!-- Left Sidebar -->
-    <aside class="w-64 flex-shrink-0">
-      <nav class="bg-[#20232a] rounded-xl border border-gray-700 overflow-hidden">
+    <aside class="w-60 flex-shrink-0">
+      <nav class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
 
         <!-- Orders -->
-        <div class="px-5 pt-5 pb-2">
-          <p class="text-white font-bold text-sm uppercase tracking-wider mb-2">Orders</p>
+        <div class="px-4 pt-4 pb-2">
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 pl-2">Orders</p>
           <ul class="space-y-0.5">
-            <li class="sub-menu-item active" data-panel="order-history" onclick="showPanel('order-history')">Order History</li>
-            <li class="sub-menu-item" data-panel="return-status" onclick="showPanel('return-status')">Return Status / History</li>
-            <li class="sub-menu-item" data-panel="claim-history" onclick="showPanel('claim-history')">Marketplace Claim History</li>
+            <li class="sub-menu-item active" data-panel="order-history" onclick="showPanel('order-history')"><i class="fas fa-box text-cyan-500 w-4 text-center text-xs"></i>Order History</li>
+            <li class="sub-menu-item" data-panel="return-status" onclick="showPanel('return-status')"><i class="fas fa-undo-alt text-cyan-500 w-4 text-center text-xs"></i>Return Status</li>
+            <li class="sub-menu-item" data-panel="claim-history" onclick="showPanel('claim-history')"><i class="fas fa-shield-alt text-cyan-500 w-4 text-center text-xs"></i>Claim History</li>
           </ul>
         </div>
 
-        <div class="border-t border-gray-700 mx-3 my-2"></div>
+        <div class="border-t border-gray-100 mx-3 my-1"></div>
 
         <!-- Manage Account -->
-        <div class="px-5 py-2">
-          <p class="text-white font-bold text-sm uppercase tracking-wider mb-2">Manage Account</p>
+        <div class="px-4 py-2">
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 pl-2">Account</p>
           <ul class="space-y-0.5">
-            <li class="sub-menu-item" data-panel="account-settings" onclick="showPanel('account-settings')">Account Settings</li>
-            <li class="sub-menu-item" data-panel="payment-options" onclick="showPanel('payment-options')">Payment Options</li>
-            <li class="sub-menu-item" data-panel="manage-reviews" onclick="showPanel('manage-reviews')">Manage Reviews</li>
+            <li class="sub-menu-item" data-panel="account-settings" onclick="showPanel('account-settings')"><i class="fas fa-user-cog text-cyan-500 w-4 text-center text-xs"></i>Account Settings</li>
+            <li class="sub-menu-item" data-panel="payment-options" onclick="showPanel('payment-options')"><i class="fas fa-credit-card text-cyan-500 w-4 text-center text-xs"></i>Payment Options</li>
+            <li class="sub-menu-item" data-panel="manage-reviews" onclick="showPanel('manage-reviews')"><i class="fas fa-star text-cyan-500 w-4 text-center text-xs"></i>Manage Reviews</li>
+            <li class="sub-menu-item" data-panel="security" onclick="showPanel('security')"><i class="fas fa-lock text-cyan-500 w-4 text-center text-xs"></i>Security &amp; Privacy</li>
           </ul>
         </div>
 
-        <div class="border-t border-gray-700 mx-3 my-2"></div>
+        <div class="border-t border-gray-100 mx-3 my-1"></div>
 
         <!-- Notifications -->
-        <div class="px-5 pt-2 pb-5">
-          <p class="text-white font-bold text-sm uppercase tracking-wider mb-2">Notifications</p>
+        <div class="px-4 pt-2 pb-4">
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 pl-2">Notifications</p>
           <ul class="space-y-0.5">
-            <li class="sub-menu-item" data-panel="message-center" onclick="showPanel('message-center')">Message Center</li>
-            <li class="sub-menu-item" data-panel="email-notifications" onclick="showPanel('email-notifications')">Email Notifications</li>
-            <li class="sub-menu-item" data-panel="mobile-text-alert" onclick="showPanel('mobile-text-alert')">Mobile Text Alert</li>
-            <li class="sub-menu-item" data-panel="auto-notify" onclick="showPanel('auto-notify')">Auto Notify</li>
-            <li class="sub-menu-item" data-panel="price-alerts" onclick="showPanel('price-alerts')">Price Alerts</li>
+            <li class="sub-menu-item" data-panel="message-center" onclick="showPanel('message-center')"><i class="fas fa-comment-dots text-cyan-500 w-4 text-center text-xs"></i>Message Center</li>
+            <li class="sub-menu-item" data-panel="email-notifications" onclick="showPanel('email-notifications')"><i class="fas fa-envelope text-cyan-500 w-4 text-center text-xs"></i>Email Notifications</li>
+            <li class="sub-menu-item" data-panel="mobile-text-alert" onclick="showPanel('mobile-text-alert')"><i class="fas fa-mobile-alt text-cyan-500 w-4 text-center text-xs"></i>SMS Alerts</li>
+            <li class="sub-menu-item" data-panel="auto-notify" onclick="showPanel('auto-notify')"><i class="fas fa-bell text-cyan-500 w-4 text-center text-xs"></i>Auto Notify</li>
+            <li class="sub-menu-item" data-panel="price-alerts" onclick="showPanel('price-alerts')"><i class="fas fa-tag text-cyan-500 w-4 text-center text-xs"></i>Price Alerts</li>
           </ul>
         </div>
 
+        <div class="border-t border-gray-100 mx-3"></div>
+
+        <!-- Quick Links -->
+        <div class="px-4 py-3">
+          <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 pl-2">Help</p>
+          <a href="marketplace-guarantee.html" class="sub-menu-item block text-sm"><i class="fas fa-shield-alt text-cyan-500 w-4 text-center text-xs"></i>Marketplace Guarantee</a>
+          <a href="return-refund-policy.html" class="sub-menu-item block text-sm"><i class="fas fa-undo-alt text-cyan-500 w-4 text-center text-xs"></i>Return Policy</a>
+          <a href="contact-support.html" class="sub-menu-item block text-sm"><i class="fas fa-headset text-cyan-500 w-4 text-center text-xs"></i>Help &amp; Support</a>
+        </div>
       </nav>
     </aside>
 
     <!-- Right Content Panel -->
-    <section class="flex-1 bg-[#20232a] rounded-xl border border-gray-700 p-8 min-h-[480px]">
+    <section class="flex-1 min-w-0">
 
       <!-- Order History -->
       <div id="panel-order-history" class="settings-panel active">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Order History</h2>
-        <p class="text-gray-400 mb-6">View all past orders placed on the marketplace.</p>
-        <div class="overflow-x-auto rounded-lg border border-gray-700">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
-              <tr>
-                <th class="px-4 py-3">Order ID</th>
-                <th class="px-4 py-3">Date</th>
-                <th class="px-4 py-3">Item</th>
-                <th class="px-4 py-3">Total</th>
-                <th class="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-700">
-              <tr class="hover:bg-[#2a2e38]">
-                <td class="px-4 py-3 text-cyan-400">#ZRX-00128</td>
-                <td class="px-4 py-3">Apr 12, 2026</td>
-                <td class="px-4 py-3">RTX 4090 FE</td>
-                <td class="px-4 py-3">$1,249.00</td>
-                <td class="px-4 py-3"><span class="bg-green-900 text-green-400 text-xs px-2 py-1 rounded-full">Delivered</span></td>
-              </tr>
-              <tr class="hover:bg-[#2a2e38]">
-                <td class="px-4 py-3 text-cyan-400">#ZRX-00115</td>
-                <td class="px-4 py-3">Mar 28, 2026</td>
-                <td class="px-4 py-3">Core i9-14900K</td>
-                <td class="px-4 py-3">$549.00</td>
-                <td class="px-4 py-3"><span class="bg-green-900 text-green-400 text-xs px-2 py-1 rounded-full">Delivered</span></td>
-              </tr>
-              <tr class="hover:bg-[#2a2e38]">
-                <td class="px-4 py-3 text-cyan-400">#ZRX-00103</td>
-                <td class="px-4 py-3">Mar 5, 2026</td>
-                <td class="px-4 py-3">Samsung 990 Pro 2TB</td>
-                <td class="px-4 py-3">$189.00</td>
-                <td class="px-4 py-3"><span class="bg-blue-900 text-blue-400 text-xs px-2 py-1 rounded-full">In Transit</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900">Order History</h2>
+              <p class="text-sm text-gray-500 mt-0.5">View and manage all your past and active orders</p>
+            </div>
+            <a href="track-your-order.html" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"><i class="fas fa-truck text-xs"></i>Track Order</a>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs border-b border-gray-200">
+                <tr>
+                  <th class="px-4 py-3">Order ID</th>
+                  <th class="px-4 py-3">Date</th>
+                  <th class="px-4 py-3">Item</th>
+                  <th class="px-4 py-3">Total</th>
+                  <th class="px-4 py-3">Status</th>
+                  <th class="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-cyan-600 font-medium">#ZRX-00128</td>
+                  <td class="px-4 py-3 text-gray-600">Apr 12, 2026</td>
+                  <td class="px-4 py-3 text-gray-800">RTX 4090 FE</td>
+                  <td class="px-4 py-3 text-gray-800 font-medium">$1,249.00</td>
+                  <td class="px-4 py-3"><span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">Delivered</span></td>
+                  <td class="px-4 py-3"><button onclick="showPanel('return-status')" class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Return</button></td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-cyan-600 font-medium">#ZRX-00115</td>
+                  <td class="px-4 py-3 text-gray-600">Mar 28, 2026</td>
+                  <td class="px-4 py-3 text-gray-800">Core i9-14900K</td>
+                  <td class="px-4 py-3 text-gray-800 font-medium">$549.00</td>
+                  <td class="px-4 py-3"><span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">Delivered</span></td>
+                  <td class="px-4 py-3"><button onclick="showPanel('return-status')" class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Return</button></td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-cyan-600 font-medium">#ZRX-00103</td>
+                  <td class="px-4 py-3 text-gray-600">Mar 5, 2026</td>
+                  <td class="px-4 py-3 text-gray-800">Samsung 990 Pro 2TB</td>
+                  <td class="px-4 py-3 text-gray-800 font-medium">$189.00</td>
+                  <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">In Transit</span></td>
+                  <td class="px-4 py-3"><a href="track-your-order.html" class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Track</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">Showing 3 of 3 orders. Orders are retained for 7 years per our data policy.</p>
         </div>
       </div>
 
       <!-- Return Status / History -->
       <div id="panel-return-status" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Return Status / History</h2>
-        <p class="text-gray-400 mb-6">Track active return requests and view past returns.</p>
-        <div class="overflow-x-auto rounded-lg border border-gray-700">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
-              <tr>
-                <th class="px-4 py-3">Return ID</th>
-                <th class="px-4 py-3">Order</th>
-                <th class="px-4 py-3">Reason</th>
-                <th class="px-4 py-3">Submitted</th>
-                <th class="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-700">
-              <tr class="hover:bg-[#2a2e38]">
-                <td class="px-4 py-3 text-cyan-400">#RET-0041</td>
-                <td class="px-4 py-3">#ZRX-00103</td>
-                <td class="px-4 py-3">Item not as described</td>
-                <td class="px-4 py-3">Apr 14, 2026</td>
-                <td class="px-4 py-3"><span class="bg-yellow-900 text-yellow-400 text-xs px-2 py-1 rounded-full">Pending Review</span></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900">Return Status &amp; History</h2>
+              <p class="text-sm text-gray-500 mt-0.5">Track active returns and review past return requests</p>
+            </div>
+            <a href="return-refund-policy.html" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"><i class="fas fa-info-circle text-xs"></i>Return Policy</a>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-gray-200 mb-4">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs border-b border-gray-200">
+                <tr>
+                  <th class="px-4 py-3">Return ID</th>
+                  <th class="px-4 py-3">Order</th>
+                  <th class="px-4 py-3">Item</th>
+                  <th class="px-4 py-3">Reason</th>
+                  <th class="px-4 py-3">Submitted</th>
+                  <th class="px-4 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-cyan-600 font-medium">#RET-0041</td>
+                  <td class="px-4 py-3 text-gray-600">#ZRX-00103</td>
+                  <td class="px-4 py-3 text-gray-800">Samsung 990 Pro 2TB</td>
+                  <td class="px-4 py-3 text-gray-600">Item not as described</td>
+                  <td class="px-4 py-3 text-gray-600">Apr 14, 2026</td>
+                  <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-medium">Pending Review</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="bg-cyan-50 border border-cyan-100 rounded-lg p-4 mb-4">
+            <p class="text-sm text-cyan-800 font-medium mb-1"><i class="fas fa-info-circle mr-1"></i>Start a New Return</p>
+            <p class="text-xs text-cyan-700">To initiate a new return, find your order in Order History and click "Return," or contact the seller directly through Messages. For items not received or defective, you can escalate to Zorexium immediately.</p>
+          </div>
+          <p class="text-xs text-gray-500">Refunds are processed within 3–5 business days after approval. <a href="return-refund-policy.html" class="text-cyan-600 hover:underline">Learn more about our return policy.</a></p>
         </div>
-        <p class="text-gray-500 text-sm mt-4">Refunds are processed within 3–5 business days after approval.</p>
       </div>
 
       <!-- Marketplace Claim History -->
       <div id="panel-claim-history" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Marketplace Claim History</h2>
-        <p class="text-gray-400 mb-6">Review disputes and claims you have filed on marketplace orders.</p>
-        <div class="overflow-x-auto rounded-lg border border-gray-700">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
-              <tr>
-                <th class="px-4 py-3">Claim ID</th>
-                <th class="px-4 py-3">Order</th>
-                <th class="px-4 py-3">Type</th>
-                <th class="px-4 py-3">Filed</th>
-                <th class="px-4 py-3">Resolution</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-700">
-              <tr class="hover:bg-[#2a2e38]">
-                <td colspan="5" class="px-4 py-6 text-center text-gray-500">No claims on record.</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900">Marketplace Claim History</h2>
+              <p class="text-sm text-gray-500 mt-0.5">Review disputes and Marketplace Guarantee claims you have filed</p>
+            </div>
+            <a href="marketplace-guarantee.html" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"><i class="fas fa-shield-alt text-xs"></i>Guarantee Policy</a>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-gray-200 mb-4">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs border-b border-gray-200">
+                <tr>
+                  <th class="px-4 py-3">Claim ID</th>
+                  <th class="px-4 py-3">Order</th>
+                  <th class="px-4 py-3">Type</th>
+                  <th class="px-4 py-3">Filed</th>
+                  <th class="px-4 py-3">Resolution</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr>
+                  <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+                    <i class="fas fa-shield-alt text-3xl text-gray-200 mb-2 block"></i>
+                    <p class="text-sm">No claims on record.</p>
+                    <p class="text-xs mt-1">Great news — you haven't needed to file a Marketplace Guarantee claim yet.</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p class="text-xs text-gray-600"><strong>Need to file a claim?</strong> If you have an issue with a recent order (item not received, not as described, defective), you can file a claim through the Order History tab or by <a href="contact-support.html" class="text-cyan-600 hover:underline">contacting support</a>. Learn about what's covered in our <a href="marketplace-guarantee.html" class="text-cyan-600 hover:underline">Marketplace Guarantee</a>.</p>
+          </div>
         </div>
       </div>
 
       <!-- Account Settings -->
       <div id="panel-account-settings" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Account Settings</h2>
-        <p class="text-gray-400 mb-6">Update your display name, email address, and password.</p>
-        <div class="space-y-5 max-w-lg">
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Display Name</label>
-            <input type="text" placeholder="Your name" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Account Settings</h2>
+          <p class="text-sm text-gray-500 mb-5">Update your display name, email address, and password</p>
+          <div class="space-y-4 max-w-lg">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Display Name</label>
+              <input type="text" placeholder="Your name" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
+              <input type="email" placeholder="email@example.com" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Current Password</label>
+              <input type="password" placeholder="Required to make changes" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">New Password</label>
+              <input type="password" placeholder="Leave blank to keep current" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Confirm New Password</label>
+              <input type="password" placeholder="Repeat new password" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Save Changes</button>
+              <a href="account-details.html" class="px-6 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg font-semibold text-sm transition-colors">Full Profile Settings</a>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
-            <input type="email" placeholder="email@example.com" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">New Password</label>
-            <input type="password" placeholder="Leave blank to keep current" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
-          </div>
-          <button class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors">Save Changes</button>
         </div>
       </div>
 
       <!-- Payment Options -->
       <div id="panel-payment-options" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Payment Options</h2>
-        <p class="text-gray-400 mb-6">Manage saved payment methods used at checkout.</p>
-        <div class="space-y-3 max-w-lg">
-          <div class="flex items-center justify-between bg-[#181b21] border border-gray-700 rounded-lg px-4 py-3">
-            <div class="flex items-center gap-3">
-              <i class="fab fa-cc-visa text-blue-400 text-2xl"></i>
-              <div>
-                <p class="text-white text-sm font-medium">Visa ending in 4242</p>
-                <p class="text-gray-500 text-xs">Expires 08/28</p>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Payment Options</h2>
+          <p class="text-sm text-gray-500 mb-5">Manage saved payment methods used at checkout</p>
+          <div class="space-y-3 max-w-lg mb-5">
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+              <div class="flex items-center gap-3">
+                <i class="fab fa-cc-visa text-blue-500 text-2xl"></i>
+                <div>
+                  <p class="text-gray-800 text-sm font-semibold">Visa ending in 4242</p>
+                  <p class="text-gray-400 text-xs">Expires 08/28</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Default</span>
+                <button class="text-xs text-gray-400 hover:text-red-500 transition-colors">Remove</button>
               </div>
             </div>
-            <span class="text-xs bg-green-900 text-green-400 px-2 py-1 rounded-full">Default</span>
-          </div>
-          <div class="flex items-center justify-between bg-[#181b21] border border-gray-700 rounded-lg px-4 py-3">
-            <div class="flex items-center gap-3">
-              <i class="fab fa-paypal text-blue-500 text-2xl"></i>
-              <div>
-                <p class="text-white text-sm font-medium">PayPal</p>
-                <p class="text-gray-500 text-xs">user@example.com</p>
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+              <div class="flex items-center gap-3">
+                <i class="fab fa-paypal text-blue-600 text-2xl"></i>
+                <div>
+                  <p class="text-gray-800 text-sm font-semibold">PayPal</p>
+                  <p class="text-gray-400 text-xs">user@example.com</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Set Default</button>
+                <button class="text-xs text-gray-400 hover:text-red-500 transition-colors">Remove</button>
               </div>
             </div>
-            <button class="text-xs text-gray-400 hover:text-red-400 transition-colors">Remove</button>
           </div>
-          <button class="mt-2 px-5 py-2 border border-dashed border-gray-600 hover:border-cyan-500 text-gray-400 hover:text-cyan-400 rounded-lg text-sm transition-colors w-full"><i class="fas fa-plus mr-2"></i>Add Payment Method</button>
+          <button class="px-5 py-2.5 border border-dashed border-gray-300 hover:border-cyan-400 text-gray-500 hover:text-cyan-600 rounded-lg text-sm transition-colors flex items-center gap-2 max-w-lg w-full justify-center">
+            <i class="fas fa-plus text-xs"></i>Add Payment Method
+          </button>
+          <div class="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3 max-w-lg">
+            <p class="text-xs text-blue-700"><i class="fas fa-lock mr-1"></i>Your payment information is encrypted and secured by Stripe's PCI-DSS Level 1 compliant infrastructure. We never store your full card number.</p>
+          </div>
         </div>
       </div>
 
       <!-- Manage Reviews -->
       <div id="panel-manage-reviews" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Manage Reviews</h2>
-        <p class="text-gray-400 mb-6">View and edit reviews you have left for sellers and products.</p>
-        <div class="overflow-x-auto rounded-lg border border-gray-700">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
-              <tr>
-                <th class="px-4 py-3">Product</th>
-                <th class="px-4 py-3">Rating</th>
-                <th class="px-4 py-3">Comment</th>
-                <th class="px-4 py-3">Date</th>
-                <th class="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-700">
-              <tr class="hover:bg-[#2a2e38]">
-                <td class="px-4 py-3">RTX 4090 FE</td>
-                <td class="px-4 py-3 text-yellow-400">★★★★★</td>
-                <td class="px-4 py-3 text-gray-300 max-w-xs truncate">Excellent card, runs cool and quiet.</td>
-                <td class="px-4 py-3">Apr 13, 2026</td>
-                <td class="px-4 py-3"><button class="text-cyan-400 hover:text-cyan-300 text-xs">Edit</button> <span class="text-gray-600 mx-1">|</span> <button class="text-red-400 hover:text-red-300 text-xs">Delete</button></td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Manage Reviews</h2>
+          <p class="text-sm text-gray-500 mb-5">View and manage reviews you have left for sellers and products</p>
+          <div class="overflow-x-auto rounded-lg border border-gray-200">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs border-b border-gray-200">
+                <tr>
+                  <th class="px-4 py-3">Product</th>
+                  <th class="px-4 py-3">Rating</th>
+                  <th class="px-4 py-3">Comment</th>
+                  <th class="px-4 py-3">Date</th>
+                  <th class="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-gray-800">RTX 4090 FE</td>
+                  <td class="px-4 py-3 text-yellow-400 text-base">★★★★★</td>
+                  <td class="px-4 py-3 text-gray-600 max-w-xs truncate">Excellent card, runs cool and quiet.</td>
+                  <td class="px-4 py-3 text-gray-500">Apr 13, 2026</td>
+                  <td class="px-4 py-3 space-x-2">
+                    <button class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Edit</button>
+                    <span class="text-gray-300">|</span>
+                    <button class="text-xs text-red-500 hover:text-red-600 font-medium">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">Reviews can be edited or deleted within 30 days of posting. Deleted reviews cannot be recovered.</p>
+        </div>
+      </div>
+
+      <!-- Security & Privacy -->
+      <div id="panel-security" class="settings-panel">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Security &amp; Privacy</h2>
+          <p class="text-sm text-gray-500 mb-5">Manage your account security settings and data privacy preferences</p>
+          <div class="space-y-4 max-w-lg">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <p class="font-semibold text-sm text-gray-800">Two-Factor Authentication</p>
+                <p class="text-xs text-gray-500">Add an extra layer of security to your account using an authenticator app or SMS</p>
+              </div>
+              <button class="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold rounded-lg transition-colors">Enable</button>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <p class="font-semibold text-sm text-gray-800">Login Notifications</p>
+                <p class="text-xs text-gray-500">Get notified by email whenever your account is accessed from a new device</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <p class="font-semibold text-sm text-gray-800">Active Sessions</p>
+                <p class="text-xs text-gray-500">View and revoke active login sessions on other devices</p>
+              </div>
+              <button class="px-4 py-1.5 border border-gray-300 hover:border-red-300 text-gray-600 hover:text-red-600 text-xs font-semibold rounded-lg transition-colors">View Sessions</button>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div>
+                <p class="font-semibold text-sm text-gray-800">Download My Data</p>
+                <p class="text-xs text-gray-500">Request a copy of all personal data we hold about your account (GDPR/CCPA right of access)</p>
+              </div>
+              <button class="px-4 py-1.5 border border-gray-300 text-gray-600 hover:text-cyan-600 hover:border-cyan-300 text-xs font-semibold rounded-lg transition-colors">Request</button>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-100">
+              <div>
+                <p class="font-semibold text-sm text-red-700">Delete Account</p>
+                <p class="text-xs text-gray-500">Permanently delete your account and all associated data. This action cannot be undone.</p>
+              </div>
+              <button class="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-semibold rounded-lg transition-colors border border-red-200">Delete</button>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-4">For full privacy information, see our <a href="privacy-policy.html" class="text-cyan-600 hover:underline">Privacy Policy</a>.</p>
         </div>
       </div>
 
       <!-- Message Center -->
       <div id="panel-message-center" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Message Center</h2>
-        <p class="text-gray-400 mb-6">Configure which in-platform message notifications you receive.</p>
-        <div class="space-y-4 max-w-lg">
-          <div class="flex items-center justify-between py-3 border-b border-gray-700">
-            <div>
-              <p class="text-white text-sm font-medium">New messages from sellers</p>
-              <p class="text-gray-500 text-xs">Get notified when a seller replies to your inquiry</p>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Message Center</h2>
+          <p class="text-sm text-gray-500 mb-5">Configure which in-platform message notifications you receive</p>
+          <div class="space-y-0 divide-y divide-gray-100 max-w-lg border border-gray-200 rounded-lg overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">New messages from sellers</p>
+                <p class="text-xs text-gray-500">Get notified when a seller replies to your inquiry</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
-          </div>
-          <div class="flex items-center justify-between py-3 border-b border-gray-700">
-            <div>
-              <p class="text-white text-sm font-medium">Order status updates</p>
-              <p class="text-gray-500 text-xs">Shipping, delivery, and confirmation notices</p>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Order status updates</p>
+                <p class="text-xs text-gray-500">Shipping, delivery, and confirmation notices</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
-          </div>
-          <div class="flex items-center justify-between py-3">
-            <div>
-              <p class="text-white text-sm font-medium">Promotional messages</p>
-              <p class="text-gray-500 text-xs">Deals, offers, and marketplace news</p>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Dispute &amp; claim updates</p>
+                <p class="text-xs text-gray-500">Notifications for open Marketplace Guarantee claims</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Promotional messages</p>
+                <p class="text-xs text-gray-500">Deals, offers, and marketplace news from sellers</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
+            </div>
           </div>
+          <a href="messages.html" class="inline-flex items-center gap-2 mt-4 text-sm text-cyan-600 hover:text-cyan-700 font-medium">
+            <i class="fas fa-comment-dots text-xs"></i>Open Messages Inbox
+          </a>
         </div>
       </div>
 
       <!-- Email Notifications -->
       <div id="panel-email-notifications" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Email Notifications</h2>
-        <p class="text-gray-400 mb-6">Choose which emails Zorexium sends to your registered address.</p>
-        <div class="space-y-4 max-w-lg">
-          <div class="flex items-center justify-between py-3 border-b border-gray-700">
-            <div>
-              <p class="text-white text-sm font-medium">Order confirmations</p>
-              <p class="text-gray-500 text-xs">Email receipt for every purchase</p>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Email Notifications</h2>
+          <p class="text-sm text-gray-500 mb-5">Choose which emails Zorexium sends to your registered address</p>
+          <div class="space-y-0 divide-y divide-gray-100 max-w-lg border border-gray-200 rounded-lg overflow-hidden mb-4">
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Order confirmations</p>
+                <p class="text-xs text-gray-500">Email receipt for every purchase — required and cannot be disabled</p>
+              </div>
+              <label class="toggle-switch opacity-50 cursor-not-allowed">
+                <input type="checkbox" checked disabled>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
-          </div>
-          <div class="flex items-center justify-between py-3 border-b border-gray-700">
-            <div>
-              <p class="text-white text-sm font-medium">Shipping updates</p>
-              <p class="text-gray-500 text-xs">Tracking info and delivery confirmations</p>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Shipping updates</p>
+                <p class="text-xs text-gray-500">Tracking info and delivery confirmations</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
-          </div>
-          <div class="flex items-center justify-between py-3 border-b border-gray-700">
-            <div>
-              <p class="text-white text-sm font-medium">Return &amp; refund updates</p>
-              <p class="text-gray-500 text-xs">Status changes on your return requests</p>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Return &amp; refund updates</p>
+                <p class="text-xs text-gray-500">Status changes on your return requests and refund processing</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
-          </div>
-          <div class="flex items-center justify-between py-3">
-            <div>
-              <p class="text-white text-sm font-medium">Newsletter &amp; promotions</p>
-              <p class="text-gray-500 text-xs">Weekly deals and product highlights</p>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Security alerts</p>
+                <p class="text-xs text-gray-500">Login from new device, password changes, and suspicious activity</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Newsletter &amp; promotions</p>
+                <p class="text-xs text-gray-500">Weekly deals, product highlights, and marketplace news</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
+            </div>
           </div>
+          <button class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Save Email Preferences</button>
         </div>
       </div>
 
       <!-- Mobile Text Alert -->
       <div id="panel-mobile-text-alert" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Mobile Text Alert</h2>
-        <p class="text-gray-400 mb-6">Receive SMS alerts for critical order and account events.</p>
-        <div class="space-y-5 max-w-lg">
-          <div>
-            <label class="block text-sm font-medium text-gray-300 mb-1">Mobile Number</label>
-            <input type="tel" placeholder="+1 (555) 000-0000" class="w-full bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">SMS Alerts</h2>
+          <p class="text-sm text-gray-500 mb-5">Receive text messages for critical order and account events</p>
+          <div class="max-w-lg space-y-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1.5">Mobile Number</label>
+              <div class="flex gap-2">
+                <input type="tel" placeholder="+1 (555) 000-0000" class="flex-1 bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+                <button class="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-semibold transition-colors border border-gray-200">Verify</button>
+              </div>
+            </div>
+            <div class="space-y-0 divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-4">
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Order shipped alerts</p>
+                  <p class="text-xs text-gray-500">Text when your order ships with tracking number</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between px-4 py-4">
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Delivery confirmation</p>
+                  <p class="text-xs text-gray-500">Text when your package is delivered</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between px-4 py-4">
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Return status changes</p>
+                  <p class="text-xs text-gray-500">Text when a return or claim status changes</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox">
+                  <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                </label>
+              </div>
+              <div class="flex items-center justify-between px-4 py-4">
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Security alerts</p>
+                  <p class="text-xs text-gray-500">Text for suspicious login attempts or account changes</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                </label>
+              </div>
+            </div>
+            <button class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Save Number &amp; Preferences</button>
+            <p class="text-xs text-gray-400">Standard messaging rates apply. You can opt out at any time by replying STOP.</p>
           </div>
-          <div class="space-y-4">
-            <div class="flex items-center justify-between py-3 border-b border-gray-700">
-              <p class="text-white text-sm font-medium">Order shipped alerts</p>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked class="sr-only peer">
-                <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-              </label>
-            </div>
-            <div class="flex items-center justify-between py-3 border-b border-gray-700">
-              <p class="text-white text-sm font-medium">Delivery confirmation</p>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" checked class="sr-only peer">
-                <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-              </label>
-            </div>
-            <div class="flex items-center justify-between py-3">
-              <p class="text-white text-sm font-medium">Return status changes</p>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" class="sr-only peer">
-                <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-                <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-              </label>
-            </div>
-          </div>
-          <button class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors">Save Number &amp; Preferences</button>
         </div>
       </div>
 
       <!-- Auto Notify -->
       <div id="panel-auto-notify" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Auto Notify</h2>
-        <p class="text-gray-400 mb-6">Automatically notify you when tracked items become available or change status.</p>
-        <div class="space-y-4 max-w-lg">
-          <div class="flex items-center justify-between py-3 border-b border-gray-700">
-            <div>
-              <p class="text-white text-sm font-medium">Back-in-stock alerts</p>
-              <p class="text-gray-500 text-xs">Get notified when a wish-listed item is restocked</p>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Auto Notify</h2>
+          <p class="text-sm text-gray-500 mb-5">Automatically notify you when tracked items become available or change status</p>
+          <div class="space-y-0 divide-y divide-gray-100 max-w-lg border border-gray-200 rounded-lg overflow-hidden mb-4">
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Back-in-stock alerts</p>
+                <p class="text-xs text-gray-500">Get notified when a wish-listed item is restocked by any seller</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
-          </div>
-          <div class="flex items-center justify-between py-3 border-b border-gray-700">
-            <div>
-              <p class="text-white text-sm font-medium">New listings in saved searches</p>
-              <p class="text-gray-500 text-xs">Auto-alert when a new product matches your saved filters</p>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">New listings in saved searches</p>
+                <p class="text-xs text-gray-500">Auto-alert when a new product matches your saved search filters</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
-          </div>
-          <div class="flex items-center justify-between py-3">
-            <div>
-              <p class="text-white text-sm font-medium">Seller activity updates</p>
-              <p class="text-gray-500 text-xs">Know when a followed seller lists new hardware</p>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Seller activity updates</p>
+                <p class="text-xs text-gray-500">Know when a seller you follow lists new hardware</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
             </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer">
-              <div class="w-10 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
-              <div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-            </label>
+            <div class="flex items-center justify-between px-4 py-4">
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Marketplace promotions</p>
+                <p class="text-xs text-gray-500">Alerts for platform-wide sales, flash deals, and clearance events</p>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox">
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
+            </div>
           </div>
+          <button class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Save Preferences</button>
         </div>
       </div>
 
       <!-- Price Alerts -->
       <div id="panel-price-alerts" class="settings-panel">
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Price Alerts</h2>
-        <p class="text-gray-400 mb-6">Set target prices and get notified when listings drop to or below your threshold.</p>
-        <div class="overflow-x-auto rounded-lg border border-gray-700 mb-5">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-[#181b21] text-gray-400 uppercase text-xs">
-              <tr>
-                <th class="px-4 py-3">Product</th>
-                <th class="px-4 py-3">Target Price</th>
-                <th class="px-4 py-3">Current Price</th>
-                <th class="px-4 py-3">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-700">
-              <tr class="hover:bg-[#2a2e38]">
-                <td class="px-4 py-3">RTX 5090</td>
-                <td class="px-4 py-3 text-green-400">$1,800.00</td>
-                <td class="px-4 py-3">$2,099.00</td>
-                <td class="px-4 py-3"><button class="text-red-400 hover:text-red-300 text-xs">Remove</button></td>
-              </tr>
-              <tr class="hover:bg-[#2a2e38]">
-                <td class="px-4 py-3">Threadripper PRO 9985WX</td>
-                <td class="px-4 py-3 text-green-400">$2,500.00</td>
-                <td class="px-4 py-3">$2,799.00</td>
-                <td class="px-4 py-3"><button class="text-red-400 hover:text-red-300 text-xs">Remove</button></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="flex gap-3 max-w-lg">
-          <input type="text" placeholder="Product name or listing URL" class="flex-1 bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
-          <input type="number" placeholder="$ Target" class="w-32 bg-[#181b21] border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-cyan-500 text-sm">
-          <button class="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors">Add Alert</button>
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Price Alerts</h2>
+          <p class="text-sm text-gray-500 mb-5">Set target prices and get notified when listings drop to or below your threshold</p>
+          <div class="overflow-x-auto rounded-lg border border-gray-200 mb-5">
+            <table class="w-full text-sm text-left">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs border-b border-gray-200">
+                <tr>
+                  <th class="px-4 py-3">Product</th>
+                  <th class="px-4 py-3">Target Price</th>
+                  <th class="px-4 py-3">Current Price</th>
+                  <th class="px-4 py-3">Alert Via</th>
+                  <th class="px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-gray-800">RTX 5090</td>
+                  <td class="px-4 py-3 text-green-600 font-semibold">$1,800.00</td>
+                  <td class="px-4 py-3 text-gray-600">$2,099.00</td>
+                  <td class="px-4 py-3 text-gray-500">Email + SMS</td>
+                  <td class="px-4 py-3"><button class="text-xs text-red-500 hover:text-red-600 font-medium">Remove</button></td>
+                </tr>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-gray-800">Threadripper PRO 9985WX</td>
+                  <td class="px-4 py-3 text-green-600 font-semibold">$2,500.00</td>
+                  <td class="px-4 py-3 text-gray-600">$2,799.00</td>
+                  <td class="px-4 py-3 text-gray-500">Email</td>
+                  <td class="px-4 py-3"><button class="text-xs text-red-500 hover:text-red-600 font-medium">Remove</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-xl">
+            <p class="text-sm font-semibold text-gray-800 mb-3">Add a New Price Alert</p>
+            <div class="flex gap-2 flex-wrap">
+              <input type="text" placeholder="Product name or listing URL" class="flex-1 min-w-48 bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+              <input type="number" placeholder="Target $ price" class="w-36 bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+              <button class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Add Alert</button>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">Price alerts are triggered when any seller lists a matching item at or below your target price. You'll receive one notification per trigger event.</p>
         </div>
       </div>
 
@@ -681,20 +890,49 @@
 
 <script>
   function toggleDropdown(id) {
-    const el = document.getElementById(id);
+    var el = document.getElementById(id);
+    if (!el) return;
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { if (d.id !== id) d.classList.remove('active'); });
     el.classList.toggle('active');
   }
 
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { if (!d.contains(e.target)) d.classList.remove('active'); });
+  });
+
   function showPanel(panelId) {
-    // Deactivate all panels
-    document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
-    // Deactivate all menu items
-    document.querySelectorAll('.sub-menu-item').forEach(i => i.classList.remove('active'));
-    // Activate selected panel
-    document.getElementById('panel-' + panelId).classList.add('active');
-    // Activate selected menu item
-    document.querySelector('[data-panel="' + panelId + '"]').classList.add('active');
+    document.querySelectorAll('.settings-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.sub-menu-item').forEach(function(i) { i.classList.remove('active'); });
+    var panel = document.getElementById('panel-' + panelId);
+    var item = document.querySelector('[data-panel="' + panelId + '"]');
+    if (panel) panel.classList.add('active');
+    if (item) item.classList.add('active');
   }
+
+  // Toggle switches
+  document.querySelectorAll('.toggle-switch input[type="checkbox"]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      var track = this.closest('.toggle-switch').querySelector('.toggle-track');
+      if (!track) return;
+      var thumb = track.querySelector('.toggle-thumb');
+      if (this.checked) {
+        track.style.background = '#0891b2';
+        if (thumb) thumb.style.transform = 'translateX(18px)';
+      } else {
+        track.style.background = '#d1d5db';
+        if (thumb) thumb.style.transform = '';
+      }
+    });
+    // Initialize state
+    var track = cb.closest('.toggle-switch').querySelector('.toggle-track');
+    if (track) {
+      var thumb = track.querySelector('.toggle-thumb');
+      if (cb.checked) {
+        track.style.background = '#0891b2';
+        if (thumb) thumb.style.transform = 'translateX(18px)';
+      }
+    }
+  });
 </script>
 
     <script src="notifications.js"></script>

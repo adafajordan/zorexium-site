@@ -1,13 +1,21 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Verified Labs - Zorexium Labs</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>body { font-family: 'Inter', sans-serif; background-color: #0f1114; color: #e6eef6; } .lab-card{background:#0f1720;border:1px solid #1f2937;padding:16px;border-radius:8px}        .nav-dropdown {
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marketplace Guarantee - Zorexium Labs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+        .panel-nav-link { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #374151; transition: background 0.15s, color 0.15s; }
+        .panel-nav-link:hover { background: #ecfeff; color: #0891b2; }
+        .info-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; }
+        .guarantee-badge { background: linear-gradient(135deg, #ecfeff 0%, #f0fdff 100%); border: 1px solid #a5f3fc; border-radius: 8px; padding: 20px; text-align: center; }
+        .step-card { display: flex; gap: 16px; padding: 16px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .step-num { width: 32px; height: 32px; background: #0891b2; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+            .nav-dropdown {
             opacity: 0;
             visibility: hidden;
             transform: translateY(-4px);
@@ -38,9 +46,7 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
-
-<!-- Header (reused) -->
-    <!-- Top Navigation -->
+        <!-- Top Navigation -->
     <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div class="px-4 sm:px-6">
             <div class="flex justify-between items-center h-24">
@@ -153,7 +159,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <!-- Orders & Returns -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
@@ -213,7 +219,7 @@
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
                             <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
-                            <a href="trust-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
                             <!-- Orders & Returns -->
@@ -239,164 +245,466 @@
         </div>
     </header>
 
-
-<main class="flex-1 max-w-6xl mx-auto px-6 sm:px-8 lg:px-10 py-10 w-full">
-  <div class="flex items-center justify-between mb-8">
-    <div>
-      <h1 class="text-4xl font-bold">Verified Labs</h1>
-      <div id="buildStamp" class="text-sm text-gray-500 mt-1">Updated: 2026-02-14 21:33</div>
-      <p class="text-gray-400">Trusted labs, vendors, and technical service providers verified by Zorexium.</p>
-    </div>
-    <!-- Single Add Lab button (only one) -->
-    <div>
-      <button id="addLabBtn" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded">Add Lab</button>
+<!-- Hero Banner -->
+<div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-6 py-10">
+  <div class="max-w-6xl mx-auto">
+    <nav class="text-xs text-gray-400 mb-3">
+      <a href="index.html" class="hover:text-cyan-400">Home</a>
+      <span class="mx-1">/</span>
+      <span class="text-cyan-400">Marketplace Guarantee</span>
+    </nav>
+    <div class="flex items-start gap-4">
+      <div class="text-cyan-400 text-4xl mt-1"><i class="fas fa-shield-alt"></i></div>
+      <div>
+        <h1 class="text-3xl font-bold mb-2">Marketplace Guarantee</h1>
+        <p class="text-gray-300 max-w-3xl">Every purchase on Zorexium Labs is backed by our comprehensive Marketplace Guarantee. We protect buyers and hold sellers accountable so you can shop with complete confidence.</p>
+      </div>
     </div>
   </div>
+</div>
 
-  <section id="labsList" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-    <!-- Lab cards will be injected here -->
-  </section>
+<div class="flex min-h-0 bg-gray-50">
+  <!-- Sidebar -->
+  <aside class="w-56 flex-shrink-0 bg-white border-r border-gray-200 p-4 sticky top-0 self-start" style="top:96px;">
+    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-1">Guarantee</p>
+    <nav class="space-y-0.5">
+      <a href="#coverage" class="panel-nav-link"><i class="fas fa-check-circle text-cyan-400 w-4 text-center"></i>What's Covered</a>
+      <a href="#how-it-works" class="panel-nav-link"><i class="fas fa-cogs text-cyan-400 w-4 text-center"></i>How It Works</a>
+      <a href="#eligible" class="panel-nav-link"><i class="fas fa-tags text-cyan-400 w-4 text-center"></i>Eligible Purchases</a>
+      <a href="#claim" class="panel-nav-link"><i class="fas fa-file-alt text-cyan-400 w-4 text-center"></i>Filing a Claim</a>
+      <a href="#disputes" class="panel-nav-link"><i class="fas fa-balance-scale text-cyan-400 w-4 text-center"></i>Dispute Resolution</a>
+      <a href="#sellers" class="panel-nav-link"><i class="fas fa-store text-cyan-400 w-4 text-center"></i>Seller Accountability</a>
+      <a href="#payment" class="panel-nav-link"><i class="fas fa-lock text-cyan-400 w-4 text-center"></i>Payment Security</a>
+      <a href="#exclusions" class="panel-nav-link"><i class="fas fa-times-circle text-cyan-400 w-4 text-center"></i>Exclusions</a>
+      <a href="#faq" class="panel-nav-link"><i class="fas fa-question-circle text-cyan-400 w-4 text-center"></i>FAQ</a>
+      <a href="#contact" class="panel-nav-link"><i class="fas fa-envelope text-cyan-400 w-4 text-center"></i>Contact</a>
+    </nav>
+    <div class="mt-6 pt-4 border-t border-gray-100">
+      <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 pl-1">Policies</p>
+      <a href="return-refund-policy.html" class="panel-nav-link text-sm"><i class="fas fa-undo-alt text-cyan-400 w-4 text-center"></i>Return Policy</a>
+      <a href="privacy-policy.html" class="panel-nav-link text-sm"><i class="fas fa-shield-alt text-cyan-400 w-4 text-center"></i>Privacy Policy</a>
+      <a href="terms-of-service.html" class="panel-nav-link text-sm"><i class="fas fa-file-contract text-cyan-400 w-4 text-center"></i>Terms of Service</a>
+      <a href="contact-support.html" class="panel-nav-link text-sm"><i class="fas fa-headset text-cyan-400 w-4 text-center"></i>Support</a>
+    </div>
+  </aside>
 
-  <!-- Add Lab Modal (hidden) -->
-  <div id="addLabModal" class="fixed inset-0 bg-black bg-opacity-60 hidden items-center justify-center z-50">
-    <div class="bg-[#0b1220] border border-gray-700 rounded-lg w-full max-w-2xl p-6">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold">Add Verified Lab</h2>
-        <button onclick="closeAddLab()" class="text-gray-400 hover:text-white">✕</button>
+  <!-- Main Content -->
+  <main class="flex-1 p-6 space-y-6 max-w-4xl">
+
+    <!-- Guarantee Badges -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="guarantee-badge">
+        <i class="fas fa-shield-alt text-cyan-500 text-2xl mb-2 block"></i>
+        <p class="font-bold text-cyan-700 text-sm">Buyer Protection</p>
+        <p class="text-xs text-gray-500 mt-0.5">On every order</p>
       </div>
-        <div class="space-y-3">
-        <input id="labName" class="w-full bg-[#08121a] p-3 rounded border border-gray-700" placeholder="Lab / Company Name">
-        <input id="labLocation" class="w-full bg-[#08121a] p-3 rounded border border-gray-700" placeholder="Location (City, Country)">
-        <textarea id="labDescription" class="w-full bg-[#08121a] p-3 rounded border border-gray-700" rows="4" placeholder="Short description"></textarea>
+      <div class="guarantee-badge">
+        <i class="fas fa-undo-alt text-cyan-500 text-2xl mb-2 block"></i>
+        <p class="font-bold text-cyan-700 text-sm">30-Day Returns</p>
+        <p class="text-xs text-gray-500 mt-0.5">No-hassle policy</p>
+      </div>
+      <div class="guarantee-badge">
+        <i class="fas fa-lock text-cyan-500 text-2xl mb-2 block"></i>
+        <p class="font-bold text-cyan-700 text-sm">Secure Payments</p>
+        <p class="text-xs text-gray-500 mt-0.5">Encrypted &amp; verified</p>
+      </div>
+      <div class="guarantee-badge">
+        <i class="fas fa-headset text-cyan-500 text-2xl mb-2 block"></i>
+        <p class="font-bold text-cyan-700 text-sm">24/7 Support</p>
+        <p class="text-xs text-gray-500 mt-0.5">Dedicated team</p>
+      </div>
+    </div>
+
+    <!-- What's Covered -->
+    <div id="coverage" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-check-circle text-cyan-500"></i>What's Covered</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">The Zorexium Labs Marketplace Guarantee covers every transaction completed through our platform. Whether you're buying a used GPU, a full workstation, or precision peripherals, you're protected.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Item Not Received</p>
+            <p class="text-xs text-gray-500">Full refund if your order never arrives</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Item Not as Described</p>
+            <p class="text-xs text-gray-500">Full refund if the listing was materially inaccurate</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Significantly Damaged in Transit</p>
+            <p class="text-xs text-gray-500">Refund or replacement for transit damage</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Counterfeit or Unauthorized Item</p>
+            <p class="text-xs text-gray-500">Full refund and seller suspension</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Defective Hardware</p>
+            <p class="text-xs text-gray-500">Refund or exchange within 30 days of receipt</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+          <i class="fas fa-check text-green-500 mt-0.5"></i>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Wrong Item Shipped</p>
+            <p class="text-xs text-gray-500">Prepaid return label and correct item or refund</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How It Works -->
+    <div id="how-it-works" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-cogs text-cyan-500"></i>How It Works</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">Our guarantee works automatically. There's no separate enrollment required—every purchase on Zorexium Labs is covered from the moment payment clears.</p>
+      <div class="space-y-3">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Browse &amp; Buy</p>
+            <p class="text-xs text-gray-500">Find your hardware and complete checkout through our secure platform. Payment is held in escrow until delivery is confirmed.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Receive &amp; Inspect</p>
+            <p class="text-xs text-gray-500">Your item ships from the seller. Upon delivery, you have 3 business days to inspect and confirm receipt—or report an issue.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Confirm or Dispute</p>
+            <p class="text-xs text-gray-500">Mark the order as received to release payment to the seller, or open a dispute if there's a problem. Our team reviews all disputes within 48 hours.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Resolution</p>
+            <p class="text-xs text-gray-500">If your claim is approved, you'll receive a full refund to your original payment method within 3–5 business days. In cases of seller negligence, Zorexium absorbs the loss.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Eligible Purchases -->
+    <div id="eligible" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-tags text-cyan-500"></i>Eligible Purchases</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">The Marketplace Guarantee applies to all purchases made through the Zorexium Labs checkout system. Transactions conducted outside our platform (e.g., direct bank transfers arranged off-site) are not covered.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="text-base text-gray-300">Attach files / photos</label>
-          <input id="labFilesInput" type="file" accept="*/*" multiple class="w-full mt-2">
-          <div id="labFilesPreview" class="mt-3 flex flex-wrap gap-3 text-sm text-gray-300"></div>
+          <h3 class="font-semibold text-sm text-gray-800 mb-2 flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i>Covered Categories</h3>
+          <ul class="text-sm text-gray-600 space-y-1.5">
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Processors &amp; CPUs</li>
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Graphics Cards &amp; GPUs</li>
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Motherboards</li>
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Memory &amp; RAM</li>
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Storage (SSD, HDD, NVMe)</li>
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Complete Systems &amp; Builds</li>
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Peripherals &amp; Accessories</li>
+            <li class="flex items-center gap-2"><i class="fas fa-microchip text-cyan-400 text-xs"></i>Networking &amp; Server Equipment</li>
+          </ul>
         </div>
-        <div class="flex justify-end gap-3">
-          <button onclick="closeAddLab()" class="px-6 py-3 bg-gray-700 text-white rounded">Cancel</button>
-          <button onclick="saveLab()" class="px-6 py-3 bg-cyan-600 text-white rounded">Save Lab</button>
+        <div>
+          <h3 class="font-semibold text-sm text-gray-800 mb-2 flex items-center gap-2"><i class="fas fa-times-circle text-red-500"></i>Requirements</h3>
+          <ul class="text-sm text-gray-600 space-y-1.5">
+            <li class="flex items-start gap-2"><i class="fas fa-dot-circle text-gray-400 text-xs mt-1"></i>Purchased via Zorexium checkout</li>
+            <li class="flex items-start gap-2"><i class="fas fa-dot-circle text-gray-400 text-xs mt-1"></i>Claim filed within 30 days of delivery</li>
+            <li class="flex items-start gap-2"><i class="fas fa-dot-circle text-gray-400 text-xs mt-1"></i>Account in good standing</li>
+            <li class="flex items-start gap-2"><i class="fas fa-dot-circle text-gray-400 text-xs mt-1"></i>Evidence provided (photos, tracking)</li>
+            <li class="flex items-start gap-2"><i class="fas fa-dot-circle text-gray-400 text-xs mt-1"></i>Attempt to resolve with seller first</li>
+          </ul>
         </div>
       </div>
     </div>
-  </div>
-</main>
 
-<!-- Footer: forum categories then full bottom bar -->
+    <!-- Filing a Claim -->
+    <div id="claim" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-file-alt text-cyan-500"></i>Filing a Claim</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">To file a claim under the Marketplace Guarantee, follow these steps. Most claims are resolved within 3–5 business days.</p>
+      <ol class="space-y-4">
+        <li class="flex items-start gap-4">
+          <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2 py-1 rounded flex-shrink-0">Step 1</span>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Contact the Seller</p>
+            <p class="text-xs text-gray-500 mt-0.5">Use the in-platform messaging system to notify the seller of the issue. Allow 48 hours for a response before escalating.</p>
+          </div>
+        </li>
+        <li class="flex items-start gap-4">
+          <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2 py-1 rounded flex-shrink-0">Step 2</span>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Open a Dispute</p>
+            <p class="text-xs text-gray-500 mt-0.5">Navigate to <strong>Marketplace Settings &rarr; Claim History</strong> and click "Open New Claim." Select your order and describe the issue clearly.</p>
+          </div>
+        </li>
+        <li class="flex items-start gap-4">
+          <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2 py-1 rounded flex-shrink-0">Step 3</span>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Provide Evidence</p>
+            <p class="text-xs text-gray-500 mt-0.5">Upload photos of the item, packaging, and any relevant documentation. Include tracking information and communication records with the seller.</p>
+          </div>
+        </li>
+        <li class="flex items-start gap-4">
+          <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2 py-1 rounded flex-shrink-0">Step 4</span>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Await Review</p>
+            <p class="text-xs text-gray-500 mt-0.5">Our Trust &amp; Safety team reviews your claim within 48 hours. They may request additional information from you or the seller.</p>
+          </div>
+        </li>
+        <li class="flex items-start gap-4">
+          <span class="bg-cyan-100 text-cyan-700 text-xs font-bold px-2 py-1 rounded flex-shrink-0">Step 5</span>
+          <div>
+            <p class="font-semibold text-sm text-gray-800">Resolution &amp; Refund</p>
+            <p class="text-xs text-gray-500 mt-0.5">If your claim is approved, your refund is processed to the original payment method within 3–5 business days. You'll receive an email confirmation when the refund is issued.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="mt-4">
+        <a href="marketplace-settings.html" class="inline-flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+          <i class="fas fa-file-alt"></i> Go to Claim Center
+        </a>
+      </div>
+    </div>
 
-    <!-- Chat Bubble -->
+    <!-- Dispute Resolution -->
+    <div id="disputes" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-balance-scale text-cyan-500"></i>Dispute Resolution</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">When buyers and sellers cannot reach an agreement, Zorexium Labs mediates the dispute through our formal arbitration process. Our team is impartial and bases decisions on evidence submitted by both parties.</p>
+      <div class="space-y-3">
+        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-blue-800 mb-1"><i class="fas fa-info-circle mr-1"></i>Mediation Phase (0–3 days)</h3>
+          <p class="text-xs text-blue-700">Our team facilitates a structured conversation between buyer and seller to find a mutually agreeable resolution. Over 70% of disputes are resolved at this stage.</p>
+        </div>
+        <div class="bg-yellow-50 border border-yellow-100 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-yellow-800 mb-1"><i class="fas fa-gavel mr-1"></i>Adjudication Phase (3–7 days)</h3>
+          <p class="text-xs text-yellow-700">If mediation fails, our Trust &amp; Safety team issues a binding decision based on the evidence. Both parties must comply with the decision.</p>
+        </div>
+        <div class="bg-purple-50 border border-purple-100 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-purple-800 mb-1"><i class="fas fa-star mr-1"></i>Final Appeal (7–14 days)</h3>
+          <p class="text-xs text-purple-700">Either party may appeal the adjudication decision once by submitting new evidence. Appeals are reviewed by a senior Trust &amp; Safety specialist.</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-4">All dispute decisions are final after the appeal period expires. Zorexium Labs reserves the right to take action against sellers who repeatedly generate disputes or act in bad faith.</p>
+    </div>
+
+    <!-- Seller Accountability -->
+    <div id="sellers" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-store text-cyan-500"></i>Seller Accountability</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">Sellers on Zorexium Labs agree to our <a href="sellers-guidelines.html" class="text-cyan-600 hover:text-cyan-700 font-medium">Seller Guidelines</a> and are held to high standards of honesty, accuracy, and reliability. We enforce these standards rigorously.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-id-card text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Identity Verification</p>
+          <p class="text-xs text-gray-500 mt-1">All sellers undergo identity verification before listing hardware on our platform</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-star text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Reputation Score</p>
+          <p class="text-xs text-gray-500 mt-1">Sellers maintain a public reputation score based on transaction history and buyer reviews</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-ban text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Zero-Tolerance Policy</p>
+          <p class="text-xs text-gray-500 mt-1">Sellers who commit fraud, misrepresent items, or fail to ship are permanently banned</p>
+        </div>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <p class="text-sm text-amber-800"><i class="fas fa-exclamation-triangle mr-2"></i><strong>Seller Performance Standards:</strong> Sellers must maintain a minimum 95% positive feedback rate, ship within the stated handling time, and respond to buyer messages within 24 hours. Sellers who fall below these standards face account restrictions or removal.</p>
+      </div>
+    </div>
+
+    <!-- Payment Security -->
+    <div id="payment" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-lock text-cyan-500"></i>Payment Security</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">Your financial information is protected at every stage of the transaction. We partner with industry-leading payment processors and never store your full card details on our servers.</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <i class="fas fa-credit-card text-cyan-500 mt-0.5"></i>
+            <div>
+              <p class="font-semibold text-sm text-gray-800">Stripe &amp; PayPal</p>
+              <p class="text-xs text-gray-500">Payments are processed through PCI-DSS Level 1 compliant processors, the highest level of payment card security.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <i class="fas fa-shield-alt text-cyan-500 mt-0.5"></i>
+            <div>
+              <p class="font-semibold text-sm text-gray-800">Escrow Hold</p>
+              <p class="text-xs text-gray-500">Payment is held securely until you confirm receipt of your order. Funds are only released to the seller after successful delivery.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <i class="fas fa-user-shield text-cyan-500 mt-0.5"></i>
+            <div>
+              <p class="font-semibold text-sm text-gray-800">Fraud Detection</p>
+              <p class="text-xs text-gray-500">Our automated fraud detection system monitors all transactions in real time and flags suspicious activity immediately.</p>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <i class="fas fa-key text-cyan-500 mt-0.5"></i>
+            <div>
+              <p class="font-semibold text-sm text-gray-800">SSL/TLS Encryption</p>
+              <p class="text-xs text-gray-500">All data transmitted between your browser and our servers is encrypted using 256-bit SSL/TLS encryption.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <i class="fas fa-undo-alt text-cyan-500 mt-0.5"></i>
+            <div>
+              <p class="font-semibold text-sm text-gray-800">Chargeback Support</p>
+              <p class="text-xs text-gray-500">If your bank or payment provider initiates a chargeback, our team will provide full documentation to support your case.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <i class="fas fa-mobile-alt text-cyan-500 mt-0.5"></i>
+            <div>
+              <p class="font-semibold text-sm text-gray-800">Two-Factor Authentication</p>
+              <p class="text-xs text-gray-500">We strongly encourage enabling 2FA on your account to prevent unauthorized purchases. Enable it in Account Settings.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exclusions -->
+    <div id="exclusions" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-times-circle text-cyan-500"></i>Exclusions &amp; Limitations</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">While our Marketplace Guarantee is broad, there are some scenarios where it does not apply or where coverage is limited.</p>
+      <div class="space-y-3">
+        <div class="bg-red-50 border border-red-100 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-red-700 mb-2">Not Covered</h3>
+          <ul class="text-xs text-gray-600 space-y-1.5">
+            <li class="flex items-start gap-2"><i class="fas fa-times text-red-400 mt-0.5 text-xs"></i>Transactions completed outside the Zorexium platform</li>
+            <li class="flex items-start gap-2"><i class="fas fa-times text-red-400 mt-0.5 text-xs"></i>Claims filed more than 30 days after confirmed delivery</li>
+            <li class="flex items-start gap-2"><i class="fas fa-times text-red-400 mt-0.5 text-xs"></i>Buyer's remorse or change of mind (no-fault returns)</li>
+            <li class="flex items-start gap-2"><i class="fas fa-times text-red-400 mt-0.5 text-xs"></i>Damage caused by the buyer after receipt</li>
+            <li class="flex items-start gap-2"><i class="fas fa-times text-red-400 mt-0.5 text-xs"></i>Items where the listing accurately disclosed known defects</li>
+            <li class="flex items-start gap-2"><i class="fas fa-times text-red-400 mt-0.5 text-xs"></i>Digital goods, software licenses, or activation codes</li>
+            <li class="flex items-start gap-2"><i class="fas fa-times text-red-400 mt-0.5 text-xs"></i>Accounts found to be engaged in abuse of the guarantee system</li>
+          </ul>
+        </div>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h3 class="font-semibold text-sm text-gray-700 mb-2">Coverage Limits</h3>
+          <ul class="text-xs text-gray-600 space-y-1.5">
+            <li class="flex items-start gap-2"><i class="fas fa-info-circle text-gray-400 mt-0.5 text-xs"></i>Guarantee coverage is capped at the original transaction amount including shipping</li>
+            <li class="flex items-start gap-2"><i class="fas fa-info-circle text-gray-400 mt-0.5 text-xs"></i>Consequential damages (e.g., data loss, downtime costs) are not covered</li>
+            <li class="flex items-start gap-2"><i class="fas fa-info-circle text-gray-400 mt-0.5 text-xs"></i>Maximum of 3 guarantee claims per account per 12-month period</li>
+            <li class="flex items-start gap-2"><i class="fas fa-info-circle text-gray-400 mt-0.5 text-xs"></i>Enterprise orders over $10,000 are subject to separate terms</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAQ -->
+    <div id="faq" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-question-circle text-cyan-500"></i>Frequently Asked Questions</h2>
+      <div class="space-y-2" id="faqList">
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            How long do I have to file a claim?
+            <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+          </div>
+          <div class="faq-a">You must file a claim within 30 days of your item's confirmed delivery date. Claims submitted after this window are not eligible for the Marketplace Guarantee unless exceptional circumstances can be demonstrated.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            What if the seller disputes my claim?
+            <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+          </div>
+          <div class="faq-a">Both parties present evidence to our Trust &amp; Safety team, who make a binding decision based on the facts. The process is impartial and both sides have an equal opportunity to be heard. We handle hundreds of disputes every month and are experienced at identifying fraudulent claims from either side.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            How quickly will I receive my refund?
+            <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+          </div>
+          <div class="faq-a">Once your claim is approved, refunds are processed within 3–5 business days. The time it takes for the refund to appear in your account depends on your payment provider—typically 1–3 additional business days for credit cards, and instant for PayPal.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Can I return an item if I simply changed my mind?
+            <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+          </div>
+          <div class="faq-a">Change-of-mind returns are at the discretion of individual sellers. The Marketplace Guarantee covers issues with the item itself (defects, not as described, not received), not buyer's remorse. Check the seller's individual return policy before purchasing.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            What happens if the seller is unresponsive?
+            <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+          </div>
+          <div class="faq-a">If a seller does not respond to your message within 48 hours, you can immediately escalate to Zorexium Labs support. Seller non-responsiveness is taken very seriously—persistent non-communication can result in the claim being decided in the buyer's favor and the seller account being restricted.</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q" onclick="toggleFaq(this)">
+            Is used / refurbished hardware covered?
+            <i class="fas fa-chevron-down text-gray-400 text-xs transition-transform"></i>
+          </div>
+          <div class="faq-a">Yes. Used and refurbished hardware is covered by the Marketplace Guarantee. If the item's condition was materially different from what was described in the listing, you are entitled to a refund. Listings must accurately represent condition grades (New, Like New, Very Good, Good, Acceptable).</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div id="contact" class="info-card">
+      <h2 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i class="fas fa-envelope text-cyan-500"></i>Contact &amp; Support</h2>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">Our Trust &amp; Safety team is available around the clock to help with Marketplace Guarantee questions, claim filing, and dispute escalation.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-comments text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Live Chat</p>
+          <p class="text-xs text-gray-500 mt-1">Use the chat bubble in the bottom-right corner for immediate assistance. Average response time: under 2 minutes.</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-envelope text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Email Support</p>
+          <p class="text-xs text-gray-500 mt-1">Email us at <a href="mailto:guarantee@zorexium.labs" class="text-cyan-600 hover:underline">guarantee@zorexium.labs</a> for non-urgent questions. Response within 24 hours.</p>
+        </div>
+        <div class="text-center p-4 bg-gray-50 rounded-lg">
+          <i class="fas fa-headset text-cyan-500 text-xl mb-2 block"></i>
+          <p class="font-semibold text-sm text-gray-800">Claim Center</p>
+          <p class="text-xs text-gray-500 mt-1">File and track claims directly from your <a href="marketplace-settings.html" class="text-cyan-600 hover:underline">Marketplace Settings</a> page.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function toggleFaq(el) {
+    var answer = el.nextElementSibling;
+    var icon = el.querySelector('i.fa-chevron-down');
+    var isOpen = answer.classList.contains('open');
+    document.querySelectorAll('.faq-a').forEach(function(a){ a.classList.remove('open'); });
+    document.querySelectorAll('.faq-q i.fa-chevron-down').forEach(function(i){ i.style.transform = ''; });
+    if (!isOpen) {
+      answer.classList.add('open');
+      if (icon) icon.style.transform = 'rotate(180deg)';
+    }
+  }
+</script>
+
+<!-- Chat Bubble -->
     <div class="fixed bottom-6 right-6 z-50">
         <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
             <i class="fas fa-comment-dots text-3xl"></i>
         </a>
     </div>
-
-<script>
-  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-
-  function openAddLab(){ document.getElementById('addLabModal').classList.remove('hidden'); document.getElementById('addLabModal').classList.add('flex'); }
-  function closeAddLab(){ document.getElementById('addLabModal').classList.add('hidden'); document.getElementById('addLabModal').classList.remove('flex'); }
-  document.getElementById('addLabBtn').addEventListener('click', function(){
-        if (!ZrxSession.isLoggedIn()) {
-      ZrxNotify.showNotification('Please log in to add a lab', 'info');
-      window.location.href = 'login-register.html';
-      return;
-    }
-    openAddLab();
-  });
-
-  // preview selected files in modal
-  document.getElementById('labFilesInput').addEventListener('change', function(){
-    const preview = document.getElementById('labFilesPreview'); preview.innerHTML = '';
-    Array.from(this.files).forEach(f=>{
-      if(f.type.startsWith('image/')){
-        const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.className='w-24 h-16 object-cover rounded'; preview.appendChild(img);
-      } else {
-        const d = document.createElement('div'); d.textContent = f.name; d.className='px-3 py-1 bg-[#08121a] rounded'; preview.appendChild(d);
-      }
-    });
-  });
-
-  async function saveLab(){
-        if (!ZrxSession.isLoggedIn()) {
-      ZrxNotify.showNotification('Please log in to add a lab', 'info');
-      window.location.href = 'login-register.html';
-      return;
-    }
-    const name = document.getElementById('labName').value.trim();
-    if(!name){ ZrxNotify.showNotification('Enter a lab name', 'error'); return; }
-    const filesInput = document.getElementById('labFilesInput');
-    const files = Array.from(filesInput.files || []);
-    const readFile = (file) => new Promise((res,reject)=>{
-      const r = new FileReader(); r.onload = e => res({ name: file.name, data: e.target.result, type: file.type, size: file.size }); r.onerror = reject; r.readAsDataURL(file);
-    });
-
-    Promise.all(files.map(readFile)).then(async function(fileObjs) {
-      try {
-        const res = await ZrxSession.fetch(BACKEND_URL + '/api/labs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-          body: JSON.stringify({
-            name,
-            location: document.getElementById('labLocation').value.trim(),
-            description: document.getElementById('labDescription').value.trim(),
-            files: fileObjs
-          })
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          ZrxNotify.showNotification(data.error || 'Failed to save lab', 'error');
-          return;
-        }
-        // clear inputs
-        document.getElementById('labName').value=''; document.getElementById('labLocation').value=''; document.getElementById('labDescription').value=''; filesInput.value=''; document.getElementById('labFilesPreview').innerHTML='';
-        closeAddLab(); renderLabs();
-      } catch(err) {
-        console.error(err); ZrxNotify.showNotification('Network error saving lab', 'error');
-      }
-    }).catch(err=>{ console.error(err); ZrxNotify.showNotification('Error reading files', 'error'); });
-  }
-
-  async function renderLabs(){
-    const container = document.getElementById('labsList'); container.innerHTML='<div class="col-span-1 text-center text-gray-400 py-12">Loading labs…</div>';
-    try {
-      const res = await fetch(BACKEND_URL + '/api/labs');
-      if (!res.ok) throw new Error('Failed to load labs');
-      const labs = await res.json();
-      if(labs.length===0){ container.innerHTML='<div class="col-span-1 text-center text-gray-400 py-12">No labs yet. Click Add Lab to create one.</div>'; return; }
-      container.innerHTML = '';
-      labs.forEach(l=>{
-        const el=document.createElement('div'); el.className='lab-card';
-        const labId = l._id ? String(l._id) : '';
-        let inner = `<h3 class="text-xl font-semibold text-white mb-1">${escapeHtml(l.name)}</h3><p class="text-base text-gray-400 mb-2">${escapeHtml(l.location||'')}</p><p class="text-base text-gray-300 mb-3">${escapeHtml((l.description||'').slice(0,200))}</p>`;
-        if(l.files && l.files.length){
-          inner += '<div class="mb-3 flex flex-wrap gap-3">';
-          l.files.forEach(f=>{
-            if(f.type && f.type.startsWith('image/')){
-              inner += `<a href="${escapeHtml(f.data)}" target="_blank"><img src="${escapeHtml(f.data)}" class="w-32 h-20 object-cover rounded"/></a>`;
-            } else {
-              inner += `<div class="px-3 py-1 bg-[#08121a] rounded"><a href="${escapeHtml(f.data)}" download="${escapeHtml(f.name)}" class="underline text-gray-300">${escapeHtml(f.name)}</a></div>`;
-            }
-          });
-          inner += '</div>';
-        }
-        inner += `<div class="text-sm text-gray-500">Added: ${new Date(l.createdAt).toLocaleString()}</div>`;
-        el.innerHTML = inner; container.appendChild(el);
-      });
-    } catch(err) {
-      container.innerHTML='<div class="col-span-1 text-center text-gray-400 py-12">Failed to load labs. Please try again.</div>';
-    }
-  }
-
-  function escapeHtml(s){ return (''+s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-
-  window.addEventListener('load', renderLabs);
-</script>
-
-<script src="notifications.js"></script>
-<script src="session.js"></script>
-<script src="profile-picture.js"></script>
 
     <!-- Dropdown toggle script: supports hover (CSS) and click (JS) -->
     <script>
@@ -425,6 +733,8 @@
         });
     </script>
 
+    <script src="notifications.js"></script>
+    <script src="session.js"></script>
     <script>
         // Header account/cart wiring
         (function(){
@@ -518,6 +828,7 @@
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
         })();
     </script>
+    <script src="profile-picture.js"></script>
 </body>
 </html>
 
