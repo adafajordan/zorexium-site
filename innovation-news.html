@@ -8,7 +8,7 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #111827; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
@@ -237,41 +237,45 @@
 
 
 <!-- Sub-header / Search -->
-<div class="bg-gray-50 py-6">
-  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row items-center justify-between gap-6">
-    <a href="index.html" class="text-gray-900 font-medium text-xl hidden md:block">Innovation & News</a>
-    <div class="flex-1 w-full max-w-3xl relative">
+<div class="bg-white border-b border-gray-200 py-4">
+  <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <i class="fas fa-newspaper text-cyan-500 text-lg"></i>
+      <a href="index.html" class="text-gray-900 font-bold text-lg">Innovation &amp; News</a>
+    </div>
+    <div class="flex-1 w-full max-w-2xl relative">
       <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
-        <input type="text" id="forumSearch" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" placeholder="Search posts and discussions..." onkeyup="filterPosts()">
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"><i class="fas fa-microphone text-gray-500"></i></div>
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400 text-sm"></i></div>
+        <input type="text" id="forumSearch" class="block w-full pl-9 pr-4 py-2 border border-gray-200 rounded-full bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 text-sm transition-colors" placeholder="Search posts and discussions…" onkeyup="filterPosts()">
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <button onclick="handleNewPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-6 py-3 rounded-md text-base font-bold flex items-center gap-3"><i class="fas fa-plus"></i> New Post</button>
-      <button onclick="logout()" id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-1.5 rounded text-base font-medium hidden">Log Out</button>
+      <button onclick="handleNewPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-5 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-colors"><i class="fas fa-plus text-xs"></i> New Post</button>
+      <button onclick="logout()" id="logoutBtn" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-full text-sm font-medium hidden transition-colors">Log Out</button>
     </div>
   </div>
 </div>
 
 <!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
-  <div class="mb-12">
-    <div id="notLoggedIn" class="bg-blue-900 border border-blue-700 rounded-lg p-4 mb-8 hidden">
-      <p class="text-blue-100"><i class="fas fa-info-circle mr-2"></i> <a href="login-register.html" class="underline font-semibold">Sign up or log in</a> to create posts and participate in discussions.</p>
+<main class="flex-1 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+  <div class="mb-8">
+    <div id="notLoggedIn" class="bg-blue-50 border border-blue-200 rounded-md px-4 py-3 mb-4 hidden">
+      <p class="text-blue-800 text-sm"><i class="fas fa-info-circle mr-2"></i> <a href="login-register.html" class="underline font-semibold">Sign up or log in</a> to create posts and participate in discussions.</p>
     </div>
 
     <!-- New Post Form -->
-    <div id="newPostForm" class="post-card hidden mb-8">
-      <h3 class="text-gray-900 font-semibold mb-6">Create New Post</h3>
-      <div class="mb-6">
-        <input type="text" id="postTitle" class="form-input mb-3" placeholder="Post title..." maxlength="100">
-        <textarea id="postContent" class="form-input" placeholder="Share your thoughts..." rows="4" maxlength="1000"></textarea>
-        <input type="url" id="postImageUrl" class="form-input mt-3" placeholder="Photo or link URL (optional)..." maxlength="2000">
+    <div id="newPostForm" class="bg-white border border-gray-200 rounded-md hidden mb-3">
+      <div class="border-b border-gray-100 px-4 py-3">
+        <span class="font-bold text-gray-900">Create a Post</span>
       </div>
-      <div class="flex gap-3">
-        <button onclick="publishPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-6 py-3 rounded text-base font-medium">Publish</button>
-        <button onclick="cancelPost()" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded text-base font-medium">Cancel</button>
+      <div class="p-4 space-y-3">
+        <input type="text" id="postTitle" class="form-input" placeholder="Title" maxlength="100">
+        <textarea id="postContent" class="form-input" placeholder="Share your thoughts…" rows="4" maxlength="1000"></textarea>
+        <input type="url" id="postImageUrl" class="form-input mt-2" placeholder="Photo or link URL (optional)…" maxlength="2000">
+        <div class="flex justify-end gap-3 pt-1">
+          <button onclick="cancelPost()" class="px-4 py-1.5 rounded-full border border-gray-300 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onclick="publishPost()" class="px-4 py-1.5 rounded-full bg-[#65a30d] hover:bg-[#4d7c0f] text-white text-sm font-semibold transition-colors">Publish</button>
+        </div>
       </div>
     </div>
 
@@ -387,7 +391,7 @@
 
   function renderPosts(postsToRender, feed) {
     if (postsToRender.length === 0) {
-      feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">No posts yet. Be the first to post!</p></div>';
+      feed.innerHTML = '<div class="text-center py-16 bg-white border border-gray-200 rounded-md"><i class="fas fa-newspaper text-4xl text-gray-200 mb-4 block"></i><p class="text-gray-500 font-semibold mb-1">No posts yet</p><p class="text-gray-400 text-sm">Be the first to share innovation news!</p></div>';
       return;
     }
     const currentUserId = getCurrentUserId();
@@ -396,54 +400,68 @@
       const likes = post.likes || [];
       const likeCount = likes.length;
       const liked = !!(currentUserId && likes.includes(currentUserId));
+      const isOwner = !!(currentUserId && currentUserId === (post.email || post.username));
+      const timeStr = timeAgo(post.createdAt);
       const firstReply = replies[0];
       return `
-        <div class="post-card">
-          <div class="flex justify-between items-start mb-3">
-            <div class="flex items-center gap-3 flex-1">
-              <a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="flex-shrink-0"><img src="${post.profileImage || 'https://placehold.co/40x40/333/fff?text=U'}" class="w-10 h-10 rounded-full border border-gray-600 object-cover"></a>
-              <div>
-                <h3 class="text-gray-900 font-semibold text-xl">${escapeHtml(post.title)}</h3>
-                <p class="text-gray-400 text-sm"><a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="text-cyan-400 hover:underline">${escapeHtml(post.username || post.email)}</a> • ${new Date(post.createdAt).toLocaleString()}</p>
+        <div class="post-card group">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="flex-shrink-0">
+                <img src="${post.profileImage || 'https://placehold.co/40x40/e5e7eb/9ca3af?text=U'}" class="w-9 h-9 rounded-full border border-gray-200 object-cover">
+              </a>
+              <div class="min-w-0">
+                <h3 class="text-gray-900 font-bold text-base leading-snug">${escapeHtml(post.title)}</h3>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  <a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="text-cyan-600 hover:underline font-medium">${escapeHtml(post.username || post.email)}</a>
+                  &bull; ${timeStr}
+                </p>
               </div>
             </div>
+            ${isOwner ? `<button onclick="deletePost('${post._id}', event)" class="text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-1 ml-2" title="Delete post" aria-label="Delete post"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
           </div>
-          <p class="text-gray-300 mb-6">${escapeHtml(post.content)}</p>
+          <p class="text-gray-700 text-sm leading-relaxed mb-3">${escapeHtml(post.content)}</p>
           ${renderPostMedia(post)}
           ${firstReply ? `
-          <div class="bg-[#2a2e38] rounded p-3 mb-3 text-base border-l-2 border-cyan-600">
-            <div class="flex items-center gap-3 mb-1">
-              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}"><img src="${firstReply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
-              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(firstReply.username || firstReply.email)}</a>
+          <div class="bg-gray-50 border border-gray-200 rounded-md p-3 mb-3 text-sm border-l-4 border-l-cyan-400">
+            <div class="flex items-center gap-2 mb-1">
+              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}">
+                <img src="${firstReply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U'}" class="w-5 h-5 rounded-full border border-gray-200 object-cover">
+              </a>
+              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}" class="text-cyan-600 font-semibold hover:underline text-xs">${escapeHtml(firstReply.username || firstReply.email)}</a>
             </div>
-            <p class="text-gray-300">${escapeHtml(firstReply.content)}</p>
+            <p class="text-gray-700">${escapeHtml(firstReply.content)}</p>
           </div>
           ` : ''}
-          <div class="flex items-center gap-6 text-base mt-2">
-            <button onclick="toggleReplies('${post._id}')" class="flex items-center gap-1 text-gray-400 hover:text-cyan-400 transition-colors">
-              <i class="fas fa-chevron-down" id="replies-arrow-${post._id}"></i>
-              <span>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</span>
+          <div class="flex items-center gap-1 text-xs text-gray-500 mt-3 -ml-1.5">
+            <button onclick="toggleReplies('${post._id}')" class="flex items-center gap-1.5 hover:bg-gray-100 px-2.5 py-1.5 rounded font-semibold hover:text-gray-800 transition-colors">
+              <i class="fas fa-comment-alt text-xs"></i>
+              <span>${replies.length} ${replies.length === 1 ? 'Reply' : 'Replies'}</span>
+              <i class="fas fa-chevron-down text-xs" id="replies-arrow-${post._id}"></i>
             </button>
-            <button onclick="toggleLike('${post._id}')" id="like-btn-${post._id}" class="flex items-center gap-1 ${liked ? 'text-red-400' : 'text-gray-400'} hover:text-red-400 transition-colors">
-              <i id="like-icon-${post._id}" class="${liked ? 'fas fa-heart' : 'far fa-heart'}"></i>
+            <button onclick="toggleLike('${post._id}')" id="like-btn-${post._id}" class="flex items-center gap-1.5 hover:bg-gray-100 px-2.5 py-1.5 rounded font-semibold transition-colors ${liked ? 'text-red-500' : 'hover:text-red-400'}">
+              <i id="like-icon-${post._id}" class="${liked ? 'fas fa-heart text-red-500' : 'far fa-heart'}"></i>
               <span id="like-count-${post._id}">${likeCount}</span>
             </button>
           </div>
-          <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-700">
-            <div class="mb-6">
+          <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-100">
+            ${replies.length > 0 ? `<div class="space-y-2 mb-4">
               ${replies.map(reply => `
-                <div class="bg-[#2a2e38] rounded p-3 mb-2 text-base">
-                  <div class="flex items-center gap-3 mb-1">
-                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}"><img src="${reply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
-                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(reply.username || reply.email)}</a>
+                <div class="flex gap-2">
+                  <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}">
+                    <img src="${reply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U'}" class="w-6 h-6 rounded-full border border-gray-200 object-cover mt-0.5">
+                  </a>
+                  <div class="flex-1 bg-gray-50 rounded-md px-3 py-2 text-sm">
+                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}" class="text-cyan-600 font-semibold hover:underline text-xs">${escapeHtml(reply.username || reply.email)}</a>
+                    <span class="text-gray-400 text-xs ml-1">&bull; ${timeAgo(reply.createdAt)}</span>
+                    <p class="text-gray-700 mt-0.5">${escapeHtml(reply.content)}</p>
                   </div>
-                  <p class="text-gray-300">${escapeHtml(reply.content)}</p>
                 </div>
               `).join('')}
-            </div>
-            <div class="flex gap-3">
-              <input type="text" id="replyText-${post._id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
-              <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-3 rounded text-base font-medium">Send</button>
+            </div>` : ''}
+            <div class="flex gap-2 items-center">
+              <input type="text" id="replyText-${post._id}" class="form-input flex-1 text-sm py-2" placeholder="Write a reply…" maxlength="500">
+              <button onclick="submitReply('${post._id}')" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors">Reply</button>
             </div>
           </div>
         </div>
@@ -451,11 +469,15 @@
     }).join('');
   }
 
-  function toggleReplies(postId) {
-    const section = document.getElementById('replies-' + postId);
-    const arrow = document.getElementById('replies-arrow-' + postId);
-    section.classList.toggle('hidden');
-    if (arrow) arrow.className = section.classList.contains('hidden') ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+  function timeAgo(date) {
+    const now = new Date();
+    const then = new Date(date);
+    const diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return then.toLocaleDateString();
   }
 
   async function toggleLike(postId) {
@@ -476,13 +498,13 @@
       const data = await res.json();
       countEl.textContent = data.likeCount;
       if (data.liked) {
-        icon.className = 'fas fa-heart';
-        btn.classList.remove('text-gray-400');
-        btn.classList.add('text-red-400');
+        icon.className = 'fas fa-heart text-red-500';
+        btn.classList.remove('text-gray-500');
+        btn.classList.add('text-red-500');
       } else {
         icon.className = 'far fa-heart';
-        btn.classList.remove('text-red-400');
-        btn.classList.add('text-gray-400');
+        btn.classList.remove('text-red-500');
+        btn.classList.add('text-gray-500');
       }
     } catch (err) {
       console.error('Error toggling like:', err);
@@ -512,6 +534,39 @@
     }
   }
 
+  function toggleReplies(postId) {
+    const section = document.getElementById('replies-' + postId);
+    const arrow = document.getElementById('replies-arrow-' + postId);
+    if (!section) return;
+    section.classList.toggle('hidden');
+    if (arrow) arrow.className = section.classList.contains('hidden') ? 'fas fa-chevron-down text-xs' : 'fas fa-chevron-up text-xs';
+    if (!section.classList.contains('hidden')) {
+      const input = document.getElementById('replyText-' + postId);
+      if (input) input.focus();
+    }
+  }
+
+  async function deletePost(postId, event) {
+    event.stopPropagation();
+    ZrxNotify.showConfirm('Delete this post?', async function() {
+      try {
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to delete post'), 'error');
+          return;
+        }
+        ZrxNotify.showNotification('Post deleted', 'success');
+        await loadPosts();
+      } catch (err) {
+        ZrxNotify.showNotification('Error deleting post.', 'error');
+      }
+    });
+  }
+
   function filterPosts() {
     const search = document.getElementById('forumSearch').value.toLowerCase();
     const feed = document.getElementById('postsFeed');
@@ -529,9 +584,9 @@
     if (!post.imageUrl || !/^https?:\/\//i.test(post.imageUrl)) return '';
     const escaped = escapeHtml(post.imageUrl);
     if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(post.imageUrl)) {
-      return '<div class="mb-6"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-lg max-h-96 object-contain"></div>';
+      return '<div class="mb-3"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-md max-h-80 object-contain border border-gray-100"></div>';
     }
-    return '<div class="mb-6"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-cyan-400 underline break-all text-base"><i class="fas fa-link mr-1"></i>' + escaped + '</a></div>';
+    return '<div class="mb-3"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-cyan-600 hover:underline break-all text-sm bg-gray-50 px-3 py-2 rounded-md border border-gray-200"><i class="fas fa-external-link-alt text-xs"></i>' + escaped + '</a></div>';
   }
 
   function toggleDropdown(id) {
