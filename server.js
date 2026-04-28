@@ -831,7 +831,7 @@ app.get('/api/posts', async function(req, res) {
   }
 
   try {
-    const query = boardType ? { boardType } : {};
+    const query = boardType ? { boardType: { $eq: String(boardType) } } : {};
     const posts = await db.collection('posts')
       .find(query)
       .sort({ createdAt: -1 })
