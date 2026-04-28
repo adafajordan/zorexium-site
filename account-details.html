@@ -11,10 +11,14 @@
     body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    .gamer-tab-content { display: none; }
+    .gamer-tab-content.active { display: block; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .profile-section { background-color: #ffffff; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
-    .section-title { color: #22d3ee; font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+    .profile-section { background-color: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #f3f4f6; }
+    .section-title { color: #06b6d4; font-size: 15px; font-weight: 600; margin-bottom: 16px; }
   
         /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
         .marketplace-mega-menu {
@@ -236,240 +240,358 @@
 
 
 <!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12 w-full">
-  <div class="mb-12">
-    <div class="flex items-start justify-between">
-      <div>
-        <h1 class="text-5xl font-bold text-gray-900 mb-2">Account Details</h1>
-        <p class="text-gray-400">Manage your profile and preferences</p>
-      </div>
-      <div class="ml-4">
-        <a id="myDashboardBtn" href="seller-dashboard.html" class="hidden inline-block px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-semibold">My Dashboard</a>
-      </div>
-    </div>
-  </div>
+<main class="flex-1 w-full pb-16">
 
   <!-- Auth Check -->
-  <div id="notLoggedIn" class="text-center py-12 hidden">
-    <i class="fas fa-user-lock text-5xl text-gray-600 mb-6 block"></i>
-    <p class="text-gray-400 mb-6 text-xl">Please log in to view your account</p>
-    <a href="signup-login.html" class="inline-block px-8 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold">Log In</a>
+  <div id="notLoggedIn" class="text-center py-12 max-w-lg mx-auto hidden">
+    <i class="fas fa-user-lock text-5xl text-gray-300 mb-6 block"></i>
+    <p class="text-gray-500 mb-6 text-lg">Please log in to view your account</p>
+    <a href="signup-login.html" class="inline-block px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold">Log In</a>
   </div>
 
   <div id="loggedInContent" class="hidden">
-    <!-- Profile Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-      <!-- Sidebar Profile -->
-      <div class="lg:col-span-1">
-        <div class="profile-section">
-          <div class="text-center">
-            <div class="h-24 w-24 mx-auto rounded-full overflow-hidden border-2 border-cyan-400 mb-6">
-              <img id="profileImage" src="https://placehold.co/200x200/333/fff?text=Profile" alt="Profile" class="h-full w-full object-cover">
-              </div>
-              <div class="mt-2">
-                <input id="profileImageFile" type="file" accept="image/*" class="hidden" onchange="handleProfileImageUpload(event)">
-                <button onclick="document.getElementById('profileImageFile').click()" class="px-3 py-1 bg-gray-700 text-base rounded text-white">Upload Photo</button>
-              </div>
-              <div id="accountFilesList" class="mt-3 text-left text-sm text-gray-300"></div>
-              </div>
-            <h2 id="profileUsername" class="text-2xl font-bold text-gray-900 mb-1">Username</h2>
-            <p id="profileEmail" class="text-gray-400 text-base mb-6">email@example.com</p>
-            <div id="sellerBadge" class="hidden">
-              <span class="inline-block px-3 py-1 bg-green-900 text-green-300 rounded-full text-base font-semibold">
-                <i class="fas fa-check-circle"></i> Verified Seller
-              </span>
-            </div>
-            <div id="notSellerNotice" class="mt-4">
-              <a href="seller-signup.html" class="inline-block px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-base font-semibold">
-                <i class="fas fa-store"></i> Become a Seller
-              </a>
-            </div>
-          </div>
 
-        <!-- Quick Stats -->
-        <div class="profile-section">
-          <h3 class="section-title">Account Stats</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="text-gray-400">Member Since</span>
-              <span id="memberSince" class="text-gray-900 font-semibold">--</span>
-            </div>
-            <div class="flex justify-between items-center">
-              <span class="text-gray-400">Total Orders</span>
-              <span id="totalOrders" class="text-cyan-400 font-semibold">0</span>
-            </div>
-            <div class="flex justify-between items-center" id="sellerStats" class="hidden">
-              <span class="text-gray-400">Products Listed</span>
-              <span id="productsListed" class="text-cyan-400 font-semibold">0</span>
-            </div>
-          </div>
+    <!-- Cover + Avatar section -->
+    <div class="relative">
+      <!-- Cover photo -->
+      <div id="coverPhotoArea" class="w-full h-48 md:h-64 bg-gradient-to-br from-cyan-400 to-blue-600 relative overflow-hidden">
+        <img id="coverImage" src="" alt="" class="w-full h-full object-cover hidden">
+        <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/30">
+          <button onclick="document.getElementById('coverImageFile').click()" class="bg-white/90 text-gray-800 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+            <i class="fas fa-camera"></i> Edit Cover
+          </button>
+          <input id="coverImageFile" type="file" accept="image/*" class="hidden" onchange="handleCoverImageUpload(event)">
         </div>
+        <!-- Edit Cover button always visible on mobile -->
+        <button onclick="document.getElementById('coverImageFile').click()" class="absolute top-3 right-3 bg-white/80 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 md:hidden">
+          <i class="fas fa-camera"></i> Edit Cover
+        </button>
       </div>
 
-      <!-- Main Content -->
-      <div class="lg:col-span-2">
-        <!-- Tabs -->
-        <div class="flex gap-6 mb-8 border-b border-gray-700">
-          <button onclick="switchTab('profile')" class="tab-btn active px-6 py-3 text-gray-900 font-semibold border-b-2 border-cyan-400">
-            <i class="fas fa-user"></i> Profile
+      <!-- Avatar -->
+      <div class="absolute left-6 md:left-10" style="bottom: -48px;">
+        <div class="relative">
+          <div class="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white overflow-hidden bg-gray-200 shadow-lg">
+            <img id="profileImage" src="https://placehold.co/200x200/e5e7eb/9ca3af?text=??" alt="Profile" class="w-full h-full object-cover">
+          </div>
+          <button onclick="document.getElementById('profileImageFile').click()" class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full flex items-center justify-center shadow-md" title="Edit Avatar">
+            <i class="fas fa-camera text-xs"></i>
           </button>
-          <button onclick="switchTab('purchases')" class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600">
-            <i class="fas fa-shopping-bag"></i> Purchases
-          </button>
-          <button onclick="switchTab('seller')" id="sellerTab" class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600 hidden">
-            <i class="fas fa-store"></i> Seller
-          </button>
-          <button onclick="switchTab('settings')" class="tab-btn px-6 py-3 text-gray-400 hover:text-white font-semibold border-b-2 border-transparent hover:border-gray-600">
-            <i class="fas fa-cog"></i> Settings
-          </button>
-        </div>
-
-        <!-- Profile Tab -->
-        <div id="profile" class="tab-content active">
-          <div class="profile-section">
-            <h3 class="section-title">Personal Information</h3>
-            <div class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label class="text-gray-400 text-base">Username</label>
-                  <input type="text" id="editUsername" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1">
-                </div>
-                <div>
-                  <label class="text-gray-400 text-base">Email Address</label>
-                  <input type="email" id="editEmail" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1">
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div>
-                  <label class="text-gray-400 text-base">Phone</label>
-                  <input type="text" id="editPhone" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1" placeholder="Optional">
-                </div>
-                <div>
-                  <label class="text-gray-400 text-base">Account Type</label>
-                  <input type="text" id="editAccountType" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1" readonly>
-                </div>
-              </div>
-              <div class="mt-4">
-                <button onclick="saveProfile()" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-semibold">Save Profile</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="profile-section">
-            <h3 class="section-title">Change Password</h3>
-            <div class="space-y-4">
-              <div>
-                <label class="text-gray-400 text-base">Current Password</label>
-                <input type="password" id="currentPassword" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1" placeholder="••••••••">
-              </div>
-              <div>
-                <label class="text-gray-400 text-base">New Password</label>
-                <input type="password" id="newPassword" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1" placeholder="••••••••">
-              </div>
-              <div>
-                <label class="text-gray-400 text-base">Confirm Password</label>
-                <input type="password" id="confirmPassword" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1" placeholder="••••••••">
-              </div>
-              <button onclick="changePassword()" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-semibold">
-                Update Password
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Purchases Tab -->
-        <div id="purchases" class="tab-content">
-          <div class="profile-section">
-            <h3 class="section-title">Order History</h3>
-            <div id="orderHistory" class="space-y-4">
-              <div class="text-center py-8">
-                <i class="fas fa-inbox text-5xl text-gray-600 mb-3 block"></i>
-                <p class="text-gray-400">No purchase history yet</p>
-              </div>
-            </div>
-                <div class="mt-4">
-                  <label class="text-gray-400 text-base">Upload Purchase File / Receipt</label>
-                  <input type="file" id="purchaseFileInput" class="w-full mt-2" onchange="uploadPurchaseFile(event)">
-                  <div id="purchaseFilesList" class="mt-3 text-sm text-gray-300"></div>
-                </div>
-          </div>
-        </div>
-
-        <!-- Seller Tab (Hidden by default) -->
-        <div id="seller" class="tab-content hidden">
-          <div class="profile-section">
-            <h3 class="section-title">Shop Information</h3>
-            <div id="shopInfo" class="space-y-4">
-              <div>
-                <label class="text-gray-400 text-base">Shop Name</label>
-                <input type="text" id="shopName" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1">
-              </div>
-              <div>
-                <label class="text-gray-400 text-base">Shop Description</label>
-                <textarea id="shopDescription" class="w-full bg-gray-700 text-white rounded px-3 py-3 mt-1 h-24"></textarea>
-              </div>
-              <button onclick="updateShopInfo()" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-semibold">
-                Update Shop Info
-              </button>
-              <div class="mt-4">
-                <label class="text-gray-400 text-base">Upload Shop Image / Files</label>
-                <input type="file" id="shopFileInput" class="w-full mt-2" onchange="uploadShopFile(event)">
-                <div id="shopFilesList" class="mt-3 text-sm text-gray-300"></div>
-              </div>
-            </div>
-
-            <div class="mt-6 pt-6 border-t border-gray-700">
-              <h3 class="section-title">Sales Stats</h3>
-              <div class="grid grid-cols-2 gap-6">
-                <div class="bg-gray-800 rounded px-6 py-3">
-                  <p class="text-gray-400 text-base">Total Sales</p>
-                  <p id="totalSales" class="text-3xl font-bold text-cyan-400">$0.00</p>
-                </div>
-                <div class="bg-gray-800 rounded px-6 py-3">
-                  <p class="text-gray-400 text-base">Avg Rating</p>
-                  <p id="avgRating" class="text-3xl font-bold text-cyan-400">N/A</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Settings Tab -->
-        <div id="settings" class="tab-content hidden">
-          <div class="profile-section">
-            <h3 class="section-title">Notification Preferences</h3>
-            <div class="space-y-4">
-              <label class="flex items-center cursor-pointer">
-                <input type="checkbox" id="emailNotifications" class="w-4 h-4 rounded" checked>
-                <span class="ml-3 text-gray-300">Email notifications for new messages</span>
-              </label>
-              <label class="flex items-center cursor-pointer">
-                <input type="checkbox" id="orderUpdates" class="w-4 h-4 rounded" checked>
-                <span class="ml-3 text-gray-300">Order status updates</span>
-              </label>
-              <label class="flex items-center cursor-pointer">
-                <input type="checkbox" id="promotions" class="w-4 h-4 rounded">
-                <span class="ml-3 text-gray-300">Promotional emails</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="profile-section">
-            <h3 class="section-title">Danger Zone</h3>
-            <button onclick="logout()" class="px-6 py-3 bg-red-900 hover:bg-red-800 text-red-300 rounded font-semibold">
-              <i class="fas fa-sign-out-alt"></i> Log Out
-            </button>
-            <button onclick="deactivateAccount()" class="ml-3 px-6 py-3 bg-yellow-800 hover:bg-yellow-700 text-yellow-100 rounded font-semibold">
-              <i class="fas fa-user-slash"></i> Deactivate Account
-            </button>
-            <button onclick="deleteAccount()" class="ml-3 px-6 py-3 bg-red-950 hover:bg-red-900 text-red-200 rounded font-semibold">
-              <i class="fas fa-trash"></i> Delete Account
-            </button>
-          </div>
+          <input id="profileImageFile" type="file" accept="image/*" class="hidden" onchange="handleProfileImageUpload(event)">
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- Profile info row -->
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="pt-16 md:pt-20 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div>
+          <h1 id="profileUsername" class="text-2xl font-bold text-gray-900">Anonymous</h1>
+          <p id="profileJoinDate" class="text-gray-400 text-sm mt-0.5">Joined on 01/01/01</p>
+          <div class="flex items-center gap-6 mt-3">
+            <div class="text-center">
+              <span id="followersCount" class="text-lg font-bold text-gray-900 block">0</span>
+              <span class="text-xs text-gray-400">Followers</span>
+            </div>
+            <div class="text-center">
+              <span id="followingCount" class="text-lg font-bold text-gray-900 block">0</span>
+              <span class="text-xs text-gray-400">Following</span>
+            </div>
+          </div>
+          <div class="mt-3" id="bioSection">
+            <p id="profileBio" class="text-gray-500 text-sm italic">No bio yet.</p>
+          </div>
+          <button onclick="toggleBioEdit()" class="mt-2 text-cyan-600 text-sm font-semibold hover:underline flex items-center gap-1">
+            <i class="fas fa-pen text-xs"></i> Edit Bio
+          </button>
+          <div id="bioEditArea" class="hidden mt-2">
+            <textarea id="bioInput" rows="3" maxlength="300" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400" placeholder="Tell the community about yourself..."></textarea>
+            <div class="flex gap-2 mt-2">
+              <button onclick="saveBio()" class="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded text-sm font-semibold">Save</button>
+              <button onclick="toggleBioEdit()" class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-col items-end gap-2 mt-2">
+          <a id="myDashboardBtn" href="seller-dashboard.html" class="hidden inline-block px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold">
+            <i class="fas fa-tachometer-alt mr-1"></i> My Dashboard
+          </a>
+          <div id="sellerBadge" class="hidden">
+            <span class="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+              <i class="fas fa-check-circle"></i> Verified Seller
+            </span>
+          </div>
+          <div id="notSellerNotice">
+            <a href="seller-signup.html" class="inline-block px-4 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 rounded-lg text-sm font-semibold">
+              <i class="fas fa-store mr-1"></i> Become a Seller
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Anonymous user notice -->
+      <div id="anonymousNotice" class="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+        <i class="fas fa-user-secret mr-2"></i>
+        You are currently set as <strong>Anonymous User</strong> and others cannot view your profile pages. If you want to display your profile page to others, you can change the display setting from Anonymous User to Real Name User.
+        <button onclick="switchTab('settings')" class="ml-2 text-amber-700 underline font-semibold hover:text-amber-900">Change in Settings →</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="mt-8 border-b border-gray-200">
+        <nav class="flex gap-1 overflow-x-auto scrollbar-hide" id="profileTabs">
+          <button onclick="switchTab('gamerProfile')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap active-tab">Gamer Community Profile</button>
+          <button onclick="switchTab('profile')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap">Account &amp; Password</button>
+          <button onclick="switchTab('purchases')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap">Purchases</button>
+          <button onclick="switchTab('seller')" id="sellerTab" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap hidden">Seller</button>
+          <button onclick="switchTab('settings')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap">Settings</button>
+        </nav>
+      </div>
+
+      <!-- Gamer Community Profile Tab -->
+      <div id="gamerProfile" class="tab-content active mt-8">
+        <!-- Sub-tabs: Showcase, Wish Lists, Gallery, Product Reviews, Seller Reviews -->
+        <div class="flex gap-4 border-b border-gray-100 mb-6 overflow-x-auto scrollbar-hide">
+          <button onclick="switchGamerTab('showcase')" class="gamer-tab-btn pb-3 text-sm font-semibold text-cyan-600 border-b-2 border-cyan-500 whitespace-nowrap">Showcase</button>
+          <button onclick="switchGamerTab('wishLists')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Public Wish Lists</button>
+          <button onclick="switchGamerTab('gallery')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Gallery</button>
+          <button onclick="switchGamerTab('productReviews')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Product Reviews</button>
+          <button onclick="switchGamerTab('sellerReviews')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Seller Reviews</button>
+        </div>
+
+        <!-- Showcase sub-tab -->
+        <div id="gamerTab-showcase" class="gamer-tab-content">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-gray-900 text-base">Showcase</h3>
+            <a href="build-showcase.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a>
+          </div>
+          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
+            <i class="fas fa-desktop text-4xl text-gray-300 mb-4 block"></i>
+            <p class="text-gray-500 font-semibold text-sm mb-1">0 lists</p>
+            <p class="text-gray-400 text-sm mb-4">Showcase Your Build</p>
+            <a href="build-showcase.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Add a Build</a>
+          </div>
+        </div>
+
+        <!-- Public Wish Lists sub-tab -->
+        <div id="gamerTab-wishLists" class="gamer-tab-content hidden">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-gray-900 text-base">Public Wish Lists</h3>
+            <a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">Manage Your Wish Lists</a>
+          </div>
+          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
+            <i class="fas fa-heart text-4xl text-gray-300 mb-4 block"></i>
+            <p class="text-gray-400 text-sm mb-4">No public wish lists yet.</p>
+            <a href="wish-lists.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Create a Wish List</a>
+          </div>
+          <div class="mt-4 text-right"><a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a></div>
+        </div>
+
+        <!-- Gallery sub-tab -->
+        <div id="gamerTab-gallery" class="gamer-tab-content hidden">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-gray-900 text-base">Gallery</h3>
+            <a href="#" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a>
+          </div>
+          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
+            <i class="fas fa-photo-video text-4xl text-gray-300 mb-4 block"></i>
+            <p class="text-gray-500 font-semibold text-sm mb-1">0 videos &nbsp; 0 photos</p>
+            <p class="text-gray-400 text-sm mb-4">Share your setup photos and videos.</p>
+            <button onclick="ZrxNotify.showNotification('Gallery upload coming soon!','info')" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Add Media</button>
+          </div>
+        </div>
+
+        <!-- Product Reviews sub-tab -->
+        <div id="gamerTab-productReviews" class="gamer-tab-content hidden">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-gray-900 text-base">Product Reviews</h3>
+          </div>
+          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
+            <i class="fas fa-star text-4xl text-gray-300 mb-4 block"></i>
+            <p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p>
+            <p class="text-gray-400 text-sm mb-4">You haven't reviewed any products yet.</p>
+            <a href="marketplace.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Products</a>
+          </div>
+        </div>
+
+        <!-- Seller Reviews sub-tab -->
+        <div id="gamerTab-sellerReviews" class="gamer-tab-content hidden">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-gray-900 text-base">Seller Reviews</h3>
+          </div>
+          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
+            <i class="fas fa-store text-4xl text-gray-300 mb-4 block"></i>
+            <p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p>
+            <p class="text-gray-400 text-sm mb-4">You haven't reviewed any sellers yet.</p>
+            <a href="marketplace.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Sellers</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Account & Password Tab -->
+      <div id="profile" class="tab-content hidden mt-8">
+        <div class="profile-section">
+          <h3 class="section-title">Personal Information</h3>
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="text-gray-400 text-sm">Username</label>
+                <input type="text" id="editUsername" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400">
+              </div>
+              <div>
+                <label class="text-gray-400 text-sm">Email Address</label>
+                <input type="email" id="editEmail" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400">
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div>
+                <label class="text-gray-400 text-sm">Phone</label>
+                <input type="text" id="editPhone" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="Optional">
+              </div>
+              <div>
+                <label class="text-gray-400 text-sm">Account Type</label>
+                <input type="text" id="editAccountType" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none" readonly>
+              </div>
+            </div>
+            <div class="mt-4">
+              <button onclick="saveProfile()" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Save Profile</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-section mt-6">
+          <h3 class="section-title">Change Password</h3>
+          <div class="space-y-4 max-w-md">
+            <div>
+              <label class="text-gray-400 text-sm">Current Password</label>
+              <input type="password" id="currentPassword" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="••••••••">
+            </div>
+            <div>
+              <label class="text-gray-400 text-sm">New Password</label>
+              <input type="password" id="newPassword" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="••••••••">
+            </div>
+            <div>
+              <label class="text-gray-400 text-sm">Confirm Password</label>
+              <input type="password" id="confirmPassword" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="••••••••">
+            </div>
+            <button onclick="changePassword()" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Update Password</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Purchases Tab -->
+      <div id="purchases" class="tab-content hidden mt-8">
+        <div class="profile-section">
+          <h3 class="section-title">Order History</h3>
+          <div id="orderHistory" class="space-y-4">
+            <div class="text-center py-10">
+              <i class="fas fa-inbox text-4xl text-gray-300 mb-3 block"></i>
+              <p class="text-gray-400 text-sm">No purchase history yet</p>
+            </div>
+          </div>
+          <div class="mt-4 border-t border-gray-100 pt-4">
+            <label class="text-gray-400 text-sm">Upload Purchase File / Receipt</label>
+            <input type="file" id="purchaseFileInput" class="w-full mt-2 text-sm" onchange="uploadPurchaseFile(event)">
+            <div id="purchaseFilesList" class="mt-3 text-sm text-gray-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seller Tab (Hidden by default) -->
+      <div id="seller" class="tab-content hidden mt-8">
+        <div class="profile-section">
+          <h3 class="section-title">Shop Information</h3>
+          <div id="shopInfo" class="space-y-4 max-w-xl">
+            <div>
+              <label class="text-gray-400 text-sm">Shop Name</label>
+              <input type="text" id="shopName" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400">
+            </div>
+            <div>
+              <label class="text-gray-400 text-sm">Shop Description</label>
+              <textarea id="shopDescription" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 h-24 text-sm focus:outline-none focus:border-cyan-400"></textarea>
+            </div>
+            <button onclick="updateShopInfo()" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Update Shop Info</button>
+            <div class="mt-4">
+              <label class="text-gray-400 text-sm">Upload Shop Image / Files</label>
+              <input type="file" id="shopFileInput" class="w-full mt-2 text-sm" onchange="uploadShopFile(event)">
+              <div id="shopFilesList" class="mt-3 text-sm text-gray-300"></div>
+            </div>
+          </div>
+          <div class="mt-6 pt-6 border-t border-gray-100">
+            <h3 class="section-title">Sales Stats</h3>
+            <div class="grid grid-cols-2 gap-4 max-w-xs">
+              <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+                <p class="text-gray-400 text-xs">Total Sales</p>
+                <p id="totalSales" class="text-2xl font-bold text-cyan-500 mt-0.5">$0.00</p>
+              </div>
+              <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+                <p class="text-gray-400 text-xs">Avg Rating</p>
+                <p id="avgRating" class="text-2xl font-bold text-cyan-500 mt-0.5">N/A</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="settings" class="tab-content hidden mt-8">
+        <div class="profile-section max-w-xl">
+          <h3 class="section-title">Display Settings</h3>
+          <div class="space-y-4 mb-6">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input type="radio" name="displayMode" value="anonymous" id="displayAnonymous" class="w-4 h-4" checked>
+              <div>
+                <span class="font-semibold text-gray-800 text-sm">Anonymous User</span>
+                <p class="text-xs text-gray-500 mt-0.5">Others cannot see your profile page.</p>
+              </div>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input type="radio" name="displayMode" value="realname" id="displayRealName" class="w-4 h-4">
+              <div>
+                <span class="font-semibold text-gray-800 text-sm">Real Name User</span>
+                <p class="text-xs text-gray-500 mt-0.5">Your profile page is visible to others.</p>
+              </div>
+            </label>
+          </div>
+          <button onclick="saveDisplaySetting()" class="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Save Setting</button>
+        </div>
+
+        <div class="profile-section mt-6 max-w-xl">
+          <h3 class="section-title">Notification Preferences</h3>
+          <div class="space-y-3">
+            <label class="flex items-center cursor-pointer gap-3">
+              <input type="checkbox" id="emailNotifications" class="w-4 h-4 rounded" checked>
+              <span class="text-sm text-gray-700">Email notifications for new messages</span>
+            </label>
+            <label class="flex items-center cursor-pointer gap-3">
+              <input type="checkbox" id="orderUpdates" class="w-4 h-4 rounded" checked>
+              <span class="text-sm text-gray-700">Order status updates</span>
+            </label>
+            <label class="flex items-center cursor-pointer gap-3">
+              <input type="checkbox" id="promotions" class="w-4 h-4 rounded">
+              <span class="text-sm text-gray-700">Promotional emails</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="profile-section mt-6 max-w-xl">
+          <h3 class="text-red-500 font-semibold text-base mb-4">Danger Zone</h3>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="logout()" class="px-5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-semibold">
+              <i class="fas fa-sign-out-alt mr-1"></i> Log Out
+            </button>
+            <button onclick="deactivateAccount()" class="px-5 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg text-sm font-semibold">
+              <i class="fas fa-user-slash mr-1"></i> Deactivate Account
+            </button>
+            <button onclick="deleteAccount()" class="px-5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 rounded-lg text-sm font-semibold">
+              <i class="fas fa-trash mr-1"></i> Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /max-w-5xl -->
+  </div><!-- /loggedInContent -->
 </main>
 
     <!-- Chat Bubble -->
@@ -499,10 +621,7 @@
 
   async function loadAccountData() {
     try {
-      // Fetch user profile from backend
-      const profileRes = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
-        credentials: 'include'
-      });
+      const profileRes = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', { credentials: 'include' });
       if (!profileRes.ok) {
         document.getElementById('notLoggedIn').classList.remove('hidden');
         document.getElementById('loggedInContent').classList.add('hidden');
@@ -514,68 +633,65 @@
       const lastName = _profileData.lastName || '';
       const fullName = (firstName + ' ' + lastName).trim() || _profileData.email;
 
-      document.getElementById('profileUsername').textContent = fullName;
+      document.getElementById('profileUsername').textContent = fullName || 'Anonymous';
       document.getElementById('editUsername').value = fullName;
       document.getElementById('editEmail').value = _profileData.email || '';
       document.getElementById('editPhone').value = _profileData.phone || '';
       document.getElementById('editAccountType').value = _profileData.isSeller ? 'Seller' : 'Buyer';
 
-      const joinDate = _profileData.createdAt ? new Date(_profileData.createdAt).toLocaleDateString() : '--';
-      document.getElementById('memberSince').textContent = joinDate;
-      document.getElementById('profileEmail').textContent = _profileData.email || '';
+      const joinDate = _profileData.createdAt ? new Date(_profileData.createdAt).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'2-digit'}) : '01/01/01';
+      document.getElementById('profileJoinDate').textContent = 'Joined on ' + joinDate;
+
+      if (_profileData.bio) {
+        document.getElementById('profileBio').textContent = _profileData.bio;
+        document.getElementById('bioInput').value = _profileData.bio;
+      }
+
+      if (_profileData.profileImage) {
+        document.getElementById('profileImage').src = _profileData.profileImage;
+      }
+      if (_profileData.coverImage) {
+        const ci = document.getElementById('coverImage');
+        ci.src = _profileData.coverImage;
+        ci.classList.remove('hidden');
+      }
+
+      // Show/hide anonymous notice based on displayMode
+      if (_profileData.displayMode === 'realname') {
+        const notice = document.getElementById('anonymousNotice');
+        if (notice) notice.classList.add('hidden');
+        const radios = document.querySelectorAll('[name="displayMode"]');
+        radios.forEach(r => { r.checked = (r.value === 'realname'); });
+      }
     } catch (e) {
       console.error('Failed to load profile:', e);
     }
 
-    // Cart badge from backend
+    // Cart badge
     try {
-      const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
-        credentials: 'include'
-      });
+      const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
       if (cartRes.ok) {
         const cartData = await cartRes.json();
         const count = (cartData.items || []).length;
         const badge = document.getElementById('cartBadge');
-        if (badge && count > 0) {
-          badge.textContent = count;
-          badge.classList.remove('hidden');
-        }
+        if (badge && count > 0) { badge.textContent = count; badge.classList.remove('hidden'); }
       }
     } catch (_) {}
 
     // Check if seller
     try {
-      const sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
-        credentials: 'include'
-      });
+      const sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', { credentials: 'include' });
       if (sellerRes.ok) {
         _sellerData = await sellerRes.json();
         document.getElementById('sellerBadge').classList.remove('hidden');
         document.getElementById('notSellerNotice').classList.add('hidden');
         document.getElementById('sellerTab').classList.remove('hidden');
-        document.getElementById('sellerStats').classList.remove('hidden');
 
         document.getElementById('shopName').value = _sellerData.shopName || '';
         document.getElementById('shopDescription').value = _sellerData.shopDescription || '';
         document.getElementById('totalSales').textContent = '$' + (_sellerData.totalSales || 0).toFixed(2);
         document.getElementById('avgRating').textContent = _sellerData.rating ? _sellerData.rating.toFixed(1) + '★' : 'N/A';
 
-        // Fetch product count via session endpoint
-        try {
-          const sessionRes = await ZrxSession.fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
-          if (sessionRes.ok) {
-            const session = await sessionRes.json();
-            if (session.userId) {
-              const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(session.userId));
-              if (prodRes.ok) {
-                const products = await prodRes.json();
-                document.getElementById('productsListed').textContent = (products || []).length;
-              }
-            }
-          }
-        } catch (_) {}
-
-        // show My Dashboard button
         const dashBtn = document.getElementById('myDashboardBtn');
         if (dashBtn) dashBtn.classList.remove('hidden');
       }
@@ -614,8 +730,56 @@
     reader.readAsDataURL(file);
   }
 
+  async function handleCoverImageUpload(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const dataUrl = ev.target.result;
+      const ci = document.getElementById('coverImage');
+      ci.src = dataUrl;
+      ci.classList.remove('hidden');
+      if (ZrxSession.isLoggedIn()) {
+        try {
+          const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ coverImage: dataUrl })
+          });
+          if (res.ok) {
+            ZrxNotify.showNotification('Cover photo updated!', 'success');
+          }
+        } catch (_) {}
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function toggleBioEdit() {
+    const area = document.getElementById('bioEditArea');
+    area.classList.toggle('hidden');
+  }
+
+  async function saveBio() {
+    const bio = document.getElementById('bioInput').value.trim();
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ bio })
+      });
+      if (res.ok) {
+        document.getElementById('profileBio').textContent = bio || 'No bio yet.';
+        document.getElementById('bioEditArea').classList.add('hidden');
+        ZrxNotify.showNotification('Bio saved!', 'success');
+      }
+    } catch (_) {
+      ZrxNotify.showNotification('Network error saving bio.', 'error');
+    }
+  }
+
   function uploadPurchaseFile(e) {
-    // Purchase file upload is not available – files are managed server-side
     ZrxNotify.showNotification('File uploads are being migrated to cloud storage. Please check back soon.', 'info');
     e.target.value = '';
   }
@@ -623,7 +787,7 @@
   function renderPurchaseFiles() {
     const el = document.getElementById('purchaseFilesList');
     if (!el) return;
-    el.innerHTML = '<div class="text-gray-500">Purchase files are managed server-side. Contact support for your downloads.</div>';
+    el.innerHTML = '<div class="text-gray-400 text-xs">Purchase files are managed server-side. Contact support for your downloads.</div>';
   }
 
   function switchTab(tab) {
@@ -632,17 +796,34 @@
       el.classList.add('hidden');
     });
     document.querySelectorAll('.tab-btn').forEach(el => {
-      el.classList.remove('border-cyan-400', 'text-gray-900');
-      el.classList.add('border-transparent', 'text-gray-400');
+      el.classList.remove('border-cyan-500', 'text-gray-900');
+      el.classList.add('border-transparent', 'text-gray-500');
     });
-    var tabContent = document.getElementById(tab);
-    tabContent.classList.add('active');
-    tabContent.classList.remove('hidden');
-    var buttons = document.querySelectorAll('.tab-btn');
-    buttons.forEach(function(btn) {
-      if (btn.getAttribute('onclick').includes("'" + tab + "'")) {
-        btn.classList.remove('border-transparent', 'text-gray-400');
-        btn.classList.add('border-cyan-400', 'text-gray-900');
+    const tabContent = document.getElementById(tab);
+    if (tabContent) { tabContent.classList.add('active'); tabContent.classList.remove('hidden'); }
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + tab + "'")) {
+        btn.classList.remove('border-transparent', 'text-gray-500');
+        btn.classList.add('border-cyan-500', 'text-gray-900');
+      }
+    });
+  }
+
+  function switchGamerTab(tab) {
+    document.querySelectorAll('.gamer-tab-content').forEach(el => {
+      el.classList.remove('active');
+      el.classList.add('hidden');
+    });
+    document.querySelectorAll('.gamer-tab-btn').forEach(el => {
+      el.classList.remove('text-cyan-600', 'border-cyan-500');
+      el.classList.add('text-gray-400', 'border-transparent');
+    });
+    const content = document.getElementById('gamerTab-' + tab);
+    if (content) { content.classList.add('active'); content.classList.remove('hidden'); }
+    document.querySelectorAll('.gamer-tab-btn').forEach(function(btn) {
+      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + tab + "'")) {
+        btn.classList.remove('text-gray-400', 'border-transparent');
+        btn.classList.add('text-cyan-600', 'border-cyan-500');
       }
     });
   }
@@ -651,17 +832,12 @@
     const currentPassword = document.getElementById('currentPassword').value;
     const newPassword = document.getElementById('newPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
-
     if (!currentPassword || !newPassword || !confirmPassword) {
-      ZrxNotify.showNotification('Please fill in all fields', 'error');
-      return;
+      ZrxNotify.showNotification('Please fill in all fields', 'error'); return;
     }
-
     if (newPassword !== confirmPassword) {
-      ZrxNotify.showNotification('New passwords do not match', 'error');
-      return;
+      ZrxNotify.showNotification('New passwords do not match', 'error'); return;
     }
-
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/auth/change-password', {
         method: 'POST',
@@ -684,10 +860,7 @@
   }
 
   async function updateShopInfo() {
-    if (!_sellerData) {
-      ZrxNotify.showNotification('You are not a seller', 'error');
-      return;
-    }
+    if (!_sellerData) { ZrxNotify.showNotification('You are not a seller', 'error'); return; }
     const shopName = document.getElementById('shopName').value;
     const shopDescription = document.getElementById('shopDescription').value;
     try {
@@ -708,19 +881,19 @@
     }
   }
 
+  function uploadShopFile(e) {
+    ZrxNotify.showNotification('File uploads are being migrated to cloud storage. Please check back soon.', 'info');
+    e.target.value = '';
+  }
+
   function logout() {
-    ZrxSession.logout(function() {
-      window.location.href = 'signup-login.html';
-    });
+    ZrxSession.logout(function() { window.location.href = 'signup-login.html'; });
   }
 
   async function deleteAccount() {
     ZrxNotify.showConfirm('Are you sure? This action cannot be undone.', async function() {
       try {
-        const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
-          method: 'DELETE',
-          credentials: 'include'
-        });
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', { method: 'DELETE', credentials: 'include' });
         if (res.ok) {
           ZrxNotify.showNotification('Account deleted', 'success');
           window.location.href = 'index.html';
@@ -740,7 +913,6 @@
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
     const phone = document.getElementById('editPhone').value.trim();
-
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
         method: 'PUT',
@@ -751,8 +923,7 @@
       if (res.ok) {
         const updated = await res.json();
         const fullName = ((updated.firstName || '') + ' ' + (updated.lastName || '')).trim() || updated.email;
-        document.getElementById('profileUsername').textContent = fullName;
-        document.getElementById('profileEmail').textContent = updated.email || '';
+        document.getElementById('profileUsername').textContent = fullName || 'Anonymous';
         ZrxNotify.showNotification('Profile saved', 'success');
       } else {
         const data = await res.json();
@@ -772,11 +943,34 @@
     });
   }
 
-  window.addEventListener('load', checkAuth);
-</script>
+  function saveDisplaySetting() {
+    const mode = document.querySelector('[name="displayMode"]:checked').value;
+    const notice = document.getElementById('anonymousNotice');
+    if (mode === 'realname') {
+      if (notice) notice.classList.add('hidden');
+      ZrxNotify.showNotification('Display mode set to Real Name.', 'success');
+    } else {
+      if (notice) notice.classList.remove('hidden');
+      ZrxNotify.showNotification('Display mode set to Anonymous.', 'success');
+    }
+    // Persist via API if available
+    if (ZrxSession.isLoggedIn()) {
+      ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ displayMode: mode })
+      }).catch(function(){});
+    }
+  }
 
-<script>
-  window.addEventListener('load', function() { renderPurchaseFiles(); });
+  window.addEventListener('load', function() {
+    checkAuth();
+    renderPurchaseFiles();
+    // Set gamerProfile as default active gamer tab
+    const firstGamerContent = document.getElementById('gamerTab-showcase');
+    if (firstGamerContent) { firstGamerContent.classList.add('active'); firstGamerContent.classList.remove('hidden'); }
+  });
 </script>
 <script src="profile-picture.js"></script>
 
