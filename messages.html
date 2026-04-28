@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #111827; }
         .message-bubble { word-wrap: break-word; }
             .nav-dropdown {
             opacity: 0;
@@ -246,51 +246,87 @@
 
 
 <!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
-  <h1 class="text-5xl font-bold text-gray-900 mb-12">Messages</h1>
+<main class="flex-1 bg-gray-100 py-6">
+  <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
 
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-    <!-- Conversations List -->
-    <div class="bg-[#20232a] border border-gray-700 rounded-lg overflow-hidden h-96 md:h-screen md:sticky md:top-8">
-      <div class="bg-[#181b21] border-b border-gray-700 p-4">
-        <h2 class="text-xl font-bold text-white">Conversations</h2>
+    <!-- Page Title -->
+    <div class="mb-5 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Messages</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Private conversations with sellers and buyers</p>
       </div>
-      <div id="conversationsList" class="overflow-y-auto p-4 space-y-2 h-full"></div>
     </div>
 
-    <!-- Chat Area -->
-    <div class="md:col-span-3 bg-[#20232a] border border-gray-700 rounded-lg flex flex-col h-96 md:h-screen">
-      <!-- Chat Header -->
-      <div class="bg-[#181b21] border-b border-gray-700 p-4 flex items-center justify-between">
-      <div id="chatHeaderLeft">
-          <h2 id="chatHeader" class="text-xl font-bold text-white">Select a conversation</h2>
-          <p id="chatSubheader" class="text-gray-400 text-base">Messages will appear here</p>
-        </div>
-        <i class="fas fa-envelope text-cyan-400 text-3xl"></i>
-      </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" style="height: calc(100vh - 220px); min-height: 500px;">
 
-      <!-- Messages -->
-      <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-[#181b21]">
-        <p class="text-gray-400 text-center text-base">Select a conversation to view messages</p>
-      </div>
-
-      <!-- Message Input -->
-      <div class="bg-[#181b21] border-t border-gray-700 p-4 space-y-3">
-        <div>
-          <label class="block text-white text-base font-semibold mb-2">Subject</label>
-          <input type="text" id="msgSubject" placeholder="Message subject" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
+      <!-- Conversations List -->
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col shadow-sm">
+        <!-- Header -->
+        <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center gap-2">
+          <i class="fas fa-comments text-cyan-500"></i>
+          <h2 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Conversations</h2>
         </div>
-        <div>
-          <label class="block text-white text-base font-semibold mb-2">Message</label>
-          <div class="flex gap-3">
-            <textarea id="msgBody" placeholder="Type your message..." rows="2" class="flex-1 bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
-            <button onclick="sendCurrentMessage()" class="px-8 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg self-end">
-              <i class="fas fa-paper-plane"></i>
-            </button>
+        <!-- Search -->
+        <div class="px-3 py-2 border-b border-gray-100">
+          <div class="relative">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+            <input type="text" id="convSearch" placeholder="Search conversations..." oninput="filterConversations()"
+              class="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent">
           </div>
         </div>
+        <div id="conversationsList" class="overflow-y-auto flex-1 p-2 space-y-0.5"></div>
+      </div>
+
+      <!-- Chat Area -->
+      <div class="md:col-span-3 bg-white border border-gray-200 rounded-xl flex flex-col shadow-sm overflow-hidden">
+
+        <!-- Chat Header -->
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3 flex items-center justify-between flex-shrink-0">
+          <div id="chatHeaderLeft" class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-user text-gray-400"></i>
+            </div>
+            <div class="min-w-0">
+              <h2 id="chatHeader" class="text-sm font-bold text-gray-900 truncate">Select a conversation</h2>
+              <p id="chatSubheader" class="text-xs text-gray-500">Messages will appear here</p>
+            </div>
+          </div>
+          <i class="fas fa-lock text-gray-300 text-sm flex-shrink-0" title="End-to-end encrypted"></i>
+        </div>
+
+        <!-- Messages -->
+        <div id="messagesContainer" class="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50">
+          <div class="flex flex-col items-center justify-center h-full text-center py-12">
+            <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <i class="fas fa-envelope-open text-gray-300 text-2xl"></i>
+            </div>
+            <p class="text-gray-500 font-medium">No conversation selected</p>
+            <p class="text-gray-400 text-sm mt-1">Choose a contact from the list to start messaging</p>
+          </div>
+        </div>
+
+        <!-- Message Input -->
+        <div class="bg-white border-t border-gray-200 px-5 py-4 flex-shrink-0">
+          <div class="mb-3">
+            <input type="text" id="msgSubject" placeholder="Subject (optional)"
+              class="w-full bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent">
+          </div>
+          <div class="flex gap-3 items-end">
+            <textarea id="msgBody" placeholder="Type your message…" rows="2"
+              class="flex-1 bg-gray-50 border border-gray-200 text-gray-900 px-4 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent resize-none"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCurrentMessage();}"></textarea>
+            <button onclick="sendCurrentMessage()"
+              class="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors flex items-center gap-2 text-sm flex-shrink-0">
+              <i class="fas fa-paper-plane"></i>
+              <span class="hidden sm:inline">Send</span>
+            </button>
+          </div>
+          <p class="text-xs text-gray-400 mt-2">Press <kbd class="bg-gray-100 border border-gray-300 rounded px-1">Enter</kbd> to send · <kbd class="bg-gray-100 border border-gray-300 rounded px-1">Shift+Enter</kbd> for new line</p>
+        </div>
+
       </div>
     </div>
+
   </div>
 </main>
 
@@ -472,37 +508,80 @@
     if (directContactId) selectContact(directContactId);
   }
 
+  let allConversations = {};
+
   async function renderConversations(conversations) {
+    allConversations = conversations;
+    await renderConversationButtons(conversations);
+  }
+
+  async function renderConversationButtons(conversations) {
     const list = document.getElementById('conversationsList');
     list.innerHTML = '';
 
     if (Object.keys(conversations).length === 0) {
-      list.innerHTML = '<p class="text-gray-400 text-base">No conversations yet</p>';
+      list.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-8 text-center px-3">
+          <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+            <i class="fas fa-inbox text-gray-300 text-xl"></i>
+          </div>
+          <p class="text-gray-500 text-sm font-medium">No conversations yet</p>
+          <p class="text-gray-400 text-xs mt-1">Contact a seller from a product page to start messaging</p>
+        </div>`;
       return;
     }
 
     for (const contactId of Object.keys(conversations)) {
       const info = await fetchUserInfoById(contactId);
+      const msgs = conversations[contactId] || [];
+      const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
       const button = document.createElement('button');
-      button.className = 'w-full text-left px-3 py-3 hover:bg-[#2a2e38] rounded transition-colors text-white flex items-center gap-3';
-      button.innerHTML = `${avatarHtml(info.profileImage, info.displayName, 32, contactId)}<span class="truncate">${escapeHtml(info.displayName)}</span>`;
+      button.className = `conv-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-3 group ${selectedContactId === contactId ? 'bg-cyan-50 border border-cyan-200' : ''}`;
+      button.dataset.contactId = contactId;
+      button.dataset.displayName = (info.displayName || '').toLowerCase();
+      button.innerHTML = `
+        ${avatarHtml(info.profileImage, info.displayName, 36, contactId)}
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(info.displayName)}</p>
+          ${lastMsg ? `<p class="text-xs text-gray-400 truncate">${escapeHtml((lastMsg.body || '').substring(0, 40))}</p>` : '<p class="text-xs text-gray-400">Start a conversation</p>'}
+        </div>
+        ${msgs.length ? `<span class="text-xs text-gray-400 flex-shrink-0">${msgs.length}</span>` : ''}`;
       button.onclick = () => selectContact(contactId);
       list.appendChild(button);
     }
   }
 
+  function filterConversations() {
+    const q = (document.getElementById('convSearch').value || '').toLowerCase().trim();
+    document.querySelectorAll('.conv-btn').forEach(btn => {
+      const name = btn.dataset.displayName || '';
+      btn.style.display = (!q || name.includes(q)) ? '' : 'none';
+    });
+  }
+
   async function selectContact(contactId) {
     selectedContactId = contactId;
+
+    // Highlight active conversation
+    document.querySelectorAll('.conv-btn').forEach(btn => {
+      if (btn.dataset.contactId === contactId) {
+        btn.classList.add('bg-cyan-50', 'border', 'border-cyan-200');
+        btn.classList.remove('hover:bg-gray-50');
+      } else {
+        btn.classList.remove('bg-cyan-50', 'border', 'border-cyan-200');
+        btn.classList.add('hover:bg-gray-50');
+      }
+    });
 
     const info = await fetchUserInfoById(contactId);
     const headerLeft = document.getElementById('chatHeaderLeft');
 
     headerLeft.innerHTML = `
-      <div class="flex items-center gap-3">
-        ${avatarHtml(info.profileImage, info.displayName, 40, contactId)}
-        <div>
-          <h2 class="text-xl font-bold text-white">${escapeHtml(info.displayName)}</h2>
-          <p class="text-gray-400 text-base">Conversation with ${escapeHtml(info.displayName)}</p>
+      <div class="flex items-center gap-3 min-w-0">
+        ${avatarHtml(info.profileImage, info.displayName, 36, contactId)}
+        <div class="min-w-0">
+          <h2 class="text-sm font-bold text-gray-900 truncate">${escapeHtml(info.displayName)}</h2>
+          <p class="text-xs text-gray-500">Direct Message</p>
         </div>
       </div>
     `;
@@ -519,7 +598,14 @@
     container.innerHTML = '';
 
     if (msgs.length === 0) {
-      container.innerHTML = '<p class="text-gray-400 text-center">No messages yet. Start the conversation!</p>';
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full text-center">
+          <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+            <i class="fas fa-comment-dots text-gray-300 text-2xl"></i>
+          </div>
+          <p class="text-gray-500 font-medium">No messages yet</p>
+          <p class="text-gray-400 text-sm mt-1">Send the first message below!</p>
+        </div>`;
       return;
     }
 
@@ -527,24 +613,27 @@
       const isOwn = msg.fromUserId === currentUserId;
       const div = document.createElement('div');
       div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'} items-end gap-2`;
+      const timeStr = new Date(msg.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
       if (isOwn) {
         div.innerHTML = `
-          <div class="max-w-xs message-bubble bg-cyan-600 text-white rounded-lg p-3">
-            <p class="text-sm opacity-75 mb-1">${escapeHtml(msg.subject || '')}</p>
-            <p class="break-words">${escapeHtml(msg.body)}</p>
-            <p class="text-sm opacity-50 mt-2">${new Date(msg.createdAt).toLocaleString()}</p>
-          </div>
-        `;
+          <div class="max-w-sm message-bubble flex flex-col items-end gap-0.5">
+            ${msg.subject ? `<p class="text-xs text-cyan-600 font-medium px-1">${escapeHtml(msg.subject)}</p>` : ''}
+            <div class="bg-cyan-500 text-white rounded-2xl rounded-br-sm px-4 py-2.5">
+              <p class="text-sm leading-relaxed break-words">${escapeHtml(msg.body)}</p>
+            </div>
+            <p class="text-xs text-gray-400 px-1">${timeStr}</p>
+          </div>`;
       } else {
         div.innerHTML = `
-          ${avatarHtml(contactInfo.profileImage, contactInfo.displayName, 32, selectedContactId)}
-          <div class="max-w-xs message-bubble bg-gray-700 text-white rounded-lg p-3">
-            <p class="text-sm font-semibold text-cyan-400 mb-1">${escapeHtml(contactInfo.displayName)}</p>
-            <p class="text-sm opacity-75 mb-1">${escapeHtml(msg.subject || '')}</p>
-            <p class="break-words">${escapeHtml(msg.body)}</p>
-            <p class="text-sm opacity-50 mt-2">${new Date(msg.createdAt).toLocaleString()}</p>
-          </div>
-        `;
+          ${avatarHtml(contactInfo.profileImage, contactInfo.displayName, 28, selectedContactId)}
+          <div class="max-w-sm message-bubble flex flex-col items-start gap-0.5">
+            ${msg.subject ? `<p class="text-xs text-gray-500 font-medium px-1">${escapeHtml(msg.subject)}</p>` : ''}
+            <div class="bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm">
+              <p class="text-sm font-semibold text-cyan-600 mb-0.5">${escapeHtml(contactInfo.displayName)}</p>
+              <p class="text-sm leading-relaxed break-words">${escapeHtml(msg.body)}</p>
+            </div>
+            <p class="text-xs text-gray-400 px-1">${timeStr}</p>
+          </div>`;
       }
       container.appendChild(div);
     });
@@ -561,8 +650,8 @@
     const subject = document.getElementById('msgSubject').value.trim();
     const body = document.getElementById('msgBody').value.trim();
 
-    if (!subject || !body) {
-      ZrxNotify.showNotification('Please fill in all fields', 'error');
+    if (!body) {
+      ZrxNotify.showNotification('Please type a message', 'error');
       return;
     }
 
