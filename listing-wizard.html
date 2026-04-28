@@ -358,7 +358,7 @@
               </div>
               <div>
                 <label class="wiz-label">Primary Category <span class="text-red-500">*</span></label>
-                <select id="productCategory" class="wiz-input">
+                <select id="productCategory" class="wiz-input" onchange="updateSubcategoryOptions(this.value, '')">
                   <option value="">Select category...</option>
                   <option value="processors">Processors / CPUs</option>
                   <option value="graphics-cards">Graphics Cards / GPUs</option>
@@ -383,8 +383,11 @@
                 </select>
               </div>
               <div>
-                <label class="wiz-label">Subcategory</label>
-                <input type="text" id="productSubcategory" class="wiz-input" placeholder="e.g., Desktop Gaming Cards, NVMe M.2 Gen5">
+                <label class="wiz-label">Subcategory <span class="text-red-500">*</span></label>
+                <select id="productSubcategory" class="wiz-input" aria-label="Product subcategory (required — select a primary category first)">
+                  <option value="">Select a category first...</option>
+                </select>
+                <p class="wiz-help">Select a subcategory that best describes your product</p>
               </div>
             </div>
 
@@ -929,6 +932,46 @@
   let editingProductId = null;
   let _sellerData = null;
 
+  // ── Subcategory options per primary category ──────────────────────────────────
+  const SUBCATEGORY_MAP = {
+    'processors':          ['Desktop Processors', 'Laptop Processors', 'Server Processors', 'Budget CPUs', 'High-End CPUs', 'Other'],
+    'graphics-cards':      ['Desktop GPUs', 'Laptop GPUs', 'Workstation GPUs', 'Budget Cards', 'Mid-Range Cards', 'High-End Cards', 'Other'],
+    'motherboards':        ['ATX Motherboards', 'Micro-ATX Motherboards', 'Mini-ITX Motherboards', 'E-ATX Motherboards', 'Server Motherboards', 'Other'],
+    'memory-ram':          ['DDR4 RAM', 'DDR5 RAM', 'Laptop RAM', 'Server / ECC RAM', 'Other'],
+    'internal-ssds':       ['M.2 NVMe SSDs', 'M.2 SATA SSDs', '2.5" SATA SSDs', 'PCIe SSDs', 'Enterprise SSDs', 'Other'],
+    'hard-drives':         ['Desktop HDDs', 'Laptop HDDs', 'NAS HDDs', 'Enterprise HDDs', 'Other'],
+    'external-storage':    ['External SSDs', 'External HDDs', 'USB Flash Drives', 'Memory Cards', 'NAS Devices', 'Other'],
+    'cooling-solutions':   ['Air Coolers', 'All-in-One Liquid Coolers', 'Custom Loop Cooling', 'Case Fans', 'Thermal Paste', 'Other'],
+    'power-supply':        ['Fully Modular PSUs', 'Semi-Modular PSUs', 'Non-Modular PSUs', 'SFX PSUs', 'Server PSUs', 'Other'],
+    'pc-cases':            ['Full Tower Cases', 'Mid Tower Cases', 'Mini-ITX Cases', 'Open-Air Cases', 'Server Chassis', 'Other'],
+    'monitors':            ['Gaming Monitors', '4K Monitors', 'Ultrawide Monitors', 'Professional Monitors', 'Budget Monitors', 'Other'],
+    'mechanical-keyboards':['Full-Size Keyboards', 'Tenkeyless (TKL)', '75% Keyboards', '65% Keyboards', '60% Keyboards', 'Wireless Keyboards', 'Other'],
+    'precision-mice':      ['Gaming Mice', 'Wireless Mice', 'Ergonomic Mice', 'Vertical Mice', 'Trackballs', 'Other'],
+    'networking-gear':     ['Routers', 'Network Switches', 'Network Cards / Adapters', 'Wi-Fi Adapters', 'Modems', 'Other'],
+    'gaming-desktops':     ['Pre-Built Gaming PCs', 'Compact Gaming Desktops', 'High-End Gaming Systems', 'Budget Gaming Systems', 'Gaming PC Kits', 'Other'],
+    'laptops':             ['Gaming Laptops', 'Ultrabooks', 'Business Laptops', 'Budget Laptops', '2-in-1 Laptops', 'Other'],
+    'server-solutions':    ['Rack Servers', 'Tower Servers', 'Blade Servers', 'Server Components', 'Workstations', 'Other'],
+    'smart-security':      ['Security Cameras', 'Smart Home Hubs', 'Alarm Systems', 'Smart Locks', 'IoT Sensors', 'Other'],
+    'accessories':         ['Cables & Adapters', 'PC Tools & Kits', 'Desk Accessories', 'Controller Accessories', 'Stands & Mounts', 'Other'],
+    'other':               ['Miscellaneous Hardware', 'Vintage Hardware', 'Parts & Components', 'Custom Builds', 'Other'],
+  };
+
+  function updateSubcategoryOptions(selectedCategory, currentValue) {
+    const sel = document.getElementById('productSubcategory');
+    if (!sel) return;
+    const opts = SUBCATEGORY_MAP[selectedCategory] || [];
+    if (opts.length === 0) {
+      sel.innerHTML = '<option value="">Select a category first...</option>';
+      sel.disabled = true;
+    } else {
+      sel.disabled = false;
+      sel.innerHTML = '<option value="">Select subcategory...</option>' +
+        opts.map(function(o) {
+          return '<option value="' + o + '"' + (o === currentValue ? ' selected' : '') + '>' + o + '</option>';
+        }).join('');
+    }
+  }
+
   const STEP_DEFS = [
     { id: 1, label: 'Product Details',       icon: 'fa-tag' },
     { id: 2, label: 'Images',                icon: 'fa-images' },
@@ -1001,6 +1044,7 @@
       if (!document.getElementById('productType').value)           { show('Product type is required.');           return false; }
       if (!document.getElementById('productCondition').value)      { show('Product condition is required.');      return false; }
       if (!document.getElementById('productCategory').value)       { show('Please select a product category.');   return false; }
+      if (!document.getElementById('productSubcategory').value)    { show('Please select a product subcategory.'); return false; }
     }
     if (currentStep === 2) {
       if (uploadedImages.length === 0) { show('Please upload at least one product image.'); return false; }
@@ -1202,7 +1246,7 @@
           { label: 'Product Type',   value: val('productType'),       required: true },
           { label: 'Condition',      value: val('productCondition'),  required: true },
           { label: 'Category',       value: val('productCategory'),   required: true },
-          { label: 'Subcategory',    value: val('productSubcategory') },
+          { label: 'Subcategory',    value: val('productSubcategory'), required: true },
           { label: 'Tags',           value: val('productTags') },
           { label: 'Attributes',     value: attrs, html: true },
           { label: 'Variations',     value: vars.join(', ') },
@@ -1488,6 +1532,7 @@
       set('productType',        p.productType);
       set('productCondition',   p.condition);
       set('productCategory',    p.category);
+      updateSubcategoryOptions(p.category || '', p.subcategory || '');
       set('productSubcategory', p.subcategory);
       set('productTags',        p.tags);
       set('productSku',         p.sku);

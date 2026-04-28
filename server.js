@@ -544,6 +544,36 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
   }
 });
 
+// ── PATCH /api/products/:id/status – list or unlist a product (auth required, owner only) ─────
+app.patch('/api/products/:id/status', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    let objectId;
+    try {
+      objectId = new ObjectId(req.params.id);
+    } catch {
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    const product = await db.collection('products').findOne({ _id: objectId });
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    if (product.sellerId !== req.userId) return res.status(403).json({ error: 'Forbidden: you do not own this product' });
+
+    const { status } = req.body;
+    if (!status || !['active', 'draft'].includes(status)) {
+      return res.status(400).json({ error: 'status must be "active" or "draft"' });
+    }
+
+    await db.collection('products').updateOne({ _id: objectId }, { $set: { status, updatedAt: new Date() } });
+    const updated = await db.collection('products').findOne({ _id: objectId });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating product status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── DELETE /api/products/:id – delete a product (auth required, owner only) ─────
 app.delete('/api/products/:id', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
@@ -1834,6 +1864,23 @@ async function recoverMissingSellers() {
 }
 
 // Start server and connect to MongoDB
+async function activateAllProducts() {
+  if (!mongoConnected) return;
+  try {
+    const result = await db.collection('products').updateMany(
+      { status: { $nin: ['active', 'sold'] } },
+      { $set: { status: 'active', updatedAt: new Date() } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(`✅ Product activation migration: ${result.modifiedCount} product(s) set to active`);
+    } else {
+      console.log('ℹ️  Product activation migration: all products already active (or sold)');
+    }
+  } catch (err) {
+    console.error('⚠️  Product activation migration error:', err.message);
+  }
+}
+
 async function start() {
   console.log('🚀 Starting server...');
   try {
@@ -1841,6 +1888,7 @@ async function start() {
     if (connected) {
       console.log('✅ Database connected — starting HTTP server');
       await recoverMissingSellers();
+      await activateAllProducts();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
     }
