@@ -1,0 +1,817 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title id="pageTitle">Brand Store - Zorexium Labs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f9fafb; color: #111827; }
+    .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
+    .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
+    .marketplace-mega-menu {
+      position: fixed !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: 96px !important;
+      width: 100vw !important;
+      max-width: none !important;
+      border-radius: 0 !important;
+      transform: translateY(-4px);
+    }
+    .nav-dropdown-trigger:hover .marketplace-mega-menu,
+    .nav-dropdown-trigger.active .marketplace-mega-menu { transform: translateY(0); }
+    .product-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; transition: box-shadow 0.2s, transform 0.2s; }
+    .product-card:hover { box-shadow: 0 8px 24px rgba(34,197,94,0.12); transform: translateY(-2px); }
+    .filter-section-title { cursor: pointer; user-select: none; }
+    .filter-checkbox:checked { accent-color: #22d3ee; }
+    .spec-row { display: flex; gap: 4px; font-size: 12px; color: #6b7280; }
+    .spec-label { font-weight: 500; color: #374151; }
+    .price-strike { text-decoration: line-through; color: #9ca3af; }
+    .save-badge { background: #fee2e2; color: #dc2626; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .free-shipping-badge { color: #16a34a; font-size: 12px; font-weight: 500; }
+  </style>
+  <script src="open-links-new-tab.js"></script>
+  <script src="cookie-consent.js"></script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- Top Navigation -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="px-4 sm:px-6">
+    <div class="flex justify-between items-center h-24">
+      <!-- Logo -->
+      <div class="flex items-center">
+        <a href="index.html" class="flex-shrink-0 flex items-center gap-3 no-underline">
+          <div class="text-cyan-400 text-5xl"><i class="fas fa-microchip"></i></div>
+          <div class="flex flex-col">
+            <span class="text-cyan-400 font-bold text-3xl tracking-wide leading-none">ZOREXIUM</span>
+            <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Nav Links -->
+      <nav class="hidden md:flex space-x-8">
+        <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
+          <a href="marketplace.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Marketplace</a>
+          <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
+            <i class="fas fa-chevron-down text-xs"></i>
+          </button>
+          <div class="nav-dropdown marketplace-mega-menu bg-white border-b border-gray-200 shadow-xl z-50">
+            <div class="px-8 py-5">
+              <div class="grid grid-cols-10 gap-x-3 gap-y-1">
+                <a href="marketplace.html?category=processors&amp;sub=desktop-hedt" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Processors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop &amp; High-End Desktop (HEDT)</span></a>
+                <a href="marketplace.html?category=processors&amp;sub=mobile-laptop" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Processors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mobile &amp; Laptop Replacement Chips</span></a>
+                <a href="marketplace.html?category=processors&amp;sub=workstation-threadripper" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Processors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Workstation &amp; Threadrippers</span></a>
+                <a href="marketplace.html?category=motherboards&amp;sub=enthusiast-atx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Motherboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Enthusiast (ATX/E-ATX)</span></a>
+                <a href="marketplace.html?category=motherboards&amp;sub=compact-itx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Motherboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Compact &amp; Small Form Factor (ITX)</span></a>
+                <a href="marketplace.html?category=motherboards&amp;sub=server-workstation" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Motherboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Server &amp; Workstation Boards</span></a>
+                <a href="marketplace.html?category=graphics-cards&amp;sub=desktop-gaming" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Graphics Cards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop Gaming Cards</span></a>
+                <a href="marketplace.html?category=graphics-cards&amp;sub=professional-ai" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Graphics Cards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Professional &amp; AI Rendering Units</span></a>
+                <a href="marketplace.html?category=graphics-cards&amp;sub=egpu-docks" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Graphics Cards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">External GPU Docks</span></a>
+                <a href="marketplace.html?category=memory-ram&amp;sub=desktop-ddr5-ddr4" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Memory</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop DDR5/DDR4</span></a>
+                <a href="marketplace.html?category=memory-ram&amp;sub=laptop-sodimm" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Memory</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Laptop SODIMM</span></a>
+                <a href="marketplace.html?category=memory-ram&amp;sub=ecc-server" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Memory</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">ECC &amp; Server Memory</span></a>
+                <a href="marketplace.html?category=internal-ssds&amp;sub=nvme-m2" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Internal SSDs</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">NVMe M.2 (Gen4 &amp; Gen5)</span></a>
+                <a href="marketplace.html?category=internal-ssds&amp;sub=sata-25" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Internal SSDs</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">2.5&quot; SATA SSDs</span></a>
+                <a href="marketplace.html?category=internal-ssds&amp;sub=enterprise-u2" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Internal SSDs</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Enterprise/U.2 Drives</span></a>
+                <a href="marketplace.html?category=hard-drives&amp;sub=nas-raid" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Hard Drives</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">NAS &amp; RAID Optimized</span></a>
+                <a href="marketplace.html?category=hard-drives&amp;sub=surveillance" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Hard Drives</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Surveillance Rated</span></a>
+                <a href="marketplace.html?category=hard-drives&amp;sub=bulk-desktop" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Hard Drives</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Bulk Desktop Storage</span></a>
+                <a href="marketplace.html?category=external-storage&amp;sub=portable-rugged" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">External Storage</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Portable Rugged SSDs</span></a>
+                <a href="marketplace.html?category=external-storage&amp;sub=desktop-hubs" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">External Storage</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Desktop Expansion Hubs</span></a>
+                <a href="marketplace.html?category=external-storage&amp;sub=flash-media" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">External Storage</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Speed Flash Media</span></a>
+                <a href="marketplace.html?category=gaming-desktops&amp;sub=entry-esports" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Gaming Desktops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Entry-Level &amp; Esports</span></a>
+                <a href="marketplace.html?category=gaming-desktops&amp;sub=high-end-liquid" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Gaming Desktops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-End Liquid Cooled</span></a>
+                <a href="marketplace.html?category=gaming-desktops&amp;sub=sff-builds" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Gaming Desktops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Small Form Factor Builds</span></a>
+                <a href="marketplace.html?category=laptops&amp;sub=gaming" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Laptops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Performance Gaming</span></a>
+                <a href="marketplace.html?category=laptops&amp;sub=ultrabooks" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Laptops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Thin &amp; Light Ultrabooks</span></a>
+                <a href="marketplace.html?category=laptops&amp;sub=mobile-workstations" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Laptops</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mobile Workstations</span></a>
+                <a href="marketplace.html?category=server-solutions&amp;sub=rackmount-blades" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Servers</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Rackmount Chassis &amp; Blades</span></a>
+                <a href="marketplace.html?category=server-solutions&amp;sub=tower-servers" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Servers</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Tower Servers</span></a>
+                <a href="marketplace.html?category=server-solutions&amp;sub=edge-computing" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Servers</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Edge Computing Nodes</span></a>
+                <a href="marketplace.html?category=monitors&amp;sub=ultrawide-curved" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Monitors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Ultra-Wide &amp; Curved Gaming</span></a>
+                <a href="marketplace.html?category=monitors&amp;sub=4k-professional" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Monitors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">4K Professional &amp; Creative</span></a>
+                <a href="marketplace.html?category=monitors&amp;sub=portable-usbc" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Monitors</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Portable USB-C Displays</span></a>
+                <a href="marketplace.html?category=mechanical-keyboards&amp;sub=custom-hotswap" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Keyboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Custom &amp; Hot-Swappable Kits</span></a>
+                <a href="marketplace.html?category=mechanical-keyboards&amp;sub=low-profile-wireless" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Keyboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Low-Profile Wireless</span></a>
+                <a href="marketplace.html?category=mechanical-keyboards&amp;sub=keycaps-switches" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Keyboards</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Keycaps &amp; Switches</span></a>
+                <a href="marketplace.html?category=precision-mice&amp;sub=ultralight-wireless" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Mice</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Ultra-Lightweight Wireless</span></a>
+                <a href="marketplace.html?category=precision-mice&amp;sub=ergonomic-productivity" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Mice</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Ergonomic &amp; Productivity</span></a>
+                <a href="marketplace.html?category=precision-mice&amp;sub=flight-sim-racing" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Mice</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Flight &amp; Sim Racing Peripherals</span></a>
+                <a href="marketplace.html?category=power-supply&amp;sub=atx3" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Power Supply</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">ATX 3.0 &amp; 3.1 Standards</span></a>
+                <a href="marketplace.html?category=power-supply&amp;sub=sfx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Power Supply</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">SFX &amp; Small Form Factor</span></a>
+                <a href="marketplace.html?category=cooling-solutions&amp;sub=aio-liquid" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Cooling</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">AIO Liquid Coolers</span></a>
+                <a href="marketplace.html?category=cooling-solutions&amp;sub=air-towers" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Cooling</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Performance Air Towers</span></a>
+                <a href="marketplace.html?category=cooling-solutions&amp;sub=thermal-paste" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Cooling</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Thermal Pastes &amp; Accessories</span></a>
+                <a href="marketplace.html?category=pc-cases&amp;sub=mid-full-tower" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">PC Cases</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mid-Tower &amp; Full-Tower</span></a>
+                <a href="marketplace.html?category=pc-cases&amp;sub=mini-itx" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">PC Cases</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Mini-ITX Enclosures</span></a>
+                <a href="marketplace.html?category=pc-cases&amp;sub=open-frame" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">PC Cases</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Open-Frame &amp; Test Benches</span></a>
+                <a href="marketplace.html?category=networking-gear&amp;sub=wifi7-mesh" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Networking</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Wi-Fi 7 &amp; Mesh Systems</span></a>
+                <a href="marketplace.html?category=networking-gear&amp;sub=high-speed-switches" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Networking</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">High-Speed Switches (10G/25G)</span></a>
+                <a href="marketplace.html?category=networking-gear&amp;sub=nas" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Networking</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Network Attached Storage (NAS)</span></a>
+                <a href="marketplace.html?category=smart-security&amp;sub=ip-poe-cameras" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Smart Security</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">IP &amp; PoE Cameras</span></a>
+                <a href="marketplace.html?category=smart-security&amp;sub=smart-access-locks" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Smart Security</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Smart Access &amp; Locks</span></a>
+                <a href="marketplace.html?category=smart-security&amp;sub=environment-sensors" class="flex flex-col px-2 py-1.5 rounded hover:bg-gray-100 transition-colors group"><span class="text-[10px] text-cyan-600 font-medium uppercase leading-none tracking-wide">Smart Security</span><span class="text-xs text-gray-600 group-hover:text-gray-900 leading-tight mt-0.5">Environment Sensors (Smoke/Flood)</span></a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+        <a id="sellHardwareLink" href="sell-on-zorexium.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+      </nav>
+
+      <!-- Right Side Actions -->
+      <div class="flex items-center space-x-5">
+        <div id="headerAccountListsGuest" class="relative hidden nav-dropdown-trigger">
+          <button class="flex items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md cursor-pointer">
+            <i class="fas fa-user text-2xl"></i>
+            <span class="text-sm font-medium whitespace-nowrap">Account &amp; Lists</span>
+          </button>
+          <div class="nav-dropdown absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
+            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 text-center">
+              <a href="signup-login.html" class="block w-full bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-4 py-2 rounded-md transition-colors mb-2">Sign In</a>
+              <p class="text-xs text-gray-500">New to Zorexium? <a href="signup-login.html?register=1" class="text-cyan-600 hover:text-cyan-700 font-medium">Create account</a></p>
+            </div>
+            <div class="px-4 py-2 bg-gray-50 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Support</p></div>
+            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
+            <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
+            <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
+            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
+            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
+            <a href="signup-login.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
+          </div>
+        </div>
+        <a id="headerCartLink" href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
+          <i class="fas fa-shopping-cart text-2xl"></i>
+          <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+        </a>
+        <div id="headerLoginForm" class="hidden items-center gap-2">
+          <input id="headerLoginEmail" type="text" placeholder="Email or username" class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-40">
+          <input id="headerLoginPassword" type="password" placeholder="Password" class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-36">
+          <button id="headerLoginBtn" type="button" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors whitespace-nowrap">Log In</button>
+          <a href="signup-login.html?forgot=1" class="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap">Forgot account?</a>
+        </div>
+        <div id="headerAccountSection" class="relative hidden nav-dropdown-trigger flex-1">
+          <button class="flex flex-row items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md cursor-pointer w-full">
+            <i class="fas fa-user text-xl"></i>
+            <span class="text-sm font-medium whitespace-nowrap">Account &amp; Lists</span>
+          </button>
+          <div class="nav-dropdown absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
+            <div id="headerUserDropdownHead" class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
+              <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-10 w-10 rounded-full object-cover border border-gray-300 flex-shrink-0">
+              <div class="flex-1 min-w-0">
+                <p id="accountMenuUsername" class="text-sm font-semibold text-gray-900 truncate">Account</p>
+                <a href="account-details.html" class="text-xs text-cyan-600 hover:text-cyan-700">My Profile</a>
+              </div>
+              <a href="#" id="signOutHeader" class="text-xs text-red-600 hover:text-red-700 whitespace-nowrap ml-2">Sign Out</a>
+            </div>
+            <div class="px-4 py-2 bg-gray-50 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
+            <a href="order-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
+            <a href="returns-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-exchange-alt text-cyan-600 w-4 text-center"></i>Returns History</a>
+            <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
+            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Seller</p></div>
+            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tachometer-alt text-cyan-600 w-4 text-center"></i>Seller Dashboard</a>
+            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tools text-cyan-600 w-4 text-center"></i>Seller Tools</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Brand Hero Banner -->
+<div class="bg-white border-b border-gray-200">
+  <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row items-center md:items-start gap-6">
+    <!-- Brand logo/icon -->
+    <div class="flex-shrink-0 w-24 h-24 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
+      <i class="fas fa-microchip text-4xl text-cyan-500" id="brandIcon"></i>
+    </div>
+    <!-- Brand info -->
+    <div class="flex-1">
+      <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Brand Store</p>
+      <h1 id="brandTitle" class="text-3xl font-bold text-gray-900 mb-1">Brand</h1>
+      <p id="brandSubtitle" class="text-gray-500 mb-4">Shop All Brand Products At Zorexium</p>
+      <div class="flex flex-wrap gap-8">
+        <div class="text-center">
+          <p id="statOrders" class="text-2xl font-bold text-cyan-600">–</p>
+          <p class="text-xs text-gray-500 mt-0.5">Orders</p>
+        </div>
+        <div class="text-center">
+          <div class="flex items-center gap-1 justify-center">
+            <p id="statRating" class="text-2xl font-bold text-cyan-600">–</p>
+            <i class="fas fa-star text-yellow-400 text-sm"></i>
+          </div>
+          <p class="text-xs text-gray-500 mt-0.5">Product Rating</p>
+        </div>
+        <div class="text-center">
+          <p id="statProducts" class="text-2xl font-bold text-cyan-600">–</p>
+          <p class="text-xs text-gray-500 mt-0.5">Products</p>
+        </div>
+      </div>
+    </div>
+    <!-- Back link -->
+    <a href="marketplace.html" class="text-sm text-cyan-600 hover:text-cyan-700 flex items-center gap-1 whitespace-nowrap self-start mt-1">
+      <i class="fas fa-arrow-left text-xs"></i> All Products
+    </a>
+  </div>
+</div>
+
+<!-- Page Body: Sidebar + Product grid -->
+<main class="flex-1 max-w-screen-xl mx-auto px-4 sm:px-6 py-6 w-full">
+  <div class="flex gap-6">
+
+    <!-- ── Left Sidebar Filters ── -->
+    <aside class="hidden lg:block w-56 flex-shrink-0">
+
+      <!-- Search within brand -->
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-gray-700 mb-1 uppercase tracking-wide">Search Within</label>
+        <div class="relative">
+          <input id="searchInput" type="text" placeholder="Search…" oninput="applyFilters()"
+            class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+          <i class="fas fa-search absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"></i>
+        </div>
+      </div>
+
+      <!-- SubCategory -->
+      <div class="border border-gray-200 rounded-md mb-3 overflow-hidden">
+        <button onclick="toggleSection('filterSubcat')" class="filter-section-title w-full flex justify-between items-center px-3 py-2.5 bg-gray-50 text-sm font-semibold text-gray-700">
+          <span>SubCategory</span><i class="fas fa-chevron-down text-xs text-gray-400"></i>
+        </button>
+        <div id="filterSubcat" class="px-3 py-2 space-y-1.5">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox" value="internal-ssds" onchange="applyFilters()"><span>Internal SSDs</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox" value="memory-ram" onchange="applyFilters()"><span>Desktop Memory</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox" value="flash-media" onchange="applyFilters()"><span>Memory Cards</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox" value="usb-drives" onchange="applyFilters()"><span>USB Flash Drives</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox" value="external-storage" onchange="applyFilters()"><span>External Storage</span></label>
+        </div>
+      </div>
+
+      <!-- Price Range -->
+      <div class="border border-gray-200 rounded-md mb-3 overflow-hidden">
+        <button onclick="toggleSection('filterPrice')" class="filter-section-title w-full flex justify-between items-center px-3 py-2.5 bg-gray-50 text-sm font-semibold text-gray-700">
+          <span>Price</span><i class="fas fa-chevron-down text-xs text-gray-400"></i>
+        </button>
+        <div id="filterPrice" class="px-3 py-2 space-y-1.5">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox price-filter" value="0-10" onchange="applyFilters()"><span>$0 – $10</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox price-filter" value="10-25" onchange="applyFilters()"><span>$10 – $25</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox price-filter" value="25-50" onchange="applyFilters()"><span>$25 – $50</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox price-filter" value="50-75" onchange="applyFilters()"><span>$50 – $75</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox price-filter" value="75-100" onchange="applyFilters()"><span>$75 – $100</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox price-filter" value="100-200" onchange="applyFilters()"><span>$100 – $200</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox price-filter" value="200-plus" onchange="applyFilters()"><span>$200+</span></label>
+          <div class="flex items-center gap-1 mt-1">
+            <input id="priceMin" type="number" placeholder="Min" min="0" oninput="applyFilters()"
+              class="w-1/2 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-400">
+            <span class="text-gray-400 text-xs">–</span>
+            <input id="priceMax" type="number" placeholder="Max" min="0" oninput="applyFilters()"
+              class="w-1/2 border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-cyan-400">
+          </div>
+        </div>
+      </div>
+
+      <!-- Availability -->
+      <div class="border border-gray-200 rounded-md mb-3 overflow-hidden">
+        <button onclick="toggleSection('filterAvail')" class="filter-section-title w-full flex justify-between items-center px-3 py-2.5 bg-gray-50 text-sm font-semibold text-gray-700">
+          <span>Availability</span><i class="fas fa-chevron-down text-xs text-gray-400"></i>
+        </button>
+        <div id="filterAvail" class="px-3 py-2 space-y-1.5">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox avail-filter" value="in-stock" onchange="applyFilters()"><span>In Stock</span></label>
+        </div>
+      </div>
+
+      <!-- Condition -->
+      <div class="border border-gray-200 rounded-md mb-3 overflow-hidden">
+        <button onclick="toggleSection('filterCond')" class="filter-section-title w-full flex justify-between items-center px-3 py-2.5 bg-gray-50 text-sm font-semibold text-gray-700">
+          <span>Condition</span><i class="fas fa-chevron-down text-xs text-gray-400"></i>
+        </button>
+        <div id="filterCond" class="px-3 py-2 space-y-1.5">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox cond-filter" value="New" onchange="applyFilters()"><span>New</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox cond-filter" value="Used" onchange="applyFilters()"><span>Used</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox cond-filter" value="Like New" onchange="applyFilters()"><span>Like New</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox cond-filter" value="Refurbished" onchange="applyFilters()"><span>Refurbished</span></label>
+        </div>
+      </div>
+
+      <!-- Discount -->
+      <div class="border border-gray-200 rounded-md mb-3 overflow-hidden">
+        <button onclick="toggleSection('filterDisc')" class="filter-section-title w-full flex justify-between items-center px-3 py-2.5 bg-gray-50 text-sm font-semibold text-gray-700">
+          <span>Discount</span><i class="fas fa-chevron-down text-xs text-gray-400"></i>
+        </button>
+        <div id="filterDisc" class="px-3 py-2 space-y-1.5">
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox disc-filter" value="10" onchange="applyFilters()"><span>10% off &amp; more</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox disc-filter" value="20" onchange="applyFilters()"><span>20% off &amp; more</span></label>
+          <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"><input type="checkbox" class="filter-checkbox disc-filter" value="40" onchange="applyFilters()"><span>40% off &amp; more</span></label>
+        </div>
+      </div>
+
+      <!-- Reset filters -->
+      <button onclick="resetFilters()" class="w-full text-xs text-cyan-600 hover:text-cyan-700 underline mt-1 text-left">Reset all filters</button>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <div class="flex-1 min-w-0">
+
+      <!-- Sort bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white border border-gray-200 rounded-md px-4 py-3">
+        <p class="text-sm text-gray-600">
+          Showing <span id="resultCount" class="font-semibold text-gray-900">0</span> <span id="resultLabel">products</span>
+        </p>
+        <div class="flex items-center gap-3">
+          <label class="text-sm text-gray-600 whitespace-nowrap">Sort By</label>
+          <select id="sortSelect" onchange="applyFilters()" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white">
+            <option value="featured">Featured Items</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating">Top Rated</option>
+            <option value="newest">Newest First</option>
+          </select>
+          <select id="perPageSelect" onchange="applyFilters()" class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 bg-white">
+            <option value="30">View 30</option>
+            <option value="60" selected>View 60</option>
+            <option value="90">View 90</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Mobile search bar (visible on small screens) -->
+      <div class="lg:hidden mb-4">
+        <input id="searchInputMobile" type="text" placeholder="Search within brand…" oninput="document.getElementById('searchInput').value=this.value;applyFilters()"
+          class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400">
+      </div>
+
+      <!-- Loading state -->
+      <div id="loadingState" class="text-center py-16">
+        <i class="fas fa-spinner fa-spin text-4xl text-cyan-400 mb-4 block"></i>
+        <p class="text-gray-500">Loading products…</p>
+      </div>
+
+      <!-- Empty state -->
+      <div id="emptyState" class="hidden text-center py-16">
+        <i class="fas fa-search text-5xl text-gray-300 mb-4 block"></i>
+        <p class="text-gray-500 text-lg font-semibold mb-1">No products found</p>
+        <p class="text-gray-400 text-sm">Try adjusting your filters or search term.</p>
+        <button onclick="resetFilters()" class="mt-4 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-md text-sm font-medium">Clear Filters</button>
+      </div>
+
+      <!-- Products grid -->
+      <div id="productsGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6"></div>
+
+      <!-- Pagination -->
+      <div id="pagination" class="hidden flex flex-wrap items-center justify-center gap-2 mt-4"></div>
+    </div>
+  </div>
+</main>
+
+<!-- Chat Bubble -->
+<div class="fixed bottom-6 right-6 z-50">
+  <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
+    <i class="fas fa-comment-dots text-3xl"></i>
+  </a>
+</div>
+
+<script>
+  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  let allProducts = [];
+  let filteredProducts = [];
+  let currentPage = 1;
+  let brandName = '';
+  let brandSlug = '';
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  async function init() {
+    const params = new URLSearchParams(window.location.search);
+    brandSlug = params.get('brand') || '';
+    brandName = params.get('name') || toTitleCase(brandSlug.replace(/[-_]/g, ' ')) || 'Brand';
+
+    // Update page title and hero
+    document.title = brandName + ' - Brand Store | Zorexium Labs';
+    document.getElementById('pageTitle').textContent = brandName + ' Brand Store - Zorexium Labs';
+    document.getElementById('brandTitle').textContent = brandName;
+    document.getElementById('brandSubtitle').textContent = 'Shop All ' + brandName + ' Products At Zorexium';
+
+    updateCartBadge();
+    await loadProducts();
+  }
+
+  function toTitleCase(str) {
+    return str.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1));
+  }
+
+  // ── Load products from backend ───────────────────────────────────────────────
+  async function loadProducts() {
+    try {
+      const url = brandSlug
+        ? BACKEND_URL + '/api/products?brand=' + encodeURIComponent(brandSlug)
+        : BACKEND_URL + '/api/products';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('fetch error');
+      const data = await res.json();
+      allProducts = Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.error('Failed to load products:', e);
+      allProducts = [];
+    }
+    document.getElementById('loadingState').classList.add('hidden');
+    updateBrandStats();
+    applyFilters();
+  }
+
+  // ── Stats ────────────────────────────────────────────────────────────────────
+  function updateBrandStats() {
+    const count = allProducts.length;
+    document.getElementById('statProducts').textContent = count > 0 ? count : '–';
+
+    const ratings = allProducts.map(p => parseFloat(p.rating) || 0).filter(r => r > 0);
+    if (ratings.length) {
+      const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+      document.getElementById('statRating').textContent = avg.toFixed(1);
+    }
+
+    const totalOrders = allProducts.reduce((s, p) => s + (parseInt(p.salesCount) || 0), 0);
+    document.getElementById('statOrders').textContent = totalOrders >= 1000000
+      ? (totalOrders / 1000000).toFixed(1) + 'M+'
+      : totalOrders > 0 ? totalOrders.toLocaleString() : '–';
+  }
+
+  // ── Filters ──────────────────────────────────────────────────────────────────
+  function applyFilters() {
+    const search = document.getElementById('searchInput').value.trim().toLowerCase();
+    const sortBy = document.getElementById('sortSelect').value;
+
+    // Price checkboxes
+    const priceChecked = [...document.querySelectorAll('.price-filter:checked')].map(c => c.value);
+    const priceMinInput = parseFloat(document.getElementById('priceMin').value);
+    const priceMaxInput = parseFloat(document.getElementById('priceMax').value);
+
+    // Availability
+    const inStockOnly = document.querySelector('.avail-filter[value="in-stock"]:checked') !== null;
+
+    // Condition
+    const condChecked = [...document.querySelectorAll('.cond-filter:checked')].map(c => c.value);
+
+    // Discount
+    const discChecked = [...document.querySelectorAll('.disc-filter:checked')].map(c => parseInt(c.value));
+
+    filteredProducts = allProducts.filter(p => {
+      const price = parseFloat(p.price) || 0;
+      const condition = p.condition || 'New';
+
+      // Search
+      if (search && !((p.name || '').toLowerCase().includes(search) || (p.description || '').toLowerCase().includes(search))) return false;
+
+      // Price range checkboxes
+      if (priceChecked.length) {
+        const inRange = priceChecked.some(range => {
+          if (range === '0-10') return price >= 0 && price <= 10;
+          if (range === '10-25') return price > 10 && price <= 25;
+          if (range === '25-50') return price > 25 && price <= 50;
+          if (range === '50-75') return price > 50 && price <= 75;
+          if (range === '75-100') return price > 75 && price <= 100;
+          if (range === '100-200') return price > 100 && price <= 200;
+          if (range === '200-plus') return price > 200;
+          return false;
+        });
+        if (!inRange) return false;
+      }
+
+      // Custom price range
+      if (!isNaN(priceMinInput) && price < priceMinInput) return false;
+      if (!isNaN(priceMaxInput) && priceMaxInput > 0 && price > priceMaxInput) return false;
+
+      // In-stock: treat products with quantity > 0 or no quantity field as in-stock
+      if (inStockOnly) {
+        const qty = parseInt(p.quantity);
+        if (!isNaN(qty) && qty <= 0) return false;
+      }
+
+      // Condition
+      if (condChecked.length && !condChecked.includes(condition)) return false;
+
+      // Discount – only apply if product has an originalPrice
+      if (discChecked.length && p.originalPrice) {
+        const origPrice = parseFloat(p.originalPrice) || price;
+        if (origPrice <= 0) return false;
+        const discPct = Math.round(((origPrice - price) / origPrice) * 100);
+        if (!discChecked.some(d => discPct >= d)) return false;
+      }
+
+      return true;
+    });
+
+    // Sort
+    if (sortBy === 'price-asc') filteredProducts.sort((a, b) => (a.price || 0) - (b.price || 0));
+    else if (sortBy === 'price-desc') filteredProducts.sort((a, b) => (b.price || 0) - (a.price || 0));
+    else if (sortBy === 'rating') filteredProducts.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+    else if (sortBy === 'newest') filteredProducts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    currentPage = 1;
+    renderPage();
+  }
+
+  function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    const mobile = document.getElementById('searchInputMobile');
+    if (mobile) mobile.value = '';
+    document.querySelectorAll('.filter-checkbox').forEach(c => { c.checked = false; });
+    document.getElementById('priceMin').value = '';
+    document.getElementById('priceMax').value = '';
+    document.getElementById('sortSelect').value = 'featured';
+    applyFilters();
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+  function renderPage() {
+    const perPage = parseInt(document.getElementById('perPageSelect').value) || 60;
+    const totalPages = Math.ceil(filteredProducts.length / perPage);
+    const pageItems = filteredProducts.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+    const grid = document.getElementById('productsGrid');
+    const empty = document.getElementById('emptyState');
+    const pag = document.getElementById('pagination');
+
+    document.getElementById('resultCount').textContent = filteredProducts.length;
+    document.getElementById('resultLabel').textContent = filteredProducts.length === 1 ? 'product' : 'products';
+
+    if (filteredProducts.length === 0) {
+      grid.classList.add('hidden');
+      empty.classList.remove('hidden');
+      pag.classList.add('hidden');
+      return;
+    }
+
+    empty.classList.add('hidden');
+    grid.classList.remove('hidden');
+    grid.innerHTML = pageItems.map(p => renderCard(p)).join('');
+
+    // Attach event listeners via data attributes (avoids inline JS / XSS)
+    grid.querySelectorAll('.js-card-view').forEach(function(card) {
+      card.addEventListener('click', function() { viewProduct(card.dataset.id); });
+    });
+    grid.querySelectorAll('.js-add-cart').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        addToCart(btn.dataset.id, btn.dataset.name, parseFloat(btn.dataset.price), btn.dataset.image);
+      });
+    });
+
+    // Pagination
+    if (totalPages > 1) {
+      pag.classList.remove('hidden');
+      pag.innerHTML = renderPagination(currentPage, totalPages);
+    } else {
+      pag.classList.add('hidden');
+    }
+  }
+
+  function renderCard(p) {
+    const price = parseFloat(p.price) || 0;
+    const origPrice = p.originalPrice ? parseFloat(p.originalPrice) : null;
+    const savePct = (origPrice && origPrice > price) ? Math.round(((origPrice - price) / origPrice) * 100) : 0;
+    const rating = parseFloat(p.rating) || 0;
+    const stars = rating > 0
+      ? Array.from({length: 5}, (_, i) => `<i class="fas fa-star text-xs ${i < Math.round(rating) ? 'text-yellow-400' : 'text-gray-300'}"></i>`).join('')
+      : '';
+    const reviewCount = p.reviewCount ? `<span class="text-xs text-gray-500 ml-1">(${p.reviewCount})</span>` : '';
+    const specEntries = p.specifications ? Object.entries(p.specifications).filter(([,v]) => v).slice(0, 4) : [];
+    const specHtml = specEntries.map(([k, v]) =>
+      `<div class="spec-row"><span class="spec-label">${escHtml(k)}:</span><span>${escHtml(String(v))}</span></div>`
+    ).join('');
+    const freeShipping = price >= 0;
+    const productId = String(p._id || p.id || '');
+
+    return `<div class="product-card overflow-hidden cursor-pointer js-card-view" data-id="${escHtml(productId)}">
+  <div class="relative bg-gray-50 h-44 flex items-center justify-center overflow-hidden">
+    <img src="${escHtml(p.image || '')}" alt="${escHtml(p.name || '')}"
+      class="max-h-full max-w-full object-contain p-2"
+      onerror="this.src='https://placehold.co/300x176/f3f4f6/9ca3af?text=No+Image'">
+    ${savePct >= 5 ? `<span class="save-badge absolute top-2 left-2">Save ${savePct}%</span>` : ''}
+  </div>
+  <div class="p-3">
+    ${stars ? `<div class="flex items-center mb-1">${stars}${reviewCount}</div>` : ''}
+    <h3 class="text-sm font-medium text-gray-900 line-clamp-2 mb-2 leading-snug">${escHtml(p.name || 'Unnamed Product')}</h3>
+    ${specHtml ? `<div class="space-y-0.5 mb-2">${specHtml}</div>` : ''}
+    ${p.model ? `<p class="text-xs text-gray-400 mb-1">Model: ${escHtml(p.model)}</p>` : ''}
+    <div class="flex items-end gap-2 mt-2 mb-1">
+      <span class="text-xl font-bold text-gray-900">$${price.toFixed(2)}</span>
+      ${origPrice && origPrice > price ? `<span class="price-strike text-sm">$${origPrice.toFixed(2)}</span>` : ''}
+    </div>
+    ${freeShipping ? '<p class="free-shipping-badge"><i class="fas fa-truck text-xs mr-1"></i>Free Shipping</p>' : ''}
+    <div class="flex gap-2 mt-3">
+      <a href="product-detail.html?id=${escHtml(productId)}"
+        class="flex-1 border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-medium py-2 rounded text-center transition-colors"
+        onclick="event.stopPropagation()">
+        Details
+      </a>
+      <button class="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold py-2 rounded transition-colors js-add-cart"
+        data-id="${escHtml(productId)}"
+        data-name="${escHtml(p.name || '')}"
+        data-price="${price}"
+        data-image="${escHtml(p.image || '')}">
+        Add to Cart
+      </button>
+    </div>
+  </div>
+</div>`;
+  }
+
+  function renderPagination(page, total) {
+    const pages = [];
+    const delta = 2;
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || (i >= page - delta && i <= page + delta)) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== '…') {
+        pages.push('…');
+      }
+    }
+    return pages.map(p => {
+      if (p === '…') return `<span class="px-2 py-1 text-gray-400 text-sm select-none">…</span>`;
+      return `<button onclick="goToPage(${p})" class="px-3 py-1.5 rounded border text-sm font-medium transition-colors ${p === page ? 'bg-cyan-500 text-white border-cyan-500' : 'bg-white text-gray-700 border-gray-300 hover:border-cyan-400 hover:text-cyan-600'}">${p}</button>`;
+    }).join('');
+  }
+
+  function goToPage(p) {
+    currentPage = p;
+    renderPage();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function viewProduct(id) {
+    if (!id) return;
+    window.location.href = 'product-detail.html?id=' + encodeURIComponent(id);
+  }
+
+  async function addToCart(productId, name, price, image) {
+    if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
+      try {
+        const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
+        let items = [];
+        if (cartRes.ok) { const d = await cartRes.json(); items = d.items || []; }
+        const ex = items.find(i => i.id === productId);
+        if (ex) ex.quantity += 1;
+        else items.push({ id: productId, name, price, quantity: 1, image });
+        await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ items })
+        });
+        const badge = document.getElementById('cartBadgeHeader');
+        if (badge) { badge.textContent = items.length; badge.classList.toggle('hidden', items.length === 0); }
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');
+      } catch (e) {
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to add to cart', 'error');
+      }
+    } else {
+      let guestCart = [];
+      try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) {}
+      const ex = guestCart.find(i => i.id === productId);
+      if (ex) ex.quantity += 1;
+      else guestCart.push({ id: productId, name, price, quantity: 1, image });
+      localStorage.setItem('guestCart', JSON.stringify(guestCart));
+      const badge = document.getElementById('cartBadgeHeader');
+      if (badge) { badge.textContent = guestCart.length; badge.classList.toggle('hidden', guestCart.length === 0); }
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');
+    }
+  }
+
+  function updateCartBadge() {
+    if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
+      fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          const count = (d && d.items) ? d.items.length : 0;
+          const badge = document.getElementById('cartBadgeHeader');
+          if (badge) { badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+        }).catch(() => {});
+    } else {
+      try {
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
+        const badge = document.getElementById('cartBadgeHeader');
+        if (badge && guestCart.length) { badge.textContent = guestCart.length; badge.classList.remove('hidden'); }
+      } catch (_) {}
+    }
+  }
+
+  function toggleSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden');
+  }
+
+  window.addEventListener('load', init);
+</script>
+
+<script src="notifications.js"></script>
+<script src="session.js"></script>
+<script src="profile-picture.js"></script>
+
+<script>
+  function toggleDropdown(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) {
+      if (d.id !== id) d.classList.remove('active');
+    });
+    el.classList.toggle('active');
+  }
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
+      if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
+    });
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
+    }
+  });
+</script>
+
+<script>
+  (function(){
+    var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+    var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
+    var loginForm = document.getElementById('headerLoginForm');
+    var acctSection = document.getElementById('headerAccountSection');
+    var cartLink = document.getElementById('headerCartLink');
+    var acctListsGuest = document.getElementById('headerAccountListsGuest');
+    var userDropHead = document.getElementById('headerUserDropdownHead');
+    if (loggedIn) {
+      if (cartLink) cartLink.classList.remove('hidden');
+      if (acctListsGuest) acctListsGuest.classList.add('hidden');
+      if (acctSection) { acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
+      if (loginForm) loginForm.classList.add('hidden');
+    } else {
+      if (cartLink) cartLink.classList.add('hidden');
+      if (acctListsGuest) { acctListsGuest.classList.remove('hidden'); acctListsGuest.classList.add('flex'); }
+      if (acctSection) { acctSection.classList.add('hidden'); acctSection.classList.remove('flex'); }
+      if (loginForm) { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
+    }
+
+    var sellHardwareLink = document.getElementById('sellHardwareLink');
+    if (sellHardwareLink && loggedIn) {
+      ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller')
+        .then(function(r){ return r.ok ? r.json() : {isSeller:false}; })
+        .then(function(data){ if (data.isSeller) sellHardwareLink.href = 'seller-dashboard.html'; })
+        .catch(function(){});
+    }
+
+    if (loggedIn) {
+      fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(data){
+          var count = (data && data.items) ? data.items.length : 0;
+          var badge = document.getElementById('cartBadgeHeader');
+          if (badge) { badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+        }).catch(function(){});
+    }
+
+    var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
+    var userNameEl = document.getElementById('accountMenuUsername');
+    if (userNameEl && user) userNameEl.textContent = user.username || user.email || 'Account';
+
+    var signOut = document.getElementById('signOutHeader');
+    if (signOut) signOut.addEventListener('click', function(e){
+      e.preventDefault();
+      ZrxSession.logout(function(){ ZrxNotify.showNotification('Signed out','success'); window.location.href='index.html'; });
+    });
+
+    async function doHeaderLogin(){
+      var email = document.getElementById('headerLoginEmail').value.trim();
+      var password = document.getElementById('headerLoginPassword').value;
+      if (!email || !password) { ZrxNotify.showNotification('Please enter your email/username and password.','error'); return; }
+      try {
+        var res = await fetch(BACKEND_URL + '/api/auth/login', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          credentials: 'include', body: JSON.stringify({email, password})
+        });
+        var data = await res.json();
+        if (!res.ok) { ZrxNotify.showNotification(data.error || 'Invalid credentials.','error'); return; }
+        if (data.token) {
+          try {
+            localStorage.setItem('authToken', data.token);
+            var userInfo = data.user ? {email: data.user.email, username: data.user.firstName || data.user.email} : {email, username: email};
+            localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+          } catch(ex) {}
+        }
+        window.location.reload();
+      } catch(err) {
+        ZrxNotify.showNotification('Login failed. Please check your connection.','error');
+      }
+    }
+
+    var loginBtn = document.getElementById('headerLoginBtn');
+    if (loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
+    var pwdInput = document.getElementById('headerLoginPassword');
+    if (pwdInput) pwdInput.addEventListener('keypress', function(e){ if (e.key === 'Enter') doHeaderLogin(); });
+  })();
+</script>
+</body>
+</html>
