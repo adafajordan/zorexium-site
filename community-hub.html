@@ -247,41 +247,237 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <button onclick="handleNewPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-6 py-3 rounded-md text-base font-bold flex items-center gap-3"><i class="fas fa-plus"></i> New Post</button>
-      <button onclick="logout()" id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-1.5 rounded text-base font-medium hidden">Log Out</button>
+      <span class="text-gray-500 text-base hidden md:block">Search</span>
     </div>
   </div>
 </div>
 
 <!-- Main Content -->
-<main class="flex-1 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8 w-full">
-  <div class="mb-12">
-    <div id="notLoggedIn" class="bg-blue-900 border border-blue-700 rounded-lg p-4 mb-8 hidden">
-      <p class="text-blue-100"><i class="fas fa-info-circle mr-2"></i> <a href="signup-login.html" class="underline font-semibold">Sign up or log in</a> to create posts and participate in discussions.</p>
+<main class="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+  <!-- Welcome banner -->
+  <div id="welcomeBanner" class="bg-gradient-to-r from-cyan-50 to-lime-50 border border-cyan-200 rounded-xl p-6 mb-8">
+    <h2 class="text-2xl font-bold text-gray-900 mb-1" id="welcomeGreeting">Welcome to the Zorexium Gamer Community!</h2>
+    <p class="text-gray-600 text-base">Your place to talk PC building, gaming, and tech! We're a friendly, moderated space with daily check-ins.
+      <a href="getting-started.html" class="text-cyan-600 font-semibold hover:underline ml-1">Click here to start →</a>
+    </p>
+  </div>
+
+  <div id="notLoggedIn" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 hidden">
+    <p class="text-blue-800"><i class="fas fa-info-circle mr-2"></i> <a href="signup-login.html" class="underline font-semibold">Sign up or log in</a> to create posts and participate in discussions.</p>
+  </div>
+
+  <!-- Forum navigation bar -->
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-6 border-b border-gray-200 pb-4">
+    <div class="flex items-center gap-1">
+      <button onclick="showView('all')" id="viewBtnAll" class="view-btn px-4 py-2 rounded-md text-sm font-semibold bg-gray-900 text-white">All categories</button>
+      <button onclick="showView('hot')" id="viewBtnHot" class="view-btn px-4 py-2 rounded-md text-sm font-semibold text-gray-600 hover:bg-gray-100">
+        <i class="fas fa-fire text-orange-500 mr-1"></i> Hot
+      </button>
+      <button onclick="showView('latest')" id="viewBtnLatest" class="view-btn px-4 py-2 rounded-md text-sm font-semibold text-gray-600 hover:bg-gray-100">
+        <i class="fas fa-clock text-cyan-500 mr-1"></i> Latest
+      </button>
+    </div>
+    <button onclick="handleNewPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-5 py-2 rounded-md text-sm font-bold flex items-center gap-2">
+      <i class="fas fa-pen"></i> Make a post
+    </button>
+  </div>
+
+  <!-- New Post Form (hidden by default) -->
+  <div id="newPostForm" class="post-card hidden mb-8">
+    <h3 class="text-gray-900 font-semibold mb-4 text-lg">Create New Post</h3>
+    <div class="mb-4">
+      <label class="text-sm text-gray-500 mb-1 block">Category</label>
+      <select id="postCategory" class="form-input mb-3 text-sm">
+        <option value="pc-building">PC Building</option>
+        <option value="gaming">Gaming</option>
+        <option value="welcome">Welcome</option>
+        <option value="announcements">Announcements</option>
+        <option value="official-brand">Official Brand</option>
+        <option value="system-help">System Help</option>
+      </select>
+      <input type="text" id="postTitle" class="form-input mb-3" placeholder="Post title..." maxlength="100">
+      <textarea id="postContent" class="form-input" placeholder="Share your thoughts..." rows="4" maxlength="1000"></textarea>
+      <div class="mt-3">
+        <label class="text-sm text-gray-500">Attach files / photos</label>
+        <input id="postFilesInput" type="file" accept="*/*" multiple class="w-full mt-2">
+        <div id="postFilesPreview" class="mt-3 flex flex-wrap gap-3 text-sm text-gray-300"></div>
+        <input type="url" id="postImageUrl" class="form-input mt-3" placeholder="Photo or link URL (optional)..." maxlength="2000">
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="publishPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-6 py-2.5 rounded text-sm font-medium">Publish</button>
+      <button onclick="cancelPost()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2.5 rounded text-sm font-medium">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Categories View -->
+  <div id="categoriesView">
+    <!-- Categories header row -->
+    <div class="grid grid-cols-12 text-xs font-bold text-gray-500 uppercase tracking-wider px-4 mb-2">
+      <div class="col-span-7">Category</div>
+      <div class="col-span-2 text-center hidden sm:block">Topics</div>
+      <div class="col-span-3 hidden sm:block">Latest</div>
     </div>
 
-    <!-- New Post Form -->
-    <div id="newPostForm" class="post-card hidden mb-8">
-      <h3 class="text-gray-900 font-semibold mb-6">Create New Post</h3>
-      <div class="mb-6">
-        <input type="text" id="postTitle" class="form-input mb-3" placeholder="Post title..." maxlength="100">
-        <textarea id="postContent" class="form-input" placeholder="Share your thoughts..." rows="4" maxlength="1000"></textarea>
-        <div class="mt-3">
-          <label class="text-base text-gray-300">Attach files / photos</label>
-          <input id="postFilesInput" type="file" accept="*/*" multiple class="w-full mt-2">
-          <div id="postFilesPreview" class="mt-3 flex flex-wrap gap-3 text-sm text-gray-300"></div>
-          <input type="url" id="postImageUrl" class="form-input mt-3" placeholder="Photo or link URL (optional)..." maxlength="2000">
+    <!-- Category cards -->
+    <div class="space-y-3">
+
+      <!-- PC Building -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('pc-building')">
+        <div class="grid grid-cols-12 items-center gap-4">
+          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-microchip text-cyan-600 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">PC Building</h3>
+              <p class="text-gray-500 text-sm mt-0.5">Get Help Choosing Parts right here.</p>
+            </div>
+          </div>
+          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
+            <span class="text-gray-900 font-semibold text-base" id="count-pc-building">26</span>
+            <p class="text-xs text-gray-400">Topics</p>
+          </div>
+          <div class="col-span-8 sm:col-span-3 hidden sm:block">
+            <p class="text-xs text-gray-400 truncate">Latest discussions about builds &amp; parts</p>
+          </div>
         </div>
       </div>
-      <div class="flex gap-3">
-        <button onclick="publishPost()" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-6 py-3 rounded text-base font-medium">Publish</button>
-        <button onclick="cancelPost()" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded text-base font-medium">Cancel</button>
+
+      <!-- Gaming -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('gaming')">
+        <div class="grid grid-cols-12 items-center gap-4">
+          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-gamepad text-purple-600 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Gaming</h3>
+              <p class="text-gray-500 text-sm mt-0.5">Your HQ for all the latest gaming topics.</p>
+            </div>
+          </div>
+          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
+            <span class="text-gray-900 font-semibold text-base" id="count-gaming">9</span>
+            <p class="text-xs text-gray-400">Topics</p>
+          </div>
+          <div class="col-span-8 sm:col-span-3 hidden sm:block">
+            <p class="text-xs text-gray-400 truncate">Game reviews, tips &amp; esports news</p>
+          </div>
+        </div>
       </div>
+
+      <!-- Welcome -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('welcome')">
+        <div class="grid grid-cols-12 items-center gap-4">
+          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-hands text-green-600 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Welcome</h3>
+              <p class="text-gray-500 text-sm mt-0.5">Welcome! This is a site to talk about some of the latest news and build a community here with… you!</p>
+            </div>
+          </div>
+          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
+            <span class="text-gray-900 font-semibold text-base" id="count-welcome">10</span>
+            <p class="text-xs text-gray-400">Topics</p>
+          </div>
+          <div class="col-span-8 sm:col-span-3 hidden sm:block">
+            <p class="text-xs text-gray-400 truncate">Introductions &amp; community posts</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Announcements -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('announcements')">
+        <div class="grid grid-cols-12 items-center gap-4">
+          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-bullhorn text-yellow-600 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Announcements</h3>
+              <p class="text-gray-500 text-sm mt-0.5">This is your go to spot for all the latest updates, news, and important info about the community.</p>
+            </div>
+          </div>
+          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
+            <span class="text-gray-900 font-semibold text-base" id="count-announcements">2</span>
+            <p class="text-xs text-gray-400">Topics</p>
+          </div>
+          <div class="col-span-8 sm:col-span-3 hidden sm:block">
+            <p class="text-xs text-gray-400 truncate">Official Zorexium updates</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Official Brand -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('official-brand')">
+        <div class="grid grid-cols-12 items-center gap-4">
+          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-certificate text-blue-600 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">Official Brand</h3>
+              <p class="text-gray-500 text-sm mt-0.5">This category is for official posts from brands—product highlights, launches, Q&amp;A threads, and more.</p>
+            </div>
+          </div>
+          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
+            <span class="text-gray-900 font-semibold text-base" id="count-official-brand">5</span>
+            <p class="text-xs text-gray-400">Topics</p>
+          </div>
+          <div class="col-span-8 sm:col-span-3 hidden sm:block">
+            <p class="text-xs text-gray-400 truncate">Brand spotlights &amp; product launches</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Help -->
+      <div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" onclick="openCategory('system-help')">
+        <div class="grid grid-cols-12 items-center gap-4">
+          <div class="col-span-12 sm:col-span-7 flex items-start gap-4">
+            <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-life-ring text-red-500 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-gray-900 text-base hover:text-cyan-600 transition-colors">System Help</h3>
+              <p class="text-gray-500 text-sm mt-0.5">Discussion about this site, its organization, how it works, and how we can improve it.</p>
+            </div>
+          </div>
+          <div class="col-span-4 sm:col-span-2 text-center hidden sm:block">
+            <span class="text-gray-900 font-semibold text-base" id="count-system-help">2</span>
+            <p class="text-xs text-gray-400">Topics</p>
+          </div>
+          <div class="col-span-8 sm:col-span-3 hidden sm:block">
+            <p class="text-xs text-gray-400 truncate">Site feedback &amp; support topics</p>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Posts Feed -->
+    <!-- Footer links -->
+    <div class="flex flex-wrap gap-5 mt-10 pt-6 border-t border-gray-200 text-sm text-gray-500">
+      <a href="community-guidelines.html" class="hover:text-cyan-600 hover:underline">Community Rules</a>
+      <a href="terms-of-service.html" class="hover:text-cyan-600 hover:underline">Terms of Service</a>
+      <a href="faq.html" class="hover:text-cyan-600 hover:underline">FAQs</a>
+      <a href="privacy-policy.html" class="hover:text-cyan-600 hover:underline">Privacy</a>
+    </div>
+  </div>
+
+  <!-- Posts Feed View (shown when a category is selected or Hot/Latest is clicked) -->
+  <div id="postsFeedView" class="hidden">
+    <div class="flex items-center gap-3 mb-6">
+      <button onclick="backToCategories()" class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-medium">
+        <i class="fas fa-arrow-left"></i> All categories
+      </button>
+      <span class="text-gray-300">•</span>
+      <h2 id="feedTitle" class="text-lg font-bold text-gray-900"></h2>
+    </div>
     <div id="postsFeed"></div>
   </div>
+
 </main>
 
     <!-- Chat Bubble -->
@@ -292,12 +488,22 @@
     </div>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  const boardType = 'tech';
+  let currentBoardType = '';
   let posts = [];
+
+  const CATEGORY_LABELS = {
+    'pc-building': 'PC Building',
+    'gaming': 'Gaming',
+    'welcome': 'Welcome',
+    'announcements': 'Announcements',
+    'official-brand': 'Official Brand',
+    'system-help': 'System Help',
+    'hot': 'Hot Topics',
+    'latest': 'Latest Posts'
+  };
 
   function init() {
     updateUI();
-    loadPosts();
     const filesInput = document.getElementById('postFilesInput');
     if (filesInput) {
       filesInput.addEventListener('change', function(){
@@ -306,37 +512,81 @@
           if (f.type && f.type.startsWith('image/')){
             const img = document.createElement('img'); img.src = URL.createObjectURL(f); img.className='w-24 h-16 object-cover rounded'; preview.appendChild(img);
           } else {
-            const d = document.createElement('div'); d.textContent = f.name; d.className='px-3 py-1 bg-[#2a2e38] rounded'; preview.appendChild(d);
+            const d = document.createElement('div'); d.textContent = f.name; d.className='px-3 py-1 bg-gray-200 rounded text-gray-700 text-xs'; preview.appendChild(d);
           }
         });
       });
     }
   }
 
-  function checkAuth(redirect = null) {
+  function checkAuth() {
     if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'signup-login.html';
       return false;
     }
-    if (redirect) window.location.href = redirect;
     return true;
   }
 
   function updateUI() {
-    const token = ZrxSession.isLoggedIn();
-    const logoutBtn = document.getElementById('logoutBtn');
+    const loggedIn = ZrxSession.isLoggedIn();
     const notLoggedIn = document.getElementById('notLoggedIn');
-    if (token) {
-      if (logoutBtn) logoutBtn.classList.remove('hidden');
+    const greeting = document.getElementById('welcomeGreeting');
+    if (loggedIn) {
       if (notLoggedIn) notLoggedIn.classList.add('hidden');
+      if (greeting) {
+        const user = ZrxSession.getUser();
+        const name = (user && (user.username || user.email)) ? (user.username || user.email).split('@')[0] : null;
+        if (name) greeting.textContent = 'Welcome back, ' + name + '!';
+      }
     } else {
-      if (logoutBtn) logoutBtn.classList.add('hidden');
       if (notLoggedIn) notLoggedIn.classList.remove('hidden');
     }
   }
 
+  function showView(type) {
+    document.querySelectorAll('.view-btn').forEach(b => {
+      b.classList.remove('bg-gray-900', 'text-white');
+      b.classList.add('text-gray-600');
+    });
+    const activeBtn = document.getElementById('viewBtn' + type.charAt(0).toUpperCase() + type.slice(1));
+    if (activeBtn) { activeBtn.classList.add('bg-gray-900', 'text-white'); activeBtn.classList.remove('text-gray-600'); }
+
+    if (type === 'all') {
+      backToCategories();
+    } else {
+      openCategory(type);
+    }
+  }
+
+  function openCategory(category) {
+    currentBoardType = category;
+    document.getElementById('categoriesView').classList.add('hidden');
+    document.getElementById('postsFeedView').classList.remove('hidden');
+    const titleEl = document.getElementById('feedTitle');
+    if (titleEl) titleEl.textContent = CATEGORY_LABELS[category] || category;
+    loadPosts(category);
+  }
+
+  function backToCategories() {
+    currentBoardType = '';
+    document.getElementById('postsFeedView').classList.add('hidden');
+    document.getElementById('categoriesView').classList.remove('hidden');
+    document.getElementById('newPostForm').classList.add('hidden');
+    document.querySelectorAll('.view-btn').forEach(b => {
+      b.classList.remove('bg-gray-900', 'text-white');
+      b.classList.add('text-gray-600');
+    });
+    const allBtn = document.getElementById('viewBtnAll');
+    if (allBtn) { allBtn.classList.add('bg-gray-900', 'text-white'); allBtn.classList.remove('text-gray-600'); }
+  }
+
   function handleNewPost() {
     if (!checkAuth()) return;
+    if (document.getElementById('categoriesView').classList.contains('hidden') === false) {
+      // Open a default category first
+      openCategory('pc-building');
+      document.getElementById('postCategory').value = 'pc-building';
+    }
     document.getElementById('newPostForm').classList.toggle('hidden');
   }
 
@@ -351,6 +601,7 @@
     const title = document.getElementById('postTitle').value.trim();
     const content = document.getElementById('postContent').value.trim();
     const imageUrl = document.getElementById('postImageUrl').value.trim();
+    const category = document.getElementById('postCategory').value || currentBoardType || 'pc-building';
     if (!title || !content) {
       ZrxNotify.showNotification('Please fill in both title and content!', 'error');
       return;
@@ -360,7 +611,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ title, content, boardType, ...(imageUrl ? { imageUrl } : {}) })
+        body: JSON.stringify({ title, content, boardType: category, ...(imageUrl ? { imageUrl } : {}) })
       });
       if (!res.ok) {
         const err = await res.json();
@@ -376,7 +627,7 @@
       const preview = document.getElementById('postFilesPreview');
       if (preview) { preview.innerHTML = ''; }
       document.getElementById('newPostForm').classList.add('hidden');
-      await loadPosts();
+      await loadPosts(category);
     } catch (err) {
       console.error(err);
       ZrxNotify.showNotification('Error publishing post. Please try again.', 'error');
@@ -387,13 +638,18 @@
     document.getElementById('newPostForm').classList.add('hidden');
   }
 
-  async function loadPosts() {
+  async function loadPosts(category) {
     const feed = document.getElementById('postsFeed');
     feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Loading posts...</p></div>';
+    const boardParam = (category === 'hot' || category === 'latest') ? '' : category;
+    let url = BACKEND_URL + '/api/posts';
+    if (boardParam) url += '?boardType=' + encodeURIComponent(boardParam);
     try {
-      const res = await fetch(BACKEND_URL + '/api/posts?boardType=' + encodeURIComponent(boardType));
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch posts');
       posts = await res.json();
+      if (category === 'hot') posts = [...posts].sort((a,b) => (b.likes||[]).length - (a.likes||[]).length).slice(0, 20);
+      if (category === 'latest') posts = [...posts].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 20);
     } catch (err) {
       console.error(err);
       feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">Failed to load posts. Please try again.</p></div>';
@@ -409,7 +665,7 @@
 
   function renderPosts(postsToRender, feed) {
     if (postsToRender.length === 0) {
-      feed.innerHTML = '<div class="text-center py-12"><p class="text-gray-400">No posts yet. Be the first to post!</p></div>';
+      feed.innerHTML = '<div class="text-center py-12"><i class="fas fa-comments text-4xl text-gray-300 mb-4 block"></i><p class="text-gray-500 font-medium">No posts yet. Be the first to post!</p></div>';
       return;
     }
     const currentUserId = getCurrentUserId();
@@ -423,49 +679,50 @@
         <div class="post-card">
           <div class="flex justify-between items-start mb-3">
             <div class="flex items-center gap-3 flex-1">
-              <a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="flex-shrink-0"><img src="${post.profileImage || 'https://placehold.co/40x40/333/fff?text=U'}" class="w-10 h-10 rounded-full border border-gray-600 object-cover"></a>
+              <a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="flex-shrink-0"><img src="${post.profileImage || 'https://placehold.co/40x40/e5e7eb/9ca3af?text=U'}" class="w-10 h-10 rounded-full border border-gray-200 object-cover"></a>
               <div>
-                <h3 class="text-gray-900 font-semibold text-xl">${escapeHtml(post.title)}</h3>
-                <p class="text-gray-400 text-sm"><a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="text-cyan-400 hover:underline">${escapeHtml(post.username || post.email)}</a> • ${new Date(post.createdAt).toLocaleString()}</p>
+                <h3 class="text-gray-900 font-semibold text-base">${escapeHtml(post.title)}</h3>
+                <p class="text-gray-400 text-xs"><a href="brand-store.html?seller=${encodeURIComponent(post.username || post.email)}&email=${encodeURIComponent(post.email || '')}" class="text-cyan-600 hover:underline">${escapeHtml(post.username || post.email)}</a> &bull; ${new Date(post.createdAt).toLocaleString()}</p>
               </div>
             </div>
           </div>
-          <p class="text-gray-300 mb-6">${escapeHtml(post.content)}</p>
+          <p class="text-gray-600 mb-4 text-sm">${escapeHtml(post.content)}</p>
           ${renderPostMedia(post)}
           ${firstReply ? `
-          <div class="bg-[#2a2e38] rounded p-3 mb-3 text-base border-l-2 border-cyan-600">
-            <div class="flex items-center gap-3 mb-1">
-              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}"><img src="${firstReply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
-              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(firstReply.username || firstReply.email)}</a>
+          <div class="bg-gray-50 rounded-lg p-3 mb-3 text-sm border-l-2 border-cyan-400">
+            <div class="flex items-center gap-2 mb-1">
+              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}"><img src="${firstReply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U'}" class="w-5 h-5 rounded-full border border-gray-200 object-cover"></a>
+              <a href="brand-store.html?seller=${encodeURIComponent(firstReply.username || firstReply.email)}&email=${encodeURIComponent(firstReply.email || '')}" class="text-cyan-600 font-semibold hover:underline text-xs">${escapeHtml(firstReply.username || firstReply.email)}</a>
             </div>
-            <p class="text-gray-300">${escapeHtml(firstReply.content)}</p>
+            <p class="text-gray-600 text-xs">${escapeHtml(firstReply.content)}</p>
           </div>
           ` : ''}
-          <div class="flex items-center gap-6 text-base mt-2">
-            <button onclick="toggleReplies('${post._id}')" class="flex items-center gap-1 text-gray-400 hover:text-cyan-400 transition-colors">
-              <i class="fas fa-chevron-down" id="replies-arrow-${post._id}"></i>
+          <div class="flex items-center gap-5 text-sm mt-2">
+            <button onclick="toggleReplies('${post._id}')" class="flex items-center gap-1 text-gray-400 hover:text-cyan-600 transition-colors">
+              <i class="fas fa-comment text-xs"></i>
               <span>${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</span>
+              <i class="fas fa-chevron-down text-xs" id="replies-arrow-${post._id}"></i>
             </button>
-            <button onclick="toggleLike('${post._id}')" id="like-btn-${post._id}" class="flex items-center gap-1 ${liked ? 'text-red-400' : 'text-gray-400'} hover:text-red-400 transition-colors">
-              <i id="like-icon-${post._id}" class="${liked ? 'fas fa-heart' : 'far fa-heart'}"></i>
+            <button onclick="toggleLike('${post._id}')" id="like-btn-${post._id}" class="flex items-center gap-1 ${liked ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition-colors">
+              <i id="like-icon-${post._id}" class="${liked ? 'fas fa-heart' : 'far fa-heart'} text-xs"></i>
               <span id="like-count-${post._id}">${likeCount}</span>
             </button>
           </div>
-          <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-700">
-            <div class="mb-6">
+          <div id="replies-${post._id}" class="hidden mt-4 pt-4 border-t border-gray-100">
+            <div class="mb-4 space-y-2">
               ${replies.map(reply => `
-                <div class="bg-[#2a2e38] rounded p-3 mb-2 text-base">
-                  <div class="flex items-center gap-3 mb-1">
-                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}"><img src="${reply.profileImage || 'https://placehold.co/24x24/333/fff?text=U'}" class="w-6 h-6 rounded-full border border-gray-600 object-cover"></a>
-                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}" class="text-cyan-400 font-semibold hover:underline">${escapeHtml(reply.username || reply.email)}</a>
+                <div class="bg-gray-50 rounded-lg p-3 text-sm">
+                  <div class="flex items-center gap-2 mb-1">
+                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}"><img src="${reply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U'}" class="w-5 h-5 rounded-full border border-gray-200 object-cover"></a>
+                    <a href="brand-store.html?seller=${encodeURIComponent(reply.username || reply.email)}&email=${encodeURIComponent(reply.email || '')}" class="text-cyan-600 font-semibold hover:underline text-xs">${escapeHtml(reply.username || reply.email)}</a>
                   </div>
-                  <p class="text-gray-300">${escapeHtml(reply.content)}</p>
+                  <p class="text-gray-600 text-xs">${escapeHtml(reply.content)}</p>
                 </div>
               `).join('')}
             </div>
-            <div class="flex gap-3">
-              <input type="text" id="replyText-${post._id}" class="form-input flex-1" placeholder="Write a reply..." maxlength="500">
-              <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-3 rounded text-base font-medium">Send</button>
+            <div class="flex gap-2">
+              <input type="text" id="replyText-${post._id}" class="form-input flex-1 text-sm py-2" placeholder="Write a reply..." maxlength="500">
+              <button onclick="submitReply('${post._id}')" class="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded text-sm font-medium">Send</button>
             </div>
           </div>
         </div>
@@ -477,7 +734,7 @@
     const section = document.getElementById('replies-' + postId);
     const arrow = document.getElementById('replies-arrow-' + postId);
     section.classList.toggle('hidden');
-    if (arrow) arrow.className = section.classList.contains('hidden') ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+    if (arrow) arrow.className = section.classList.contains('hidden') ? 'fas fa-chevron-down text-xs' : 'fas fa-chevron-up text-xs';
   }
 
   async function toggleLike(postId) {
@@ -498,12 +755,12 @@
       const data = await res.json();
       countEl.textContent = data.likeCount;
       if (data.liked) {
-        icon.className = 'fas fa-heart';
+        icon.className = 'fas fa-heart text-xs';
         btn.classList.remove('text-gray-400');
-        btn.classList.add('text-red-400');
+        btn.classList.add('text-red-500');
       } else {
-        icon.className = 'far fa-heart';
-        btn.classList.remove('text-red-400');
+        icon.className = 'far fa-heart text-xs';
+        btn.classList.remove('text-red-500');
         btn.classList.add('text-gray-400');
       }
     } catch (err) {
@@ -527,7 +784,7 @@
         ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to submit reply'), 'error');
         return;
       }
-      await loadPosts();
+      await loadPosts(currentBoardType);
     } catch (err) {
       console.error(err);
       ZrxNotify.showNotification('Error submitting reply. Please try again.', 'error');
@@ -551,9 +808,9 @@
     if (!post.imageUrl || !/^https?:\/\//i.test(post.imageUrl)) return '';
     const escaped = escapeHtml(post.imageUrl);
     if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(post.imageUrl)) {
-      return '<div class="mb-6"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-lg max-h-96 object-contain"></div>';
+      return '<div class="mb-4"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-lg max-h-72 object-contain"></div>';
     }
-    return '<div class="mb-6"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-cyan-400 underline break-all text-base"><i class="fas fa-link mr-1"></i>' + escaped + '</a></div>';
+    return '<div class="mb-4"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-cyan-600 underline break-all text-sm"><i class="fas fa-link mr-1"></i>' + escaped + '</a></div>';
   }
 
   function toggleDropdown(id) {
