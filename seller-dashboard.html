@@ -253,7 +253,7 @@
           <span id="verifiedBadge" class="hidden inline-flex items-center gap-1 text-xs bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 rounded-full font-semibold"><i class="fas fa-check-circle"></i> Verified Seller</span>
         </div>
         <p class="text-gray-500 text-sm" id="shopDescDisplay"></p>
-        <a href="#" id="viewProfileLink" class="text-cyan-600 hover:text-cyan-700 text-sm font-medium mt-1 inline-flex items-center gap-1">
+        <a href="#" id="viewProfileLink" aria-disabled="true" class="text-gray-400 text-sm font-medium mt-1 inline-flex items-center gap-1 cursor-not-allowed opacity-60" title="Loading profile…">
           <i class="fas fa-external-link-alt text-xs"></i> View Public Profile
         </a>
       </div>
@@ -666,7 +666,14 @@
     document.getElementById('shopNameDisplay').textContent = sellerData.shopName || 'Your Shop';
     document.getElementById('shopDescDisplay').textContent = sellerData.shopDescription || '';
     const profileParam = _userId ? 'id=' + encodeURIComponent(_userId) : 'seller=' + encodeURIComponent((ZrxSession.getUser() || {}).email || '');
-    document.getElementById('viewProfileLink').href = 'brand-store.html?' + profileParam;
+    const profileLink = document.getElementById('viewProfileLink');
+    if (profileLink) {
+      profileLink.href = 'brand-store.html?' + profileParam;
+      profileLink.removeAttribute('aria-disabled');
+      profileLink.classList.remove('text-gray-400', 'cursor-not-allowed', 'opacity-60');
+      profileLink.classList.add('text-cyan-600', 'hover:text-cyan-700');
+      profileLink.removeAttribute('title');
+    }
 
     if (sellerData.stripeVerified) {
       document.getElementById('verifiedBadge').classList.remove('hidden');

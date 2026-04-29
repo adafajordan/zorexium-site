@@ -34,6 +34,8 @@
     .tyo-nav-link { display: flex; align-items: center; gap: 8px; padding: 9px 16px; font-size: 14px; color: #374151; transition: background 0.12s, color 0.12s; }
     .tyo-nav-link:hover { background: #f9fafb; color: #0891b2; }
     .tyo-nav-link.active { background: #ecfeff; color: #0e7490; font-weight: 600; }
+    .tyo-nav-link.coming-soon { opacity: 0.5; cursor: default; pointer-events: none; }
+    .tyo-nav-link .cs-badge { font-size: 9px; background: #e5e7eb; color: #6b7280; border-radius: 4px; padding: 1px 5px; margin-left: auto; text-transform: uppercase; letter-spacing: 0.04em; }
     .order-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
     .order-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .status-delivered { background: #dcfce7; color: #15803d; }
@@ -290,11 +292,11 @@
         </div>
         <nav>
           <a href="track-your-order.html" class="tyo-nav-link active"><i class="fas fa-box-open w-4 text-center text-cyan-500"></i>Order History</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-file-alt w-4 text-center text-gray-400"></i>Digital Orders</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-sync-alt w-4 text-center text-gray-400"></i>Subscription Orders</a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-file-alt w-4 text-center text-gray-400"></i>Digital Orders<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-sync-alt w-4 text-center text-gray-400"></i>Subscription Orders<span class="cs-badge">Soon</span></a>
           <a href="returns-history.html" class="tyo-nav-link"><i class="fas fa-exchange-alt w-4 text-center text-gray-400"></i>Return Status / History</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-store w-4 text-center text-gray-400"></i>Marketplace Claim History</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-random w-4 text-center text-gray-400"></i>Trade-in Orders</a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-store w-4 text-center text-gray-400"></i>Marketplace Claim History<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-random w-4 text-center text-gray-400"></i>Trade-in Orders<span class="cs-badge">Soon</span></a>
         </nav>
       </div>
 
@@ -315,14 +317,14 @@
         </div>
         <nav>
           <a href="account-details.html" class="tyo-nav-link"><i class="fas fa-cog w-4 text-center text-gray-400"></i>Account Settings</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-star w-4 text-center text-gray-400"></i>Zorexium+</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-address-book w-4 text-center text-gray-400"></i>Address Book</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-credit-card w-4 text-center text-gray-400"></i>Payment Options</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-coins w-4 text-center text-gray-400"></i>EggPoints</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-gift w-4 text-center text-gray-400"></i>Gift Cards</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-graduation-cap w-4 text-center text-gray-400"></i>Academic Info</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-star-half-alt w-4 text-center text-gray-400"></i>Manage Reviews</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-file-invoice w-4 text-center text-gray-400"></i>Tax Exemption Application</a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-star w-4 text-center text-gray-400"></i>Zorexium+<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-address-book w-4 text-center text-gray-400"></i>Address Book<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-credit-card w-4 text-center text-gray-400"></i>Payment Options<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-coins w-4 text-center text-gray-400"></i>EggPoints<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-gift w-4 text-center text-gray-400"></i>Gift Cards<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-graduation-cap w-4 text-center text-gray-400"></i>Academic Info<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-star-half-alt w-4 text-center text-gray-400"></i>Manage Reviews<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-file-invoice w-4 text-center text-gray-400"></i>Tax Exemption Application<span class="cs-badge">Soon</span></a>
         </nav>
       </div>
 
@@ -334,9 +336,9 @@
         <nav>
           <a href="messages.html" class="tyo-nav-link"><i class="fas fa-envelope w-4 text-center text-gray-400"></i>Message Center</a>
           <a href="email-notifications.html" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Email Notifications</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-mobile-alt w-4 text-center text-gray-400"></i>Mobile Text Alert</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Auto Notify</a>
-          <a href="#" class="tyo-nav-link"><i class="fas fa-chart-line w-4 text-center text-gray-400"></i>Price Alerts</a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-mobile-alt w-4 text-center text-gray-400"></i>Mobile Text Alert<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Auto Notify<span class="cs-badge">Soon</span></a>
+          <a class="tyo-nav-link coming-soon"><i class="fas fa-chart-line w-4 text-center text-gray-400"></i>Price Alerts<span class="cs-badge">Soon</span></a>
         </nav>
       </div>
 
@@ -356,7 +358,7 @@
       <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4">
         <div class="flex items-center justify-between mb-1">
           <h1 class="text-xl font-bold text-gray-900">Order History</h1>
-          <a href="#" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium">Find A Guest Order</a>
+          <a href="#" onclick="tyoShowGuestLookup(event)" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium">Find A Guest Order</a>
         </div>
         <p class="text-sm text-gray-500">Check the status of your order, review your order history, leave a review for your purchases and request a return.</p>
       </div>
@@ -388,7 +390,7 @@
           </div>
           <div class="flex items-center gap-2 ml-auto">
             <label class="font-medium whitespace-nowrap">View:</label>
-            <select id="tyoViewFilter" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+            <select id="tyoViewFilter" onchange="tyoRenderOrders()" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
               <option value="orders">Orders</option>
               <option value="invoices">Invoices</option>
             </select>
@@ -400,7 +402,7 @@
       <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4 flex items-center gap-3 text-sm">
         <i class="fas fa-mobile-alt text-blue-500 text-lg flex-shrink-0"></i>
         <span class="text-blue-700">Stay connected with order and delivery update via text alert.</span>
-        <a href="#" class="ml-auto text-cyan-600 hover:text-cyan-700 font-semibold whitespace-nowrap">Sign Up</a>
+        <a href="#" onclick="tyoShowTextAlertSignup(event)" class="ml-auto text-cyan-600 hover:text-cyan-700 font-semibold whitespace-nowrap">Sign Up</a>
       </div>
 
       <!-- Auth gate (not logged in) -->
@@ -422,6 +424,53 @@
     </div>
   </div>
 </main>
+
+<!-- Guest Order Lookup Modal -->
+<div id="tyoGuestModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="tyoGuestModalTitle">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="tyoGuestModalTitle" class="text-lg font-bold text-gray-900"><i class="fas fa-search text-cyan-500 mr-2"></i>Find a Guest Order</h2>
+      <button onclick="tyoCloseGuestModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">Enter your order ID and the email address used at checkout.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="tyoGuestOrderId">Order ID</label>
+        <input id="tyoGuestOrderId" type="text" placeholder="e.g. ORD-1234567890-abc" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="tyoGuestEmail">Email Address</label>
+        <input id="tyoGuestEmail" type="email" placeholder="you@example.com" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+      </div>
+    </div>
+    <div id="tyoGuestError" class="hidden mt-3 text-red-600 text-xs"></div>
+    <div id="tyoGuestResult" class="hidden mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700"></div>
+    <div class="flex gap-3 justify-end mt-5">
+      <button onclick="tyoCloseGuestModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
+      <button id="tyoGuestLookupBtn" onclick="tyoDoGuestLookup()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Look Up Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Text Alert Sign-up Modal -->
+<div id="tyoTextAlertModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-mobile-alt text-cyan-500 mr-2"></i>Text Alert Sign-Up</h2>
+      <button onclick="tyoCloseTextAlertModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
+      <i class="fas fa-clock text-yellow-500 mt-0.5 flex-shrink-0"></i>
+      <div>
+        <p class="font-semibold text-gray-800 text-sm mb-1">Coming Soon</p>
+        <p class="text-xs text-gray-500">SMS text alert notifications are currently in development. We'll let you know when this feature becomes available.</p>
+      </div>
+    </div>
+    <div class="mt-5 text-right">
+      <button onclick="tyoCloseTextAlertModal()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Got It</button>
+    </div>
+  </div>
+</div>
 
 <!-- Chat Bubble -->
 <div class="fixed bottom-6 right-6 z-50">
@@ -624,7 +673,52 @@
     var query   = (document.getElementById('tyoSearchInput') ? document.getElementById('tyoSearchInput').value.trim().toLowerCase() : '');
     var dayVal  = document.getElementById('tyoDateFilter') ? document.getElementById('tyoDateFilter').value : 'all';
     var sort    = document.getElementById('tyoSortFilter') ? document.getElementById('tyoSortFilter').value : 'recent';
+    var viewMode = document.getElementById('tyoViewFilter') ? document.getElementById('tyoViewFilter').value : 'orders';
     var cutoff  = dayVal !== 'all' ? Date.now() - parseInt(dayVal, 10) * 86400000 : 0;
+
+    // Invoices view: show a summary table of order totals
+    if (viewMode === 'invoices') {
+      var invoiceOrders = _allOrders.filter(function(o) {
+        if (cutoff && o.createdAt && new Date(o.createdAt).getTime() < cutoff) return false;
+        if (query) {
+          var id = ((o._id || o.orderId || '') + '').toLowerCase();
+          if (!id.includes(query)) return false;
+        }
+        return true;
+      });
+      if (sort === 'oldest') {
+        invoiceOrders.sort(function(a, b) { return new Date(a.createdAt || 0) - new Date(b.createdAt || 0); });
+      } else {
+        invoiceOrders.sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+      }
+      if (invoiceOrders.length === 0) {
+        listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14">' +
+          '<i class="fas fa-file-invoice text-5xl text-gray-200 mb-3 block"></i>' +
+          '<p class="font-semibold text-gray-600 mb-1">No invoices found</p>' +
+          '<p class="text-sm text-gray-400">Completed orders will appear here as invoices.</p>' +
+          '</div>';
+        return;
+      }
+      var tableRows = invoiceOrders.map(function(o) {
+        var ordNum = ('#' + ((o._id || o.orderId || '---') + '').slice(-8).toUpperCase());
+        var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—';
+        var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '—';
+        var status = o.status || 'Processing';
+        var sc = statusClass(status);
+        return '<tr class="border-t border-gray-100">' +
+          '<td class="px-4 py-3 text-sm font-mono text-gray-700">' + ordNum + '</td>' +
+          '<td class="px-4 py-3 text-sm text-gray-500">' + date + '</td>' +
+          '<td class="px-4 py-3"><span class="order-status ' + sc + '">' + status + '</span></td>' +
+          '<td class="px-4 py-3 text-sm font-semibold text-gray-800 text-right">' + total + '</td>' +
+          '</tr>';
+      }).join('');
+      listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg overflow-hidden">' +
+        '<table class="w-full">' +
+        '<thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">' +
+        '<tr><th class="px-4 py-3 text-left">Invoice #</th><th class="px-4 py-3 text-left">Date</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-right">Total</th></tr>' +
+        '</thead><tbody>' + tableRows + '</tbody></table></div>';
+      return;
+    }
 
     var filtered = _allOrders.filter(function (o) {
       if (cutoff && o.createdAt && new Date(o.createdAt).getTime() < cutoff) return false;
@@ -709,6 +803,95 @@
         '</div>';
     });
 })();
+
+  // ── Guest Order Lookup ──
+  var BACKEND_TYO = 'https://zorexium-backend.onrender.com';
+
+  window.tyoShowGuestLookup = function(e) {
+    if (e) e.preventDefault();
+    document.getElementById('tyoGuestOrderId').value = '';
+    document.getElementById('tyoGuestEmail').value = '';
+    document.getElementById('tyoGuestError').classList.add('hidden');
+    document.getElementById('tyoGuestResult').classList.add('hidden');
+    var modal = document.getElementById('tyoGuestModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('tyoGuestOrderId').focus();
+  };
+
+  window.tyoCloseGuestModal = function() {
+    var modal = document.getElementById('tyoGuestModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  };
+
+  window.tyoDoGuestLookup = function() {
+    var orderId = document.getElementById('tyoGuestOrderId').value.trim();
+    var email = document.getElementById('tyoGuestEmail').value.trim();
+    var errEl = document.getElementById('tyoGuestError');
+    var resEl = document.getElementById('tyoGuestResult');
+    var btn = document.getElementById('tyoGuestLookupBtn');
+    errEl.classList.add('hidden');
+    resEl.classList.add('hidden');
+    if (!orderId || !email) {
+      errEl.textContent = 'Please enter both order ID and email address.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Looking up…';
+    fetch(BACKEND_TYO + '/api/orders/guest?orderId=' + encodeURIComponent(orderId) + '&email=' + encodeURIComponent(email))
+      .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+      .then(function(res) {
+        btn.disabled = false; btn.textContent = 'Look Up Order';
+        if (!res.ok) {
+          errEl.textContent = res.data.error || 'Order not found.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+        var o = res.data;
+        var status = o.status || 'Processing';
+        var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—';
+        var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '—';
+        var items = (o.items || []).map(function(i) { return (i.name || 'Item') + ' (x' + (i.quantity || 1) + ')'; }).join(', ') || '—';
+        resEl.innerHTML = '<p class="font-semibold text-gray-800 mb-2">Order Found</p>' +
+          '<dl class="grid grid-cols-2 gap-1 text-xs">' +
+          '<dt class="text-gray-500">Order ID:</dt><dd class="font-mono text-gray-700">' + (o.id || o._id || '—') + '</dd>' +
+          '<dt class="text-gray-500">Date:</dt><dd class="text-gray-700">' + date + '</dd>' +
+          '<dt class="text-gray-500">Status:</dt><dd class="font-semibold text-cyan-700">' + status + '</dd>' +
+          '<dt class="text-gray-500">Total:</dt><dd class="font-semibold text-gray-800">' + total + '</dd>' +
+          '<dt class="text-gray-500">Items:</dt><dd class="text-gray-700 col-span-1">' + items + '</dd>' +
+          '</dl>';
+        resEl.classList.remove('hidden');
+      })
+      .catch(function() {
+        btn.disabled = false; btn.textContent = 'Look Up Order';
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.classList.remove('hidden');
+      });
+  };
+
+  // ── Text Alert Signup ──
+  window.tyoShowTextAlertSignup = function(e) {
+    if (e) e.preventDefault();
+    var modal = document.getElementById('tyoTextAlertModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  };
+
+  window.tyoCloseTextAlertModal = function() {
+    var modal = document.getElementById('tyoTextAlertModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  };
+
+  // Close modals on Escape / backdrop click
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { tyoCloseGuestModal(); tyoCloseTextAlertModal(); }
+  });
+  document.getElementById('tyoGuestModal').addEventListener('click', function(e) { if (e.target === this) tyoCloseGuestModal(); });
+  document.getElementById('tyoTextAlertModal').addEventListener('click', function(e) { if (e.target === this) tyoCloseTextAlertModal(); });
+  document.getElementById('tyoGuestOrderId').addEventListener('keypress', function(e) { if (e.key === 'Enter') tyoDoGuestLookup(); });
+  document.getElementById('tyoGuestEmail').addEventListener('keypress', function(e) { if (e.key === 'Enter') tyoDoGuestLookup(); });
 </script>
 </body>
 </html>

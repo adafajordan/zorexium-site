@@ -290,7 +290,7 @@
         <p class="text-gray-400 text-base">Don't have an account? <a href="#" onclick="toggleForms(event)" class="text-cyan-400 hover:text-cyan-300">Sign Up</a></p>
       </div>
       <div class="mt-4 text-center">
-        <a href="#" class="text-gray-400 hover:text-gray-300 text-base">Forgot your password?</a>
+        <a href="#" onclick="slShowForgotPassword(event)" class="text-gray-400 hover:text-gray-300 text-base">Forgot your password?</a>
       </div>
     </div>
 
@@ -429,7 +429,76 @@
       ZrxNotify.showNotification('Login failed. Please check your connection and try again.', 'error');
     }
   }
+
+  // ── Forgot Password ──
+  function slShowForgotPassword(e) {
+    if (e) e.preventDefault();
+    document.getElementById('slFpEmail').value = '';
+    document.getElementById('slFpError').classList.add('hidden');
+    document.getElementById('slFpSuccess').classList.add('hidden');
+    document.getElementById('slFpEmail').classList.remove('hidden');
+    document.getElementById('slFpSendBtn').classList.remove('hidden');
+    var modal = document.getElementById('slFpModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    setTimeout(function() { document.getElementById('slFpEmail').focus(); }, 50);
+  }
+
+  function slCloseFpModal() {
+    var modal = document.getElementById('slFpModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  async function slDoForgotPassword() {
+    var email = document.getElementById('slFpEmail').value.trim();
+    var errEl = document.getElementById('slFpError');
+    var successEl = document.getElementById('slFpSuccess');
+    var btn = document.getElementById('slFpSendBtn');
+    errEl.classList.add('hidden');
+    if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.classList.remove('hidden'); return; }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const res = await fetch(BACKEND_URL + '/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      btn.disabled = false; btn.textContent = 'Send Reset Link';
+      document.getElementById('slFpEmail').classList.add('hidden');
+      btn.classList.add('hidden');
+      successEl.classList.remove('hidden');
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Send Reset Link';
+      errEl.textContent = 'Network error. Please try again.'; errEl.classList.remove('hidden');
+    }
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') slCloseFpModal();
+  });
 </script>
+
+<!-- Forgot Password Modal -->
+<div id="slFpModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-70" role="dialog" aria-modal="true" aria-labelledby="slFpTitle">
+  <div class="bg-[#20232a] border border-gray-700 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="slFpTitle" class="text-lg font-bold text-white"><i class="fas fa-key text-cyan-400 mr-2"></i>Reset Password</h2>
+      <button onclick="slCloseFpModal()" class="text-gray-400 hover:text-gray-300"><i class="fas fa-times"></i></button>
+    </div>
+    <p class="text-gray-400 text-sm mb-4">Enter the email address associated with your account and we'll send you a reset link.</p>
+    <input id="slFpEmail" type="email" placeholder="you@example.com" class="w-full bg-[#16181d] border border-gray-600 rounded-md px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400 mb-3">
+    <div id="slFpError" class="hidden text-red-400 text-xs mb-3"></div>
+    <div id="slFpSuccess" class="hidden bg-green-900 border border-green-700 rounded-lg p-3 text-green-300 text-sm mb-3">
+      <i class="fas fa-check-circle mr-1"></i> If that email is registered, a reset link has been sent. Please check your inbox.
+    </div>
+    <div class="flex gap-3 justify-end">
+      <button onclick="slCloseFpModal()" class="px-4 py-2 text-sm font-medium text-gray-400 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors">Cancel</button>
+      <button id="slFpSendBtn" onclick="slDoForgotPassword()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Send Reset Link</button>
+    </div>
+  </div>
+</div>
 
 <script src="session.js"></script>
 <script src="notifications.js"></script>

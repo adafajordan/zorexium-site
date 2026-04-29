@@ -299,17 +299,11 @@
           </div>
         </div>
 
-        <div class="text-center py-14 bg-white border border-gray-200 rounded-lg">
-          <i class="fas fa-list text-5xl text-gray-200 mb-3 block"></i>
-          <p class="font-semibold text-gray-600 mb-1">No build lists yet</p>
-          <p class="text-sm text-gray-400 mb-5">Start planning your next build by adding components from the marketplace.</p>
-          <div class="flex gap-3 justify-center">
-            <button onclick="blCreate()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors">
-              <i class="fas fa-plus mr-1"></i> Create Build
-            </button>
-            <a href="index.html" class="bg-white border border-gray-300 hover:border-cyan-400 text-gray-600 hover:text-cyan-600 text-sm font-medium px-5 py-2 rounded-md transition-colors">
-              Browse Components
-            </a>
+        <!-- Lists container (populated by JS) -->
+        <div id="blListsContainer">
+          <div class="text-center py-14 bg-white border border-gray-200 rounded-lg">
+            <i class="fas fa-spinner fa-spin text-3xl text-cyan-400 mb-3 block"></i>
+            <p class="text-sm text-gray-400">Loading your build lists…</p>
           </div>
         </div>
       </div>
@@ -317,7 +311,37 @@
   </div>
 </main>
 
+<!-- Create Build List Modal -->
+<div id="blCreateModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="blModalTitle">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <h2 id="blModalTitle" class="text-lg font-bold text-gray-900 mb-4"><i class="fas fa-list text-cyan-500 mr-2"></i>New Build List</h2>
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="blListName">List Name</label>
+    <input id="blListName" type="text" maxlength="100" placeholder="e.g. Gaming Rig 2025" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 mb-4">
+    <div id="blModalError" class="hidden text-red-600 text-xs mb-3"></div>
+    <div class="flex gap-3 justify-end">
+      <button onclick="blCloseModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
+      <button id="blModalSave" onclick="blSaveList()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Create List</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Build List Confirm Modal -->
+<div id="blDeleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <h2 class="text-lg font-bold text-gray-900 mb-2">Delete Build List?</h2>
+    <p class="text-sm text-gray-500 mb-5">This action cannot be undone.</p>
+    <div class="flex gap-3 justify-end">
+      <button onclick="blCloseDeleteModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
+      <button id="blDeleteConfirm" class="px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  var BACKEND_BL = 'https://zorexium-backend.onrender.com';
+  var _blLists = [];
+  var _blDeleteId = null;
+
   (function() {
     var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
     if (!isLoggedIn) {
@@ -325,12 +349,138 @@
     } else {
       document.getElementById('blContent').classList.remove('hidden');
       document.getElementById('blCreateBtn').classList.remove('hidden');
+      blLoadLists();
     }
   })();
-  function blCreate() {
-    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build list creation coming soon!', 'info');
-    else alert('Build list creation coming soon!');
+
+  function blLoadLists() {
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_BL + '/api/lists?type=build', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(lists) { _blLists = lists || []; blRenderLists(); })
+      .catch(function() { blRenderLists(); });
   }
+
+  function blRenderLists() {
+    var container = document.getElementById('blListsContainer');
+    if (!container) return;
+    if (_blLists.length === 0) {
+      container.innerHTML = '<div class="text-center py-14 bg-white border border-gray-200 rounded-lg">' +
+        '<i class="fas fa-list text-5xl text-gray-200 mb-3 block"></i>' +
+        '<p class="font-semibold text-gray-600 mb-1">No build lists yet</p>' +
+        '<p class="text-sm text-gray-400 mb-5">Start planning your next build by adding components from the marketplace.</p>' +
+        '<div class="flex gap-3 justify-center">' +
+        '<button onclick="blCreate()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors"><i class="fas fa-plus mr-1"></i> Create Build</button>' +
+        '<a href="index.html" class="bg-white border border-gray-300 hover:border-cyan-400 text-gray-600 hover:text-cyan-600 text-sm font-medium px-5 py-2 rounded-md transition-colors">Browse Components</a>' +
+        '</div></div>';
+      return;
+    }
+    container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
+      _blLists.map(function(list) {
+        var itemCount = (list.items || []).length;
+        var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
+        var safeId = String(list._id);
+        var safeName = String(list.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-2">' +
+          '<div class="flex items-start justify-between gap-2">' +
+          '<p class="font-semibold text-gray-800 text-sm">' + safeName + '</p>' +
+          '<button onclick="blConfirmDelete(\'' + safeId + '\')" class="text-gray-400 hover:text-red-500 transition-colors text-xs" title="Delete list"><i class="fas fa-trash"></i></button>' +
+          '</div>' +
+          '<p class="text-xs text-gray-400">' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + (date ? ' &middot; Created ' + date : '') + '</p>' +
+          '<a href="build-showcase.html" class="inline-block mt-auto text-cyan-600 hover:text-cyan-700 text-xs font-semibold"><i class="fas fa-arrow-right mr-1"></i>Open List</a>' +
+          '</div>';
+      }).join('') + '</div>';
+  }
+
+  function blCreate() {
+    document.getElementById('blListName').value = '';
+    document.getElementById('blModalError').classList.add('hidden');
+    document.getElementById('blModalError').textContent = '';
+    var modal = document.getElementById('blCreateModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('blListName').focus();
+  }
+
+  function blCloseModal() {
+    var modal = document.getElementById('blCreateModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function blSaveList() {
+    var name = document.getElementById('blListName').value.trim();
+    var errEl = document.getElementById('blModalError');
+    if (!name) { errEl.textContent = 'Please enter a name for your build list.'; errEl.classList.remove('hidden'); return; }
+    var btn = document.getElementById('blModalSave');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_BL + '/api/lists', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, type: 'build' })
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      btn.disabled = false; btn.textContent = 'Create List';
+      if (!res.ok) { errEl.textContent = res.data.error || 'Failed to create list.'; errEl.classList.remove('hidden'); return; }
+      blCloseModal();
+      _blLists.unshift(res.data);
+      blRenderLists();
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build list created!', 'success');
+    })
+    .catch(function() {
+      btn.disabled = false; btn.textContent = 'Create List';
+      errEl.textContent = 'Network error. Please try again.'; errEl.classList.remove('hidden');
+    });
+  }
+
+  function blConfirmDelete(id) {
+    _blDeleteId = id;
+    var modal = document.getElementById('blDeleteModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('blDeleteConfirm').onclick = blDoDelete;
+  }
+
+  function blCloseDeleteModal() {
+    _blDeleteId = null;
+    var modal = document.getElementById('blDeleteModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function blDoDelete() {
+    if (!_blDeleteId) return;
+    var id = _blDeleteId;
+    blCloseDeleteModal();
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_BL + '/api/lists/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })
+      .then(function(r) {
+        if (r.ok) {
+          _blLists = _blLists.filter(function(l) { return String(l._id) !== id; });
+          blRenderLists();
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build list deleted.', 'success');
+        } else {
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to delete list.', 'error');
+        }
+      })
+      .catch(function() {
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Network error. Please try again.', 'error');
+      });
+  }
+
+  // Close modals on Escape
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { blCloseModal(); blCloseDeleteModal(); }
+  });
+
+  // Close modals on backdrop click
+  document.getElementById('blCreateModal').addEventListener('click', function(e) { if (e.target === this) blCloseModal(); });
+  document.getElementById('blDeleteModal').addEventListener('click', function(e) { if (e.target === this) blCloseDeleteModal(); });
+
+  // Submit on Enter in name input
+  document.getElementById('blListName').addEventListener('keypress', function(e) { if (e.key === 'Enter') blSaveList(); });
 </script>
 
 <script>

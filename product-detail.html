@@ -345,7 +345,7 @@
           </p>
           <p class="text-gray-500 text-xs mt-1">
             or as low as <span data-financing-monthly class="font-semibold text-gray-700">$23/mo</span> with financing.
-            <a href="#" class="text-cyan-600 hover:underline">Prequalify Now</a>
+            <span class="text-gray-400 text-xs">(Financing <span class="bg-gray-100 text-gray-500 text-xs rounded px-1">Coming Soon</span>)</span>
           </p>
         </div>
 
@@ -376,7 +376,7 @@
           </div>
           <div class="flex items-center gap-2 text-gray-500">
             <i class="fas fa-map-marker-alt text-gray-300 w-4 text-center"></i>
-            <a href="#" class="text-cyan-600 hover:underline">Select delivery location</a>
+            <a href="#" onclick="pdShowLocationComingSoon(event)" class="text-cyan-600 hover:underline">Select delivery location</a>
           </div>
           <div class="flex items-center gap-2 text-gray-500">
             <i class="fas fa-clock text-gray-300 w-4 text-center"></i>
@@ -1382,5 +1382,11 @@
         })();
     </script>
     <script src="profile-picture.js"></script>
+<script>
+  function pdShowLocationComingSoon(e) {
+    if (e) e.preventDefault();
+    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Delivery location picker coming soon!', 'info');
+  }
+</script>
 </body>
 </html>

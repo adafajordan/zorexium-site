@@ -331,8 +331,27 @@
     }
   })();
   function bsShare() {
-    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build sharing coming soon!', 'info');
-    else alert('Build sharing coming soon!');
+    var shareUrl = window.location.href;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(function() {
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build link copied to clipboard!', 'success');
+      }).catch(function() {
+        bsShareFallback(shareUrl);
+      });
+    } else {
+      bsShareFallback(shareUrl);
+    }
+  }
+  function bsShareFallback(url) {
+    var ta = document.createElement('textarea');
+    ta.value = url;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build link copied to clipboard!', 'success'); }
+    catch(e) { if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Copy this link to share: ' + url, 'info'); }
+    document.body.removeChild(ta);
   }
 </script>
 

@@ -287,18 +287,49 @@
 
       <!-- Content -->
       <div id="wlContent" class="hidden">
-        <div class="text-center py-14 bg-white border border-gray-200 rounded-lg">
-          <i class="fas fa-heart text-5xl text-pink-200 mb-3 block"></i>
-          <p class="font-semibold text-gray-600 mb-1">Your wish lists are empty</p>
-          <p class="text-sm text-gray-400 mb-5">Browse the marketplace and click the <i class="fas fa-heart text-pink-400"></i> icon on any product to save it here.</p>
-          <a href="index.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Browse Marketplace</a>
+        <!-- Lists container (populated by JS) -->
+        <div id="wlListsContainer">
+          <div class="text-center py-14 bg-white border border-gray-200 rounded-lg">
+            <i class="fas fa-spinner fa-spin text-3xl text-cyan-400 mb-3 block"></i>
+            <p class="text-sm text-gray-400">Loading your wish lists…</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </main>
 
+<!-- Create Wish List Modal -->
+<div id="wlCreateModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="wlModalTitle">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <h2 id="wlModalTitle" class="text-lg font-bold text-gray-900 mb-4"><i class="fas fa-heart text-cyan-500 mr-2"></i>New Wish List</h2>
+    <label class="block text-sm font-medium text-gray-700 mb-1" for="wlListName">List Name</label>
+    <input id="wlListName" type="text" maxlength="100" placeholder="e.g. Birthday Wishlist" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300 mb-4">
+    <div id="wlModalError" class="hidden text-red-600 text-xs mb-3"></div>
+    <div class="flex gap-3 justify-end">
+      <button onclick="wlCloseModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
+      <button id="wlModalSave" onclick="wlSaveList()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Create List</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Wish List Confirm Modal -->
+<div id="wlDeleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <h2 class="text-lg font-bold text-gray-900 mb-2">Delete Wish List?</h2>
+    <p class="text-sm text-gray-500 mb-5">This action cannot be undone.</p>
+    <div class="flex gap-3 justify-end">
+      <button onclick="wlCloseDeleteModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
+      <button id="wlDeleteConfirm" class="px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  var BACKEND_WL = 'https://zorexium-backend.onrender.com';
+  var _wlLists = [];
+  var _wlDeleteId = null;
+
   (function() {
     var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
     if (!isLoggedIn) {
@@ -306,12 +337,133 @@
     } else {
       document.getElementById('wlContent').classList.remove('hidden');
       document.getElementById('wlCreateBtn').classList.remove('hidden');
+      wlLoadLists();
     }
   })();
-  function wlCreateList() {
-    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Wish list creation coming soon!', 'info');
-    else alert('Wish list creation coming soon!');
+
+  function wlLoadLists() {
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_WL + '/api/lists?type=wish', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(lists) { _wlLists = lists || []; wlRenderLists(); })
+      .catch(function() { wlRenderLists(); });
   }
+
+  function wlRenderLists() {
+    var container = document.getElementById('wlListsContainer');
+    if (!container) return;
+    if (_wlLists.length === 0) {
+      container.innerHTML = '<div class="text-center py-14 bg-white border border-gray-200 rounded-lg">' +
+        '<i class="fas fa-heart text-5xl text-pink-200 mb-3 block"></i>' +
+        '<p class="font-semibold text-gray-600 mb-1">Your wish lists are empty</p>' +
+        '<p class="text-sm text-gray-400 mb-5">Browse the marketplace and click the <i class="fas fa-heart text-pink-400"></i> icon on any product to save it here.</p>' +
+        '<div class="flex gap-3 justify-center">' +
+        '<button onclick="wlCreateList()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors"><i class="fas fa-plus mr-1"></i> Create List</button>' +
+        '<a href="index.html" class="inline-block bg-white border border-gray-300 hover:border-cyan-400 text-gray-600 hover:text-cyan-600 text-sm font-medium px-5 py-2 rounded-md">Browse Marketplace</a>' +
+        '</div></div>';
+      return;
+    }
+    container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
+      _wlLists.map(function(list) {
+        var itemCount = (list.items || []).length;
+        var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
+        var safeId = String(list._id);
+        var safeName = String(list.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-2">' +
+          '<div class="flex items-start justify-between gap-2">' +
+          '<p class="font-semibold text-gray-800 text-sm">' + safeName + '</p>' +
+          '<button onclick="wlConfirmDelete(\'' + safeId + '\')" class="text-gray-400 hover:text-red-500 transition-colors text-xs" title="Delete list"><i class="fas fa-trash"></i></button>' +
+          '</div>' +
+          '<p class="text-xs text-gray-400">' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + (date ? ' &middot; Created ' + date : '') + '</p>' +
+          '<a href="index.html" class="inline-block mt-auto text-cyan-600 hover:text-cyan-700 text-xs font-semibold"><i class="fas fa-arrow-right mr-1"></i>Add Items</a>' +
+          '</div>';
+      }).join('') + '</div>';
+  }
+
+  function wlCreateList() {
+    document.getElementById('wlListName').value = '';
+    document.getElementById('wlModalError').classList.add('hidden');
+    document.getElementById('wlModalError').textContent = '';
+    var modal = document.getElementById('wlCreateModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('wlListName').focus();
+  }
+
+  function wlCloseModal() {
+    var modal = document.getElementById('wlCreateModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function wlSaveList() {
+    var name = document.getElementById('wlListName').value.trim();
+    var errEl = document.getElementById('wlModalError');
+    if (!name) { errEl.textContent = 'Please enter a name for your wish list.'; errEl.classList.remove('hidden'); return; }
+    var btn = document.getElementById('wlModalSave');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_WL + '/api/lists', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, type: 'wish' })
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      btn.disabled = false; btn.textContent = 'Create List';
+      if (!res.ok) { errEl.textContent = res.data.error || 'Failed to create list.'; errEl.classList.remove('hidden'); return; }
+      wlCloseModal();
+      _wlLists.unshift(res.data);
+      wlRenderLists();
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Wish list created!', 'success');
+    })
+    .catch(function() {
+      btn.disabled = false; btn.textContent = 'Create List';
+      errEl.textContent = 'Network error. Please try again.'; errEl.classList.remove('hidden');
+    });
+  }
+
+  function wlConfirmDelete(id) {
+    _wlDeleteId = id;
+    var modal = document.getElementById('wlDeleteModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('wlDeleteConfirm').onclick = wlDoDelete;
+  }
+
+  function wlCloseDeleteModal() {
+    _wlDeleteId = null;
+    var modal = document.getElementById('wlDeleteModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function wlDoDelete() {
+    if (!_wlDeleteId) return;
+    var id = _wlDeleteId;
+    wlCloseDeleteModal();
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_WL + '/api/lists/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })
+      .then(function(r) {
+        if (r.ok) {
+          _wlLists = _wlLists.filter(function(l) { return String(l._id) !== id; });
+          wlRenderLists();
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Wish list deleted.', 'success');
+        } else {
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to delete list.', 'error');
+        }
+      })
+      .catch(function() {
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Network error. Please try again.', 'error');
+      });
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { wlCloseModal(); wlCloseDeleteModal(); }
+  });
+  document.getElementById('wlCreateModal').addEventListener('click', function(e) { if (e.target === this) wlCloseModal(); });
+  document.getElementById('wlDeleteModal').addEventListener('click', function(e) { if (e.target === this) wlCloseDeleteModal(); });
+  document.getElementById('wlListName').addEventListener('keypress', function(e) { if (e.key === 'Enter') wlSaveList(); });
 </script>
 
 <script>
