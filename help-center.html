@@ -651,7 +651,12 @@
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') hcCloseArticle();
   });
-  document.getElementById('hcArticleModal') && document.getElementById('hcArticleModal').addEventListener('click', function(e) { if (e.target === this) hcCloseArticle(); });</script>
+  var hcModalEl = document.getElementById('hcArticleModal');
+  if (hcModalEl) {
+    hcModalEl.addEventListener('click', function(e) {
+      if (e.target === this) hcCloseArticle();
+    });
+  }</script>
 
 <script>
   function toggleDropdown(id) {

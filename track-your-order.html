@@ -839,7 +839,8 @@
       return;
     }
     btn.disabled = true; btn.textContent = 'Looking up…';
-    fetch(BACKEND_TYO + '/api/orders/guest?orderId=' + encodeURIComponent(orderId) + '&email=' + encodeURIComponent(email))
+    var params = new URLSearchParams({ orderId: orderId, email: email });
+    fetch(BACKEND_TYO + '/api/orders/guest?' + params.toString())
       .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
       .then(function(res) {
         btn.disabled = false; btn.textContent = 'Look Up Order';

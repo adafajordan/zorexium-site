@@ -838,7 +838,7 @@ app.get('/api/orders', verifyToken, async function(req, res) {
 
 // GET /api/orders/my – get orders for the currently logged-in user (auth required)
 // Must be defined before /api/orders/:orderId to avoid Express capturing 'my' as a param
-app.get('/api/orders/my', verifyToken, async function(req, res) {
+app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const orders = await db.collection('orders')
@@ -853,7 +853,7 @@ app.get('/api/orders/my', verifyToken, async function(req, res) {
 });
 
 // GET /api/orders/guest – look up a guest order by orderId + email (public)
-app.get('/api/orders/guest', async function(req, res) {
+app.get('/api/orders/guest', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   const { orderId, email } = req.query;
   if (!orderId || !email) {
@@ -862,11 +862,15 @@ app.get('/api/orders/guest', async function(req, res) {
   if (typeof orderId !== 'string' || orderId.length > 64) {
     return res.status(400).json({ error: 'Invalid orderId' });
   }
-  const normalizedEmail = (typeof email === 'string') ? email.trim().toLowerCase() : '';
+  if (typeof email !== 'string' || email.length > 254) {
+    return res.status(400).json({ error: 'Invalid email' });
+  }
+  // Normalize email and use exact equality to avoid ReDoS risk
+  const normalizedEmail = email.trim().toLowerCase();
   try {
     const order = await db.collection('orders').findOne({
       $or: [{ id: orderId }, { orderId: orderId }],
-      buyerEmail: { $regex: new RegExp('^' + normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+      buyerEmail: normalizedEmail
     });
     if (!order) return res.status(404).json({ error: 'Order not found. Please check the order ID and email address.' });
     res.json(order);
@@ -1818,7 +1822,7 @@ app.put('/api/payouts/:id', verifyToken, async function(req, res) {
 // ── LISTS (Build Lists & Wish Lists) ──────────────────────────────────────────
 
 // GET /api/lists – get all lists for the current user (auth required)
-app.get('/api/lists', verifyToken, async function(req, res) {
+app.get('/api/lists', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   const type = req.query.type; // optional: 'build' or 'wish'
   try {
@@ -1833,7 +1837,7 @@ app.get('/api/lists', verifyToken, async function(req, res) {
 });
 
 // POST /api/lists – create a new list (auth required)
-app.post('/api/lists', verifyToken, async function(req, res) {
+app.post('/api/lists', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   const { name, type } = req.body;
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -1863,7 +1867,7 @@ app.post('/api/lists', verifyToken, async function(req, res) {
 });
 
 // PUT /api/lists/:id – update a list (auth required)
-app.put('/api/lists/:id', verifyToken, async function(req, res) {
+app.put('/api/lists/:id', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   let objectId;
   try { objectId = new ObjectId(req.params.id); } catch (e) {
@@ -1886,7 +1890,7 @@ app.put('/api/lists/:id', verifyToken, async function(req, res) {
 });
 
 // DELETE /api/lists/:id – delete a list (auth required)
-app.delete('/api/lists/:id', verifyToken, async function(req, res) {
+app.delete('/api/lists/:id', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   let objectId;
   try { objectId = new ObjectId(req.params.id); } catch (e) {
@@ -1913,9 +1917,13 @@ app.post('/api/auth/forgot-password', authRateLimit, async function(req, res) {
   if (!email || typeof email !== 'string') {
     return res.status(400).json({ error: 'email is required' });
   }
+  if (email.length > 254) {
+    return res.status(400).json({ error: 'Invalid email' });
+  }
+  // Normalize email and use exact equality to avoid ReDoS risk
   const normalizedEmail = email.trim().toLowerCase();
   try {
-    const user = await db.collection('users').findOne({ email: { $regex: new RegExp('^' + normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } });
+    const user = await db.collection('users').findOne({ email: normalizedEmail });
     // Always respond with success to prevent email enumeration
     if (!user) {
       return res.json({ message: 'If that email is registered, a reset link will be sent.' });
