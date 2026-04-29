@@ -836,6 +836,50 @@ app.get('/api/orders', verifyToken, async function(req, res) {
   }
 });
 
+// GET /api/orders/my – get orders for the currently logged-in user (auth required)
+// Must be defined before /api/orders/:orderId to avoid Express capturing 'my' as a param
+app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const orders = await db.collection('orders')
+      .find({ $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.json(orders);
+  } catch (error) {
+    console.error('Error fetching user orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/orders/guest – look up a guest order by orderId + email (public)
+app.get('/api/orders/guest', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { orderId, email } = req.query;
+  if (!orderId || !email) {
+    return res.status(400).json({ error: 'orderId and email are required' });
+  }
+  if (typeof orderId !== 'string' || orderId.length > 64) {
+    return res.status(400).json({ error: 'Invalid orderId' });
+  }
+  if (typeof email !== 'string' || email.length > 254) {
+    return res.status(400).json({ error: 'Invalid email' });
+  }
+  // Normalize email and use exact equality to avoid ReDoS risk
+  const normalizedEmail = email.trim().toLowerCase();
+  try {
+    const order = await db.collection('orders').findOne({
+      $or: [{ id: orderId }, { orderId: orderId }],
+      buyerEmail: normalizedEmail
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found. Please check the order ID and email address.' });
+    res.json(order);
+  } catch (error) {
+    console.error('Error fetching guest order:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── GET SINGLE ORDER BY ORDER ID (public, order ID is unguessable) ─────────────
 app.get('/api/orders/:orderId', async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
@@ -1771,6 +1815,164 @@ app.put('/api/payouts/:id', verifyToken, async function(req, res) {
     res.json(updated);
   } catch (error) {
     console.error('Error updating payout:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── LISTS (Build Lists & Wish Lists) ──────────────────────────────────────────
+
+// GET /api/lists – get all lists for the current user (auth required)
+app.get('/api/lists', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const type = req.query.type; // optional: 'build' or 'wish'
+  try {
+    const query = { userId: req.userId };
+    // Use explicit literals to prevent any user-controlled value from reaching the query
+    if (type === 'build') query.type = 'build';
+    else if (type === 'wish') query.type = 'wish';
+    const lists = await db.collection('lists').find(query).sort({ createdAt: -1 }).toArray();
+    res.json(lists);
+  } catch (error) {
+    console.error('Error fetching lists:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/lists – create a new list (auth required)
+app.post('/api/lists', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { name, type } = req.body;
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  if (name.trim().length > 100) {
+    return res.status(400).json({ error: 'name must be 100 characters or fewer' });
+  }
+  if (!type || (type !== 'build' && type !== 'wish')) {
+    return res.status(400).json({ error: "type must be 'build' or 'wish'" });
+  }
+  try {
+    const list = {
+      userId: req.userId,
+      name: name.trim(),
+      type,
+      items: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    const result = await db.collection('lists').insertOne(list);
+    res.status(201).json({ ...list, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error creating list:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/lists/:id – update a list (auth required)
+app.put('/api/lists/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid list ID' });
+  }
+  try {
+    const list = await db.collection('lists').findOne({ _id: objectId });
+    if (!list) return res.status(404).json({ error: 'List not found' });
+    if (list.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    const updates = { updatedAt: new Date() };
+    if (req.body.name && typeof req.body.name === 'string') updates.name = req.body.name.trim().slice(0, 100);
+    if (Array.isArray(req.body.items)) updates.items = req.body.items;
+    await db.collection('lists').updateOne({ _id: objectId }, { $set: updates });
+    const updated = await db.collection('lists').findOne({ _id: objectId });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating list:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/lists/:id – delete a list (auth required)
+app.delete('/api/lists/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid list ID' });
+  }
+  try {
+    const list = await db.collection('lists').findOne({ _id: objectId });
+    if (!list) return res.status(404).json({ error: 'List not found' });
+    if (list.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    await db.collection('lists').deleteOne({ _id: objectId });
+    res.json({ message: 'List deleted' });
+  } catch (error) {
+    console.error('Error deleting list:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── PASSWORD RESET ────────────────────────────────────────────────────────────
+
+// POST /api/auth/forgot-password – verify email exists and issue a reset token
+app.post('/api/auth/forgot-password', authRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'email is required' });
+  }
+  if (email.length > 254) {
+    return res.status(400).json({ error: 'Invalid email' });
+  }
+  // Normalize email and use exact equality to avoid ReDoS risk
+  const normalizedEmail = email.trim().toLowerCase();
+  try {
+    const user = await db.collection('users').findOne({ email: normalizedEmail });
+    // Always respond with success to prevent email enumeration
+    if (!user) {
+      return res.json({ message: 'If that email is registered, a reset link will be sent.' });
+    }
+    // Generate a reset token (valid for 1 hour)
+    const resetToken = require('crypto').randomBytes(32).toString('hex');
+    const resetExpiry = new Date(Date.now() + 3600000);
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { passwordResetToken: resetToken, passwordResetExpiry: resetExpiry } }
+    );
+    // In production, send an email with the reset link. For now, return token in dev mode.
+    const isDev = process.env.NODE_ENV !== 'production';
+    res.json({
+      message: 'If that email is registered, a reset link will be sent.',
+      ...(isDev && { devResetToken: resetToken })
+    });
+  } catch (error) {
+    console.error('Error in forgot-password:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/auth/reset-password – reset password using a token
+app.post('/api/auth/reset-password', authRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'token and newPassword are required' });
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+  try {
+    const user = await db.collection('users').findOne({
+      passwordResetToken: token,
+      passwordResetExpiry: { $gt: new Date() }
+    });
+    if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { password: hashed, updatedAt: new Date() }, $unset: { passwordResetToken: '', passwordResetExpiry: '' } }
+    );
+    res.json({ message: 'Password reset successfully. You may now log in.' });
+  } catch (error) {
+    console.error('Error in reset-password:', error);
     res.status(500).json({ error: error.message });
   }
 });

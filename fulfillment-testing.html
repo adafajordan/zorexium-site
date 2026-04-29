@@ -429,7 +429,7 @@
           <button onclick="updateOrderStatus('${order.id}', 'next')" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded text-base font-semibold">
             Mark ${getNextStatus(order.status)}
           </button>
-          <button onclick="ZrxNotify.showNotification('Contact feature coming soon!', 'info')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-semibold">
+          <button onclick="ftContactBuyer('${order.buyerId || ''}', '${(order.buyer || '').replace(/'/g, '&#39;')}')" class="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-semibold">
             Contact Buyer
           </button>
         </div>
@@ -440,6 +440,15 @@
   function getNextStatus(currentStatus) {
     const flow = { pending: 'Testing', testing: 'Shipped', shipped: 'Delivered' };
     return flow[currentStatus] || 'Complete';
+  }
+
+  function ftContactBuyer(buyerId, buyerName) {
+    if (buyerId) {
+      window.location.href = 'messages.html?with=' + encodeURIComponent(buyerId);
+    } else {
+      // No userId available; open messages and let seller start a new conversation
+      window.location.href = 'messages.html';
+    }
   }
 
   function updateOrderStatus(orderId, direction) {

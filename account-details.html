@@ -390,13 +390,15 @@
         <div id="gamerTab-gallery" class="gamer-tab-content hidden">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-gray-900 text-base">Gallery</h3>
-            <a href="#" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a>
+            <span class="text-xs text-gray-400 italic">Gallery coming soon</span>
           </div>
           <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
             <i class="fas fa-photo-video text-4xl text-gray-300 mb-4 block"></i>
             <p class="text-gray-500 font-semibold text-sm mb-1">0 videos &nbsp; 0 photos</p>
             <p class="text-gray-400 text-sm mb-4">Share your setup photos and videos.</p>
-            <button onclick="ZrxNotify.showNotification('Gallery upload coming soon!','info')" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Add Media</button>
+            <button onclick="adShowGalleryComingSoon()" class="inline-block px-5 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-semibold cursor-not-allowed" title="Gallery upload coming soon" aria-disabled="true">
+              <i class="fas fa-lock mr-1"></i> Add Media — Coming Soon
+            </button>
           </div>
         </div>
 
@@ -1095,6 +1097,12 @@
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
         })();
     </script>
+
+<script>
+  function adShowGalleryComingSoon() {
+    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Gallery media upload is coming soon. Stay tuned!', 'info');
+  }
+</script>
 </body>
 </html>
 
