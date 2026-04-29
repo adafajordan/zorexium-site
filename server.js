@@ -1827,7 +1827,9 @@ app.get('/api/lists', publicApiRateLimit, verifyToken, async function(req, res) 
   const type = req.query.type; // optional: 'build' or 'wish'
   try {
     const query = { userId: req.userId };
-    if (type === 'build' || type === 'wish') query.type = type;
+    // Use explicit literals to prevent any user-controlled value from reaching the query
+    if (type === 'build') query.type = 'build';
+    else if (type === 'wish') query.type = 'wish';
     const lists = await db.collection('lists').find(query).sort({ createdAt: -1 }).toArray();
     res.json(lists);
   } catch (error) {
