@@ -330,8 +330,9 @@
                 <input type="text" id="productBrand" class="wiz-input" placeholder="e.g., ASUS, NVIDIA, Corsair">
               </div>
               <div>
-                <label class="wiz-label">Model / Part Number</label>
+                <label class="wiz-label">Manufacturer Part Number (MPN) <span class="text-red-500">*</span></label>
                 <input type="text" id="productModel" class="wiz-input" placeholder="e.g., ROG-STRIX-RTX4090-O24G-GAMING">
+                <p class="wiz-help">Unique alphanumeric code assigned by the manufacturer</p>
               </div>
               <div>
                 <label class="wiz-label">Product Type <span class="text-red-500">*</span></label>
@@ -388,6 +389,27 @@
                   <option value="">Select a category first...</option>
                 </select>
                 <p class="wiz-help">Select a subcategory that best describes your product</p>
+              </div>
+              <div>
+                <label class="wiz-label">Smart Type <span class="text-red-500">*</span></label>
+                <input type="text" id="smartType" class="wiz-input" placeholder="e.g., DDR5 Memory, LGA1700 Processor, ATX Motherboard">
+                <p class="wiz-help">Specific technical category identifier for this product</p>
+              </div>
+              <div>
+                <label class="wiz-label">Packs or Sets <span class="text-red-500">*</span></label>
+                <select id="packsOrSets" class="wiz-input">
+                  <option value="">Select pack type...</option>
+                  <option value="Single Item">Single Item</option>
+                  <option value="2-Pack">2-Pack</option>
+                  <option value="3-Pack">3-Pack</option>
+                  <option value="4-Pack">4-Pack</option>
+                  <option value="5-Pack">5-Pack</option>
+                  <option value="6-Pack">6-Pack</option>
+                  <option value="10-Pack">10-Pack</option>
+                  <option value="Bundle / Kit">Bundle / Kit</option>
+                  <option value="Other Multi-Pack">Other Multi-Pack</option>
+                </select>
+                <p class="wiz-help">Indicates if this listing is for a single item or a multi-pack / bundle</p>
               </div>
             </div>
 
@@ -498,9 +520,17 @@
                 <p class="wiz-help">Unique internal identifier for inventory tracking</p>
               </div>
               <div>
-                <label class="wiz-label">GTIN / UPC / EAN <span class="text-gray-400 font-normal">(optional)</span></label>
+                <label class="wiz-label">GTIN / UPC / EAN <span class="text-red-500">*</span></label>
                 <input type="text" id="productGtin" class="wiz-input" placeholder="e.g., 195553535213">
-                <p class="wiz-help">Global trade item number if applicable</p>
+                <p class="wiz-help">12 or 14-digit universal barcode (strictly enforced for CPUs, RAM, and Hard Drives)</p>
+              </div>
+              <div>
+                <label class="wiz-label">MSRP — Manufacturer's Suggested Retail Price (USD) <span class="text-red-500">*</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-semibold text-sm">$</span>
+                  <input type="number" id="productMsrp" class="wiz-input pl-7" placeholder="e.g., 1299.99" min="0" step="0.01">
+                </div>
+                <p class="wiz-help">Used to show buyers how much they are saving compared to retail price</p>
               </div>
               <div>
                 <label class="wiz-label">Base Price (USD) <span class="text-red-500">*</span></label>
@@ -717,8 +747,8 @@
             <div>
               <div class="flex items-center justify-between mb-2">
                 <div>
-                  <label class="wiz-label mb-0">Key Feature Bullets</label>
-                  <p class="wiz-help">Up to 10 feature highlights shown prominently on the product page</p>
+                  <label class="wiz-label mb-0">Key Feature Bullets <span class="text-red-500">*</span></label>
+                  <p class="wiz-help">At least 1 "Hero" feature required — up to 10 highlights shown on the product page</p>
                 </div>
                 <button type="button" onclick="addFeatureBullet()" class="text-xs text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1 flex-shrink-0 ml-4 px-3 py-1.5 border border-amber-200 rounded-lg hover:bg-amber-50">
                   <i class="fas fa-plus"></i> Add Bullet
@@ -845,7 +875,7 @@
                   </select>
                 </div>
                 <div>
-                  <label class="wiz-label">Country of Origin</label>
+                  <label class="wiz-label">Country of Origin <span class="text-red-500">*</span></label>
                   <input type="text" id="countryOfOrigin" class="wiz-input" placeholder="e.g., Taiwan, China, United States">
                 </div>
                 <div>
@@ -1041,18 +1071,24 @@
     if (currentStep === 1) {
       if (!document.getElementById('productName').value.trim())    { show('Product name is required.');           return false; }
       if (!document.getElementById('productBrand').value.trim())   { show('Brand is required.');                  return false; }
+      if (!document.getElementById('productModel').value.trim())   { show('Manufacturer Part Number (MPN) is required.'); return false; }
       if (!document.getElementById('productType').value)           { show('Product type is required.');           return false; }
       if (!document.getElementById('productCondition').value)      { show('Product condition is required.');      return false; }
       if (!document.getElementById('productCategory').value)       { show('Please select a product category.');   return false; }
       if (!document.getElementById('productSubcategory').value)    { show('Please select a product subcategory.'); return false; }
+      if (!document.getElementById('smartType').value.trim())      { show('Smart Type is required.');             return false; }
+      if (!document.getElementById('packsOrSets').value)           { show('Please indicate if this is a single item or a multi-pack.'); return false; }
     }
     if (currentStep === 2) {
       if (uploadedImages.length === 0) { show('Please upload at least one product image.'); return false; }
     }
     if (currentStep === 3) {
       if (!document.getElementById('productSku').value.trim())     { show('SKU is required.'); return false; }
+      if (!document.getElementById('productGtin').value.trim())    { show('GTIN / UPC / EAN barcode is required.'); return false; }
       const price = parseFloat(document.getElementById('productPrice').value);
       if (!price || price <= 0)                                     { show('A valid price greater than $0 is required.'); return false; }
+      const msrp = parseFloat(document.getElementById('productMsrp').value);
+      if (!msrp || msrp <= 0)                                       { show('MSRP (Manufacturer\'s Suggested Retail Price) is required.'); return false; }
       const qty = document.getElementById('productQuantity').value;
       if (qty === '' || parseInt(qty) < 0)                         { show('Stock quantity is required.'); return false; }
     }
@@ -1062,8 +1098,11 @@
     if (currentStep === 5) {
       if (!document.getElementById('shortDescription').value.trim())                { show('Short description is required.'); return false; }
       if (!document.getElementById('richTextEditor').innerText.trim())              { show('Full product description is required.'); return false; }
+      const bullets = Array.from(document.querySelectorAll('.feature-bullet')).filter(el => el.value.trim());
+      if (bullets.length === 0)                                     { show('At least one feature bullet (Hero feature) is required.'); return false; }
     }
     if (currentStep === 6) {
+      if (!document.getElementById('countryOfOrigin').value.trim()) { show('Country of Origin is required.'); return false; }
       if (!document.getElementById('termsConfirm').checked) { show('You must confirm compliance with Zorexium\'s Terms of Service.'); return false; }
     }
     return true;
@@ -1242,11 +1281,13 @@
         items: [
           { label: 'Product Name',   value: val('productName'),       required: true },
           { label: 'Brand',          value: val('productBrand'),      required: true },
-          { label: 'Model / Part #', value: val('productModel') },
+          { label: 'MPN',            value: val('productModel'),      required: true },
           { label: 'Product Type',   value: val('productType'),       required: true },
           { label: 'Condition',      value: val('productCondition'),  required: true },
           { label: 'Category',       value: val('productCategory'),   required: true },
           { label: 'Subcategory',    value: val('productSubcategory'), required: true },
+          { label: 'Smart Type',     value: val('smartType'),         required: true },
+          { label: 'Packs or Sets',  value: val('packsOrSets'),       required: true },
           { label: 'Tags',           value: val('productTags') },
           { label: 'Attributes',     value: attrs, html: true },
           { label: 'Variations',     value: vars.join(', ') },
@@ -1266,9 +1307,10 @@
         title: 'Pricing & Inventory', step: 3, icon: 'fa-dollar-sign',
         items: [
           { label: 'SKU',           value: val('productSku'),                                                     required: true },
+          { label: 'GTIN / UPC / EAN', value: val('productGtin'),                                                 required: true },
           { label: 'Price',         value: val('productPrice') ? '$' + parseFloat(val('productPrice')).toFixed(2) : '', required: true },
+          { label: 'MSRP',         value: val('productMsrp') ? '$' + parseFloat(val('productMsrp')).toFixed(2) : '',   required: true },
           { label: 'Sale Price',    value: val('productSalePrice') ? '$' + parseFloat(val('productSalePrice')).toFixed(2) : '' },
-          { label: 'GTIN',          value: val('productGtin') },
           { label: 'Stock Qty',     value: val('productQuantity'),                                                required: true },
           { label: 'Min Order Qty', value: val('minQty') || '1' },
           { label: 'Max Order Qty', value: val('maxQty') || 'Unlimited' },
@@ -1291,7 +1333,7 @@
         items: [
           { label: 'Short Description', value: val('shortDescription').substring(0, 90) + (val('shortDescription').length > 90 ? '…' : ''), required: true },
           { label: 'Full Description',  value: richHtml ? 'Provided ✓' : '',                                                                  required: true, ok: !!richHtml },
-          { label: 'Feature Bullets',   value: features.length + ' bullet(s)' },
+          { label: 'Feature Bullets',   value: features.length + ' bullet(s)',                                                                 required: true, ok: features.length > 0 },
           { label: 'Video URL',         value: val('productVideo') },
           { label: 'Documents',         value: uploadedDocs.length + ' file(s)' },
         ]
@@ -1302,7 +1344,7 @@
           { label: 'Certifications',  value: certs.join(', ') || 'None' },
           { label: 'Warranty',        value: val('warrantyType') + (val('warrantyDuration') ? ' – ' + val('warrantyDuration') : '') },
           { label: 'Age Restriction', value: val('ageRestriction') },
-          { label: 'Country of Origin', value: val('countryOfOrigin') },
+          { label: 'Country of Origin', value: val('countryOfOrigin'),                                                                  required: true },
           { label: 'Terms Confirmed', value: chk('termsConfirm') ? 'Yes ✓' : 'Not confirmed', required: true, ok: chk('termsConfirm') },
         ]
       }
@@ -1393,10 +1435,13 @@
       name:         val('productName'),
       brand:        val('productBrand'),
       model:        val('productModel'),
+      mpn:          val('productModel'),
       productType:  val('productType'),
       condition:    val('productCondition'),
       category:     val('productCategory'),
       subcategory:  val('productSubcategory'),
+      smartType:    val('smartType'),
+      packsOrSets:  val('packsOrSets'),
       tags:         val('productTags'),
       attributes:   attrs,
       variations,
@@ -1407,6 +1452,7 @@
       sku:               val('productSku'),
       gtin:              val('productGtin'),
       price:             parseFloat(document.getElementById('productPrice')?.value) || 0,
+      msrp:              parseFloat(document.getElementById('productMsrp')?.value) || null,
       salePrice:         parseFloat(document.getElementById('productSalePrice')?.value) || null,
       quantity:          parseInt(document.getElementById('productQuantity')?.value) || 0,
       minQty:            parseInt(document.getElementById('minQty')?.value) || 1,
@@ -1528,15 +1574,19 @@
       function set(id, v) { const el = document.getElementById(id); if (el) el.value = v || ''; }
       set('productName',        p.name);
       set('productBrand',       p.brand);
-      set('productModel',       p.model);
+      set('productModel',       p.mpn || p.model);
       set('productType',        p.productType);
       set('productCondition',   p.condition);
       set('productCategory',    p.category);
       updateSubcategoryOptions(p.category || '', p.subcategory || '');
       set('productSubcategory', p.subcategory);
+      set('smartType',          p.smartType);
+      set('packsOrSets',        p.packsOrSets);
       set('productTags',        p.tags);
       set('productSku',         p.sku);
+      set('productGtin',        p.gtin);
       set('productPrice',       p.price);
+      set('productMsrp',        p.msrp);
       set('productSalePrice',   p.salePrice);
       set('productQuantity',    p.quantity);
       set('shortDescription',   p.shortDescription);
