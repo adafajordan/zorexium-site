@@ -522,7 +522,7 @@
               <div>
                 <label class="wiz-label">GTIN / UPC / EAN <span class="text-red-500">*</span></label>
                 <input type="text" id="productGtin" class="wiz-input" placeholder="e.g., 195553535213">
-                <p class="wiz-help">12 or 14-digit universal barcode (strictly enforced for CPUs, RAM, and Hard Drives)</p>
+                <p class="wiz-help">12 or 14-digit universal barcode, required for all products</p>
               </div>
               <div>
                 <label class="wiz-label">MSRP — Manufacturer's Suggested Retail Price (USD) <span class="text-red-500">*</span></label>
@@ -748,7 +748,7 @@
               <div class="flex items-center justify-between mb-2">
                 <div>
                   <label class="wiz-label mb-0">Key Feature Bullets <span class="text-red-500">*</span></label>
-                  <p class="wiz-help">At least 1 "Hero" feature required — up to 10 highlights shown on the product page</p>
+                  <p class="wiz-help">At least 1 hero feature required — up to 10 highlights shown on the product page</p>
                 </div>
                 <button type="button" onclick="addFeatureBullet()" class="text-xs text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1 flex-shrink-0 ml-4 px-3 py-1.5 border border-amber-200 rounded-lg hover:bg-amber-50">
                   <i class="fas fa-plus"></i> Add Bullet
@@ -1099,7 +1099,7 @@
       if (!document.getElementById('shortDescription').value.trim())                { show('Short description is required.'); return false; }
       if (!document.getElementById('richTextEditor').innerText.trim())              { show('Full product description is required.'); return false; }
       const bullets = Array.from(document.querySelectorAll('.feature-bullet')).filter(el => el.value.trim());
-      if (bullets.length === 0)                                     { show('At least one feature bullet (Hero feature) is required.'); return false; }
+      if (bullets.length === 0)                                     { show('At least one feature bullet is required.'); return false; }
     }
     if (currentStep === 6) {
       if (!document.getElementById('countryOfOrigin').value.trim()) { show('Country of Origin is required.'); return false; }

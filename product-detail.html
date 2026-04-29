@@ -264,8 +264,8 @@
       <span id="productBrand" class="text-cyan-600 font-bold text-sm uppercase tracking-wide">Brand</span>
       <span class="text-gray-300">|</span>
       <span class="text-gray-500 text-xs">Item#: <span id="productId" class="font-mono text-gray-700">-</span></span>
-      <span id="productMpnRow" class="hidden text-gray-300">|</span>
-      <span id="productMpnRow2" class="hidden text-gray-500 text-xs">MPN: <span id="productMpn" class="font-mono text-gray-700">-</span></span>
+      <span id="productMpnSeparator" class="hidden text-gray-300">|</span>
+      <span id="productMpnLabel" class="hidden text-gray-500 text-xs">MPN: <span id="productMpn" class="font-mono text-gray-700">-</span></span>
     </div>
 
     <!-- Product Title -->
@@ -709,6 +709,24 @@
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // Sanitize seller-provided rich text HTML — allow only safe formatting tags/attributes
+  function sanitizeHtml(html) {
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+    var dangerous = ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'style', 'meta', 'base'];
+    dangerous.forEach(function(tag) {
+      temp.querySelectorAll(tag).forEach(function(el) { el.remove(); });
+    });
+    temp.querySelectorAll('*').forEach(function(el) {
+      Array.from(el.attributes).forEach(function(attr) {
+        if (/^on/i.test(attr.name)) { el.removeAttribute(attr.name); return; }
+        if (attr.name === 'href' && /^javascript:/i.test(attr.value)) { el.removeAttribute(attr.name); }
+        if (attr.name === 'src' && /^javascript:/i.test(attr.value)) { el.removeAttribute(attr.name); }
+      });
+    });
+    return temp.innerHTML;
+  }
+
   // ── Similar products ──────────────────────────────────────────────────────
   async function loadSimilarProducts(category, excludeId) {
     try {
@@ -872,8 +890,8 @@
           // MPN
           if (currentProduct.mpn) {
             document.getElementById('productMpn').innerText = currentProduct.mpn;
-            document.getElementById('productMpnRow').classList.remove('hidden');
-            document.getElementById('productMpnRow2').classList.remove('hidden');
+            document.getElementById('productMpnSeparator').classList.remove('hidden');
+            document.getElementById('productMpnLabel').classList.remove('hidden');
           }
 
           // Price – show salePrice as current price and originalPrice/price as strike-through
@@ -978,12 +996,12 @@
             if (shortDescEl) { shortDescEl.innerText = currentProduct.shortDescription; shortDescEl.classList.remove('hidden'); }
           }
 
-          // Full Description (Overview tab) — render as HTML if it contains tags, else as text
+          // Full Description (Overview tab) — sanitize then render HTML from rich text editor
           var descEl = document.getElementById('productDescription');
           if (currentProduct.description) {
             var hasHtmlTags = /<[a-z][\s\S]*>/i.test(currentProduct.description);
             if (hasHtmlTags) {
-              descEl.innerHTML = currentProduct.description;
+              descEl.innerHTML = sanitizeHtml(currentProduct.description);
             } else {
               descEl.innerText = currentProduct.description;
             }
@@ -1017,8 +1035,10 @@
             var noReturnEl = document.getElementById('noReturnsNote');
             var returnLineEl = document.getElementById('returnPolicyLine');
             if (!rEligible) {
-              if (rwEl1) rwEl1.closest('p') && (rwEl1.closest('p').classList.add('hidden'));
-              if (rwEl2) rwEl2.closest('p') && (rwEl2.closest('p').classList.add('hidden'));
+              var rwP1 = rwEl1 ? rwEl1.closest('p') : null;
+              var rwP2 = rwEl2 ? rwEl2.closest('p') : null;
+              if (rwP1) rwP1.classList.add('hidden');
+              if (rwP2) rwP2.classList.add('hidden');
               if (noReturnEl) noReturnEl.classList.remove('hidden');
               if (returnLineEl) returnLineEl.innerText = 'No Returns Accepted';
             } else {
