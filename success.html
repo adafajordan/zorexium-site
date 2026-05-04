@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Onboarding Success | Zorexium Labs</title>
+    <title>Onboarding Success | Zorexium</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
@@ -99,7 +99,7 @@
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-                            body: JSON.stringify({ stripeAccountId: accountId, stripeVerified: true })
+                            body: JSON.stringify({ payoutAccountId: accountId, payoutVerified: true })
                         });
                     } catch (e) {
                         console.error('Could not update seller payout info on backend:', e);
