@@ -1486,20 +1486,20 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
     'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
     'businessAddress', 'businessCity', 'businessState', 'businessZip',
     'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
-    'shippingState', 'shippingZip', 'stripeAccountId', 'stripeVerified'
+    'shippingState', 'shippingZip', 'payoutAccountId', 'payoutVerified'
   ];
   const updates = { updatedAt: new Date() };
   const stringFields = [
     'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
     'businessAddress', 'businessCity', 'businessState', 'businessZip',
     'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
-    'shippingState', 'shippingZip', 'stripeAccountId'
+    'shippingState', 'shippingZip', 'payoutAccountId'
   ];
   for (const field of stringFields) {
     if (req.body[field] !== undefined) updates[field] = String(req.body[field]).slice(0, 2000);
   }
-  if (req.body.stripeVerified !== undefined) {
-    updates.stripeVerified = Boolean(req.body.stripeVerified);
+  if (req.body.payoutVerified !== undefined) {
+    updates.payoutVerified = Boolean(req.body.payoutVerified);
   }
 
   try {

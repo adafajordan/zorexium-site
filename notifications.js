@@ -1,4 +1,4 @@
-// Simple notification/modal utility for Zorexium Labs
+// Simple notification/modal utility for Zorexium
 (function(){
   const container = document.createElement('div');
   container.id = 'zrx-notifications';
