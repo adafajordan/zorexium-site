@@ -1618,14 +1618,14 @@ app.get('/api/messages', verifyToken, async function(req, res) {
 });
 
 // POST /api/messages – send a message (auth required)
-app.post('/api/messages', verifyToken, async function(req, res) {
+app.post('/api/messages', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { toUserId, subject, body } = req.body;
-  if (!toUserId || !subject || !body) {
-    return res.status(400).json({ error: 'toUserId, subject, and body are required' });
+  if (!toUserId || !body) {
+    return res.status(400).json({ error: 'toUserId and body are required' });
   }
-  if (typeof subject !== 'string' || subject.length > 200) {
+  if (subject !== undefined && subject !== null && (typeof subject !== 'string' || subject.length > 200)) {
     return res.status(400).json({ error: 'Invalid subject' });
   }
   if (typeof body !== 'string' || body.length > 5000) {
@@ -1648,13 +1648,26 @@ app.post('/api/messages', verifyToken, async function(req, res) {
       fromEmail: req.userEmail,
       fromDisplayName,
       toUserId: String(toUserId),
-      subject: subject.trim(),
+      subject: subject ? subject.trim() : '',
       body: body.trim(),
       read: false,
       createdAt: new Date()
     };
 
     const result = await db.collection('messages').insertOne(message);
+    // Create an in-site notification for the recipient
+    try {
+      await db.collection('notifications').insertOne({
+        userId: String(toUserId),
+        type: 'new_message',
+        title: 'New message from ' + fromDisplayName,
+        body: (message.subject ? message.subject + ': ' : '') + message.body.slice(0, 100),
+        fromUserId: req.userId,
+        fromDisplayName,
+        read: false,
+        createdAt: new Date()
+      });
+    } catch (_) {}
     res.status(201).json({ ...message, _id: result.insertedId });
   } catch (error) {
     console.error('Error sending message:', error);
@@ -1973,6 +1986,168 @@ app.post('/api/auth/reset-password', authRateLimit, async function(req, res) {
     res.json({ message: 'Password reset successfully. You may now log in.' });
   } catch (error) {
     console.error('Error in reset-password:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── REVIEWS ───────────────────────────────────────────────────────────────────
+
+// GET /api/reviews?productId=xxx – get reviews for a product (public)
+app.get('/api/reviews', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { productId } = req.query;
+  if (!productId) return res.status(400).json({ error: 'productId is required' });
+  try {
+    const reviews = await db.collection('reviews')
+      .find({ productId: String(productId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.json(reviews);
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/reviews – submit a review (auth required)
+app.post('/api/reviews', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { productId, rating, title, body } = req.body;
+  if (!productId || !rating || !body) {
+    return res.status(400).json({ error: 'productId, rating, and body are required' });
+  }
+  const numRating = Number(rating);
+  if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
+    return res.status(400).json({ error: 'rating must be an integer between 1 and 5' });
+  }
+  if (typeof body !== 'string' || body.trim().length < 3 || body.length > 5000) {
+    return res.status(400).json({ error: 'Review body must be between 3 and 5000 characters' });
+  }
+
+  try {
+    // Check if user already reviewed this product
+    const existing = await db.collection('reviews').findOne({ productId: String(productId), reviewerId: req.userId });
+    if (existing) {
+      return res.status(409).json({ error: 'You have already reviewed this product' });
+    }
+
+    // Get product to find sellerId
+    let product = null;
+    try { product = await db.collection('products').findOne({ _id: new ObjectId(productId) }); } catch (_) {}
+
+    // Get reviewer display name
+    let reviewerName = req.userEmail;
+    try {
+      const userDoc = await db.collection('users').findOne({ _id: new ObjectId(req.userId) });
+      if (userDoc) {
+        const fullName = ((userDoc.firstName || '') + ' ' + (userDoc.lastName || '')).trim();
+        reviewerName = fullName || userDoc.email || req.userEmail;
+      }
+    } catch (_) {}
+
+    const review = {
+      productId: String(productId),
+      reviewerId: req.userId,
+      reviewerEmail: req.userEmail,
+      reviewerName,
+      rating: numRating,
+      title: title ? String(title).trim().slice(0, 200) : '',
+      body: body.trim(),
+      createdAt: new Date()
+    };
+
+    const result = await db.collection('reviews').insertOne(review);
+
+    // Update product rating
+    const allProductReviews = await db.collection('reviews').find({ productId: String(productId) }).toArray();
+    const avgRating = allProductReviews.reduce(function(sum, r) { return sum + r.rating; }, 0) / allProductReviews.length;
+    try {
+      await db.collection('products').updateOne(
+        { _id: new ObjectId(productId) },
+        { $set: { rating: Math.round(avgRating * 10) / 10, reviewCount: allProductReviews.length, updatedAt: new Date() } }
+      );
+    } catch (_) {}
+
+    // Update seller rating
+    if (product && product.sellerId) {
+      try {
+        const sellerProductIds = (await db.collection('products').find({ sellerId: product.sellerId }, { projection: { _id: 1 } }).toArray()).map(function(p) { return String(p._id); });
+        const sellerReviews = await db.collection('reviews').find({ productId: { $in: sellerProductIds } }).toArray();
+        if (sellerReviews.length > 0) {
+          const sellerAvgRating = sellerReviews.reduce(function(sum, r) { return sum + r.rating; }, 0) / sellerReviews.length;
+          await db.collection('sellers').updateOne(
+            { userId: product.sellerId },
+            { $set: { rating: Math.round(sellerAvgRating * 10) / 10, updatedAt: new Date() } }
+          );
+        }
+      } catch (_) {}
+
+      // Notify seller of new review
+      try {
+        await db.collection('notifications').insertOne({
+          userId: product.sellerId,
+          type: 'new_review',
+          title: 'New ' + numRating + '-star review',
+          body: reviewerName + ' reviewed your product: ' + (product.name || productId),
+          productId: String(productId),
+          read: false,
+          createdAt: new Date()
+        });
+      } catch (_) {}
+    }
+
+    res.status(201).json({ ...review, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+
+// GET /api/notifications – get notifications for current user (auth required)
+app.get('/api/notifications', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const notifications = await db.collection('notifications')
+      .find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .toArray();
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/notifications/read-all – mark all notifications as read (auth required)
+app.put('/api/notifications/read-all', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    await db.collection('notifications').updateMany({ userId: req.userId, read: false }, { $set: { read: true } });
+    res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/notifications/:id/read – mark a notification as read (auth required)
+app.put('/api/notifications/:id/read', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid notification ID' });
+  }
+  try {
+    const notification = await db.collection('notifications').findOne({ _id: objectId });
+    if (!notification) return res.status(404).json({ error: 'Notification not found' });
+    if (notification.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    await db.collection('notifications').updateOne({ _id: objectId }, { $set: { read: true } });
+    res.json({ message: 'Marked as read' });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
     res.status(500).json({ error: error.message });
   }
 });
