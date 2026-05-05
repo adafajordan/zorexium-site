@@ -1166,21 +1166,25 @@
 
           // Video URL — embed in Overview tab if present
           if (currentProduct.videoUrl) {
-            var videoSection = document.getElementById('productVideoSection');
-            if (!videoSection) {
-              videoSection = document.createElement('div');
-              videoSection.id = 'productVideoSection';
-              videoSection.className = 'mt-6';
-              var descContainer = document.getElementById('tabContent-overview');
-              if (descContainer) descContainer.appendChild(videoSection);
-            }
             var videoUrl = currentProduct.videoUrl;
-            // Convert YouTube watch URLs to embed URLs
-            var embedUrl = videoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/');
-            videoSection.innerHTML = '<h4 class="text-sm font-semibold text-gray-700 mb-2">Product Video</h4>'
-              + '<div class="aspect-video rounded-lg overflow-hidden border border-gray-200">'
-              + '<iframe src="' + escapeHtml(embedUrl) + '" class="w-full h-full" allowfullscreen loading="lazy" title="Product Video"></iframe>'
-              + '</div>';
+            // Only embed safe video URLs (YouTube and Vimeo)
+            var safeVideoHost = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\//i.test(videoUrl);
+            if (safeVideoHost) {
+              var videoSection = document.getElementById('productVideoSection');
+              if (!videoSection) {
+                videoSection = document.createElement('div');
+                videoSection.id = 'productVideoSection';
+                videoSection.className = 'mt-6';
+                var descContainer = document.getElementById('tabContent-overview');
+                if (descContainer) descContainer.appendChild(videoSection);
+              }
+              // Convert YouTube watch URLs to embed URLs
+              var embedUrl = videoUrl.replace(/youtube\.com\/watch\?v=/, 'youtube.com/embed/').replace(/youtu\.be\//, 'www.youtube.com/embed/').replace(/vimeo\.com\/(\d+)/, 'player.vimeo.com/video/$1');
+              videoSection.innerHTML = '<h4 class="text-sm font-semibold text-gray-700 mb-2">Product Video</h4>'
+                + '<div class="aspect-video rounded-lg overflow-hidden border border-gray-200">'
+                + '<iframe src="' + escapeHtml(embedUrl) + '" class="w-full h-full" allowfullscreen loading="lazy" title="Product Video"></iframe>'
+                + '</div>';
+            }
           }
 
           // Variations — show in Overview tab if present
