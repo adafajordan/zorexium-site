@@ -56,7 +56,7 @@
                         </div>
                         <div class="flex flex-col">
                             <span class="text-cyan-400 font-bold text-3xl tracking-wide leading-none">ZOREXIUM</span>
-                            <span class="text-cyan-400 font-medium text-base tracking-widest leading-none">LABS</span>
+                            
                         </div>
                     </a>
                 </div>
@@ -340,35 +340,17 @@
                   <th class="px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-cyan-600 font-medium">#ZRX-00128</td>
-                  <td class="px-4 py-3 text-gray-600">Apr 12, 2026</td>
-                  <td class="px-4 py-3 text-gray-800">RTX 4090 FE</td>
-                  <td class="px-4 py-3 text-gray-800 font-medium">$1,249.00</td>
-                  <td class="px-4 py-3"><span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">Delivered</span></td>
-                  <td class="px-4 py-3"><button onclick="showPanel('return-status')" class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Return</button></td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-cyan-600 font-medium">#ZRX-00115</td>
-                  <td class="px-4 py-3 text-gray-600">Mar 28, 2026</td>
-                  <td class="px-4 py-3 text-gray-800">Core i9-14900K</td>
-                  <td class="px-4 py-3 text-gray-800 font-medium">$549.00</td>
-                  <td class="px-4 py-3"><span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">Delivered</span></td>
-                  <td class="px-4 py-3"><button onclick="showPanel('return-status')" class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Return</button></td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-cyan-600 font-medium">#ZRX-00103</td>
-                  <td class="px-4 py-3 text-gray-600">Mar 5, 2026</td>
-                  <td class="px-4 py-3 text-gray-800">Samsung 990 Pro 2TB</td>
-                  <td class="px-4 py-3 text-gray-800 font-medium">$189.00</td>
-                  <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">In Transit</span></td>
-                  <td class="px-4 py-3"><a href="track-your-order.html" class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Track</a></td>
+              <tbody id="msOrderHistoryBody" class="divide-y divide-gray-100">
+                <tr id="msOrderHistoryEmpty">
+                  <td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <i class="fas fa-box-open text-2xl mb-2 block"></i>
+                    No orders found.
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p class="text-xs text-gray-400 mt-3">Showing 3 of 3 orders. Orders are retained for 7 years per our data policy.</p>
+          <p class="text-xs text-gray-400 mt-3">Orders are retained for 7 years per our data policy.</p>
         </div>
       </div>
 
@@ -394,14 +376,12 @@
                   <th class="px-4 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-cyan-600 font-medium">#RET-0041</td>
-                  <td class="px-4 py-3 text-gray-600">#ZRX-00103</td>
-                  <td class="px-4 py-3 text-gray-800">Samsung 990 Pro 2TB</td>
-                  <td class="px-4 py-3 text-gray-600">Item not as described</td>
-                  <td class="px-4 py-3 text-gray-600">Apr 14, 2026</td>
-                  <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-1 rounded-full font-medium">Pending Review</span></td>
+              <tbody id="msReturnHistoryBody" class="divide-y divide-gray-100">
+                <tr id="msReturnHistoryEmpty">
+                  <td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <i class="fas fa-undo-alt text-2xl mb-2 block"></i>
+                    No return requests found.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -456,30 +436,31 @@
       <div id="panel-account-settings" class="settings-panel">
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h2 class="text-xl font-bold text-gray-900 mb-1">Account Settings</h2>
-          <p class="text-sm text-gray-500 mb-5">Update your display name, email address, and password</p>
+          <p class="text-sm text-gray-500 mb-5">Update your display name and password. Email address cannot be changed here.</p>
           <div class="space-y-4 max-w-lg">
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1.5">Display Name</label>
-              <input type="text" placeholder="Your name" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+              <input id="msDisplayName" type="text" placeholder="Your name" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
-              <input type="email" placeholder="email@example.com" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+              <input id="msEmail" type="email" readonly class="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-lg px-4 py-2.5 text-sm cursor-not-allowed" placeholder="Loading…">
+              <p class="text-xs text-gray-400 mt-1">Email cannot be changed. Contact support if needed.</p>
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1.5">Current Password</label>
-              <input type="password" placeholder="Required to make changes" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+              <input id="msCurrentPassword" type="password" placeholder="Required to change password" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1.5">New Password</label>
-              <input type="password" placeholder="Leave blank to keep current" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+              <input id="msNewPassword" type="password" placeholder="Leave blank to keep current" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1.5">Confirm New Password</label>
-              <input type="password" placeholder="Repeat new password" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
+              <input id="msConfirmPassword" type="password" placeholder="Repeat new password" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent text-sm">
             </div>
             <div class="flex gap-3 pt-2">
-              <button class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Save Changes</button>
+              <button id="msSaveBtn" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Save Changes</button>
               <a href="account-details.html" class="px-6 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg font-semibold text-sm transition-colors">Full Profile Settings</a>
             </div>
           </div>
@@ -491,32 +472,10 @@
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h2 class="text-xl font-bold text-gray-900 mb-1">Payment Options</h2>
           <p class="text-sm text-gray-500 mb-5">Manage saved payment methods used at checkout</p>
-          <div class="space-y-3 max-w-lg mb-5">
-            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-              <div class="flex items-center gap-3">
-                <i class="fab fa-cc-visa text-blue-500 text-2xl"></i>
-                <div>
-                  <p class="text-gray-800 text-sm font-semibold">Visa ending in 4242</p>
-                  <p class="text-gray-400 text-xs">Expires 08/28</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">Default</span>
-                <button class="text-xs text-gray-400 hover:text-red-500 transition-colors">Remove</button>
-              </div>
-            </div>
-            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
-              <div class="flex items-center gap-3">
-                <i class="fab fa-paypal text-blue-600 text-2xl"></i>
-                <div>
-                  <p class="text-gray-800 text-sm font-semibold">PayPal</p>
-                  <p class="text-gray-400 text-xs">user@example.com</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Set Default</button>
-                <button class="text-xs text-gray-400 hover:text-red-500 transition-colors">Remove</button>
-              </div>
+          <div id="msPaymentList" class="space-y-3 max-w-lg mb-5">
+            <div class="text-center py-6 text-gray-400 text-sm">
+              <i class="fas fa-credit-card text-2xl mb-2 block"></i>
+              No payment methods saved yet.
             </div>
           </div>
           <button class="px-5 py-2.5 border border-dashed border-gray-300 hover:border-cyan-400 text-gray-500 hover:text-cyan-600 rounded-lg text-sm transition-colors flex items-center gap-2 max-w-lg w-full justify-center">
@@ -544,16 +503,11 @@
                   <th class="px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-gray-800">RTX 4090 FE</td>
-                  <td class="px-4 py-3 text-yellow-400 text-base">★★★★★</td>
-                  <td class="px-4 py-3 text-gray-600 max-w-xs truncate">Excellent card, runs cool and quiet.</td>
-                  <td class="px-4 py-3 text-gray-500">Apr 13, 2026</td>
-                  <td class="px-4 py-3 space-x-2">
-                    <button class="text-xs text-cyan-600 hover:text-cyan-700 font-medium">Edit</button>
-                    <span class="text-gray-300">|</span>
-                    <button class="text-xs text-red-500 hover:text-red-600 font-medium">Delete</button>
+              <tbody id="msReviewsBody" class="divide-y divide-gray-100">
+                <tr id="msReviewsEmpty">
+                  <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <i class="fas fa-star text-2xl mb-2 block"></i>
+                    You haven't left any reviews yet.
                   </td>
                 </tr>
               </tbody>
@@ -854,20 +808,12 @@
                   <th class="px-4 py-3">Action</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-gray-800">RTX 5090</td>
-                  <td class="px-4 py-3 text-green-600 font-semibold">$1,800.00</td>
-                  <td class="px-4 py-3 text-gray-600">$2,099.00</td>
-                  <td class="px-4 py-3 text-gray-500">Email + SMS</td>
-                  <td class="px-4 py-3"><button class="text-xs text-red-500 hover:text-red-600 font-medium">Remove</button></td>
-                </tr>
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-gray-800">Threadripper PRO 9985WX</td>
-                  <td class="px-4 py-3 text-green-600 font-semibold">$2,500.00</td>
-                  <td class="px-4 py-3 text-gray-600">$2,799.00</td>
-                  <td class="px-4 py-3 text-gray-500">Email</td>
-                  <td class="px-4 py-3"><button class="text-xs text-red-500 hover:text-red-600 font-medium">Remove</button></td>
+              <tbody id="msPriceAlertsBody" class="divide-y divide-gray-100">
+                <tr id="msPriceAlertsEmpty">
+                  <td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <i class="fas fa-bell text-2xl mb-2 block"></i>
+                    No price alerts set. Add one below.
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1028,6 +974,80 @@
             if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
             var pwdInput = document.getElementById('headerLoginPassword');
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
+
+            // ── Account Settings: load real user data ──────────────────────────────
+            if(loggedIn){
+                ZrxSession.fetch(BACKEND_URL + '/api/user/profile')
+                    .then(function(r){ return r.ok ? r.json() : null; })
+                    .then(function(data){
+                        if(!data) return;
+                        var nameEl  = document.getElementById('msDisplayName');
+                        var emailEl = document.getElementById('msEmail');
+                        if(nameEl){
+                            var fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
+                            nameEl.value = fullName;
+                        }
+                        if(emailEl){ emailEl.value = data.email || ''; }
+                    })
+                    .catch(function(){});
+            }
+
+            // ── Account Settings: save handler ─────────────────────────────────────
+            var msSaveBtn = document.getElementById('msSaveBtn');
+            if(msSaveBtn){
+                msSaveBtn.addEventListener('click', async function(){
+                    if(!loggedIn){ ZrxNotify.showNotification('You must be logged in to save changes.', 'error'); return; }
+                    var nameEl    = document.getElementById('msDisplayName');
+                    var curPwdEl  = document.getElementById('msCurrentPassword');
+                    var newPwdEl  = document.getElementById('msNewPassword');
+                    var confPwdEl = document.getElementById('msConfirmPassword');
+                    var nameVal   = nameEl ? nameEl.value.trim() : '';
+                    var curPwd    = curPwdEl  ? curPwdEl.value  : '';
+                    var newPwd    = newPwdEl  ? newPwdEl.value  : '';
+                    var confPwd   = confPwdEl ? confPwdEl.value : '';
+                    var hasName   = nameVal.length > 0;
+                    var hasPwd    = newPwd.length > 0;
+
+                    // Validate all inputs before any API calls
+                    if(!hasName && !hasPwd){ ZrxNotify.showNotification('Nothing to save.', 'info'); return; }
+                    if(hasPwd){
+                        if(newPwd !== confPwd){ ZrxNotify.showNotification('New passwords do not match.', 'error'); return; }
+                        if(newPwd.length < 6){ ZrxNotify.showNotification('New password must be at least 6 characters.', 'error'); return; }
+                        if(!curPwd){ ZrxNotify.showNotification('Enter your current password to change it.', 'error'); return; }
+                    }
+
+                    msSaveBtn.disabled = true;
+                    try{
+                        if(hasName){
+                            var parts     = nameVal.split(/\s+/);
+                            var firstName = parts[0] || '';
+                            var lastName  = parts.slice(1).join(' ');
+                            var r = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ firstName: firstName, lastName: lastName })
+                            });
+                            if(!r.ok){ var e = await r.json(); throw new Error(e.error || 'Failed to update name'); }
+                        }
+                        if(hasPwd){
+                            var pr = await ZrxSession.fetch(BACKEND_URL + '/api/auth/change-password', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ currentPassword: curPwd, newPassword: newPwd })
+                            });
+                            if(!pr.ok){ var pe = await pr.json(); throw new Error(pe.error || 'Failed to change password'); }
+                            if(curPwdEl) curPwdEl.value = '';
+                            if(newPwdEl) newPwdEl.value = '';
+                            if(confPwdEl) confPwdEl.value = '';
+                        }
+                        ZrxNotify.showNotification('Settings saved successfully.', 'success');
+                    }catch(err){
+                        ZrxNotify.showNotification(err.message || 'Save failed. Please try again.', 'error');
+                    }finally{
+                        msSaveBtn.disabled = false;
+                    }
+                });
+            }
         })();
     </script>
     <script src="profile-picture.js"></script>

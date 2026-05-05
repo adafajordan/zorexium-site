@@ -1,7 +1,7 @@
 {
   "name": "zorexium-site",
   "version": "1.0.0",
-  "description": "Zorexium Labs - Hardware Marketplace",
+  "description": "Zorexium - Hardware Marketplace",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
