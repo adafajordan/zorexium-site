@@ -691,7 +691,20 @@
         return;
       }
       document.getElementById('lrRegSuccess').classList.remove('hidden');
-      setTimeout(function() { lrShowTab('login'); }, 2500);
+      if (data.token) {
+        // Auto-login: store JWT and redirect as a logged-in user
+        try {
+          localStorage.setItem('authToken', data.token);
+          var userInfo = data.user
+            ? { email: data.user.email, username: data.user.firstName || data.user.username || data.user.email }
+            : { email: email, username: username };
+          localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+        } catch (ex) {}
+        setTimeout(function() { window.location.href = 'index.html'; }, 1500);
+      } else {
+        // Server did not return a token — switch to login tab so user can sign in
+        setTimeout(function() { lrShowTab('login'); }, 2500);
+      }
     } catch (err) {
       errMsg.textContent = 'Registration failed. Please check your connection and try again.';
       errEl.classList.remove('hidden');
