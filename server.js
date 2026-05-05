@@ -1618,7 +1618,7 @@ app.get('/api/messages', verifyToken, async function(req, res) {
 });
 
 // POST /api/messages – send a message (auth required)
-app.post('/api/messages', verifyToken, async function(req, res) {
+app.post('/api/messages', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { toUserId, subject, body } = req.body;
@@ -1993,7 +1993,7 @@ app.post('/api/auth/reset-password', authRateLimit, async function(req, res) {
 // ── REVIEWS ───────────────────────────────────────────────────────────────────
 
 // GET /api/reviews?productId=xxx – get reviews for a product (public)
-app.get('/api/reviews', async function(req, res) {
+app.get('/api/reviews', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   const { productId } = req.query;
   if (!productId) return res.status(400).json({ error: 'productId is required' });
@@ -2010,7 +2010,7 @@ app.get('/api/reviews', async function(req, res) {
 });
 
 // POST /api/reviews – submit a review (auth required)
-app.post('/api/reviews', verifyToken, async function(req, res) {
+app.post('/api/reviews', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   const { productId, rating, title, body } = req.body;
   if (!productId || !rating || !body) {
@@ -2106,7 +2106,7 @@ app.post('/api/reviews', verifyToken, async function(req, res) {
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
 
 // GET /api/notifications – get notifications for current user (auth required)
-app.get('/api/notifications', verifyToken, async function(req, res) {
+app.get('/api/notifications', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const notifications = await db.collection('notifications')
@@ -2122,7 +2122,7 @@ app.get('/api/notifications', verifyToken, async function(req, res) {
 });
 
 // PUT /api/notifications/read-all – mark all notifications as read (auth required)
-app.put('/api/notifications/read-all', verifyToken, async function(req, res) {
+app.put('/api/notifications/read-all', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     await db.collection('notifications').updateMany({ userId: req.userId, read: false }, { $set: { read: true } });
@@ -2134,7 +2134,7 @@ app.put('/api/notifications/read-all', verifyToken, async function(req, res) {
 });
 
 // PUT /api/notifications/:id/read – mark a notification as read (auth required)
-app.put('/api/notifications/:id/read', verifyToken, async function(req, res) {
+app.put('/api/notifications/:id/read', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   let objectId;
   try { objectId = new ObjectId(req.params.id); } catch (e) {
