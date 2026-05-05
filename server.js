@@ -685,8 +685,8 @@ app.post('/api/orders', async function(req, res) {
       };
     });
     
-    const shipping = Math.max(0, Math.round(subtotal * 0.10 - 0.99)) + 0.99;
-    const tax = subtotal * 0.08;
+    const shipping = items.length * 10.99;
+    const tax = subtotal * 0.10;
     const total = (subtotal + shipping + tax).toFixed(2);
     
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
