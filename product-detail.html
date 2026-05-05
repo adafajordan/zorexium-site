@@ -649,33 +649,6 @@
   </div>
 </main>
 
-<!-- Contact Seller Modal -->
-<div id="contactModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-  <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6 max-w-md w-full">
-    <div class="flex justify-between items-center mb-6">
-      <h2 class="text-3xl font-bold text-gray-900">Contact Seller</h2>
-      <button onclick="closeContactModal()" class="text-gray-400 hover:text-white text-3xl">&times;</button>
-    </div>
-
-    <div class="space-y-4">
-      <div>
-        <label class="block text-white text-base font-semibold mb-2">Subject <span class="text-gray-400 font-normal text-sm">(optional)</span></label>
-        <input type="text" id="messageSubject" placeholder="Question about this product" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
-      </div>
-
-      <div>
-        <label class="block text-white text-base font-semibold mb-2">Message</label>
-        <textarea id="messageBody" placeholder="Type your message..." rows="5" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
-      </div>
-
-      <div class="flex gap-3">
-        <button onclick="sendMessage()" class="flex-1 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg">Send</button>
-        <button onclick="closeContactModal()" class="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Write a Review Modal -->
 <div id="reviewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
   <div class="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl">
@@ -1375,42 +1348,6 @@
     window.location.href = url;
   }
 
-  function closeContactModal() {
-    document.getElementById('contactModal').classList.add('hidden');
-    document.getElementById('messageSubject').value = '';
-    document.getElementById('messageBody').value = '';
-  }
-
-  async function sendMessage() {
-    if (!ZrxSession.isLoggedIn()) {
-      ZrxNotify.showNotification('Please log in to send a message', 'info');
-      return;
-    }
-    var subject = document.getElementById('messageSubject').value.trim();
-    var body = document.getElementById('messageBody').value.trim();
-    if (!body) { ZrxNotify.showNotification('Please type your message', 'error'); return; }
-
-    try {
-      var res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ toUserId: currentProduct.sellerId, subject: subject, body: body })
-      });
-      if (res.ok) {
-        ZrxNotify.showNotification('Message sent!', 'success');
-        closeContactModal();
-        var msgUrl = 'messages.html?with=' + encodeURIComponent(currentProduct.sellerId);
-        if (window.ZrxSpa && ZrxSpa.navigate(msgUrl)) return;
-        window.location.href = msgUrl;
-      } else {
-        var data = await res.json();
-        ZrxNotify.showNotification(data.error || 'Failed to send message', 'error');
-      }
-    } catch (_) {
-      ZrxNotify.showNotification('Network error. Please try again.', 'error');
-    }
-  }
 
   function askSeller() {
     if (!ZrxSession.isLoggedIn()) {
@@ -1424,10 +1361,9 @@
       ZrxNotify.showNotification('Seller information not available', 'error');
       return;
     }
-    // Pre-fill subject with a question prompt, then open contact modal
-    var subjectEl = document.getElementById('messageSubject');
-    if (subjectEl && !subjectEl.value) subjectEl.value = 'Question about: ' + (currentProduct.name || 'this product');
-    document.getElementById('contactModal').classList.remove('hidden');
+    var url = 'messages.html?with=' + encodeURIComponent(currentProduct.sellerId);
+    if (window.ZrxSpa && ZrxSpa.navigate(url)) return;
+    window.location.href = url;
   }
 
   // ── Reviews ───────────────────────────────────────────────────────────────
