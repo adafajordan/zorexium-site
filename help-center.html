@@ -270,7 +270,8 @@
                             <a href="help-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
-                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-headset text-cyan-600 w-4 text-center"></i>Contact Support</a>
+                            <a href="feedback.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
                             <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <!-- Orders & Returns -->
@@ -330,7 +331,8 @@
                             <a href="help-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
-                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-headset text-cyan-600 w-4 text-center"></i>Contact Support</a>
+                            <a href="feedback.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
                             <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
@@ -571,24 +573,18 @@
 
 </main>
 
-<!-- Help Article Stub Modal -->
+<!-- Help Article Modal -->
 <div id="hcArticleModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true">
-  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4">
-    <div class="flex items-start justify-between mb-4">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4" style="max-height:90vh;display:flex;flex-direction:column;">
+    <div class="flex items-start justify-between p-6 pb-4 border-b border-gray-100">
       <div>
         <p class="text-xs font-bold text-cyan-600 uppercase tracking-wider mb-1" id="hcArticleCategory"></p>
         <h2 class="text-lg font-bold text-gray-900" id="hcArticleTitle"></h2>
       </div>
-      <button onclick="hcCloseArticle()" class="text-gray-400 hover:text-gray-600 ml-4 flex-shrink-0"><i class="fas fa-times"></i></button>
+      <button onclick="hcCloseArticle()" class="text-gray-400 hover:text-gray-600 ml-4 flex-shrink-0 text-xl"><i class="fas fa-times"></i></button>
     </div>
-    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3 mb-4">
-      <i class="fas fa-tools text-yellow-500 mt-0.5 flex-shrink-0"></i>
-      <div>
-        <p class="font-semibold text-gray-800 text-sm mb-1">Article coming soon</p>
-        <p class="text-xs text-gray-500">This help article is currently being written. For immediate assistance, please reach out to our support team.</p>
-      </div>
-    </div>
-    <div class="flex gap-3 flex-wrap">
+    <div id="hcArticleBody" class="p-6 overflow-y-auto text-sm text-gray-700 leading-relaxed" style="flex:1;"></div>
+    <div class="px-6 py-4 border-t border-gray-100 flex gap-3 flex-wrap">
       <a href="contact-support.html" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors"><i class="fas fa-headset mr-1"></i>Contact Support</a>
       <button onclick="hcCloseArticle()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Close</button>
     </div>
@@ -623,6 +619,189 @@
       hcRunSearch(query);
     }, 350);
   }
+
+  var HC_ARTICLE_CONTENT = {
+    'Order Status & History': '<p class="mb-3">You can check the status of any order at any time from your <strong>Order History</strong> page.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to check your order status</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Log in to your Zorexium account.</li><li>Click your name in the top-right corner, then select <strong>Order History</strong>.</li><li>Find the order you want to check. Orders are sorted by date, newest first.</li><li>Click the order to view its full details, including tracking information if your item has shipped.</li></ol>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Order statuses explained</h3>'
+      + '<ul class="space-y-1 mb-4"><li><strong>Pending</strong> – Your order has been placed and is awaiting seller confirmation.</li><li><strong>Processing</strong> – The seller has confirmed your order and is preparing it for shipment.</li><li><strong>Shipped</strong> – Your item is on its way. Use the tracking number to monitor delivery.</li><li><strong>Delivered</strong> – Your item has been delivered to the address on file.</li><li><strong>Cancelled</strong> – The order was cancelled before shipment.</li><li><strong>Returned</strong> – A return has been initiated or completed.</li></ul>'
+      + '<p class="text-gray-500 text-xs">Need more help? <a href="contact-support.html" class="text-cyan-600 underline">Contact Support</a>.</p>',
+
+    'Order processing time': '<p class="mb-3">Order processing time is the time it takes a seller to prepare your item before handing it to a carrier for shipment. This is separate from shipping time.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Typical processing times</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Standard:</strong> 1–3 business days</li><li><strong>Expedited:</strong> 1 business day</li><li><strong>Pre-orders / backorders:</strong> Varies — check the product listing for details.</li></ul>'
+      + '<p class="mb-3">Business days are Monday through Friday, excluding public holidays. Orders placed after 2:00 PM local time may not begin processing until the next business day.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Why is my order still processing?</h3>'
+      + '<p class="mb-3">Processing may take longer during peak periods (holidays, sales events). If your order has been in "Processing" for more than 5 business days, please <a href="contact-support.html" class="text-cyan-600 underline">contact our support team</a> or message the seller directly.</p>',
+
+    'Editing an order': '<p class="mb-3">Once an order is placed on Zorexium, editing options are limited because sellers begin preparing your item quickly.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">What you can change</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Shipping address</strong> – May be editable if the order has not yet shipped. Contact the seller as soon as possible.</li><li><strong>Quantity / items</strong> – Generally not editable. Cancel the order and place a new one instead.</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to request a change</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Go to <a href="order-history.html" class="text-cyan-600 underline">Order History</a>.</li><li>Find your order and click on it.</li><li>Click <strong>Message Seller</strong> to request a change before the order ships.</li></ol>'
+      + '<p class="text-gray-500 text-xs">If the item has already shipped, you may need to initiate a <a href="returns-history.html" class="text-cyan-600 underline">return</a> after delivery.</p>',
+
+    'Order verification': '<p class="mb-3">Zorexium may place an order in "Verification" status if unusual activity is detected, additional information is needed, or a payment requires review.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">What to expect</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>You will receive an email explaining what information is needed.</li><li>Verification usually resolves within 1 business day.</li><li>Your card will not be charged until verification is complete and the order is confirmed.</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Common verification requests</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Confirmation of billing address</li><li>Photo ID for high-value purchases</li><li>Confirmation of payment method ownership</li></ul>'
+      + '<p class="text-gray-500 text-xs">Questions? <a href="contact-support.html" class="text-cyan-600 underline">Contact our support team</a>.</p>',
+
+    'Different price than advertised': '<p class="mb-3">If you see a price that differs from what was shown in an advertisement, email, or on-site promotion, there are a few common reasons:</p>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Promotion ended:</strong> Sales and promotions are time-limited. The advertised price may have expired.</li><li><strong>Personalized pricing:</strong> Some prices are shown to specific account segments. The advertised price may apply to new customers or members only.</li><li><strong>Browser cache:</strong> Your browser may be displaying an outdated price. Clear your cache and reload the page.</li><li><strong>Marketplace seller pricing:</strong> Third-party sellers set their own prices, which can change independently.</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">What to do</h3>'
+      + '<p class="mb-3">If you believe the price discrepancy is an error on our part, please <a href="contact-support.html" class="text-cyan-600 underline">contact support</a> with a screenshot of the advertised price and the URL where you saw it. We will investigate promptly.</p>',
+
+    'Using a promo code': '<p class="mb-3">Promo codes give you discounts at checkout. Here\'s how to apply one:</p>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Add items to your cart and proceed to <a href="checkout.html" class="text-cyan-600 underline">Checkout</a>.</li><li>Look for the <strong>Promo Code</strong> or <strong>Coupon</strong> field on the checkout page.</li><li>Enter your code exactly as shown (codes are case-sensitive).</li><li>Click <strong>Apply</strong>. The discount will appear in your order summary.</li></ol>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Troubleshooting promo codes</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Code not working:</strong> Check for typos or extra spaces. Codes are case-sensitive.</li><li><strong>Expired:</strong> Promo codes have expiry dates. Check the promotion terms.</li><li><strong>Not applicable:</strong> Some codes exclude certain products, categories, or brands.</li><li><strong>Already used:</strong> Most codes can only be used once per account.</li></ul>',
+
+    'Price Match': '<p class="mb-3">Zorexium offers a Price Match Guarantee on identical items sold by verified sellers. Here\'s how it works:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Eligibility requirements</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>The item must be identical — same brand, model number, and condition.</li><li>The competing price must be publicly available online at the time of your request.</li><li>The competing seller must be a U.S.-based retailer with the item in stock.</li><li>Price match applies to the item price only — shipping costs and taxes are excluded.</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to request a price match</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Find the lower-priced item and copy the URL.</li><li><a href="contact-support.html" class="text-cyan-600 underline">Contact support</a> with the Zorexium product link and the competing store\'s URL.</li><li>Our team will verify the price and apply the match within 1 business day.</li></ol>',
+
+    'Subscribing to the Zorexium newsletter': '<p class="mb-3">Stay up to date with exclusive deals, product launches, and tech news by subscribing to the Zorexium newsletter.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to subscribe</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Scroll to the bottom of any Zorexium page and locate the newsletter sign-up section.</li><li>Enter your email address and click <strong>Subscribe</strong>.</li><li>Check your inbox for a confirmation email and click the link to activate your subscription.</li></ol>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to unsubscribe</h3>'
+      + '<p class="mb-3">Click the <strong>Unsubscribe</strong> link at the bottom of any newsletter email. You can also manage your email preferences in your <a href="email-notifications.html" class="text-cyan-600 underline">Email Notifications</a> settings.</p>',
+
+    'Editing or canceling a return': '<p class="mb-3">Once a return is submitted, you may be able to edit or cancel it depending on its current status.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to cancel a return</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Go to <a href="returns-history.html" class="text-cyan-600 underline">Returns History</a>.</li><li>Find the return and click on it to view its details.</li><li>If the return is still in <strong>Pending</strong> status, you may see a <strong>Cancel Return</strong> option.</li><li>Returns that have already been shipped or processed cannot be cancelled.</li></ol>'
+      + '<p class="mb-3">If you need to update a return that cannot be cancelled, <a href="contact-support.html" class="text-cyan-600 underline">contact support</a> as soon as possible.</p>',
+
+    'Return address': '<p class="mb-3">The return address for your item depends on which seller you purchased from. Each seller may have a different return address.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Finding the return address</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Go to <a href="returns-history.html" class="text-cyan-600 underline">Returns History</a> and select your return.</li><li>The return label and shipping address are provided after your return request is approved.</li><li>Always use the address on the return label — do not send items to the billing or corporate address.</li></ol>'
+      + '<p class="mb-3 font-semibold">Important:</p><ul class="list-disc pl-5 space-y-1 mb-4"><li>Ship only after receiving a return authorization. Unauthorized returns may not be processed.</li><li>Use a trackable shipping method and keep your tracking number.</li></ul>',
+
+    'Resolving a declined payment': '<p class="mb-3">If your payment was declined, here are the most common causes and how to fix them:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Common reasons for declined payments</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Insufficient funds:</strong> Ensure your account has enough balance.</li><li><strong>Incorrect card details:</strong> Double-check the card number, expiration date, and CVV.</li><li><strong>Billing address mismatch:</strong> The billing address must match what your bank has on file.</li><li><strong>Card not enabled for online purchases:</strong> Contact your bank to enable online/international transactions.</li><li><strong>Fraud protection hold:</strong> Your bank may have flagged the transaction. Call them directly.</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Steps to resolve</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Re-enter your payment details carefully.</li><li>Try a different payment method (another card or PayPal).</li><li>Contact your bank or card issuer to verify the transaction is approved.</li><li>If the issue persists, <a href="contact-support.html" class="text-cyan-600 underline">contact Zorexium support</a>.</li></ol>',
+
+    'U.S. Payment Methods': '<p class="mb-3">Zorexium accepts the following payment methods for U.S. customers:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Accepted methods</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Credit cards:</strong> Visa, Mastercard, American Express, Discover</li><li><strong>Debit cards:</strong> Visa Debit, Mastercard Debit (with billing address)</li><li><strong>PayPal</strong></li><li><strong>Gift cards / promotional credits</strong> (Zorexium-issued)</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Not accepted</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Cryptocurrency</li><li>Money orders or checks</li><li>Cash on delivery (COD)</li></ul>'
+      + '<p class="text-gray-500 text-xs">Payment information is encrypted and never stored on our servers. We use industry-standard PCI DSS compliant payment processing.</p>',
+
+    'Split payment methods': '<p class="mb-3">Currently, Zorexium does not support splitting a single order across multiple payment methods at checkout.</p>'
+      + '<p class="mb-3">However, if you have a Zorexium gift card or promotional credit, it will automatically be applied to your order balance before your primary payment method is charged.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Workarounds</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Use a card that has a high enough limit for the full order total.</li><li>Apply any available Zorexium credits first — the remaining balance goes to your card.</li><li>Split your purchase into multiple orders (note: each order has its own shipping fee).</li></ul>',
+
+    'U.S. Shipping Policy': '<p class="mb-3">Zorexium ships to all 50 U.S. states and U.S. territories. Here\'s what you need to know about shipping:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Shipping fees</h3>'
+      + '<p class="mb-3">Standard shipping is <strong>$10.99 per order</strong>. Expedited and overnight options may be available at checkout depending on the seller.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Delivery timeframes</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Standard shipping:</strong> 5–7 business days after processing</li><li><strong>Expedited shipping:</strong> 2–3 business days after processing</li><li><strong>Overnight shipping:</strong> Next business day after processing (if ordered before 2 PM)</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Tracking your shipment</h3>'
+      + '<p class="mb-3">Once your item ships, you\'ll receive a confirmation email with a tracking number. You can also track it on the <a href="track-your-order.html" class="text-cyan-600 underline">Track Your Order</a> page.</p>',
+
+    'Reporting a delivery issue': '<p class="mb-3">If your package is missing, damaged, or incorrectly delivered, please report it as soon as possible.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Steps to report an issue</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Check your tracking information on <a href="track-your-order.html" class="text-cyan-600 underline">Track Your Order</a>.</li><li>Check with neighbors or building management if the package isn\'t at your door.</li><li>If the tracking shows "Delivered" but you haven\'t received it, wait 24 hours — carriers sometimes mark items delivered early.</li><li>If still unresolved, <a href="contact-support.html" class="text-cyan-600 underline">contact support</a> with your order number and tracking information.</li></ol>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Damaged packages</h3>'
+      + '<p class="mb-3">If your item arrived damaged, take photos of the package and the damaged item before opening fully. Contact support within 48 hours of delivery for the fastest resolution.</p>',
+
+    'Calculating the shipping cost': '<p class="mb-3">Shipping costs on Zorexium are calculated based on the following factors:</p>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Base rate:</strong> $10.99 for standard shipping</li><li><strong>Seller-specific rates:</strong> Some sellers offer free shipping on qualifying orders</li><li><strong>Shipping class:</strong> Oversized, heavy, or fragile items may incur additional charges</li><li><strong>Shipping speed:</strong> Expedited and overnight options cost more than standard</li></ul>'
+      + '<p class="mb-3">The final shipping cost is always shown at checkout before you confirm your order. You will never be charged more than the amount displayed at checkout.</p>',
+
+    'Product specifications and details': '<p class="mb-3">Each product listing on Zorexium includes detailed specifications provided by the seller. Here\'s where to find them:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Reading product specs</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Open the product detail page.</li><li>Click the <strong>Specs</strong> tab below the product images.</li><li>Review the full technical specifications table.</li></ol>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Understanding specs</h3>'
+      + '<p class="mb-3">Specifications include details like processor speed, memory capacity, dimensions, connectivity, and compatibility. If you need help interpreting a spec, use the <strong>Ask a Question</strong> button on the product page to message the seller directly.</p>'
+      + '<p class="mb-3">Zorexium validates listing data, but ultimate accuracy is the seller\'s responsibility. If you spot incorrect specs, please use the <strong>Report a listing</strong> option on the product page.</p>',
+
+    'Discontinued, deactivated or currently unavailable items': '<p class="mb-3">Sometimes a product you\'re looking for is no longer available. Here\'s what that means:</p>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>Discontinued:</strong> The product is no longer manufactured and won\'t be restocked.</li><li><strong>Deactivated:</strong> The seller has temporarily or permanently removed the listing.</li><li><strong>Out of stock:</strong> The seller is temporarily out but may restock.</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">What to do</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Add the item to a <a href="wish-lists.html" class="text-cyan-600 underline">Wish List</a> to be notified if it becomes available again.</li><li>Search for similar products using the search bar or browse by category.</li><li>Contact support if you believe an active listing is incorrectly shown as unavailable.</li></ul>',
+
+    'Product Warranties': '<p class="mb-3">Warranty terms vary by product and seller. Here\'s how warranties work on Zorexium:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Manufacturer warranty</h3>'
+      + '<p class="mb-3">New products typically include the manufacturer\'s standard warranty. The warranty period and coverage are listed in the product\'s specifications or description. For warranty service, contact the manufacturer directly using the information in your product documentation.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Seller warranty</h3>'
+      + '<p class="mb-3">Some sellers on Zorexium offer additional or extended warranties. These are described in the product listing under "Warranty &amp; Returns." Contact the seller through the <a href="messages.html" class="text-cyan-600 underline">Messaging</a> system for warranty claims.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Used/refurbished items</h3>'
+      + '<p class="mb-3">Used and refurbished products may have limited or no warranty. Review the listing carefully before purchasing.</p>',
+
+    'Product disclaimers': '<p class="mb-3">Product listings on Zorexium include information provided by third-party sellers. Zorexium is not the manufacturer or creator of the products listed.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Important disclaimers</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Product images may differ slightly from the actual item received.</li><li>Compatibility claims are the seller\'s responsibility — verify with your specific system before purchasing.</li><li>Specifications marked "estimated" or "typical" are approximations, not guarantees.</li><li>Zorexium is not liable for damage resulting from incorrect installation or incompatible use.</li></ul>'
+      + '<p class="mb-3">If you have a dispute about a product that doesn\'t match its listing, you are covered by the <a href="marketplace-guarantee.html" class="text-cyan-600 underline">Zorexium Marketplace Guarantee</a>.</p>',
+
+    'Benefits of a Zorexium Account': '<p class="mb-3">Creating a free Zorexium account gives you access to a range of features designed to make your shopping and selling experience better:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Buyer benefits</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Track orders and view order history</li><li>Save items to Wish Lists</li><li>Receive exclusive member deals and promotions</li><li>Message sellers directly</li><li>Leave product reviews and ratings</li><li>Faster checkout with saved shipping address</li><li>Real-time in-website notifications</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Seller benefits</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>List hardware for sale with detailed specifications</li><li>Manage inventory and orders from the Seller Dashboard</li><li>Receive payouts via Stripe</li><li>Build your reputation with seller ratings and reviews</li></ul>',
+
+    'Report Suspicious Activity': '<p class="mb-3">If you notice suspicious activity on your Zorexium account or see a listing that looks fraudulent, please report it immediately.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Signs of suspicious activity</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Orders placed that you didn\'t make</li><li>Your password was changed without your knowledge</li><li>Unfamiliar messages in your inbox</li><li>Listings with prices that seem too good to be true</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to report</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Immediately change your password at <a href="account-details.html" class="text-cyan-600 underline">Account Details</a>.</li><li><a href="contact-support.html" class="text-cyan-600 underline">Contact support</a> with details of the suspicious activity.</li><li>For product listings, use the <strong>Report a listing</strong> button on the product page.</li></ol>',
+
+    'Problems logging in': '<p class="mb-3">Can\'t access your Zorexium account? Here are the most common issues and how to resolve them:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Forgot your password</h3>'
+      + '<p class="mb-3">Click <strong>Forgot password?</strong> on the <a href="login-register.html" class="text-cyan-600 underline">Login page</a>. Enter the email address on your account and follow the reset link sent to your inbox. Check your spam folder if you don\'t see the email within a few minutes.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Email or username not recognized</h3>'
+      + '<p class="mb-3">Make sure you\'re using the email address you registered with. If you have multiple email addresses, try each one. Accounts cannot be merged.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Account locked</h3>'
+      + '<p class="mb-3">After several failed login attempts, your account may be temporarily locked for security. Wait 30 minutes and try again. If you\'re still locked out, <a href="contact-support.html" class="text-cyan-600 underline">contact support</a>.</p>',
+
+    'Changing your password': '<p class="mb-3">To change your Zorexium account password:</p>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Log in to your account.</li><li>Click your name or avatar in the header and select <strong>Account Details</strong>.</li><li>Navigate to the <strong>Security</strong> or <strong>Password</strong> section.</li><li>Enter your current password, then your new password twice.</li><li>Click <strong>Save Changes</strong>.</li></ol>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Password requirements</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>At least 8 characters</li><li>At least one uppercase letter and one number</li><li>Avoid using the same password you use on other sites</li></ul>'
+      + '<p class="text-gray-500 text-xs">If you can\'t log in to change your password, use the <strong>Forgot password?</strong> link on the login page.</p>',
+
+    'How to place an order': '<p class="mb-3">Placing an order on Zorexium is simple:</p>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Browse or search for a product on the <a href="index.html" class="text-cyan-600 underline">Marketplace</a>.</li><li>Click a product to view its details.</li><li>Select quantity and any available options, then click <strong>Add to Cart</strong>.</li><li>Continue shopping or click the cart icon to proceed to checkout.</li><li>Review your cart and click <strong>Proceed to Checkout</strong>.</li><li>Enter or confirm your shipping address.</li><li>Choose your shipping speed and enter payment details.</li><li>Review your order summary and click <strong>Place Order</strong>.</li></ol>'
+      + '<p class="mb-3">You\'ll receive a confirmation email with your order details. Track your order from <a href="order-history.html" class="text-cyan-600 underline">Order History</a>.</p>',
+
+    'Time sync error': '<p class="mb-3">A "time sync error" usually indicates that your device\'s clock is out of sync, which can cause issues with authentication and secure sessions.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How to fix it</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Check your device\'s date and time settings. Make sure they\'re set to the correct timezone and synchronized with an internet time server.</li><li><strong>Windows:</strong> Settings → Time &amp; Language → Date &amp; Time → Sync now</li><li><strong>Mac:</strong> System Preferences → Date &amp; Time → Set date and time automatically</li><li><strong>Mobile:</strong> Settings → General Management → Date and Time → Automatic date and time</li><li>After syncing, reload the Zorexium page and try again.</li></ol>'
+      + '<p class="text-gray-500 text-xs">If the issue persists after syncing your clock, <a href="contact-support.html" class="text-cyan-600 underline">contact support</a>.</p>',
+
+    'International payment methods': '<p class="mb-3">Zorexium currently supports customers in the United States. International shoppers may place orders with the following considerations:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Accepted international payment methods</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li><strong>International credit cards:</strong> Visa, Mastercard, and American Express with international billing enabled</li><li><strong>PayPal</strong> (must be linked to a verified payment method)</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Notes for international buyers</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Prices are displayed in USD. Your bank will convert to your local currency.</li><li>International transaction fees from your bank may apply and are not included in Zorexium\'s pricing.</li><li>Some sellers may not ship internationally. Check the product listing\'s shipping details.</li></ul>',
+
+    'Zorexium Messaging Terms & Conditions': '<p class="mb-3">By using Zorexium\'s messaging system, you agree to the following terms:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Acceptable use</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Messages must relate to products, orders, or legitimate support inquiries.</li><li>Do not share personal financial information (credit card numbers, bank details) through messages.</li><li>Spam, harassment, threats, or discriminatory content is strictly prohibited.</li><li>Do not attempt to conduct transactions outside of the Zorexium platform.</li></ul>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Privacy</h3>'
+      + '<p class="mb-3">Messages are stored securely and may be reviewed by Zorexium staff in case of a dispute or reported violation. See our <a href="privacy-policy.html" class="text-cyan-600 underline">Privacy Policy</a> for full details.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Enforcement</h3>'
+      + '<p class="mb-3">Violations may result in message restrictions, account suspension, or permanent banning from the platform.</p>',
+
+    'Will Call pickup information': '<p class="mb-3">Will Call is an in-person pickup service offered by select Zorexium sellers for local customers. Here\'s everything you need to know:</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">How Will Call works</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Browse listings that offer Will Call pickup (indicated on the product page).</li><li>Select "Will Call / Local Pickup" at checkout instead of standard shipping.</li><li>After placing your order, the seller will contact you to confirm a pickup time.</li><li>Bring your order confirmation and a valid photo ID when picking up.</li></ol>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Important notes</h3>'
+      + '<ul class="list-disc pl-5 space-y-1 mb-4"><li>Will Call availability depends on the individual seller\'s location and policies.</li><li>No shipping fee is charged for Will Call orders.</li><li>Do not visit a seller\'s location without first receiving confirmation of your pickup appointment.</li></ul>',
+
+    'Will Call hours and locations': '<p class="mb-3">Will Call pickup locations and hours are set by each individual seller. Zorexium does not operate centralized pickup facilities.</p>'
+      + '<h3 class="font-semibold text-gray-900 mb-2">Finding pickup hours and location</h3>'
+      + '<ol class="list-decimal pl-5 space-y-1 mb-4"><li>Open the product listing and check the seller\'s profile for location information.</li><li>After placing a Will Call order, the seller will provide their address and available hours directly through the <a href="messages.html" class="text-cyan-600 underline">Messaging</a> system.</li><li>Always confirm hours before visiting — sellers may have limited availability during holidays or peak seasons.</li></ol>'
+      + '<p class="text-gray-500 text-xs">Have a scheduling issue? Contact the seller through Messages or <a href="contact-support.html" class="text-cyan-600 underline">reach out to support</a>.</p>'
+  };
 
   var HC_ARTICLES = [
     { title: 'Order Status & History', category: 'Ordering', href: '#', stub: true },
@@ -670,6 +849,16 @@
   function hcOpenArticle(title, category) {
     document.getElementById('hcArticleTitle').textContent = title;
     document.getElementById('hcArticleCategory').textContent = category;
+    var bodyEl = document.getElementById('hcArticleBody');
+    var content = HC_ARTICLE_CONTENT[title];
+    if (content) {
+      bodyEl.innerHTML = content;
+    } else {
+      bodyEl.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">'
+        + '<i class="fas fa-tools text-yellow-500 mt-0.5 flex-shrink-0"></i>'
+        + '<div><p class="font-semibold text-gray-800 text-sm mb-1">Full article coming soon</p>'
+        + '<p class="text-xs text-gray-500">For immediate assistance, please contact our support team.</p></div></div>';
+    }
     var modal = document.getElementById('hcArticleModal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');

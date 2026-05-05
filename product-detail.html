@@ -222,7 +222,8 @@
                             <a href="help-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
-                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-headset text-cyan-600 w-4 text-center"></i>Contact Support</a>
+                            <a href="feedback.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
                             <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <!-- Orders & Returns -->
@@ -282,7 +283,8 @@
                             <a href="help-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
                             <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
                             <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
-                            <a href="contact-support.html?type=feedback" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-headset text-cyan-600 w-4 text-center"></i>Contact Support</a>
+                            <a href="feedback.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
                             <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
                             <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
                             <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
@@ -571,22 +573,24 @@
     <div id="tabContent-reviews" class="py-6 hidden">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold text-gray-900">Customer Reviews</h3>
-        <button class="px-4 py-2 border border-cyan-500 text-cyan-600 text-sm rounded hover:bg-cyan-50 transition-colors">
+        <button onclick="openReviewModal()" class="px-4 py-2 border border-cyan-500 text-cyan-600 text-sm rounded hover:bg-cyan-50 transition-colors">
           Write A Review
         </button>
       </div>
-      <p class="text-gray-500 text-sm">No reviews yet. Be the first to write one!</p>
+      <div id="reviewsContainer">
+        <p class="text-gray-500 text-sm">No reviews yet. Be the first to write one!</p>
+      </div>
     </div>
 
     <!-- Tab: Q&A -->
     <div id="tabContent-qa" class="py-6 hidden">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-semibold text-gray-900">Questions &amp; Answers</h3>
-        <button class="px-4 py-2 border border-cyan-500 text-cyan-600 text-sm rounded hover:bg-cyan-50 transition-colors">
+        <button onclick="askSeller()" class="px-4 py-2 border border-cyan-500 text-cyan-600 text-sm rounded hover:bg-cyan-50 transition-colors">
           Ask a Question
         </button>
       </div>
-      <p class="text-gray-500 text-sm">No questions yet. Have a question? Ask!</p>
+      <p class="text-gray-500 text-sm">Have a question? Click "Ask a Question" to message the seller directly.</p>
     </div>
 
     <!-- ── Similar Products ──────────────────────────────────────────────── -->
@@ -655,7 +659,7 @@
 
     <div class="space-y-4">
       <div>
-        <label class="block text-white text-base font-semibold mb-2">Subject</label>
+        <label class="block text-white text-base font-semibold mb-2">Subject <span class="text-gray-400 font-normal text-sm">(optional)</span></label>
         <input type="text" id="messageSubject" placeholder="Question about this product" class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400">
       </div>
 
@@ -667,6 +671,56 @@
       <div class="flex gap-3">
         <button onclick="sendMessage()" class="flex-1 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg">Send</button>
         <button onclick="closeContactModal()" class="flex-1 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Write a Review Modal -->
+<div id="reviewModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+  <div class="bg-white rounded-xl p-6 max-w-lg w-full shadow-2xl">
+    <div class="flex justify-between items-center mb-5">
+      <h2 class="text-xl font-bold text-gray-900">Write a Review</h2>
+      <button onclick="closeReviewModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+    </div>
+
+    <div class="space-y-4">
+      <!-- Star rating -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Overall Rating <span class="text-red-500">*</span></label>
+        <div class="flex gap-1" id="starRatingRow">
+          <button type="button" class="star-btn text-3xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="1">&#9733;</button>
+          <button type="button" class="star-btn text-3xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="2">&#9733;</button>
+          <button type="button" class="star-btn text-3xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="3">&#9733;</button>
+          <button type="button" class="star-btn text-3xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="4">&#9733;</button>
+          <button type="button" class="star-btn text-3xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="5">&#9733;</button>
+        </div>
+        <p id="reviewRatingLabel" class="text-xs text-gray-500 mt-1">Select a rating</p>
+      </div>
+
+      <!-- Review title -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Review Title <span class="text-gray-400 font-normal">(optional)</span></label>
+        <input type="text" id="reviewTitle" placeholder="Summarize your experience" maxlength="200"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+      </div>
+
+      <!-- Review body -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1">Your Review <span class="text-red-500">*</span></label>
+        <textarea id="reviewBody" rows="4" placeholder="Share your experience with this product..." maxlength="3000"
+          class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
+        <p class="text-xs text-gray-400 mt-1">Minimum 3 characters</p>
+      </div>
+
+      <div id="reviewError" class="hidden text-sm text-red-600 p-3 bg-red-50 border border-red-200 rounded-lg"></div>
+      <div id="reviewSuccess" class="hidden text-sm text-green-700 p-3 bg-green-50 border border-green-200 rounded-lg font-semibold">
+        ✓ Review submitted! Thank you for your feedback.
+      </div>
+
+      <div class="flex gap-3 pt-1">
+        <button onclick="submitReview()" id="reviewSubmitBtn" class="flex-1 px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors">Submit Review</button>
+        <button onclick="closeReviewModal()" class="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors">Cancel</button>
       </div>
     </div>
   </div>
@@ -1209,6 +1263,9 @@
           // Similar products
           if (currentProduct.category) loadSimilarProducts(currentProduct.category, currentProduct.id);
 
+          // Load reviews
+          loadReviews(currentProductId);
+
           return;
         }
       }
@@ -1331,7 +1388,7 @@
     }
     var subject = document.getElementById('messageSubject').value.trim();
     var body = document.getElementById('messageBody').value.trim();
-    if (!subject || !body) { ZrxNotify.showNotification('Please fill in all fields', 'error'); return; }
+    if (!body) { ZrxNotify.showNotification('Please type your message', 'error'); return; }
 
     try {
       var res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
@@ -1352,6 +1409,148 @@
       }
     } catch (_) {
       ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
+  }
+
+  function askSeller() {
+    if (!ZrxSession.isLoggedIn()) {
+      ZrxNotify.showNotification('Please log in to ask a question', 'info');
+      var loginUrl = 'login-register.html';
+      if (window.ZrxSpa && ZrxSpa.navigate(loginUrl)) return;
+      window.location.href = loginUrl;
+      return;
+    }
+    if (!currentProduct || !currentProduct.sellerId) {
+      ZrxNotify.showNotification('Seller information not available', 'error');
+      return;
+    }
+    // Pre-fill subject with a question prompt, then open contact modal
+    var subjectEl = document.getElementById('messageSubject');
+    if (subjectEl && !subjectEl.value) subjectEl.value = 'Question about: ' + (currentProduct.name || 'this product');
+    document.getElementById('contactModal').classList.remove('hidden');
+  }
+
+  // ── Reviews ───────────────────────────────────────────────────────────────
+  var selectedReviewRating = 0;
+
+  function openReviewModal() {
+    if (!ZrxSession.isLoggedIn()) {
+      ZrxNotify.showNotification('Please log in to write a review', 'info');
+      var loginUrl = 'login-register.html';
+      if (window.ZrxSpa && ZrxSpa.navigate(loginUrl)) return;
+      window.location.href = loginUrl;
+      return;
+    }
+    selectedReviewRating = 0;
+    document.getElementById('reviewTitle').value = '';
+    document.getElementById('reviewBody').value = '';
+    document.getElementById('reviewError').classList.add('hidden');
+    document.getElementById('reviewSuccess').classList.add('hidden');
+    document.getElementById('reviewSubmitBtn').disabled = false;
+    updateStarUI(0);
+    document.getElementById('reviewModal').classList.remove('hidden');
+
+    // Wire star buttons
+    document.querySelectorAll('.star-btn').forEach(function(btn) {
+      btn.onclick = function() {
+        selectedReviewRating = parseInt(btn.getAttribute('data-value'));
+        updateStarUI(selectedReviewRating);
+      };
+      btn.onmouseenter = function() { updateStarUI(parseInt(btn.getAttribute('data-value'))); };
+      btn.onmouseleave = function() { updateStarUI(selectedReviewRating); };
+    });
+  }
+
+  function updateStarUI(rating) {
+    var labels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+    document.querySelectorAll('.star-btn').forEach(function(btn) {
+      var val = parseInt(btn.getAttribute('data-value'));
+      btn.style.color = val <= rating ? '#f59e0b' : '#d1d5db';
+    });
+    var labelEl = document.getElementById('reviewRatingLabel');
+    if (labelEl) labelEl.textContent = rating > 0 ? labels[rating] + ' (' + rating + '/5)' : 'Select a rating';
+  }
+
+  function closeReviewModal() {
+    document.getElementById('reviewModal').classList.add('hidden');
+  }
+
+  async function submitReview() {
+    var errEl = document.getElementById('reviewError');
+    var successEl = document.getElementById('reviewSuccess');
+    errEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+
+    if (!selectedReviewRating) { errEl.textContent = 'Please select a star rating.'; errEl.classList.remove('hidden'); return; }
+    var body = document.getElementById('reviewBody').value.trim();
+    if (!body || body.length < 3) { errEl.textContent = 'Please write a review (at least 3 characters).'; errEl.classList.remove('hidden'); return; }
+
+    var submitBtn = document.getElementById('reviewSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+
+    try {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          productId: currentProductId,
+          rating: selectedReviewRating,
+          title: document.getElementById('reviewTitle').value.trim(),
+          body: body
+        })
+      });
+      var data = await res.json();
+      if (res.ok) {
+        successEl.classList.remove('hidden');
+        submitBtn.classList.add('hidden');
+        loadReviews(currentProductId);
+        setTimeout(closeReviewModal, 2000);
+      } else {
+        errEl.textContent = data.error || 'Failed to submit review. Please try again.';
+        errEl.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Review';
+      }
+    } catch (_) {
+      errEl.textContent = 'Network error. Please try again.';
+      errEl.classList.remove('hidden');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Review';
+    }
+  }
+
+  async function loadReviews(productId) {
+    var container = document.getElementById('reviewsContainer');
+    if (!container) return;
+    try {
+      var res = await fetch(BACKEND_URL + '/api/reviews?productId=' + encodeURIComponent(productId));
+      if (!res.ok) { container.innerHTML = '<p class="text-gray-500 text-sm">Could not load reviews.</p>'; return; }
+      var reviews = await res.json();
+      if (!reviews || reviews.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-sm">No reviews yet. Be the first to write one!</p>';
+        return;
+      }
+      var avg = (reviews.reduce(function(s, r) { return s + r.rating; }, 0) / reviews.length).toFixed(1);
+      var html = '<div class="mb-4 flex items-center gap-3">'
+        + '<span class="text-2xl font-bold text-gray-900">' + avg + '</span>'
+        + '<div class="flex text-yellow-400">' + '&#9733;'.repeat(Math.round(Number(avg))) + '<span class="text-gray-300">' + '&#9733;'.repeat(5 - Math.round(Number(avg))) + '</span></div>'
+        + '<span class="text-sm text-gray-500">(' + reviews.length + ' review' + (reviews.length !== 1 ? 's' : '') + ')</span>'
+        + '</div>';
+      reviews.forEach(function(r) {
+        var stars = '&#9733;'.repeat(r.rating) + '<span style="color:#d1d5db">' + '&#9733;'.repeat(5 - r.rating) + '</span>';
+        var date = new Date(r.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        html += '<div class="py-4 border-t border-gray-100">'
+          + '<div class="flex items-center gap-2 mb-1"><span class="text-yellow-400 text-sm">' + stars + '</span>'
+          + (r.title ? '<span class="font-semibold text-gray-900 text-sm ml-1">' + escapeHtml(r.title) + '</span>' : '') + '</div>'
+          + '<p class="text-sm text-gray-700 mb-1">' + escapeHtml(r.body) + '</p>'
+          + '<p class="text-xs text-gray-400">By ' + escapeHtml(r.reviewerName || 'Anonymous') + ' · ' + date + '</p>'
+          + '</div>';
+      });
+      container.innerHTML = html;
+    } catch (_) {
+      container.innerHTML = '<p class="text-gray-500 text-sm">Could not load reviews.</p>';
     }
   }
 
