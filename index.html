@@ -662,7 +662,7 @@
 <script src="notifications.js"></script>
 <script src="session.js"></script>
         <script>
-        // Header account/cart wiring and 'dokan' sweep
+        // Header account/cart wiring
         (function(){
             var BACKEND_URL = 'https://zorexium-backend.onrender.com';
 
@@ -752,9 +752,6 @@
             if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
             var pwdInput = document.getElementById('headerLoginPassword');
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
-
-            // Sweep any visible 'dokan' occurrences on page
-            document.body.innerHTML = document.body.innerHTML.replace(/dokan/gi, '');
         })();
 
         // Home page search function – filter products in-place
