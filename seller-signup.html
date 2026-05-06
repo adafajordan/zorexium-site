@@ -396,11 +396,11 @@
                 </ul>
               </label>
               <!-- Brand -->
-              <label class="tier-option flex flex-col p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-colors" id="tierBrandLabel">
-                <input type="radio" name="sellerTier" value="brand" class="sr-only" id="tierBrandRadio">
+              <label class="tier-option flex flex-col p-4 border-2 border-gray-100 rounded-xl opacity-60 cursor-not-allowed transition-colors relative" id="tierBrandLabel" style="pointer-events:none;">
+                <input type="radio" name="sellerTier" value="brand" class="sr-only" id="tierBrandRadio" disabled>
                 <div class="flex items-center justify-between mb-2">
                   <span class="font-bold text-gray-900 text-sm">Official Brand</span>
-                  <span class="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">Custom</span>
+                  <span class="text-xs font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">Coming Soon</span>
                 </div>
                 <p class="text-xs text-gray-500 mb-3">Negotiated transaction fees</p>
                 <ul class="space-y-1 text-xs text-gray-600 flex-1">
@@ -423,7 +423,11 @@
             <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $19/month subscription is required for the Pro Seller tier. Complete payment via PayPal to continue your registration.</p>
             <div class="ml-9">
               <div id="paypal-subscription-container" class="min-h-[45px]"></div>
-              <p id="paypalSubError" class="hidden text-red-500 text-sm mt-3"><i class="fas fa-exclamation-circle mr-1"></i>Failed to load PayPal. Please check your connection and try again.</p>
+              <div id="paypalSubError" class="hidden text-red-500 text-sm mt-3 flex items-center gap-2 flex-wrap">
+                <i class="fas fa-exclamation-circle flex-shrink-0"></i>
+                <span id="paypalSubErrorMsg">Failed to load PayPal. Please check your connection and try again.</span>
+                <button type="button" onclick="retryPaypalSubLoad()" class="underline text-red-700 hover:text-red-900 bg-transparent border-0 cursor-pointer text-sm ml-1">Retry</button>
+              </div>
               <div id="paypalSubConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
                 <i class="fas fa-check-circle text-green-500"></i>
                 <span>Subscription confirmed! Complete the form below and click Submit to finish your registration.</span>
@@ -640,6 +644,8 @@
     };
     script.onerror = function() {
       paypalSubSDKLoading = false;
+      var msgEl = document.getElementById('paypalSubErrorMsg');
+      if (msgEl) msgEl.textContent = 'Failed to load PayPal SDK. Please check your connection and try again.';
       document.getElementById('paypalSubError').classList.remove('hidden');
     };
     document.head.appendChild(script);
@@ -674,20 +680,30 @@
     }).render('#paypal-subscription-container');
   }
 
+  function retryPaypalSubLoad() {
+    var errEl = document.getElementById('paypalSubError');
+    if (errEl) errEl.classList.add('hidden');
+    paypalSubSDKLoaded = false;
+    paypalSubSDKLoading = false;
+    initProPayment();
+  }
+
   function initProPayment() {
     fetch(BACKEND_URL + '/api/config')
       .then(function(r) { return r.json(); })
       .then(function(config) {
-        if (!config.paypalClientId) throw new Error('Missing PayPal client ID');
+        if (!config.paypalClientId) throw new Error('PayPal is not configured on this server. Please try again later or contact support.');
         return fetch(BACKEND_URL + '/api/sellers/pro-plan')
           .then(function(r) { return r.json(); })
           .then(function(planData) {
-            if (!planData.planId) throw new Error('Missing PayPal plan ID');
+            if (!planData.planId) throw new Error('Pro Seller subscription plan is unavailable. Please try again later.');
             loadPayPalSubSDK(config.paypalClientId, planData.planId);
           });
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
+        var msgEl = document.getElementById('paypalSubErrorMsg');
+        if (msgEl) msgEl.textContent = err.message || 'Failed to load PayPal. Please check your connection and try again.';
         document.getElementById('paypalSubError').classList.remove('hidden');
       });
   }
@@ -861,7 +877,7 @@
   function updateTierLabels() {
     const val = document.querySelector('input[name="sellerTier"]:checked');
     if (!val) return;
-    const tiers = ['starter', 'pro', 'brand'];
+    const tiers = ['starter', 'pro'];
     tiers.forEach(function(t) {
       const label = document.getElementById('tier' + t.charAt(0).toUpperCase() + t.slice(1) + 'Label');
       if (!label) return;
@@ -873,6 +889,7 @@
         label.classList.add('border-gray-200');
       }
     });
+    // Brand label is always visually disabled (pointer-events:none) – never apply active styles to it
 
     // Show/hide Pro payment section and update step numbers
     const proPaymentSection = document.getElementById('proPaymentSection');

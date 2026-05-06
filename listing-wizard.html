@@ -344,6 +344,35 @@
       <p class="text-gray-500 mt-0.5 text-sm">Complete all sections to publish your product on the Zorexium marketplace.</p>
     </div>
 
+    <!-- Starter tier upgrade banner (shown when at/near listing limit) -->
+    <div id="wizUpgradeBanner" class="hidden mb-5 bg-amber-50 border border-amber-300 rounded-xl p-4">
+      <div class="flex items-start gap-3">
+        <i class="fas fa-exclamation-triangle text-amber-500 mt-0.5 flex-shrink-0"></i>
+        <div class="flex-1">
+          <p class="text-sm font-semibold text-amber-900 mb-0.5" id="wizUpgradeBannerMsg">You are approaching your Starter tier listing limit.</p>
+          <p class="text-xs text-amber-700 mb-3">Upgrade to Pro Seller for unlimited listings, advanced analytics, and priority support.</p>
+          <button id="wizUpgradeBtn" onclick="toggleWizUpgradePayPal()" class="text-sm bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded-lg">
+            Upgrade to Pro – $19/month
+          </button>
+          <!-- PayPal subscription panel -->
+          <div id="wizPayPalPanel" class="hidden mt-4 border-2 border-amber-300 rounded-xl p-4 bg-white">
+            <p class="text-sm font-semibold text-gray-800 mb-1">Complete PayPal subscription to activate Pro</p>
+            <p class="text-xs text-gray-500 mb-3">A recurring $19/month subscription is required. Cancel anytime from your PayPal account.</p>
+            <div id="wizPaypalContainer" class="min-h-[45px]"></div>
+            <p id="wizPaypalError" class="hidden text-red-600 text-sm mt-3 flex items-center gap-2">
+              <i class="fas fa-exclamation-circle"></i>
+              <span id="wizPaypalErrorMsg">Failed to load PayPal. Please check your connection and try again.</span>
+              <button onclick="retryWizPayPal()" class="ml-2 underline text-red-700 hover:text-red-900 bg-transparent border-0 cursor-pointer text-sm">Retry</button>
+            </p>
+            <div id="wizPaypalConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
+              <i class="fas fa-check-circle text-green-500"></i>
+              <span>Subscription confirmed! Completing your upgrade…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Wizard Layout -->
     <div class="flex gap-6 items-start">
 
@@ -1687,6 +1716,139 @@
     } catch (e) { console.error('Failed to load product for edit:', e); }
   }
 
+  // ── PayPal Pro Upgrade (shown when Starter seller hits listing limit) ──────────
+  var _wizPaypalSubSDKLoaded = false;
+  var _wizPaypalSubSDKLoading = false;
+  var _wizPendingPlanId = null;
+  var _wizProSubscriptionId = null;
+
+  function showWizUpgradeBanner(atLimit) {
+    var banner = document.getElementById('wizUpgradeBanner');
+    if (!banner) return;
+    banner.classList.remove('hidden');
+    var msg = document.getElementById('wizUpgradeBannerMsg');
+    if (msg) {
+      msg.textContent = atLimit
+        ? 'You have reached the Starter tier limit of ' + STARTER_LISTING_LIMIT + ' active listings.'
+        : 'You are approaching your Starter tier listing limit (' + STARTER_LISTING_LIMIT + ' max).';
+    }
+  }
+
+  function toggleWizUpgradePayPal() {
+    var panel = document.getElementById('wizPayPalPanel');
+    var btn   = document.getElementById('wizUpgradeBtn');
+    if (!panel) return;
+    var hidden = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden', !hidden);
+    if (btn) btn.textContent = hidden ? 'Cancel upgrade' : 'Upgrade to Pro – $19/month';
+    if (hidden && !_wizPaypalSubSDKLoaded && !_wizPaypalSubSDKLoading) {
+      initWizProPayment();
+    }
+  }
+
+  function retryWizPayPal() {
+    var errEl = document.getElementById('wizPaypalError');
+    if (errEl) errEl.classList.add('hidden');
+    _wizPaypalSubSDKLoaded = false;
+    _wizPaypalSubSDKLoading = false;
+    initWizProPayment();
+  }
+
+  function initWizProPayment() {
+    fetch(BACKEND_URL + '/api/config')
+      .then(function(r) { return r.json(); })
+      .then(function(config) {
+        if (!config.paypalClientId) throw new Error('PayPal is not configured on this server. Please try again later or contact support.');
+        return fetch(BACKEND_URL + '/api/sellers/pro-plan')
+          .then(function(r) { return r.json(); })
+          .then(function(planData) {
+            if (!planData.planId) throw new Error('Pro Seller plan is unavailable. Please try again later.');
+            loadWizPayPalSubSDK(config.paypalClientId, planData.planId);
+          });
+      })
+      .catch(function(err) {
+        console.error('Failed to load PayPal:', err);
+        var errEl  = document.getElementById('wizPaypalError');
+        var msgEl  = document.getElementById('wizPaypalErrorMsg');
+        if (msgEl) msgEl.textContent = err.message || 'Failed to load PayPal. Please check your connection and try again.';
+        if (errEl) errEl.classList.remove('hidden');
+      });
+  }
+
+  function loadWizPayPalSubSDK(clientId, planId) {
+    if (_wizPaypalSubSDKLoaded) { renderWizPayPalButtons(planId); return; }
+    if (_wizPaypalSubSDKLoading) return;
+    _wizPaypalSubSDKLoading = true;
+    _wizPendingPlanId = planId;
+    var script = document.createElement('script');
+    script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(clientId) + '&vault=true&intent=subscription';
+    script.onload = function() {
+      _wizPaypalSubSDKLoaded = true;
+      _wizPaypalSubSDKLoading = false;
+      renderWizPayPalButtons(_wizPendingPlanId);
+    };
+    script.onerror = function() {
+      _wizPaypalSubSDKLoading = false;
+      var errEl = document.getElementById('wizPaypalError');
+      var msgEl = document.getElementById('wizPaypalErrorMsg');
+      if (msgEl) msgEl.textContent = 'Failed to load PayPal. Please check your connection and try again.';
+      if (errEl) errEl.classList.remove('hidden');
+    };
+    document.head.appendChild(script);
+  }
+
+  function renderWizPayPalButtons(planId) {
+    var container = document.getElementById('wizPaypalContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    paypal.Buttons({
+      style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'subscribe' },
+      createSubscription: function(data, actions) {
+        return actions.subscription.create({ 'plan_id': planId });
+      },
+      onApprove: function(data) {
+        _wizProSubscriptionId = data.subscriptionID;
+        var confirmed = document.getElementById('wizPaypalConfirmed');
+        var errEl     = document.getElementById('wizPaypalError');
+        if (confirmed) confirmed.classList.remove('hidden');
+        if (errEl)     errEl.classList.add('hidden');
+        completeWizUpgrade(_wizProSubscriptionId);
+      },
+      onError: function(err) {
+        console.error('PayPal subscription error:', err);
+        var errEl = document.getElementById('wizPaypalError');
+        var msgEl = document.getElementById('wizPaypalErrorMsg');
+        if (msgEl) msgEl.textContent = 'Payment failed. Please try again.';
+        if (errEl) errEl.classList.remove('hidden');
+      },
+      onCancel: function() {
+        ZrxNotify.showNotification('Payment cancelled.', 'info');
+      }
+    }).render('#wizPaypalContainer');
+  }
+
+  async function completeWizUpgrade(subscriptionId) {
+    try {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/upgrade-to-pro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ subscriptionId: subscriptionId })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upgrade failed');
+      _sellerData = Object.assign(_sellerData || {}, data);
+      ZrxNotify.showNotification('Successfully upgraded to Pro Seller! You can now add unlimited listings.', 'success');
+      var banner = document.getElementById('wizUpgradeBanner');
+      if (banner) banner.classList.add('hidden');
+    } catch (err) {
+      var errEl = document.getElementById('wizPaypalError');
+      var msgEl = document.getElementById('wizPaypalErrorMsg');
+      if (msgEl) msgEl.textContent = err.message || 'Upgrade failed. Please contact support.';
+      if (errEl) errEl.classList.remove('hidden');
+    }
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────────
   async function init() {
     if (!ZrxSession.isLoggedIn()) { window.location.href = 'seller-signup.html'; return; }
@@ -1710,9 +1872,9 @@
                 return p.status === 'active' || p.status === 'approved' || p.status === 'pending';
               }).length;
               if (activeCount >= STARTER_LISTING_LIMIT) {
-                ZrxNotify.showNotification('You have reached the Starter tier limit of ' + STARTER_LISTING_LIMIT + ' active listings. Upgrade to Pro for unlimited listings.', 'error');
+                showWizUpgradeBanner(true);
               } else if (activeCount >= STARTER_LISTING_WARN_THRESHOLD) {
-                ZrxNotify.showNotification('Starter tier: ' + activeCount + '/' + STARTER_LISTING_LIMIT + ' active listings used. ' + (STARTER_LISTING_LIMIT - activeCount) + ' remaining.', 'info');
+                showWizUpgradeBanner(false);
               }
             }
           }

@@ -191,10 +191,7 @@ app.get('/health', function(req, res) {
 
 // ── Config endpoint ────────────────────────────────────────────────────────────
 app.get('/api/config', function(req, res) {
-  const clientId = process.env.PAYPAL_CLIENT_ID;
-  if (!clientId) {
-    return res.status(500).json({ error: 'PAYPAL_CLIENT_ID environment variable is not set.' });
-  }
+  const clientId = process.env.PAYPAL_CLIENT_ID || null;
   res.json({ paypalClientId: clientId });
 });
 
@@ -1724,6 +1721,67 @@ app.post('/api/sellers/assign-starter-tier', publicApiRateLimit, verifyToken, as
     res.json({ updated: result.modifiedCount, message: `Assigned starter tier to ${result.modifiedCount} sellers.` });
   } catch (error) {
     console.error('Error assigning starter tier:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sellers/upgrade-to-pro – upgrade existing seller to Pro tier via PayPal subscription (auth required)
+app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
+    if (seller.tier === 'pro') return res.status(400).json({ error: 'Already on Pro tier' });
+
+    const { subscriptionId } = req.body;
+    if (!subscriptionId || typeof subscriptionId !== 'string' || subscriptionId.length > 128) {
+      return res.status(400).json({ error: 'subscriptionId is required' });
+    }
+
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+      return res.status(503).json({ error: 'PayPal is not configured on the server' });
+    }
+    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+    const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' }
+    });
+    const subData = await subRes.json();
+
+    if (!subRes.ok || !['ACTIVE', 'APPROVED'].includes(subData.status)) {
+      console.error('PayPal subscription verification failed:', subData);
+      return res.status(400).json({ error: 'PayPal subscription could not be verified. Please try again.' });
+    }
+
+    await db.collection('sellers').updateOne(
+      { userId: req.userId },
+      { $set: { tier: 'pro', proSubscriptionId: subscriptionId, proSubscriptionStatus: subData.status,
+                proTierDowngraded: false, updatedAt: new Date() } }
+    );
+    const updated = await db.collection('sellers').findOne({ userId: req.userId });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error upgrading seller to Pro:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sellers/downgrade-to-starter – downgrade existing seller to Starter tier (auth required)
+app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
+    if (seller.tier === 'starter') return res.status(400).json({ error: 'Already on Starter tier' });
+
+    await db.collection('sellers').updateOne(
+      { userId: req.userId },
+      { $set: { tier: 'starter', updatedAt: new Date() },
+        $unset: { proSubscriptionId: '', proSubscriptionStatus: '' } }
+    );
+    const updated = await db.collection('sellers').findOne({ userId: req.userId });
+    res.json(updated);
+  } catch (error) {
+    console.error('Error downgrading seller to Starter:', error);
     res.status(500).json({ error: error.message });
   }
 });
