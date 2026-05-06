@@ -2062,7 +2062,7 @@ app.delete('/api/labs/:id', verifyToken, async function(req, res) {
 // ── PAYOUTS ───────────────────────────────────────────────────────────────────────
 
 // GET /api/payouts – get payouts for the current seller (auth required)
-app.get('/api/payouts', verifyToken, async function(req, res) {
+app.get('/api/payouts', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -2070,11 +2070,10 @@ app.get('/api/payouts', verifyToken, async function(req, res) {
     const seller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { shopName: 1 } });
     const sellerUsername = seller ? (seller.shopName || '') : '';
 
-    // Return only payouts for this seller (by sellerId or sellerUsername fallback)
+    // Return only payouts for this seller (by sellerId or shopName fallback for legacy payouts)
     const query = {
       $or: [
         { sellerId: req.userId },
-        { sellerUsername: req.userEmail },
         ...(sellerUsername ? [{ sellerUsername: sellerUsername }] : [])
       ]
     };

@@ -504,11 +504,12 @@
         document.getElementById('brandSubtitle').textContent = seller.shopDescription;
       }
 
-      // Update banner
-      if (seller.bannerUrl) {
+      // Update banner – validate URL is safe before using in CSS context
+      if (seller.bannerUrl && /^https?:\/\//i.test(seller.bannerUrl)) {
+        const safeBannerUrl = seller.bannerUrl.replace(/['"()\\]/g, '');
         const hero = document.getElementById('brandHero');
         if (hero) {
-          hero.style.backgroundImage = 'linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(' + escHtml(seller.bannerUrl) + ')';
+          hero.style.backgroundImage = 'linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url("' + safeBannerUrl + '")';
           hero.style.backgroundSize = 'cover';
           hero.style.backgroundPosition = 'center';
         }

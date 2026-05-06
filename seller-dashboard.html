@@ -1037,11 +1037,11 @@
       if (!res.ok) return;
       const orders = await res.json();
       // Only show completed/real orders – exclude pending and empty-status entries
-      const completed = (Array.isArray(orders) ? orders : []).filter(function(o) {
+      const nonPendingOrders = (Array.isArray(orders) ? orders : []).filter(function(o) {
         var s = (o.status || '').toLowerCase();
         return s && s !== 'pending';
       });
-      _allOrders = completed;
+      _allOrders = nonPendingOrders;
       renderRecentOrders(_allOrders.slice(0, 5));
     } catch(_) {
       document.getElementById('recentOrdersList').innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Could not load orders.</p>';
