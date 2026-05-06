@@ -857,7 +857,7 @@
     }
   }
 
-
+  async function submitReply(postId) {
     if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
     var replyText = document.getElementById('replyText-' + postId).value.trim();
     if (!replyText) return;

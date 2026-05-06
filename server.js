@@ -146,6 +146,8 @@ var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
 // Always allow the production frontend and backend origins
 ALLOWED_ORIGINS.push('https://zorexiumlabs.com');
 ALLOWED_ORIGINS.push('https://zorexium-backend.onrender.com');
+ALLOWED_ORIGINS.push('https://zorexium-site.vercel.app');
+ALLOWED_ORIGINS.push('https://www.zorexiumlabs.com');
 
 app.use(function(req, res, next) {
   var origin = req.headers.origin;
