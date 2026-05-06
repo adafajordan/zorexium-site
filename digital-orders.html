@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Track Your Order - Zorexium</title>
+  <title>Digital Orders - Zorexium</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -338,37 +338,34 @@
   <div class="bg-white border-b border-gray-200 px-6 py-3">
     <nav class="text-xs text-gray-400">
       <a href="index.html" class="hover:text-cyan-500">Home</a><span class="mx-1">/</span>
-      <span class="text-cyan-600">Order History</span>
+      <a href="account-details.html" class="hover:text-cyan-500">Account</a><span class="mx-1">/</span>
+      <span class="text-cyan-600">Digital Orders</span>
     </nav>
   </div>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-5 items-start">
-
     <!-- ── Left Sidebar ── -->
     <aside class="w-60 flex-shrink-0">
 
-      <!-- User greeting (logged-in only) -->
       <div id="tyoUserGreeting" class="hidden bg-white border border-gray-200 rounded-lg px-4 py-3 mb-3">
         <p class="text-sm font-bold text-gray-800">Hi, <span id="tyoUsername">there</span></p>
         <p id="tyoMemberDays" class="text-xs text-gray-500 mt-0.5"></p>
       </div>
 
-      <!-- Orders section -->
       <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
         <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
           <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Orders</span>
         </div>
         <nav>
-          <a href="order-history.html" class="tyo-nav-link active"><i class="fas fa-box-open w-4 text-center text-cyan-500"></i>Order History</a>
-          <a href="digital-orders.html" class="tyo-nav-link"><i class="fas fa-file-alt w-4 text-center text-gray-400"></i>Digital Orders</a>
-          <a href="subscription-orders.html" class="tyo-nav-link"><i class="fas fa-sync-alt w-4 text-center text-gray-400"></i>Subscription Orders</a>
+          <a href="order-history.html" class="tyo-nav-link"><i class="fas fa-box-open w-4 text-center text-cyan-500"></i>Order History</a>
+          <a href="digital-orders.html" class="tyo-nav-link active"><i class="fas fa-file-alt w-4 text-center text-cyan-500"></i>Digital Orders</a>
+          <a href="subscription-orders.html" class="tyo-nav-link"><i class="fas fa-sync-alt w-4 text-center text-cyan-500"></i>Subscription Orders</a>
           <a href="returns-history.html" class="tyo-nav-link"><i class="fas fa-exchange-alt w-4 text-center text-gray-400"></i>Return Status / History</a>
-          <a href="marketplace-claims.html" class="tyo-nav-link"><i class="fas fa-store w-4 text-center text-gray-400"></i>Marketplace Claim History</a>
-          <a href="trade-in-orders.html" class="tyo-nav-link"><i class="fas fa-random w-4 text-center text-gray-400"></i>Trade-in Orders</a>
+          <a href="marketplace-claims.html" class="tyo-nav-link"><i class="fas fa-store w-4 text-center text-cyan-500"></i>Marketplace Claim History</a>
+          <a href="trade-in-orders.html" class="tyo-nav-link"><i class="fas fa-random w-4 text-center text-cyan-500"></i>Trade-in Orders</a>
         </nav>
       </div>
 
-      <!-- Offers section -->
       <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
         <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
           <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Offers</span>
@@ -378,23 +375,21 @@
         </nav>
       </div>
 
-      <!-- Manage Account section -->
       <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
         <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
           <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Manage Account</span>
         </div>
         <nav>
           <a href="account-details.html" class="tyo-nav-link"><i class="fas fa-cog w-4 text-center text-gray-400"></i>Account Settings</a>
-          <a href="address-book.html" class="tyo-nav-link"><i class="fas fa-address-book w-4 text-center text-gray-400"></i>Address Book</a>
-          <a href="payment-options.html" class="tyo-nav-link"><i class="fas fa-credit-card w-4 text-center text-gray-400"></i>Payment Options</a>
-          <a href="gift-cards.html" class="tyo-nav-link"><i class="fas fa-gift w-4 text-center text-gray-400"></i>Gift Cards</a>
-          <a href="academic-info.html" class="tyo-nav-link"><i class="fas fa-graduation-cap w-4 text-center text-gray-400"></i>Academic Info</a>
-          <a href="manage-reviews.html" class="tyo-nav-link"><i class="fas fa-star-half-alt w-4 text-center text-gray-400"></i>Manage Reviews</a>
-          <a href="tax-exemption.html" class="tyo-nav-link"><i class="fas fa-file-invoice w-4 text-center text-gray-400"></i>Tax Exemption Application</a>
+          <a href="address-book.html" class="tyo-nav-link"><i class="fas fa-address-book w-4 text-center text-cyan-500"></i>Address Book</a>
+          <a href="payment-options.html" class="tyo-nav-link"><i class="fas fa-credit-card w-4 text-center text-cyan-500"></i>Payment Options</a>
+          <a href="gift-cards.html" class="tyo-nav-link"><i class="fas fa-gift w-4 text-center text-cyan-500"></i>Gift Cards</a>
+          <a href="academic-info.html" class="tyo-nav-link"><i class="fas fa-graduation-cap w-4 text-center text-cyan-500"></i>Academic Info</a>
+          <a href="manage-reviews.html" class="tyo-nav-link"><i class="fas fa-star-half-alt w-4 text-center text-cyan-500"></i>Manage Reviews</a>
+          <a href="tax-exemption.html" class="tyo-nav-link"><i class="fas fa-file-invoice w-4 text-center text-cyan-500"></i>Tax Exemption Application</a>
         </nav>
       </div>
 
-      <!-- Notifications section -->
       <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
         <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
           <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Notifications</span>
@@ -402,13 +397,12 @@
         <nav>
           <a href="messages.html" class="tyo-nav-link"><i class="fas fa-envelope w-4 text-center text-gray-400"></i>Message Center</a>
           <a href="email-notifications.html" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Email Notifications</a>
-          <a class="tyo-nav-link coming-soon"><i class="fas fa-mobile-alt w-4 text-center text-gray-400"></i>Mobile Text Alert<span class="cs-badge">Soon</span></a>
-          <a class="tyo-nav-link coming-soon"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Auto Notify<span class="cs-badge">Soon</span></a>
-          <a href="price-alerts.html" class="tyo-nav-link"><i class="fas fa-chart-line w-4 text-center text-gray-400"></i>Price Alerts</a>
+          <a href="track-your-order.html" class="tyo-nav-link"><i class="fas fa-mobile-alt w-4 text-center text-gray-400"></i>Mobile Text Alert</a>
+          <a href="email-notifications.html" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Auto Notify</a>
+          <a href="price-alerts.html" class="tyo-nav-link"><i class="fas fa-chart-line w-4 text-center text-cyan-500"></i>Price Alerts</a>
         </nav>
       </div>
 
-      <!-- Sign Out -->
       <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <a href="#" id="tyoSignOut" class="tyo-nav-link text-red-600 hover:bg-red-50 hover:text-red-700">
           <i class="fas fa-sign-out-alt w-4 text-center"></i>Sign Out
@@ -417,126 +411,25 @@
 
     </aside>
 
-    <!-- ── Main Content Area ── -->
+    <!-- Main Content Area -->
     <div class="flex-1 min-w-0">
 
-      <!-- Order History header card -->
       <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4">
         <div class="flex items-center justify-between mb-1">
-          <h1 class="text-xl font-bold text-gray-900">Order History</h1>
-          <a href="#" onclick="tyoShowGuestLookup(event)" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium">Find A Guest Order</a>
+          <h1 class="text-xl font-bold text-gray-900"><i class="fas fa-file-alt text-cyan-500 mr-2"></i>Digital Orders</h1>
         </div>
-        <p class="text-sm text-gray-500">Check the status of your order, review your order history, leave a review for your purchases and request a return.</p>
+        <p class="text-sm text-gray-500">Access your software licenses, digital downloads, and other digital purchases.</p>
       </div>
-
-      <!-- Search + Filter bar -->
-      <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4">
-        <div class="flex flex-wrap gap-2 items-center mb-3">
-          <input id="tyoSearchInput" type="text" placeholder="Search by Product, Order # or Invoice # in all orders"
-            class="flex-1 min-w-0 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-300">
-          <button onclick="tyoSearch()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors whitespace-nowrap">Search Orders</button>
-        </div>
-        <div class="flex flex-wrap gap-4 items-center text-sm text-gray-600">
-          <div class="flex items-center gap-2">
-            <label class="font-medium whitespace-nowrap">Find Orders Within:</label>
-            <select id="tyoDateFilter" onchange="tyoRenderOrders()" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
-              <option value="all">All Time</option>
-              <option value="30" selected>Recent Orders</option>
-              <option value="90">Last 3 Months</option>
-              <option value="180">Last 6 Months</option>
-              <option value="365">Last Year</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="font-medium whitespace-nowrap">Recent Orders</label>
-            <select id="tyoSortFilter" onchange="tyoRenderOrders()" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
-              <option value="recent">Most Recent</option>
-              <option value="oldest">Oldest First</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2 ml-auto">
-            <label class="font-medium whitespace-nowrap">View:</label>
-            <select id="tyoViewFilter" onchange="tyoRenderOrders()" class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
-              <option value="orders">Orders</option>
-              <option value="invoices">Invoices</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Text alert sign-up banner -->
-      <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-4 flex items-center gap-3 text-sm">
-        <i class="fas fa-mobile-alt text-blue-500 text-lg flex-shrink-0"></i>
-        <span class="text-blue-700">Stay connected with order and delivery update via text alert.</span>
-        <a href="#" onclick="tyoShowTextAlertSignup(event)" class="ml-auto text-cyan-600 hover:text-cyan-700 font-semibold whitespace-nowrap">Sign Up</a>
-      </div>
-
-      <!-- Auth gate (not logged in) -->
-      <div id="tyoAuthGate" class="hidden bg-white border border-gray-200 rounded-lg text-center py-16">
-        <i class="fas fa-lock text-4xl text-gray-300 mb-4 block"></i>
-        <p class="text-lg font-semibold text-gray-700 mb-1">Sign in to view your orders</p>
-        <p class="text-sm text-gray-400 mb-5">Your order history is tied to your Zorexium account.</p>
-        <a href="login-register.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-6 py-2.5 rounded-md transition-colors">Sign In / Register</a>
-      </div>
-
-      <!-- Order list -->
-      <div id="tyoOrderList" class="space-y-3">
-        <div class="bg-white border border-gray-200 rounded-lg text-center py-12 text-gray-400">
-          <i class="fas fa-spinner fa-spin text-3xl mb-3 block text-cyan-400"></i>
-          <p class="text-sm">Loading your orders…</p>
+      <div id="doOrderList" class="space-y-3">
+        <div class="bg-white border border-gray-200 rounded-lg text-center py-10">
+          <i class="fas fa-spinner fa-spin text-3xl text-cyan-400 mb-3 block"></i>
+          <p class="text-sm text-gray-400">Loading digital orders&hellip;</p>
         </div>
       </div>
 
     </div>
   </div>
 </main>
-
-<!-- Guest Order Lookup Modal -->
-<div id="tyoGuestModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="tyoGuestModalTitle">
-  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-    <div class="flex items-center justify-between mb-4">
-      <h2 id="tyoGuestModalTitle" class="text-lg font-bold text-gray-900"><i class="fas fa-search text-cyan-500 mr-2"></i>Find a Guest Order</h2>
-      <button onclick="tyoCloseGuestModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
-    </div>
-    <p class="text-sm text-gray-500 mb-4">Enter your order ID and the email address used at checkout.</p>
-    <div class="space-y-3">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="tyoGuestOrderId">Order ID</label>
-        <input id="tyoGuestOrderId" type="text" placeholder="e.g. ORD-1234567890-abc" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="tyoGuestEmail">Email Address</label>
-        <input id="tyoGuestEmail" type="email" placeholder="you@example.com" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
-      </div>
-    </div>
-    <div id="tyoGuestError" class="hidden mt-3 text-red-600 text-xs"></div>
-    <div id="tyoGuestResult" class="hidden mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-700"></div>
-    <div class="flex gap-3 justify-end mt-5">
-      <button onclick="tyoCloseGuestModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
-      <button id="tyoGuestLookupBtn" onclick="tyoDoGuestLookup()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Look Up Order</button>
-    </div>
-  </div>
-</div>
-
-<!-- Text Alert Sign-up Modal -->
-<div id="tyoTextAlertModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true">
-  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-bold text-gray-900"><i class="fas fa-mobile-alt text-cyan-500 mr-2"></i>Text Alert Sign-Up</h2>
-      <button onclick="tyoCloseTextAlertModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
-      <i class="fas fa-clock text-yellow-500 mt-0.5 flex-shrink-0"></i>
-      <div>
-        <p class="font-semibold text-gray-800 text-sm mb-1">Coming Soon</p>
-        <p class="text-xs text-gray-500">SMS text alert notifications are currently in development. We'll let you know when this feature becomes available.</p>
-      </div>
-    </div>
-    <div class="mt-5 text-right">
-      <button onclick="tyoCloseTextAlertModal()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Got It</button>
-    </div>
-  </div>
-</div>
 
 <!-- Chat Bubble -->
 <div class="fixed bottom-6 right-6 z-50">
@@ -663,304 +556,56 @@
     </script>
 
 <script>
-// ── Order History page logic ──
-(function () {
+(function(){
   var BACKEND = 'https://zorexium-backend.onrender.com';
-  var _allOrders = [];
-
-  var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
-  var listEl  = document.getElementById('tyoOrderList');
-  var gateEl  = document.getElementById('tyoAuthGate');
+  if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) {
+    window.location.href = 'login-register.html'; return;
+  }
   var greetEl = document.getElementById('tyoUserGreeting');
+  if (greetEl) greetEl.classList.remove('hidden');
+  var user = ZrxSession.getUser();
+  var nameEl = document.getElementById('tyoUsername');
+  if (nameEl && user) nameEl.textContent = user.username || user.email || 'there';
+  ZrxSession.fetch(BACKEND + '/api/user/profile', { credentials: 'include' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(p){
+      if (!p) return;
+      if (nameEl && (p.firstName || p.lastName)) nameEl.textContent = ((p.firstName||'') + (p.lastName ? ' '+p.lastName : '')).trim();
+      var dEl = document.getElementById('tyoMemberDays');
+      if (dEl && p.createdAt) { var d = Math.max(0,Math.floor((Date.now()-new Date(p.createdAt).getTime())/86400000)); dEl.textContent = 'Thanks for being a Zorexium customer for '+d+' day'+(d===1?'':'s'); }
+    }).catch(function(){});
+  var so = document.getElementById('tyoSignOut');
+  if (so) so.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ window.location.href='index.html'; }); });
 
-  // ── User greeting ──
-  if (isLoggedIn) {
-    if (greetEl) greetEl.classList.remove('hidden');
-    var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
-    var nameEl = document.getElementById('tyoUsername');
-    if (nameEl && user) nameEl.textContent = user.username || user.email || 'there';
-
-    // Member days: fetch profile for createdAt
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
-    fetchFn(BACKEND + '/api/user/profile', { credentials: 'include' })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (profile) {
-        if (!profile) return;
-        // Update username with real firstName if available
-        if (nameEl && (profile.firstName || profile.lastName)) {
-          var fullName = ((profile.firstName || '') + (profile.lastName ? ' ' + profile.lastName : '')).trim();
-          if (fullName) nameEl.textContent = fullName;
-        }
-        var daysEl = document.getElementById('tyoMemberDays');
-        if (daysEl && profile.createdAt) {
-          var days = Math.max(0, Math.floor((Date.now() - new Date(profile.createdAt).getTime()) / 86400000));
-          daysEl.textContent = 'Thanks for being a Zorexium customer for ' + days + ' day' + (days === 1 ? '' : 's');
-        }
-      })
-      .catch(function () {});
-  } else {
-    if (gateEl) gateEl.classList.remove('hidden');
-    if (listEl) listEl.innerHTML = '';
-    return;
-  }
-
-  // ── Sign Out link ──
-  var signOutEl = document.getElementById('tyoSignOut');
-  if (signOutEl) {
-    signOutEl.addEventListener('click', function (e) {
-      e.preventDefault();
-      if (typeof ZrxSession !== 'undefined') {
-        ZrxSession.logout(function () { window.location.href = 'index.html'; });
-      }
-    });
-  }
-
-  // ── Status helpers ──
-  function statusClass(s) {
-    if (!s) return 'status-processing';
-    var l = s.toLowerCase();
-    if (l.includes('deliver') || l.includes('complet')) return 'status-delivered';
-    if (l.includes('ship') || l.includes('transit')) return 'status-shipped';
-    if (l.includes('cancel')) return 'status-cancelled';
-    return 'status-processing';
-  }
-  function statusIcon(s) {
-    if (!s) return 'fas fa-clock';
-    var l = s.toLowerCase();
-    if (l.includes('deliver') || l.includes('complet')) return 'fas fa-check-circle';
-    if (l.includes('ship') || l.includes('transit')) return 'fas fa-truck';
-    if (l.includes('cancel')) return 'fas fa-times-circle';
-    return 'fas fa-clock';
-  }
-
-  // ── Render orders ──
-  window.tyoRenderOrders = function () {
-    if (!listEl) return;
-    var query   = (document.getElementById('tyoSearchInput') ? document.getElementById('tyoSearchInput').value.trim().toLowerCase() : '');
-    var dayVal  = document.getElementById('tyoDateFilter') ? document.getElementById('tyoDateFilter').value : 'all';
-    var sort    = document.getElementById('tyoSortFilter') ? document.getElementById('tyoSortFilter').value : 'recent';
-    var viewMode = document.getElementById('tyoViewFilter') ? document.getElementById('tyoViewFilter').value : 'orders';
-    var cutoff  = dayVal !== 'all' ? Date.now() - parseInt(dayVal, 10) * 86400000 : 0;
-
-    // Invoices view: show a summary table of order totals
-    if (viewMode === 'invoices') {
-      var invoiceOrders = _allOrders.filter(function(o) {
-        if (cutoff && o.createdAt && new Date(o.createdAt).getTime() < cutoff) return false;
-        if (query) {
-          var id = ((o._id || o.orderId || '') + '').toLowerCase();
-          if (!id.includes(query)) return false;
-        }
-        return true;
+  var BACKEND = 'https://zorexium-backend.onrender.com';
+  var doListEl = document.getElementById('doOrderList');
+  ZrxSession.fetch(BACKEND + '/api/orders/my', { credentials: 'include' })
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(orders){
+      var digital = (orders || []).filter(function(o){
+        return (o.type === 'digital') || (o.items || []).some(function(i){ return i.digital || i.type === 'digital'; });
       });
-      if (sort === 'oldest') {
-        invoiceOrders.sort(function(a, b) { return new Date(a.createdAt || 0) - new Date(b.createdAt || 0); });
-      } else {
-        invoiceOrders.sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
-      }
-      if (invoiceOrders.length === 0) {
-        listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14">' +
-          '<i class="fas fa-file-invoice text-5xl text-gray-200 mb-3 block"></i>' +
-          '<p class="font-semibold text-gray-600 mb-1">No invoices found</p>' +
-          '<p class="text-sm text-gray-400">Completed orders will appear here as invoices.</p>' +
-          '</div>';
+      if (digital.length === 0) {
+        doListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14"><i class="fas fa-file-alt text-5xl text-gray-200 mb-3 block"></i><p class="font-semibold text-gray-600 mb-1">No digital orders</p><p class="text-sm text-gray-400 mb-4">Digital products you purchase will appear here with download links.</p><a href="index.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Browse Marketplace</a></div>';
         return;
       }
-      var tableRows = invoiceOrders.map(function(o) {
-        var ordNum = ('#' + ((o._id || o.orderId || '---') + '').slice(-8).toUpperCase());
-        var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—';
-        var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '—';
-        var status = o.status || 'Processing';
-        var sc = statusClass(status);
-        return '<tr class="border-t border-gray-100">' +
-          '<td class="px-4 py-3 text-sm font-mono text-gray-700">' + ordNum + '</td>' +
-          '<td class="px-4 py-3 text-sm text-gray-500">' + date + '</td>' +
-          '<td class="px-4 py-3"><span class="order-status ' + sc + '">' + status + '</span></td>' +
-          '<td class="px-4 py-3 text-sm font-semibold text-gray-800 text-right">' + total + '</td>' +
-          '</tr>';
+      doListEl.innerHTML = digital.map(function(o){
+        var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '';
+        var items = (o.items||[]).map(function(i){
+          return '<div class="flex items-center justify-between py-2 border-t border-gray-100">' +
+            '<div class="flex items-center gap-3"><i class="fas fa-download text-cyan-400"></i><div><p class="text-sm font-medium text-gray-700">' + (i.name||'Digital Item') + '</p>' +
+            (i.licenseKey ? '<p class="text-xs font-mono text-gray-400 mt-0.5">Key: ' + i.licenseKey + '</p>' : '') + '</div></div>' +
+            (i.downloadUrl ? '<a href="' + i.downloadUrl + '" class="text-xs font-semibold text-cyan-600 border border-cyan-300 px-3 py-1 rounded-md hover:bg-cyan-50">Download</a>' : '<span class="text-xs text-gray-400">Pending</span>') +
+            '</div>';
+        }).join('');
+        return '<div class="bg-white border border-gray-200 rounded-lg px-5 py-4"><div class="flex items-center justify-between mb-2"><span class="font-semibold text-sm text-gray-800">Order #' + ((o._id||'').slice(-8).toUpperCase()) + '</span><span class="text-xs text-gray-400">' + date + '</span></div>' + (items || '<p class="text-xs text-gray-400">No digital items in this order.</p>') + '</div>';
       }).join('');
-      listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg overflow-hidden">' +
-        '<table class="w-full">' +
-        '<thead class="bg-gray-50 text-xs font-bold text-gray-500 uppercase tracking-wider">' +
-        '<tr><th class="px-4 py-3 text-left">Invoice #</th><th class="px-4 py-3 text-left">Date</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-right">Total</th></tr>' +
-        '</thead><tbody>' + tableRows + '</tbody></table></div>';
-      return;
-    }
-
-    var filtered = _allOrders.filter(function (o) {
-      if (cutoff && o.createdAt && new Date(o.createdAt).getTime() < cutoff) return false;
-      if (query) {
-        var id = ((o._id || o.orderId || '') + '').toLowerCase();
-        var items = (o.items || []).map(function (i) { return (i.name || '').toLowerCase(); }).join(' ');
-        if (!id.includes(query) && !items.includes(query)) return false;
-      }
-      return true;
-    });
-
-    if (sort === 'oldest') {
-      filtered.sort(function (a, b) { return new Date(a.createdAt || 0) - new Date(b.createdAt || 0); });
-    } else {
-      filtered.sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
-    }
-
-    if (filtered.length === 0) {
-      listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14">' +
-        '<i class="fas fa-box-open text-5xl text-gray-200 mb-3 block"></i>' +
-        '<p class="font-semibold text-gray-600 mb-1">No orders found</p>' +
-        '<p class="text-sm text-gray-400 mb-5">Try adjusting your search or date filter.</p>' +
-        '<a href="index.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Shop Now</a>' +
-        '</div>';
-      return;
-    }
-
-    listEl.innerHTML = filtered.map(function (o) {
-      var status = o.status || 'Processing';
-      var sc = statusClass(status);
-      var si = statusIcon(status);
-      var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '';
-      var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '';
-      var items = (o.items || []).slice(0, 3).map(function (i) {
-        return '<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5 mr-1">' + (i.name || 'Item') + '</span>';
-      }).join('');
-      return '<div class="order-card flex flex-wrap gap-4 items-center">' +
-        '<div class="flex-1 min-w-0">' +
-        '<div class="flex items-center gap-2 mb-1">' +
-        '<span class="font-semibold text-sm text-gray-800">Order #' + ((o._id || o.orderId || '---') + '').slice(-8).toUpperCase() + '</span>' +
-        '<span class="order-status ' + sc + '"><i class="' + si + '"></i> ' + status + '</span>' +
-        '</div>' +
-        '<div class="text-xs text-gray-400 mb-2">' + date + (total ? ' &middot; ' + total : '') + '</div>' +
-        '<div>' + (items || '<span class="text-xs text-gray-400">No items listed</span>') + '</div>' +
-        '</div>' +
-        '<div class="flex gap-2 flex-shrink-0">' +
-        '<a href="track-your-order.html?order=' + encodeURIComponent(o._id || '') + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
-        '<a href="returns-history.html" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Return</a>' +
-        '</div>' +
-        '</div>';
-    }).join('');
-  };
-
-  // ── Search button ──
-  window.tyoSearch = function () { tyoRenderOrders(); };
-  var searchInput = document.getElementById('tyoSearchInput');
-  if (searchInput) {
-    searchInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') tyoRenderOrders(); });
-  }
-
-  // ── Load orders from API ──
-  var fetchFn2 = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
-  fetchFn2(BACKEND + '/api/orders/my', { credentials: 'include' })
-    .then(function (r) { return r.ok ? r.json() : []; })
-    .then(function (orders) {
-      _allOrders = orders || [];
-      if (_allOrders.length === 0) {
-        listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14">' +
-          '<i class="fas fa-box-open text-5xl text-gray-200 mb-3 block"></i>' +
-          '<p class="font-semibold text-gray-600 mb-1">No orders yet</p>' +
-          '<p class="text-sm text-gray-400 mb-5">Discover hardware on the marketplace and place your first order.</p>' +
-          '<a href="index.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Shop Now</a>' +
-          '</div>';
-        return;
-      }
-      tyoRenderOrders();
     })
-    .catch(function () {
-      listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-10 text-gray-400">' +
-        '<i class="fas fa-exclamation-triangle text-3xl mb-3 block text-red-400"></i>' +
-        '<p class="text-sm">Could not load orders. Please try again later.</p>' +
-        '</div>';
-    });
+    .catch(function(){ doListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-10 text-gray-400"><i class="fas fa-exclamation-triangle text-2xl text-red-400 mb-2 block"></i><p class="text-sm">Could not load digital orders.</p></div>'; });
+
 })();
-
-  // ── Guest Order Lookup ──
-  var BACKEND_TYO = 'https://zorexium-backend.onrender.com';
-
-  window.tyoShowGuestLookup = function(e) {
-    if (e) e.preventDefault();
-    document.getElementById('tyoGuestOrderId').value = '';
-    document.getElementById('tyoGuestEmail').value = '';
-    document.getElementById('tyoGuestError').classList.add('hidden');
-    document.getElementById('tyoGuestResult').classList.add('hidden');
-    var modal = document.getElementById('tyoGuestModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    document.getElementById('tyoGuestOrderId').focus();
-  };
-
-  window.tyoCloseGuestModal = function() {
-    var modal = document.getElementById('tyoGuestModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-  };
-
-  window.tyoDoGuestLookup = function() {
-    var orderId = document.getElementById('tyoGuestOrderId').value.trim();
-    var email = document.getElementById('tyoGuestEmail').value.trim();
-    var errEl = document.getElementById('tyoGuestError');
-    var resEl = document.getElementById('tyoGuestResult');
-    var btn = document.getElementById('tyoGuestLookupBtn');
-    errEl.classList.add('hidden');
-    resEl.classList.add('hidden');
-    if (!orderId || !email) {
-      errEl.textContent = 'Please enter both order ID and email address.';
-      errEl.classList.remove('hidden');
-      return;
-    }
-    btn.disabled = true; btn.textContent = 'Looking up…';
-    var params = new URLSearchParams({ orderId: orderId, email: email });
-    fetch(BACKEND_TYO + '/api/orders/guest?' + params.toString())
-      .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-      .then(function(res) {
-        btn.disabled = false; btn.textContent = 'Look Up Order';
-        if (!res.ok) {
-          errEl.textContent = res.data.error || 'Order not found.';
-          errEl.classList.remove('hidden');
-          return;
-        }
-        var o = res.data;
-        var status = o.status || 'Processing';
-        var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—';
-        var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '—';
-        var items = (o.items || []).map(function(i) { return (i.name || 'Item') + ' (x' + (i.quantity || 1) + ')'; }).join(', ') || '—';
-        resEl.innerHTML = '<p class="font-semibold text-gray-800 mb-2">Order Found</p>' +
-          '<dl class="grid grid-cols-2 gap-1 text-xs">' +
-          '<dt class="text-gray-500">Order ID:</dt><dd class="font-mono text-gray-700">' + (o.id || o._id || '—') + '</dd>' +
-          '<dt class="text-gray-500">Date:</dt><dd class="text-gray-700">' + date + '</dd>' +
-          '<dt class="text-gray-500">Status:</dt><dd class="font-semibold text-cyan-700">' + status + '</dd>' +
-          '<dt class="text-gray-500">Total:</dt><dd class="font-semibold text-gray-800">' + total + '</dd>' +
-          '<dt class="text-gray-500">Items:</dt><dd class="text-gray-700 col-span-1">' + items + '</dd>' +
-          '</dl>';
-        resEl.classList.remove('hidden');
-      })
-      .catch(function() {
-        btn.disabled = false; btn.textContent = 'Look Up Order';
-        errEl.textContent = 'Network error. Please try again.';
-        errEl.classList.remove('hidden');
-      });
-  };
-
-  // ── Text Alert Signup ──
-  window.tyoShowTextAlertSignup = function(e) {
-    if (e) e.preventDefault();
-    var modal = document.getElementById('tyoTextAlertModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-  };
-
-  window.tyoCloseTextAlertModal = function() {
-    var modal = document.getElementById('tyoTextAlertModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-  };
-
-  // Close modals on Escape / backdrop click
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { tyoCloseGuestModal(); tyoCloseTextAlertModal(); }
-  });
-  document.getElementById('tyoGuestModal').addEventListener('click', function(e) { if (e.target === this) tyoCloseGuestModal(); });
-  document.getElementById('tyoTextAlertModal').addEventListener('click', function(e) { if (e.target === this) tyoCloseTextAlertModal(); });
-  document.getElementById('tyoGuestOrderId').addEventListener('keypress', function(e) { if (e.key === 'Enter') tyoDoGuestLookup(); });
-  document.getElementById('tyoGuestEmail').addEventListener('keypress', function(e) { if (e.key === 'Enter') tyoDoGuestLookup(); });
 </script>
+<script src="open-links-new-tab.js"></script>
+<script src="cookie-consent.js"></script>
 </body>
 </html>
-
-
