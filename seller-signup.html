@@ -805,7 +805,7 @@
         if (submitBtnText) submitBtnText.textContent = 'Submit';
         return;
       }
-      successAlert.textContent = selectedTier === 'pro' ? 'Welcome to Zorexium Pro Sellers! Redirecting...' : 'Welcome to Zorexium Sellers!';
+      successAlert.textContent = selectedTier === 'pro' ? 'Welcome to Zorexium Pro Sellers! Redirecting...' : 'Welcome to Zorexium Sellers! Redirecting...';
       successAlert.classList.remove('hidden');
       window.location.href = 'seller-dashboard.html';
     } catch (err) {
