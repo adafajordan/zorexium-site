@@ -632,7 +632,8 @@
           mrListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14"><i class="fas fa-star text-5xl text-gray-200 mb-3 block"></i><p class="font-semibold text-gray-600 mb-1">No reviews yet</p><p class="text-sm text-gray-400">Reviews you write will appear here.</p></div>';
           return;
         }
-        mrListEl.innerHTML = reviews.map(function(rv){
+        window._mrData = reviews;
+        mrListEl.innerHTML = reviews.map(function(rv, i){
           var date = rv.createdAt ? new Date(rv.createdAt).toLocaleDateString() : '';
           return '<div class="bg-white border border-gray-200 rounded-lg px-5 py-4">' +
             '<div class="flex items-start gap-3">' +
@@ -644,8 +645,8 @@
             '<p class="text-sm text-gray-500">' + (rv.body||rv.comment||'') + '</p>' +
             '</div>' +
             '<div class="flex gap-2 flex-shrink-0">' +
-            '<button onclick='mrOpenEdit(' + JSON.stringify(rv) + ')' class="text-xs font-medium text-gray-600 border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-50">Edit</button>' +
-            '<button onclick="mrDeleteReview('' + rv._id + '')" class="text-xs font-medium text-red-600 border border-red-300 px-3 py-1.5 rounded-md hover:bg-red-50">Delete</button>' +
+            '<button onclick="mrOpenEdit(window._mrData[' + i + '])" class="text-xs font-medium text-gray-600 border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-50">Edit</button>' +
+            '<button onclick="mrDeleteReview(\'' + rv._id + '\')" class="text-xs font-medium text-red-600 border border-red-300 px-3 py-1.5 rounded-md hover:bg-red-50">Delete</button>' +
             '</div></div></div>';
         }).join('');
       })

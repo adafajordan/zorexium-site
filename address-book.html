@@ -618,7 +618,8 @@
       abListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14"><i class="fas fa-address-book text-5xl text-gray-200 mb-3 block"></i><p class="font-semibold text-gray-600 mb-1">No saved addresses</p><p class="text-sm text-gray-400 mb-4">Add an address to speed up checkout.</p><button onclick="abShowAddForm()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Add Address</button></div>';
       return;
     }
-    abListEl.innerHTML = addresses.map(function(a) {
+    window._abData = addresses;
+    abListEl.innerHTML = addresses.map(function(a, i) {
       var line = [a.street, a.apt, a.city, a.state, a.zip, a.country].filter(Boolean).join(', ');
       return '<div class="bg-white border border-gray-200 rounded-lg px-5 py-4 flex items-start gap-4">' +
         '<i class="fas fa-map-marker-alt text-cyan-400 mt-1 flex-shrink-0"></i>' +
@@ -629,9 +630,9 @@
         (a.phone ? '<p class="text-xs text-gray-400 mt-0.5">' + a.phone + '</p>' : '') +
         '</div>' +
         '<div class="flex gap-2 flex-shrink-0">' +
-        (!a.isDefault ? '<button onclick="abSetDefault('' + a._id + '')" class="text-xs font-medium text-cyan-600 border border-cyan-300 px-3 py-1.5 rounded-md hover:bg-cyan-50 transition-colors">Set Default</button>' : '') +
-        '<button onclick='abEditAddress(' + JSON.stringify(a) + ')' class="text-xs font-medium text-gray-600 border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-50 transition-colors">Edit</button>' +
-        '<button onclick="abDeleteAddress('' + a._id + '')" class="text-xs font-medium text-red-600 border border-red-300 px-3 py-1.5 rounded-md hover:bg-red-50 transition-colors">Delete</button>' +
+        (!a.isDefault ? '<button onclick="abSetDefault(\'' + a._id + '\')" class="text-xs font-medium text-cyan-600 border border-cyan-300 px-3 py-1.5 rounded-md hover:bg-cyan-50 transition-colors">Set Default</button>' : '') +
+        '<button onclick="abEditAddress(window._abData[' + i + '])" class="text-xs font-medium text-gray-600 border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-50 transition-colors">Edit</button>' +
+        '<button onclick="abDeleteAddress(\'' + a._id + '\')" class="text-xs font-medium text-red-600 border border-red-300 px-3 py-1.5 rounded-md hover:bg-red-50 transition-colors">Delete</button>' +
         '</div></div>';
     }).join('');
   }
