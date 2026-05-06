@@ -577,7 +577,6 @@
   var so = document.getElementById('tyoSignOut');
   if (so) so.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ window.location.href='index.html'; }); });
 
-  var BACKEND = 'https://zorexium-backend.onrender.com';
   var soListEl = document.getElementById('soSubList');
   ZrxSession.fetch(BACKEND + '/api/orders/my', { credentials: 'include' })
     .then(function(r){ return r.ok ? r.json() : []; })
