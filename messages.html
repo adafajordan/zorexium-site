@@ -406,6 +406,7 @@
   let currentUser = null;
   let selectedContactId = null;
   let allMessages = [];
+  let pollingTimeout = null;
   const userInfoCache = {};
 
   function getUserIdFromToken(token) {
@@ -546,6 +547,17 @@
     const directContact = params.get('with');
 
     await loadConversations(directContact);
+
+    // Schedule polling for new messages so both parties see updates in real time.
+    // Recursive setTimeout ensures each poll completes before the next is scheduled.
+    function scheduleNextPoll() {
+      pollingTimeout = setTimeout(async () => {
+        await pollForNewMessages();
+        scheduleNextPoll();
+      }, 7000);
+    }
+    scheduleNextPoll();
+    window.addEventListener('beforeunload', () => clearTimeout(pollingTimeout));
   }
 
   async function loadConversations(directContactId) {
@@ -748,6 +760,60 @@
       }
     } catch (_) {
       ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
+  }
+
+  async function pollForNewMessages() {
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
+        credentials: 'include'
+      });
+      if (!res.ok) return;
+      const latestMessages = await res.json();
+
+      // Detect changes by comparing total count and the ID of the most recent message
+      const lastOldId = allMessages.length ? String(allMessages[allMessages.length - 1]._id) : '';
+      const lastNewId = latestMessages.length ? String(latestMessages[latestMessages.length - 1]._id) : '';
+      if (latestMessages.length === allMessages.length && lastOldId === lastNewId) return;
+
+      // Track how many messages belong to the currently selected conversation before updating
+      const prevSelectedCount = selectedContactId
+        ? allMessages.filter(msg =>
+            (msg.fromUserId === currentUserId && msg.toUserId === selectedContactId) ||
+            (msg.fromUserId === selectedContactId && msg.toUserId === currentUserId)
+          ).length
+        : 0;
+
+      allMessages = latestMessages;
+
+      // Rebuild conversations map
+      const conversations = {};
+      allMessages.forEach(msg => {
+        const otherId = msg.fromUserId === currentUserId ? msg.toUserId : msg.fromUserId;
+        if (!conversations[otherId]) conversations[otherId] = [];
+        conversations[otherId].push(msg);
+      });
+
+      // Preserve any pending empty conversation for the selected contact
+      if (selectedContactId && !conversations[selectedContactId]) {
+        conversations[selectedContactId] = [];
+      }
+
+      // Re-render sidebar (renderConversationButtons already preserves active state via selectedContactId)
+      await renderConversations(conversations);
+
+      // Only update the main conversation view if new messages arrived for the selected contact
+      if (selectedContactId) {
+        const newSelectedCount = allMessages.filter(msg =>
+          (msg.fromUserId === currentUserId && msg.toUserId === selectedContactId) ||
+          (msg.fromUserId === selectedContactId && msg.toUserId === currentUserId)
+        ).length;
+        if (newSelectedCount !== prevSelectedCount) {
+          await selectContact(selectedContactId);
+        }
+      }
+    } catch (_) {
+      // Silently ignore polling errors
     }
   }
 
