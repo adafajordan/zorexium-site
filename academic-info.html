@@ -3,22 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Account Details - Zorexium</title>
+  <title>Academic Info - Zorexium</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111827; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .gamer-tab-content { display: none; }
-    .gamer-tab-content.active { display: block; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .custom-green { background-color: #65a30d; }
+    .custom-green-text { color: #65a30d; }
+    .verified-badge { color: #4ade80; }
     .nav-dropdown { opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease; }
     .nav-dropdown-trigger:hover .nav-dropdown, .nav-dropdown-trigger.active .nav-dropdown { opacity: 1; visibility: visible; transform: translateY(0); }
-    .profile-section { background-color: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #f3f4f6; }
-    .section-title { color: #06b6d4; font-size: 15px; font-weight: 600; margin-bottom: 16px; }
   
         /* Marketplace mega-menu: full-width fixed panel matching sidebar colour scheme */
         .marketplace-mega-menu {
@@ -35,6 +31,17 @@
         .nav-dropdown-trigger.active .marketplace-mega-menu {
             transform: translateY(0);
         }
+    .tyo-nav-link { display: flex; align-items: center; gap: 8px; padding: 9px 16px; font-size: 14px; color: #374151; transition: background 0.12s, color 0.12s; }
+    .tyo-nav-link:hover { background: #f9fafb; color: #0891b2; }
+    .tyo-nav-link.active { background: #ecfeff; color: #0e7490; font-weight: 600; }
+    .tyo-nav-link.coming-soon { opacity: 0.5; cursor: default; pointer-events: none; }
+    .tyo-nav-link .cs-badge { font-size: 9px; background: #e5e7eb; color: #6b7280; border-radius: 4px; padding: 1px 5px; margin-left: auto; text-transform: uppercase; letter-spacing: 0.04em; }
+    .order-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+    .order-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-delivered { background: #dcfce7; color: #15803d; }
+    .status-shipped { background: #dbeafe; color: #1d4ed8; }
+    .status-processing { background: #fef9c3; color: #a16207; }
+    .status-cancelled { background: #fee2e2; color: #b91c1c; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -307,800 +314,187 @@
     </header>
 
 
-<!-- Main Content -->
-<main class="flex-1 w-full pb-16">
-
-  <!-- Auth Check -->
-  <div id="notLoggedIn" class="text-center py-12 max-w-lg mx-auto hidden">
-    <i class="fas fa-user-lock text-5xl text-gray-300 mb-6 block"></i>
-    <p class="text-gray-500 mb-6 text-lg">Please log in to view your account</p>
-    <a href="login-register.html" class="inline-block px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold">Log In</a>
-  </div>
-
-  <div id="loggedInContent" class="hidden">
-
-    <!-- Cover + Avatar section -->
-    <div class="relative">
-      <!-- Cover photo -->
-      <div id="coverPhotoArea" class="w-full h-48 md:h-64 bg-gradient-to-br from-cyan-400 to-blue-600 relative overflow-hidden">
-        <img id="coverImage" src="" alt="" class="w-full h-full object-cover hidden">
-        <div class="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/30">
-          <button onclick="document.getElementById('coverImageFile').click()" class="bg-white/90 text-gray-800 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
-            <i class="fas fa-camera"></i> Edit Cover
-          </button>
-          <input id="coverImageFile" type="file" accept="image/*" class="hidden" onchange="handleCoverImageUpload(event)">
-        </div>
-        <!-- Edit Cover button always visible on mobile -->
-        <button onclick="document.getElementById('coverImageFile').click()" class="absolute top-3 right-3 bg-white/80 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 md:hidden">
-          <i class="fas fa-camera"></i> Edit Cover
-        </button>
-      </div>
-
-      <!-- Avatar -->
-      <div class="absolute left-6 md:left-10" style="bottom: -48px;">
-        <div class="relative">
-          <div class="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white overflow-hidden bg-gray-200 shadow-lg">
-            <img id="profileImage" src="https://placehold.co/200x200/e5e7eb/9ca3af?text=??" alt="Profile" class="w-full h-full object-cover">
-          </div>
-          <button onclick="document.getElementById('profileImageFile').click()" class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full flex items-center justify-center shadow-md" title="Edit Avatar">
-            <i class="fas fa-camera text-xs"></i>
-          </button>
-          <input id="profileImageFile" type="file" accept="image/*" class="hidden" onchange="handleProfileImageUpload(event)">
-        </div>
+<!-- Sub-header / Search -->
+<div class="bg-gray-50 py-6">
+  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 flex flex-col md:flex-row items-center justify-between gap-6">
+    <a href="index.html" class="text-gray-900 font-medium text-xl hidden md:block">Marketplace</a>
+    <div class="flex-1 w-full max-w-3xl relative">
+      <div class="relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
+        <input type="text" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" placeholder="Search for AI Accelerators, GPUS & Tech">
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"><i class="fas fa-microphone text-gray-500"></i></div>
       </div>
     </div>
+    <div class="flex items-center gap-3">
+      <button class="text-gray-400 hover:text-white"><i class="fas fa-plus text-xl"></i></button>
+    </div>
+  </div>
+</div>
 
-    <!-- Profile info row -->
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="pt-16 md:pt-20 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h1 id="profileUsername" class="text-2xl font-bold text-gray-900">Anonymous</h1>
-          <p id="profileJoinDate" class="text-gray-400 text-sm mt-0.5">Joined on 01/01/01</p>
-          <div class="flex items-center gap-6 mt-3">
-            <div class="text-center">
-              <span id="followersCount" class="text-lg font-bold text-gray-900 block">0</span>
-              <span class="text-xs text-gray-400">Followers</span>
-            </div>
-            <div class="text-center">
-              <span id="followingCount" class="text-lg font-bold text-gray-900 block">0</span>
-              <span class="text-xs text-gray-400">Following</span>
-            </div>
-          </div>
-          <div class="mt-3" id="bioSection">
-            <p id="profileBio" class="text-gray-500 text-sm italic">No bio yet.</p>
-          </div>
-          <button onclick="toggleBioEdit()" class="mt-2 text-cyan-600 text-sm font-semibold hover:underline flex items-center gap-1">
-            <i class="fas fa-pen text-xs"></i> Edit Bio
-          </button>
-          <div id="bioEditArea" class="hidden mt-2">
-            <textarea id="bioInput" rows="3" maxlength="300" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400" placeholder="Tell the community about yourself..."></textarea>
-            <div class="flex gap-2 mt-2">
-              <button onclick="saveBio()" class="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded text-sm font-semibold">Save</button>
-              <button onclick="toggleBioEdit()" class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-sm">Cancel</button>
-            </div>
-          </div>
-        </div>
-        <div class="flex flex-col items-end gap-2 mt-2">
-          <a id="myDashboardBtn" href="seller-dashboard.html" class="hidden inline-block px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold">
-            <i class="fas fa-tachometer-alt mr-1"></i> My Dashboard
-          </a>
-          <div id="sellerBadge" class="hidden">
-            <span class="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-              <i class="fas fa-check-circle"></i> Verified Seller
-            </span>
-          </div>
-          <div id="notSellerNotice">
-            <a href="seller-signup.html" class="inline-block px-4 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 rounded-lg text-sm font-semibold">
-              <i class="fas fa-store mr-1"></i> Become a Seller
-            </a>
-          </div>
-        </div>
+<!-- Main Content -->
+<main class="flex-1 bg-gray-50">
+
+  <!-- Page sub-header -->
+  <div class="bg-white border-b border-gray-200 px-6 py-3">
+    <nav class="text-xs text-gray-400">
+      <a href="index.html" class="hover:text-cyan-500">Home</a><span class="mx-1">/</span>
+      <a href="account-details.html" class="hover:text-cyan-500">Account</a><span class="mx-1">/</span>
+      <span class="text-cyan-600">Academic Info</span>
+    </nav>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex gap-5 items-start">
+    <!-- ── Left Sidebar ── -->
+    <aside class="w-60 flex-shrink-0">
+
+      <div id="tyoUserGreeting" class="hidden bg-white border border-gray-200 rounded-lg px-4 py-3 mb-3">
+        <p class="text-sm font-bold text-gray-800">Hi, <span id="tyoUsername">there</span></p>
+        <p id="tyoMemberDays" class="text-xs text-gray-500 mt-0.5"></p>
       </div>
 
-      <!-- Anonymous user notice -->
-      <div id="anonymousNotice" class="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-        <i class="fas fa-user-secret mr-2"></i>
-        You are currently set as <strong>Anonymous User</strong> and others cannot view your profile pages. If you want to display your profile page to others, you can change the display setting from Anonymous User to Real Name User.
-        <button onclick="switchTab('settings')" class="ml-2 text-amber-700 underline font-semibold hover:text-amber-900">Change in Settings →</button>
-      </div>
-
-      <!-- Tabs -->
-      <div class="mt-8 border-b border-gray-200">
-        <nav class="flex gap-1 overflow-x-auto scrollbar-hide" id="profileTabs">
-          <button onclick="switchTab('gamerProfile')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap active-tab">Gamer Community Profile</button>
-          <button onclick="switchTab('profile')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap">Account &amp; Password</button>
-          <button onclick="switchTab('purchases')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap">Purchases</button>
-          <button onclick="switchTab('seller')" id="sellerTab" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap hidden">Seller</button>
-          <button onclick="switchTab('settings')" class="tab-btn px-5 py-3 text-sm font-semibold text-gray-500 border-b-2 border-transparent hover:text-gray-900 whitespace-nowrap">Settings</button>
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Orders</span>
+        </div>
+        <nav>
+          <a href="order-history.html" class="tyo-nav-link"><i class="fas fa-box-open w-4 text-center text-cyan-500"></i>Order History</a>
+          <a href="digital-orders.html" class="tyo-nav-link"><i class="fas fa-file-alt w-4 text-center text-cyan-500"></i>Digital Orders</a>
+          <a href="subscription-orders.html" class="tyo-nav-link"><i class="fas fa-sync-alt w-4 text-center text-cyan-500"></i>Subscription Orders</a>
+          <a href="returns-history.html" class="tyo-nav-link"><i class="fas fa-exchange-alt w-4 text-center text-gray-400"></i>Return Status / History</a>
+          <a href="marketplace-claims.html" class="tyo-nav-link"><i class="fas fa-store w-4 text-center text-cyan-500"></i>Marketplace Claim History</a>
+          <a href="trade-in-orders.html" class="tyo-nav-link"><i class="fas fa-random w-4 text-center text-cyan-500"></i>Trade-in Orders</a>
         </nav>
       </div>
 
-      <!-- Gamer Community Profile Tab -->
-      <div id="gamerProfile" class="tab-content active mt-8">
-        <!-- Sub-tabs: Showcase, Wish Lists, Gallery, Product Reviews, Seller Reviews -->
-        <div class="flex gap-4 border-b border-gray-100 mb-6 overflow-x-auto scrollbar-hide">
-          <button onclick="switchGamerTab('showcase')" class="gamer-tab-btn pb-3 text-sm font-semibold text-cyan-600 border-b-2 border-cyan-500 whitespace-nowrap">Showcase</button>
-          <button onclick="switchGamerTab('wishLists')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Public Wish Lists</button>
-          <button onclick="switchGamerTab('gallery')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Gallery</button>
-          <button onclick="switchGamerTab('productReviews')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Product Reviews</button>
-          <button onclick="switchGamerTab('sellerReviews')" class="gamer-tab-btn pb-3 text-sm font-semibold text-gray-400 border-b-2 border-transparent whitespace-nowrap hover:text-gray-700">Seller Reviews</button>
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Offers</span>
         </div>
-
-        <!-- Showcase sub-tab -->
-        <div id="gamerTab-showcase" class="gamer-tab-content">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-gray-900 text-base">Showcase</h3>
-            <a href="build-showcase.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a>
-          </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-desktop text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">0 lists</p>
-            <p class="text-gray-400 text-sm mb-4">Showcase Your Build</p>
-            <a href="build-showcase.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Add a Build</a>
-          </div>
-        </div>
-
-        <!-- Public Wish Lists sub-tab -->
-        <div id="gamerTab-wishLists" class="gamer-tab-content hidden">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-gray-900 text-base">Public Wish Lists</h3>
-            <a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">Manage Your Wish Lists</a>
-          </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-heart text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-400 text-sm mb-4">No public wish lists yet.</p>
-            <a href="wish-lists.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Create a Wish List</a>
-          </div>
-          <div class="mt-4 text-right"><a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a></div>
-        </div>
-
-        <!-- Gallery sub-tab -->
-        <div id="gamerTab-gallery" class="gamer-tab-content hidden">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-gray-900 text-base">Gallery</h3>
-            <button onclick="adShowAddGalleryModal()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold transition-colors">
-              <i class="fas fa-plus text-xs"></i> Add Photo
-            </button>
-          </div>
-          <div id="galleryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4"></div>
-          <div id="galleryEmpty" class="hidden bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-photo-video text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">No photos yet</p>
-            <p class="text-gray-400 text-sm mb-4">Share your setup photos and tech builds.</p>
-            <button onclick="adShowAddGalleryModal()" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold transition-colors">
-              <i class="fas fa-plus mr-1"></i> Add Your First Photo
-            </button>
-          </div>
-        </div>
-
-        <!-- Add Gallery Photo Modal -->
-        <div id="adGalleryModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
-          <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-base font-bold text-gray-900">Add Photo to Gallery</h2>
-              <button onclick="adCloseGalleryModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
-            </div>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Image URL <span class="text-red-500">*</span></label>
-                <input type="url" id="adGalleryUrl" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 bg-gray-50" placeholder="https://...">
-                <p class="text-xs text-gray-400 mt-1">Paste a direct image link (JPG, PNG, GIF, WebP)</p>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Caption (optional)</label>
-                <input type="text" id="adGalleryCaption" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 bg-gray-50" placeholder="My gaming setup..." maxlength="200">
-              </div>
-            </div>
-            <div id="adGalleryMsg" class="hidden mt-3 text-sm"></div>
-            <div class="flex gap-3 justify-end mt-5">
-              <button onclick="adCloseGalleryModal()" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
-              <button onclick="adSaveGalleryPhoto()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-lg transition-colors">Add Photo</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Product Reviews sub-tab -->
-        <div id="gamerTab-productReviews" class="gamer-tab-content hidden">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-gray-900 text-base">Product Reviews</h3>
-          </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-star text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p>
-            <p class="text-gray-400 text-sm mb-4">You haven't reviewed any products yet.</p>
-            <a href="index.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Products</a>
-          </div>
-        </div>
-
-        <!-- Seller Reviews sub-tab -->
-        <div id="gamerTab-sellerReviews" class="gamer-tab-content hidden">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-gray-900 text-base">Seller Reviews</h3>
-          </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-store text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p>
-            <p class="text-gray-400 text-sm mb-4">You haven't reviewed any sellers yet.</p>
-            <a href="index.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Sellers</a>
-          </div>
-        </div>
-
+        <nav>
+          <a href="deals-promotions.html" class="tyo-nav-link"><i class="fas fa-tag w-4 text-center text-gray-400"></i>Deals &amp; Promotions</a>
+        </nav>
       </div>
 
-      <!-- Account & Password Tab -->
-      <div id="profile" class="tab-content hidden mt-8">
-        <div class="profile-section">
-          <h3 class="section-title">Personal Information</h3>
-          <div class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="text-gray-400 text-sm">Username</label>
-                <input type="text" id="editUsername" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400">
-              </div>
-              <div>
-                <label class="text-gray-400 text-sm">Email Address</label>
-                <input type="email" id="editEmail" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400">
-              </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div>
-                <label class="text-gray-400 text-sm">Phone</label>
-                <input type="text" id="editPhone" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="Optional">
-              </div>
-              <div>
-                <label class="text-gray-400 text-sm">Account Type</label>
-                <input type="text" id="editAccountType" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none" readonly>
-              </div>
-            </div>
-            <div class="mt-4">
-              <button onclick="saveProfile()" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Save Profile</button>
-            </div>
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Manage Account</span>
+        </div>
+        <nav>
+          <a href="account-details.html" class="tyo-nav-link"><i class="fas fa-cog w-4 text-center text-gray-400"></i>Account Settings</a>
+          <a href="address-book.html" class="tyo-nav-link"><i class="fas fa-address-book w-4 text-center text-cyan-500"></i>Address Book</a>
+          <a href="payment-options.html" class="tyo-nav-link"><i class="fas fa-credit-card w-4 text-center text-cyan-500"></i>Payment Options</a>
+          <a href="gift-cards.html" class="tyo-nav-link"><i class="fas fa-gift w-4 text-center text-cyan-500"></i>Gift Cards</a>
+          <a href="academic-info.html" class="tyo-nav-link active"><i class="fas fa-graduation-cap w-4 text-center text-cyan-500"></i>Academic Info</a>
+          <a href="manage-reviews.html" class="tyo-nav-link"><i class="fas fa-star-half-alt w-4 text-center text-cyan-500"></i>Manage Reviews</a>
+          <a href="tax-exemption.html" class="tyo-nav-link"><i class="fas fa-file-invoice w-4 text-center text-cyan-500"></i>Tax Exemption Application</a>
+        </nav>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-lg mb-2 overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-gray-100 bg-gray-50">
+          <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">Notifications</span>
+        </div>
+        <nav>
+          <a href="messages.html" class="tyo-nav-link"><i class="fas fa-envelope w-4 text-center text-gray-400"></i>Message Center</a>
+          <a href="email-notifications.html" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Email Notifications</a>
+          <a href="track-your-order.html" class="tyo-nav-link"><i class="fas fa-mobile-alt w-4 text-center text-gray-400"></i>Mobile Text Alert</a>
+          <a href="email-notifications.html" class="tyo-nav-link"><i class="fas fa-bell w-4 text-center text-gray-400"></i>Auto Notify</a>
+          <a href="price-alerts.html" class="tyo-nav-link"><i class="fas fa-chart-line w-4 text-center text-cyan-500"></i>Price Alerts</a>
+        </nav>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <a href="#" id="tyoSignOut" class="tyo-nav-link text-red-600 hover:bg-red-50 hover:text-red-700">
+          <i class="fas fa-sign-out-alt w-4 text-center"></i>Sign Out
+        </a>
+      </div>
+
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 min-w-0">
+
+      <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4">
+        <div class="flex items-center justify-between mb-1">
+          <h1 class="text-xl font-bold text-gray-900"><i class="fas fa-graduation-cap text-purple-600 mr-2"></i>Academic Info</h1>
+        </div>
+        <p class="text-sm text-gray-500">Verify your academic status to unlock exclusive student and faculty discounts.</p>
+      </div>
+      <div id="aiStatusBanner" class="hidden mb-4"></div>
+      <div class="bg-white border border-gray-200 rounded-lg px-5 py-5">
+        <h2 class="text-base font-bold text-gray-800 mb-4">Academic Verification</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Academic Role</label>
+            <select id="aiRole" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+              <option value="">Select your role</option>
+              <option value="student">Student</option>
+              <option value="faculty">Faculty / Staff</option>
+              <option value="researcher">Researcher</option>
+              <option value="alumni">Alumni</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Institution Name</label>
+            <input id="aiInstitution" type="text" placeholder="e.g. MIT, Stanford University" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Academic Email</label>
+            <input id="aiEmail" type="email" placeholder="you@university.edu" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+            <p class="text-xs text-gray-400 mt-1">Use your .edu or institutional email for automatic verification.</p>
+          </div>
+          <div id="aiGradDiv">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Expected Graduation Year</label>
+            <input id="aiGradYear" type="number" min="2024" max="2035" placeholder="e.g. 2026" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
           </div>
         </div>
-
-        <div class="profile-section mt-6">
-          <h3 class="section-title">Change Password</h3>
-          <div class="space-y-4 max-w-md">
-            <div>
-              <label class="text-gray-400 text-sm">Current Password</label>
-              <input type="password" id="currentPassword" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="••••••••">
-            </div>
-            <div>
-              <label class="text-gray-400 text-sm">New Password</label>
-              <input type="password" id="newPassword" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="••••••••">
-            </div>
-            <div>
-              <label class="text-gray-400 text-sm">Confirm Password</label>
-              <input type="password" id="confirmPassword" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400" placeholder="••••••••">
-            </div>
-            <button onclick="changePassword()" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Update Password</button>
-          </div>
+        <div id="aiError" class="hidden mt-3 text-red-600 text-xs"></div>
+        <div class="flex gap-3 justify-end mt-5">
+          <button id="aiSaveBtn" onclick="aiSave()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-6 py-2 rounded-md transition-colors">Save Academic Info</button>
+        </div>
+      </div>
+      <div class="mt-4 bg-purple-50 border border-purple-200 rounded-lg px-5 py-4 flex gap-3 items-start">
+        <i class="fas fa-info-circle text-purple-500 mt-0.5 flex-shrink-0"></i>
+        <div>
+          <p class="text-sm font-semibold text-purple-800 mb-0.5">How Academic Discounts Work</p>
+          <p class="text-sm text-purple-700">After submitting your info, our team will verify your status within 1&ndash;3 business days. Verified members receive up to 15% off eligible hardware purchases.</p>
         </div>
       </div>
 
-      <!-- Purchases Tab -->
-      <div id="purchases" class="tab-content hidden mt-8">
-        <div class="profile-section">
-          <h3 class="section-title">Order History</h3>
-          <div id="orderHistory" class="space-y-4">
-            <div class="text-center py-10">
-              <i class="fas fa-inbox text-4xl text-gray-300 mb-3 block"></i>
-              <p class="text-gray-400 text-sm">No purchase history yet</p>
-            </div>
-          </div>
-          <div class="mt-4 border-t border-gray-100 pt-4">
-            <label class="text-gray-400 text-sm">Upload Purchase File / Receipt</label>
-            <input type="file" id="purchaseFileInput" class="w-full mt-2 text-sm" onchange="uploadPurchaseFile(event)">
-            <div id="purchaseFilesList" class="mt-3 text-sm text-gray-300"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Seller Tab (Hidden by default) -->
-      <div id="seller" class="tab-content hidden mt-8">
-        <div class="profile-section">
-          <h3 class="section-title">Shop Information</h3>
-          <div id="shopInfo" class="space-y-4 max-w-xl">
-            <div>
-              <label class="text-gray-400 text-sm">Shop Name</label>
-              <input type="text" id="shopName" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 text-sm focus:outline-none focus:border-cyan-400">
-            </div>
-            <div>
-              <label class="text-gray-400 text-sm">Shop Description</label>
-              <textarea id="shopDescription" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded px-3 py-2.5 mt-1 h-24 text-sm focus:outline-none focus:border-cyan-400"></textarea>
-            </div>
-            <button onclick="updateShopInfo()" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Update Shop Info</button>
-            <div class="mt-4">
-              <label class="text-gray-400 text-sm">Upload Shop Image / Files</label>
-              <input type="file" id="shopFileInput" class="w-full mt-2 text-sm" onchange="uploadShopFile(event)">
-              <div id="shopFilesList" class="mt-3 text-sm text-gray-300"></div>
-            </div>
-          </div>
-          <div class="mt-6 pt-6 border-t border-gray-100">
-            <h3 class="section-title">Sales Stats</h3>
-            <div class="grid grid-cols-2 gap-4 max-w-xs">
-              <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
-                <p class="text-gray-400 text-xs">Total Sales</p>
-                <p id="totalSales" class="text-2xl font-bold text-cyan-500 mt-0.5">$0.00</p>
-              </div>
-              <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
-                <p class="text-gray-400 text-xs">Avg Rating</p>
-                <p id="avgRating" class="text-2xl font-bold text-cyan-500 mt-0.5">N/A</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Settings Tab -->
-      <div id="settings" class="tab-content hidden mt-8">
-        <div class="profile-section max-w-xl">
-          <h3 class="section-title">Display Settings</h3>
-          <div class="space-y-4 mb-6">
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input type="radio" name="displayMode" value="anonymous" id="displayAnonymous" class="w-4 h-4" checked>
-              <div>
-                <span class="font-semibold text-gray-800 text-sm">Anonymous User</span>
-                <p class="text-xs text-gray-500 mt-0.5">Others cannot see your profile page.</p>
-              </div>
-            </label>
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input type="radio" name="displayMode" value="realname" id="displayRealName" class="w-4 h-4">
-              <div>
-                <span class="font-semibold text-gray-800 text-sm">Real Name User</span>
-                <p class="text-xs text-gray-500 mt-0.5">Your profile page is visible to others.</p>
-              </div>
-            </label>
-          </div>
-          <button onclick="saveDisplaySetting()" class="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Save Setting</button>
-        </div>
-
-        <div class="profile-section mt-6 max-w-xl">
-          <h3 class="section-title">Notification Preferences</h3>
-          <div class="space-y-3">
-            <label class="flex items-center cursor-pointer gap-3">
-              <input type="checkbox" id="emailNotifications" class="w-4 h-4 rounded" checked>
-              <span class="text-sm text-gray-700">Email notifications for new messages</span>
-            </label>
-            <label class="flex items-center cursor-pointer gap-3">
-              <input type="checkbox" id="orderUpdates" class="w-4 h-4 rounded" checked>
-              <span class="text-sm text-gray-700">Order status updates</span>
-            </label>
-            <label class="flex items-center cursor-pointer gap-3">
-              <input type="checkbox" id="promotions" class="w-4 h-4 rounded">
-              <span class="text-sm text-gray-700">Promotional emails</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="profile-section mt-6 max-w-xl">
-          <h3 class="text-red-500 font-semibold text-base mb-4">Danger Zone</h3>
-          <div class="flex flex-wrap gap-3">
-            <button onclick="logout()" class="px-5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-sm font-semibold">
-              <i class="fas fa-sign-out-alt mr-1"></i> Log Out
-            </button>
-            <button onclick="deactivateAccount()" class="px-5 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-lg text-sm font-semibold">
-              <i class="fas fa-user-slash mr-1"></i> Deactivate Account
-            </button>
-            <button onclick="deleteAccount()" class="px-5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-300 rounded-lg text-sm font-semibold">
-              <i class="fas fa-trash mr-1"></i> Delete Account
-            </button>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /max-w-5xl -->
-  </div><!-- /loggedInContent -->
+    </div>
+  </div>
 </main>
 
-    <!-- Chat Bubble -->
-    <div class="fixed bottom-6 right-6 z-50">
-        <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
-            <i class="fas fa-comment-dots text-3xl"></i>
-        </a>
-    </div>
+<!-- Chat Bubble -->
+<div class="fixed bottom-6 right-6 z-50">
+  <button class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14"><i class="fas fa-comment-dots text-3xl"></i></button>
+</div>
 
-<script src="notifications.js"></script>
-<script src="session.js"></script>
 <script>
-  const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  let _profileData = null;
-  let _sellerData = null;
-
-  function checkAuth() {
-    if (!ZrxSession.isLoggedIn()) {
-      document.getElementById('notLoggedIn').classList.remove('hidden');
-      document.getElementById('loggedInContent').classList.add('hidden');
-      return false;
-    }
-    document.getElementById('loggedInContent').classList.remove('hidden');
-    loadAccountData();
-    return true;
-  }
-
-  async function loadAccountData() {
-    try {
-      const profileRes = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', { credentials: 'include' });
-      if (!profileRes.ok) {
-        document.getElementById('notLoggedIn').classList.remove('hidden');
-        document.getElementById('loggedInContent').classList.add('hidden');
-        return;
-      }
-      _profileData = await profileRes.json();
-
-      const firstName = _profileData.firstName || '';
-      const lastName = _profileData.lastName || '';
-      const fullName = (firstName + ' ' + lastName).trim() || _profileData.email;
-
-      document.getElementById('profileUsername').textContent = fullName || 'Anonymous';
-      document.getElementById('editUsername').value = fullName;
-      document.getElementById('editEmail').value = _profileData.email || '';
-      document.getElementById('editPhone').value = _profileData.phone || '';
-      document.getElementById('editAccountType').value = _profileData.isSeller ? 'Seller' : 'Buyer';
-
-      const joinDate = _profileData.createdAt ? new Date(_profileData.createdAt).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit',year:'2-digit'}) : '01/01/01';
-      document.getElementById('profileJoinDate').textContent = 'Joined on ' + joinDate;
-
-      if (_profileData.bio) {
-        document.getElementById('profileBio').textContent = _profileData.bio;
-        document.getElementById('bioInput').value = _profileData.bio;
-      }
-
-      if (_profileData.profileImage) {
-        document.getElementById('profileImage').src = _profileData.profileImage;
-      }
-      if (_profileData.coverImage) {
-        const ci = document.getElementById('coverImage');
-        ci.src = _profileData.coverImage;
-        ci.classList.remove('hidden');
-      }
-
-      // Show/hide anonymous notice based on displayMode
-      if (_profileData.displayMode === 'realname') {
-        const notice = document.getElementById('anonymousNotice');
-        if (notice) notice.classList.add('hidden');
-        const radios = document.querySelectorAll('[name="displayMode"]');
-        radios.forEach(r => { r.checked = (r.value === 'realname'); });
-      }
-    } catch (e) {
-      console.error('Failed to load profile:', e);
-    }
-
-    // Cart badge
-    try {
-      const cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
-      if (cartRes.ok) {
-        const cartData = await cartRes.json();
-        const count = (cartData.items || []).length;
-        const badge = document.getElementById('cartBadge');
-        if (badge && count > 0) { badge.textContent = count; badge.classList.remove('hidden'); }
-      }
-    } catch (_) {}
-
-    // Check if seller
-    try {
-      const sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', { credentials: 'include' });
-      if (sellerRes.ok) {
-        _sellerData = await sellerRes.json();
-        document.getElementById('sellerBadge').classList.remove('hidden');
-        document.getElementById('notSellerNotice').classList.add('hidden');
-        document.getElementById('sellerTab').classList.remove('hidden');
-
-        document.getElementById('shopName').value = _sellerData.shopName || '';
-        document.getElementById('shopDescription').value = _sellerData.shopDescription || '';
-        document.getElementById('totalSales').textContent = '$' + (_sellerData.totalSales || 0).toFixed(2);
-        document.getElementById('avgRating').textContent = _sellerData.rating ? _sellerData.rating.toFixed(1) + '★' : 'N/A';
-
-        const dashBtn = document.getElementById('myDashboardBtn');
-        if (dashBtn) dashBtn.classList.remove('hidden');
-      }
-    } catch (_) {}
-  }
-
-  async function handleProfileImageUpload(e) {
-    const file = e.target.files[0]; if (!file) return;
-    const fileInput = e.target;
-    const reader = new FileReader();
-    reader.onload = async function(ev) {
-      const dataUrl = ev.target.result;
-      document.getElementById('profileImage').src = dataUrl;
-      if (ZrxSession.isLoggedIn()) {
-        try {
-          const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile-picture', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ profileImage: dataUrl })
-          });
-          if (res.ok) {
-            ZrxNotify.showNotification('Profile picture updated!', 'success');
-            const headerImg = document.getElementById('userProfileImage');
-            if (headerImg) headerImg.src = dataUrl;
-            fileInput.value = '';
-          } else {
-            const err = await res.json();
-            ZrxNotify.showNotification('Upload failed: ' + (err.error || 'Unknown error'), 'error');
-          }
-        } catch (err) {
-          ZrxNotify.showNotification('Upload failed: network error', 'error');
-        }
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  async function handleCoverImageUpload(e) {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async function(ev) {
-      const dataUrl = ev.target.result;
-      const ci = document.getElementById('coverImage');
-      ci.src = dataUrl;
-      ci.classList.remove('hidden');
-      if (ZrxSession.isLoggedIn()) {
-        try {
-          const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ coverImage: dataUrl })
-          });
-          if (res.ok) {
-            ZrxNotify.showNotification('Cover photo updated!', 'success');
-          }
-        } catch (_) {}
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function toggleBioEdit() {
-    const area = document.getElementById('bioEditArea');
-    area.classList.toggle('hidden');
-  }
-
-  async function saveBio() {
-    const bio = document.getElementById('bioInput').value.trim();
-    try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ bio })
-      });
-      if (res.ok) {
-        document.getElementById('profileBio').textContent = bio || 'No bio yet.';
-        document.getElementById('bioEditArea').classList.add('hidden');
-        ZrxNotify.showNotification('Bio saved!', 'success');
-      }
-    } catch (_) {
-      ZrxNotify.showNotification('Network error saving bio.', 'error');
-    }
-  }
-
-  function uploadPurchaseFile(e) {
-    ZrxNotify.showNotification('File uploads are being migrated to cloud storage. Please check back soon.', 'info');
-    e.target.value = '';
-  }
-
-  function renderPurchaseFiles() {
-    const el = document.getElementById('purchaseFilesList');
+  function toggleDropdown(id) {
+    var el = document.getElementById(id);
     if (!el) return;
-    el.innerHTML = '<div class="text-gray-400 text-xs">Purchase files are managed server-side. Contact support for your downloads.</div>';
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) {
+      if (d.id !== id) d.classList.remove('active');
+    });
+    el.classList.toggle('active');
   }
-
-  function switchTab(tab) {
-    document.querySelectorAll('.tab-content').forEach(el => {
-      el.classList.remove('active');
-      el.classList.add('hidden');
+  document.addEventListener('click', function(e) {
+    document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
+      if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
     });
-    document.querySelectorAll('.tab-btn').forEach(el => {
-      el.classList.remove('border-cyan-500', 'text-gray-900');
-      el.classList.add('border-transparent', 'text-gray-500');
-    });
-    const tabContent = document.getElementById(tab);
-    if (tabContent) { tabContent.classList.add('active'); tabContent.classList.remove('hidden'); }
-    document.querySelectorAll('.tab-btn').forEach(function(btn) {
-      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + tab + "'")) {
-        btn.classList.remove('border-transparent', 'text-gray-500');
-        btn.classList.add('border-cyan-500', 'text-gray-900');
-      }
-    });
-  }
-
-  function switchGamerTab(tab) {
-    document.querySelectorAll('.gamer-tab-content').forEach(el => {
-      el.classList.remove('active');
-      el.classList.add('hidden');
-    });
-    document.querySelectorAll('.gamer-tab-btn').forEach(el => {
-      el.classList.remove('text-cyan-600', 'border-cyan-500');
-      el.classList.add('text-gray-400', 'border-transparent');
-    });
-    const content = document.getElementById('gamerTab-' + tab);
-    if (content) { content.classList.add('active'); content.classList.remove('hidden'); }
-    document.querySelectorAll('.gamer-tab-btn').forEach(function(btn) {
-      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes("'" + tab + "'")) {
-        btn.classList.remove('text-gray-400', 'border-transparent');
-        btn.classList.add('text-cyan-600', 'border-cyan-500');
-      }
-    });
-  }
-
-  async function changePassword() {
-    const currentPassword = document.getElementById('currentPassword').value;
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      ZrxNotify.showNotification('Please fill in all fields', 'error'); return;
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
     }
-    if (newPassword !== confirmPassword) {
-      ZrxNotify.showNotification('New passwords do not match', 'error'); return;
-    }
-    try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ currentPassword, newPassword })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        document.getElementById('currentPassword').value = '';
-        document.getElementById('newPassword').value = '';
-        document.getElementById('confirmPassword').value = '';
-        ZrxNotify.showNotification('Password updated successfully!', 'success');
-      } else {
-        ZrxNotify.showNotification(data.error || 'Failed to update password', 'error');
-      }
-    } catch (_) {
-      ZrxNotify.showNotification('Network error. Please try again.', 'error');
-    }
-  }
-
-  async function updateShopInfo() {
-    if (!_sellerData) { ZrxNotify.showNotification('You are not a seller', 'error'); return; }
-    const shopName = document.getElementById('shopName').value;
-    const shopDescription = document.getElementById('shopDescription').value;
-    try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ shopName, shopDescription })
-      });
-      if (res.ok) {
-        ZrxNotify.showNotification('Shop information updated!', 'success');
-      } else {
-        const data = await res.json();
-        ZrxNotify.showNotification(data.error || 'Failed to update shop info', 'error');
-      }
-    } catch (_) {
-      ZrxNotify.showNotification('Network error. Please try again.', 'error');
-    }
-  }
-
-  function uploadShopFile(e) {
-    ZrxNotify.showNotification('File uploads are being migrated to cloud storage. Please check back soon.', 'info');
-    e.target.value = '';
-  }
-
-  function logout() {
-    ZrxSession.logout(function() { window.location.href = 'login-register.html'; });
-  }
-
-  async function deleteAccount() {
-    ZrxNotify.showConfirm('Are you sure? This action cannot be undone.', async function() {
-      try {
-        const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', { method: 'DELETE', credentials: 'include' });
-        if (res.ok) {
-          ZrxNotify.showNotification('Account deleted', 'success');
-          window.location.href = 'index.html';
-        } else {
-          const data = await res.json();
-          ZrxNotify.showNotification(data.error || 'Failed to delete account', 'error');
-        }
-      } catch (_) {
-        ZrxNotify.showNotification('Network error. Please try again.', 'error');
-      }
-    });
-  }
-
-  async function saveProfile() {
-    if (!ZrxSession.isLoggedIn()) { ZrxNotify.showNotification('Not logged in', 'info'); return; }
-    const nameParts = document.getElementById('editUsername').value.trim().split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    const phone = document.getElementById('editPhone').value.trim();
-    try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ firstName, lastName, phone })
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        const fullName = ((updated.firstName || '') + ' ' + (updated.lastName || '')).trim() || updated.email;
-        document.getElementById('profileUsername').textContent = fullName || 'Anonymous';
-        ZrxNotify.showNotification('Profile saved', 'success');
-      } else {
-        const data = await res.json();
-        ZrxNotify.showNotification(data.error || 'Failed to save profile', 'error');
-      }
-    } catch (_) {
-      ZrxNotify.showNotification('Network error. Please try again.', 'error');
-    }
-  }
-
-  async function deactivateAccount() {
-    ZrxNotify.showConfirm('Deactivate your account? You can reactivate by contacting support.', async function() {
-      ZrxSession.logout(function() {
-        ZrxNotify.showNotification('Account deactivated', 'success');
-        window.location.href = 'index.html';
-      });
-    });
-  }
-
-  function saveDisplaySetting() {
-    const mode = document.querySelector('[name="displayMode"]:checked').value;
-    const notice = document.getElementById('anonymousNotice');
-    if (mode === 'realname') {
-      if (notice) notice.classList.add('hidden');
-      ZrxNotify.showNotification('Display mode set to Real Name.', 'success');
-    } else {
-      if (notice) notice.classList.remove('hidden');
-      ZrxNotify.showNotification('Display mode set to Anonymous.', 'success');
-    }
-    // Persist via API if available
-    if (ZrxSession.isLoggedIn()) {
-      ZrxSession.fetch(BACKEND_URL + '/api/user/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ displayMode: mode })
-      }).catch(function(){});
-    }
-  }
-
-  window.addEventListener('load', function() {
-    checkAuth();
-    renderPurchaseFiles();
-    // Set gamerProfile as default active gamer tab
-    const firstGamerContent = document.getElementById('gamerTab-showcase');
-    if (firstGamerContent) { firstGamerContent.classList.add('active'); firstGamerContent.classList.remove('hidden'); }
   });
 </script>
+
 <script src="profile-picture.js"></script>
 
-
-    <!-- Dropdown toggle script: supports hover (CSS) and click (JS) -->
-    <script>
-        function toggleDropdown(id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            // Close other dropdowns
-            document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) {
-                if (d.id !== id) d.classList.remove('active');
-            });
-            el.classList.toggle('active');
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(e) {
-            document.querySelectorAll('.nav-dropdown-trigger').forEach(function(dropdown) {
-                if (!dropdown.contains(e.target)) dropdown.classList.remove('active');
-            });
-        });
-
-        // Close all on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.nav-dropdown-trigger').forEach(function(d) { d.classList.remove('active'); });
-            }
-        });
-    </script>
-
+    <script src="notifications.js"></script>
+    <script src="session.js"></script>
     <script>
         // Header account/cart wiring
         (function(){
@@ -1196,114 +590,70 @@
     </script>
 
 <script>
-  const AD_BACKEND = 'https://zorexium-backend.onrender.com';
-  var adGalleryItems = [];
-
-  async function adLoadGallery() {
-    if (!ZrxSession.isLoggedIn()) return;
-    try {
-      var res = await ZrxSession.fetch(AD_BACKEND + '/api/user/gallery');
-      if (!res.ok) return;
-      adGalleryItems = await res.json();
-      adRenderGallery();
-    } catch (_) {}
+(function(){
+  var BACKEND = 'https://zorexium-backend.onrender.com';
+  if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) {
+    window.location.href = 'login-register.html'; return;
   }
+  var greetEl = document.getElementById('tyoUserGreeting');
+  if (greetEl) greetEl.classList.remove('hidden');
+  var user = ZrxSession.getUser();
+  var nameEl = document.getElementById('tyoUsername');
+  if (nameEl && user) nameEl.textContent = user.username || user.email || 'there';
+  ZrxSession.fetch(BACKEND + '/api/user/profile', { credentials: 'include' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(p){
+      if (!p) return;
+      if (nameEl && (p.firstName || p.lastName)) nameEl.textContent = ((p.firstName||'') + (p.lastName ? ' '+p.lastName : '')).trim();
+      var dEl = document.getElementById('tyoMemberDays');
+      if (dEl && p.createdAt) { var d = Math.max(0,Math.floor((Date.now()-new Date(p.createdAt).getTime())/86400000)); dEl.textContent = 'Thanks for being a Zorexium customer for '+d+' day'+(d===1?'':'s'); }
+    }).catch(function(){});
+  var so = document.getElementById('tyoSignOut');
+  if (so) so.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ window.location.href='index.html'; }); });
 
-  function adRenderGallery() {
-    var grid = document.getElementById('galleryGrid');
-    var empty = document.getElementById('galleryEmpty');
-    if (!grid) return;
-    if (!adGalleryItems || adGalleryItems.length === 0) {
-      grid.innerHTML = '';
-      if (empty) { empty.classList.remove('hidden'); }
-      return;
-    }
-    if (empty) empty.classList.add('hidden');
-    grid.innerHTML = adGalleryItems.map(function(item) {
-      return '<div class="relative group rounded-lg overflow-hidden aspect-square bg-gray-100 border border-gray-200">'
-        + '<img src="' + escHtml(item.url) + '" alt="' + escHtml(item.caption || '') + '" class="w-full h-full object-cover">'
-        + '<div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">'
-        + '<button onclick="adDeleteGalleryItem(\'' + item.id + '\')" class="bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs transition-colors"><i class="fas fa-trash"></i></button>'
-        + '</div>'
-        + (item.caption ? '<p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 truncate">' + escHtml(item.caption) + '</p>' : '')
-        + '</div>';
-    }).join('');
-  }
-
-  function escHtml(str) {
-    var d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML;
-  }
-
-  function adShowAddGalleryModal() {
-    var modal = document.getElementById('adGalleryModal');
-    if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
-    document.getElementById('adGalleryUrl').value = '';
-    document.getElementById('adGalleryCaption').value = '';
-    var msg = document.getElementById('adGalleryMsg');
-    if (msg) msg.classList.add('hidden');
-  }
-
-  function adCloseGalleryModal() {
-    var modal = document.getElementById('adGalleryModal');
-    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
-  }
-
-  async function adSaveGalleryPhoto() {
-    var url = (document.getElementById('adGalleryUrl').value || '').trim();
-    var caption = (document.getElementById('adGalleryCaption').value || '').trim();
-    var msgEl = document.getElementById('adGalleryMsg');
-    if (!url || !/^https?:\/\//i.test(url)) {
-      msgEl.textContent = 'Please enter a valid image URL (must start with http:// or https://)';
-      msgEl.className = 'mt-3 text-sm text-red-600';
-      msgEl.classList.remove('hidden');
-      return;
-    }
-    if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
-    try {
-      var res = await ZrxSession.fetch(AD_BACKEND + '/api/user/gallery', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url, caption: caption })
-      });
-      if (res.ok) {
-        adCloseGalleryModal();
-        adLoadGallery();
-        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Photo added to gallery!', 'success');
-      } else {
-        var err = await res.json();
-        msgEl.textContent = err.error || 'Failed to add photo.';
-        msgEl.className = 'mt-3 text-sm text-red-600';
-        msgEl.classList.remove('hidden');
+  var BACKEND = 'https://zorexium-backend.onrender.com';
+  ZrxSession.fetch(BACKEND + '/api/user/preferences', { credentials: 'include' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(prefs){
+      if (!prefs || !prefs.academic) return;
+      var ac = prefs.academic;
+      if (ac.role) document.getElementById('aiRole').value = ac.role;
+      if (ac.institution) document.getElementById('aiInstitution').value = ac.institution;
+      if (ac.email) document.getElementById('aiEmail').value = ac.email;
+      if (ac.gradYear) document.getElementById('aiGradYear').value = ac.gradYear;
+      if (ac.verified) {
+        var b = document.getElementById('aiStatusBanner');
+        b.innerHTML = '<div class="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex gap-3 items-center"><i class="fas fa-check-circle text-green-500"></i><p class="text-sm font-semibold text-green-700">Your academic status is verified. Discounts are active on eligible products.</p></div>';
+        b.classList.remove('hidden');
+      } else if (ac.submitted) {
+        var b2 = document.getElementById('aiStatusBanner');
+        b2.innerHTML = '<div class="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 flex gap-3 items-center"><i class="fas fa-clock text-yellow-500"></i><p class="text-sm font-semibold text-yellow-700">Verification pending. We'll notify you within 1–3 business days.</p></div>';
+        b2.classList.remove('hidden');
       }
-    } catch (e) {
-      msgEl.textContent = 'Error adding photo. Please try again.';
-      msgEl.className = 'mt-3 text-sm text-red-600';
-      msgEl.classList.remove('hidden');
+    }).catch(function(){});
+  window.aiSave = function() {
+    var btn = document.getElementById('aiSaveBtn'), errEl = document.getElementById('aiError');
+    var payload = { academic: {
+      role: document.getElementById('aiRole').value,
+      institution: document.getElementById('aiInstitution').value.trim(),
+      email: document.getElementById('aiEmail').value.trim(),
+      gradYear: document.getElementById('aiGradYear').value,
+      submitted: true
+    }};
+    if (!payload.academic.role || !payload.academic.institution || !payload.academic.email) {
+      errEl.textContent = 'Please fill in all required fields.'; errEl.classList.remove('hidden'); return;
     }
-  }
-
-  async function adDeleteGalleryItem(itemId) {
-    if (!ZrxSession.isLoggedIn()) return;
-    if (!confirm('Remove this photo from your gallery?')) return;
-    try {
-      var res = await ZrxSession.fetch(AD_BACKEND + '/api/user/gallery/' + itemId, { method: 'DELETE' });
-      if (res.ok) { adLoadGallery(); }
-    } catch (_) {}
-  }
-
-  // Load gallery when gallery tab is opened
-  var _origSwitchGamerTab = window.switchGamerTab;
-  window.switchGamerTab = function(tab) {
-    if (_origSwitchGamerTab) _origSwitchGamerTab(tab);
-    if (tab === 'gallery') adLoadGallery();
+    errEl.classList.add('hidden');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    ZrxSession.fetch(BACKEND + '/api/user/preferences', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) })
+      .then(function(r){ return r.ok ? r.json() : r.json().then(function(d){ throw new Error(d.error||'Save failed'); }); })
+      .then(function(){ btn.disabled=false; btn.textContent='Save Academic Info'; ZrxNotify.showNotification('Academic info saved! Verification in progress.','success'); })
+      .catch(function(e){ btn.disabled=false; btn.textContent='Save Academic Info'; errEl.textContent=e.message||'Save failed.'; errEl.classList.remove('hidden'); });
   };
 
-  // Also close gallery modal on backdrop click
-  document.addEventListener('click', function(e) {
-    var modal = document.getElementById('adGalleryModal');
-    if (modal && e.target === modal) adCloseGalleryModal();
-  });
+})();
 </script>
+<script src="open-links-new-tab.js"></script>
+<script src="cookie-consent.js"></script>
 </body>
 </html>
-

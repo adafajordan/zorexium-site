@@ -412,8 +412,8 @@
             <i class="fas fa-undo-alt text-xs"></i> <span id="returnPolicyLine">Free 30-day Returns</span>
           </p>
           <p class="text-gray-500 text-xs mt-1">
-            or as low as <span data-financing-monthly class="font-semibold text-gray-700">$23/mo</span> with financing.
-            <span class="text-gray-400 text-xs">(Financing <span class="bg-gray-100 text-gray-500 text-xs rounded px-1">Coming Soon</span>)</span>
+            or as low as <a href="#" onclick="pdShowFinancingCalc(event)" class="font-semibold text-gray-700 hover:text-cyan-600 hover:underline" data-financing-monthly>$23/mo</a> with financing.
+            <a href="#" onclick="pdShowFinancingCalc(event)" class="text-cyan-600 text-xs hover:underline">Calculate</a>
           </p>
         </div>
 
@@ -432,7 +432,7 @@
             <i class="fas fa-shopping-cart"></i> Add to cart
           </button>
           <button onclick="goToCheckout()"
-            class="flex-1 min-w-28 px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded text-sm transition-colors">
+            class="flex-1 min-w-28 px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-sm transition-colors">
             Buy Now
           </button>
         </div>
@@ -444,7 +444,7 @@
           </div>
           <div class="flex items-center gap-2 text-gray-500">
             <i class="fas fa-map-marker-alt text-gray-300 w-4 text-center"></i>
-            <a href="#" onclick="pdShowLocationComingSoon(event)" class="text-cyan-600 hover:underline">Select delivery location</a>
+            <a href="#" onclick="pdShowLocationPicker(event)" id="pdLocationLink" class="text-cyan-600 hover:underline">Select delivery location</a>
           </div>
           <div class="flex items-center gap-2 text-gray-500">
             <i class="fas fa-clock text-gray-300 w-4 text-center"></i>
@@ -1651,11 +1651,161 @@
         })();
     </script>
     <script src="profile-picture.js"></script>
+<!-- Delivery Location Modal -->
+<div id="pdLocationModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold text-gray-900"><i class="fas fa-map-marker-alt text-cyan-500 mr-2"></i>Delivery Location</h2>
+      <button onclick="pdCloseLocationModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <p class="text-sm text-gray-600 mb-3">Enter your ZIP code to see estimated delivery times and shipping options.</p>
+    <div class="flex gap-2 mb-3">
+      <input type="text" id="pdZipInput" class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 bg-gray-50" placeholder="ZIP / Postal Code" maxlength="10">
+      <button onclick="pdCheckDelivery()" class="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold rounded-lg transition-colors">Check</button>
+    </div>
+    <div id="pdDeliveryResult" class="hidden"></div>
+  </div>
+</div>
+
+<!-- Financing Calculator Modal -->
+<div id="pdFinancingModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold text-gray-900"><i class="fas fa-calculator text-green-500 mr-2"></i>Financing Calculator</h2>
+      <button onclick="pdCloseFinancingModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+      <div class="flex justify-between text-sm mb-2">
+        <span class="text-gray-600">Product Price:</span>
+        <span id="pdFinPrice" class="font-bold text-gray-900">—</span>
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Term (months)</label>
+        <select id="pdFinTerm" onchange="pdCalcFinancing()" class="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-cyan-400 bg-white">
+          <option value="6">6 months</option>
+          <option value="12" selected>12 months</option>
+          <option value="18">18 months</option>
+          <option value="24">24 months</option>
+          <option value="36">36 months</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs font-semibold text-gray-700 mb-1">APR (%)</label>
+        <input type="number" id="pdFinApr" value="19.99" min="0" max="99" step="0.01" oninput="pdCalcFinancing()" class="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-cyan-400 bg-white">
+      </div>
+      <div class="border-t border-gray-200 pt-3">
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-semibold text-gray-700">Monthly Payment:</span>
+          <span id="pdFinMonthly" class="text-xl font-bold text-green-600">—</span>
+        </div>
+        <div class="flex justify-between text-xs text-gray-400 mt-1">
+          <span>Total paid:</span>
+          <span id="pdFinTotal">—</span>
+        </div>
+        <div class="flex justify-between text-xs text-gray-400">
+          <span>Total interest:</span>
+          <span id="pdFinInterest">—</span>
+        </div>
+      </div>
+    </div>
+    <p class="text-xs text-gray-400">This is an estimate only. Actual terms depend on your credit approval and the lender.</p>
+    <div class="mt-4 text-right">
+      <button onclick="pdCloseFinancingModal()" class="px-4 py-2 text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  function pdShowLocationComingSoon(e) {
+  var pdCurrentPrice = 0;
+
+  function pdShowLocationPicker(e) {
     if (e) e.preventDefault();
-    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Delivery location picker coming soon!', 'info');
+    var modal = document.getElementById('pdLocationModal');
+    if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    document.getElementById('pdZipInput').focus();
+    document.getElementById('pdDeliveryResult').classList.add('hidden');
   }
+
+  function pdCloseLocationModal() {
+    var modal = document.getElementById('pdLocationModal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  }
+
+  function pdCheckDelivery() {
+    var zip = (document.getElementById('pdZipInput').value || '').trim();
+    var result = document.getElementById('pdDeliveryResult');
+    if (!zip || zip.length < 4) {
+      result.innerHTML = '<p class="text-sm text-red-500">Please enter a valid ZIP or postal code.</p>';
+      result.classList.remove('hidden');
+      return;
+    }
+    // Simulate delivery estimate based on zip
+    var firstDigit = parseInt(zip[0]) || 5;
+    var days = 2 + (firstDigit % 4);
+    var date = new Date();
+    date.setDate(date.getDate() + days);
+    var dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    result.innerHTML = '<div class="space-y-2 text-sm">'
+      + '<div class="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg p-2.5">'
+      + '<i class="fas fa-shipping-fast text-green-500"></i>'
+      + '<div><p class="font-semibold">FREE Standard Shipping</p><p class="text-xs">Arrives by ' + dateStr + ' (' + days + ' business days)</p></div>'
+      + '</div>'
+      + '<div class="flex items-center gap-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-2.5">'
+      + '<i class="fas fa-bolt text-yellow-500"></i>'
+      + '<div><p class="font-semibold">Express Shipping — $14.99</p><p class="text-xs">Arrives by ' + new Date(Date.now() + 86400000 * 2).toLocaleDateString('en-US', {weekday:'long',month:'short',day:'numeric'}) + ' (2 days)</p></div>'
+      + '</div>'
+      + '</div>';
+    result.classList.remove('hidden');
+    var link = document.getElementById('pdLocationLink');
+    if (link) link.textContent = 'Deliver to ' + zip;
+    setTimeout(pdCloseLocationModal, 2500);
+  }
+
+  function pdShowFinancingCalc(e) {
+    if (e) e.preventDefault();
+    var price = parseFloat((document.getElementById('productPrice') || {}).textContent || '0');
+    pdCurrentPrice = isNaN(price) ? 0 : price;
+    var modal = document.getElementById('pdFinancingModal');
+    if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    document.getElementById('pdFinPrice').textContent = '$' + pdCurrentPrice.toFixed(2);
+    pdCalcFinancing();
+  }
+
+  function pdCloseFinancingModal() {
+    var modal = document.getElementById('pdFinancingModal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  }
+
+  function pdCalcFinancing() {
+    var price = pdCurrentPrice || 0;
+    var term = parseInt(document.getElementById('pdFinTerm').value) || 12;
+    var apr = parseFloat(document.getElementById('pdFinApr').value) || 19.99;
+    var monthlyRate = apr / 100 / 12;
+    var monthly;
+    if (monthlyRate === 0) {
+      monthly = price / term;
+    } else {
+      monthly = price * monthlyRate / (1 - Math.pow(1 + monthlyRate, -term));
+    }
+    var total = monthly * term;
+    var interest = total - price;
+    document.getElementById('pdFinMonthly').textContent = '$' + monthly.toFixed(2) + '/mo';
+    document.getElementById('pdFinTotal').textContent = '$' + total.toFixed(2);
+    document.getElementById('pdFinInterest').textContent = '$' + interest.toFixed(2);
+    // Update the inline financing estimate
+    var finEl = document.querySelector('[data-financing-monthly]');
+    if (finEl) finEl.textContent = '$' + monthly.toFixed(2) + '/mo';
+  }
+
+  document.addEventListener('click', function(e) {
+    var locModal = document.getElementById('pdLocationModal');
+    if (locModal && e.target === locModal) pdCloseLocationModal();
+    var finModal = document.getElementById('pdFinancingModal');
+    if (finModal && e.target === finModal) pdCloseFinancingModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { pdCloseLocationModal(); pdCloseFinancingModal(); }
+  });
 </script>
 </body>
 </html>

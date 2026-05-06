@@ -651,7 +651,25 @@
         : escapeHtml(contentText);
       var mediaHtml = renderPostMedia(post);
       var repliesHtml = replies.map(function(reply) {
-        return '<div class="flex gap-2 group">'
+        var replyLikes = reply.likes || [];
+        var replyLikeCount = replyLikes.length;
+        var replyLiked = !!(currentUserEmail && replyLikes.includes(currentUserEmail));
+        var isReplyOwner = !!(currentUserEmail && currentUserEmail === reply.email);
+        var subreplies = reply.subreplies || [];
+        var subrepliesHtml = subreplies.map(function(sr) {
+          return '<div class="flex gap-2 ml-8 mt-2">'
+            + '<a href="brand-store.html?seller=' + encodeURIComponent(sr.username || sr.email) + '&email=' + encodeURIComponent(sr.email || '') + '">'
+            + '<img src="' + (sr.profileImage || 'https://placehold.co/20x20/e5e7eb/9ca3af?text=U') + '" class="w-5 h-5 rounded-full object-cover flex-shrink-0 mt-0.5 border border-gray-200">'
+            + '</a>'
+            + '<div class="flex-1 min-w-0">'
+            + '<div class="flex items-center gap-1.5 text-xs mb-0.5">'
+            + '<a href="brand-store.html?seller=' + encodeURIComponent(sr.username || sr.email) + '&email=' + encodeURIComponent(sr.email || '') + '" class="text-cyan-600 font-semibold hover:underline">' + escapeHtml(sr.username || sr.email) + '</a>'
+            + '<span class="text-gray-400">' + timeAgo(sr.createdAt) + '</span>'
+            + '</div>'
+            + '<p class="text-sm text-gray-700 leading-relaxed">' + escapeHtml(sr.content) + '</p>'
+            + '</div></div>';
+        }).join('');
+        return '<div class="flex gap-2 group" id="reply-' + (reply.replyId || '') + '">'
           + '<a href="brand-store.html?seller=' + encodeURIComponent(reply.username || reply.email) + '&email=' + encodeURIComponent(reply.email || '') + '">'
           + '<img src="' + (reply.profileImage || 'https://placehold.co/24x24/e5e7eb/9ca3af?text=U') + '" class="w-6 h-6 rounded-full object-cover flex-shrink-0 mt-0.5 border border-gray-200">'
           + '</a>'
@@ -661,6 +679,20 @@
           + '<span class="text-gray-400">' + timeAgo(reply.createdAt) + '</span>'
           + '</div>'
           + '<p class="text-sm text-gray-700 leading-relaxed">' + escapeHtml(reply.content) + '</p>'
+          + '<div class="flex items-center gap-0.5 text-xs text-gray-400 mt-1 -ml-1.5">'
+          + '<button onclick="toggleReplyLike(\'' + post._id + '\',\'' + (reply.replyId || '') + '\')" id="rl-btn-' + (reply.replyId || '') + '" class="flex items-center gap-1 hover:bg-gray-100 px-2 py-1 rounded transition-colors ' + (replyLiked ? 'text-orange-500' : 'hover:text-orange-500') + '">'
+          + '<i id="rl-icon-' + (reply.replyId || '') + '" class="' + (replyLiked ? 'fas' : 'far') + ' fa-heart text-xs"></i>'
+          + '<span id="rl-count-' + (reply.replyId || '') + '">' + (replyLikeCount > 0 ? replyLikeCount : '') + '</span>'
+          + '</button>'
+          + '<button onclick="toggleSubreply(\'' + post._id + '\',\'' + (reply.replyId || '') + '\')" class="flex items-center gap-1 hover:bg-gray-100 px-2 py-1 rounded hover:text-gray-700 transition-colors">'
+          + '<i class="fas fa-reply text-xs"></i> Reply'
+          + '</button>'
+          + '</div>'
+          + subrepliesHtml
+          + '<div id="subreply-form-' + (reply.replyId || '') + '" class="hidden ml-0 mt-2 flex gap-2 items-center">'
+          + '<input type="text" id="subreplyText-' + (reply.replyId || '') + '" class="form-input flex-1 text-xs py-1.5" placeholder="Write a reply..." maxlength="500">'
+          + '<button onclick="submitSubreply(\'' + post._id + '\',\'' + (reply.replyId || '') + '\')" class="bg-[#65a30d] hover:bg-[#4d7c0f] text-white px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors">Reply</button>'
+          + '</div>'
           + '</div></div>';
       }).join('');
 
@@ -759,7 +791,73 @@
     }
   }
 
-  async function submitReply(postId) {
+  async function toggleReplyLike(postId, replyId) {
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
+    if (!replyId) return;
+    var btn = document.getElementById('rl-btn-' + replyId);
+    var icon = document.getElementById('rl-icon-' + replyId);
+    var countEl = document.getElementById('rl-count-' + replyId);
+    if (!btn) return;
+    try {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/replies/' + replyId + '/like', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        if (res.status === 401) { window.location.href = 'login-register.html'; return; }
+        return;
+      }
+      var data = await res.json();
+      if (countEl) countEl.textContent = data.likeCount > 0 ? data.likeCount : '';
+      if (data.liked) {
+        btn.classList.add('text-orange-500');
+        if (icon) { icon.classList.remove('far'); icon.classList.add('fas'); }
+      } else {
+        btn.classList.remove('text-orange-500');
+        if (icon) { icon.classList.remove('fas'); icon.classList.add('far'); }
+      }
+    } catch (err) {
+      console.error('Error toggling reply like:', err);
+    }
+  }
+
+  function toggleSubreply(postId, replyId) {
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
+    var form = document.getElementById('subreply-form-' + replyId);
+    if (!form) return;
+    form.classList.toggle('hidden');
+    if (!form.classList.contains('hidden')) {
+      var input = document.getElementById('subreplyText-' + replyId);
+      if (input) input.focus();
+    }
+  }
+
+  async function submitSubreply(postId, replyId) {
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
+    var input = document.getElementById('subreplyText-' + replyId);
+    if (!input) return;
+    var text = input.value.trim();
+    if (!text) return;
+    try {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts/' + postId + '/replies/' + replyId + '/replies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ content: text })
+      });
+      if (!res.ok) {
+        var err = await res.json();
+        ZrxNotify.showNotification('Error: ' + (err.error || 'Failed to submit reply'), 'error');
+        return;
+      }
+      await loadPosts();
+    } catch (err) {
+      console.error(err);
+      ZrxNotify.showNotification('Error submitting reply. Please try again.', 'error');
+    }
+  }
+
+
     if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
     var replyText = document.getElementById('replyText-' + postId).value.trim();
     if (!replyText) return;

@@ -988,6 +988,9 @@ app.get('/api/posts', async function(req, res) {
       if (post.userId) userIdSet.add(post.userId);
       for (const reply of (post.replies || [])) {
         if (reply.userId) userIdSet.add(reply.userId);
+        for (const sr of (reply.subreplies || [])) {
+          if (sr.userId) userIdSet.add(sr.userId);
+        }
       }
     }
 
@@ -1015,7 +1018,12 @@ app.get('/api/posts', async function(req, res) {
         replies: (post.replies || []).map(reply => ({
           ...reply,
           username: (reply.userId && usernameMap[reply.userId]) || reply.username || reply.email,
-          profileImage: (reply.userId && profileImageMap[reply.userId]) || null
+          profileImage: (reply.userId && profileImageMap[reply.userId]) || null,
+          subreplies: (reply.subreplies || []).map(sr => ({
+            ...sr,
+            username: (sr.userId && usernameMap[sr.userId]) || sr.username || sr.email,
+            profileImage: (sr.userId && profileImageMap[sr.userId]) || null
+          }))
         }))
       };
     });
@@ -1056,11 +1064,14 @@ app.post('/api/posts/:postId/replies', verifyToken, async function(req, res) {
     } catch (_) {}
 
     const reply = {
+      replyId: require('crypto').randomUUID(),
       userId: req.userId,
       email: req.userEmail,
       username,
       content,
-      createdAt: new Date()
+      createdAt: new Date(),
+      likes: [],
+      subreplies: []
     };
     const result = await db.collection('posts').updateOne(
       { _id: objectId },
@@ -2152,7 +2163,358 @@ app.put('/api/notifications/:id/read', publicApiRateLimit, verifyToken, async fu
   }
 });
 
-// ── Error handler ──────────────────────────────────────────────────────────────
+// ── REPLY INTERACTIONS ────────────────────────────────────────────────────────
+
+// POST /api/posts/:postId/replies/:replyId/like – toggle like on a reply (auth required)
+app.post('/api/posts/:postId/replies/:replyId/like', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.postId); } catch (e) {
+    return res.status(400).json({ error: 'Invalid postId' });
+  }
+  const { replyId } = req.params;
+  try {
+    const post = await db.collection('posts').findOne({ _id: objectId });
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const replies = post.replies || [];
+    const replyIdx = replies.findIndex(function(r) { return r.replyId === replyId; });
+    if (replyIdx === -1) return res.status(404).json({ error: 'Reply not found' });
+    const reply = replies[replyIdx];
+    const likes = reply.likes || [];
+    const hasLiked = likes.includes(req.userId);
+    if (hasLiked) {
+      await db.collection('posts').updateOne(
+        { _id: objectId },
+        { $pull: { [`replies.${replyIdx}.likes`]: req.userId } }
+      );
+      return res.json({ likeCount: likes.length - 1, liked: false });
+    } else {
+      await db.collection('posts').updateOne(
+        { _id: objectId },
+        { $push: { [`replies.${replyIdx}.likes`]: req.userId } }
+      );
+      return res.json({ likeCount: likes.length + 1, liked: true });
+    }
+  } catch (error) {
+    console.error('Error toggling reply like:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/posts/:postId/replies/:replyId/replies – add a nested reply (auth required)
+app.post('/api/posts/:postId/replies/:replyId/replies', verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.postId); } catch (e) {
+    return res.status(400).json({ error: 'Invalid postId' });
+  }
+  const { replyId } = req.params;
+  const { content } = req.body;
+  if (!content || typeof content !== 'string' || content.length < 1 || content.length > 2000) {
+    return res.status(400).json({ error: 'Valid content is required' });
+  }
+  try {
+    const post = await db.collection('posts').findOne({ _id: objectId });
+    if (!post) return res.status(404).json({ error: 'Post not found' });
+    const replies = post.replies || [];
+    const replyIdx = replies.findIndex(function(r) { return r.replyId === replyId; });
+    if (replyIdx === -1) return res.status(404).json({ error: 'Reply not found' });
+    let username = req.userEmail;
+    try {
+      const userDoc = await db.collection('users').findOne({ _id: new ObjectId(req.userId) });
+      if (userDoc) {
+        const fullName = ((userDoc.firstName || '') + ' ' + (userDoc.lastName || '')).trim();
+        username = fullName || userDoc.email || req.userEmail;
+      }
+    } catch (_) {}
+    const nestedReply = {
+      replyId: require('crypto').randomUUID(),
+      userId: req.userId,
+      email: req.userEmail,
+      username,
+      content,
+      createdAt: new Date(),
+      likes: []
+    };
+    await db.collection('posts').updateOne(
+      { _id: objectId },
+      { $push: { [`replies.${replyIdx}.subreplies`]: nestedReply } }
+    );
+    res.status(201).json(nestedReply);
+  } catch (error) {
+    console.error('Error adding nested reply:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── USER ADDRESSES ────────────────────────────────────────────────────────────
+
+// GET /api/user/addresses – list saved addresses (auth required)
+app.get('/api/user/addresses', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const doc = await db.collection('userAddresses').findOne({ userId: req.userId });
+    res.json((doc && doc.addresses) || []);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// POST /api/user/addresses – add an address (auth required)
+app.post('/api/user/addresses', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { label, name, line1, line2, city, state, zip, country, phone, isDefault } = req.body;
+  if (!name || !line1 || !city || !state || !zip) {
+    return res.status(400).json({ error: 'name, line1, city, state, and zip are required' });
+  }
+  const address = {
+    id: require('crypto').randomUUID(),
+    label: label || 'Home',
+    name: String(name).trim().slice(0, 100),
+    line1: String(line1).trim().slice(0, 200),
+    line2: line2 ? String(line2).trim().slice(0, 200) : '',
+    city: String(city).trim().slice(0, 100),
+    state: String(state).trim().slice(0, 100),
+    zip: String(zip).trim().slice(0, 20),
+    country: country ? String(country).trim().slice(0, 100) : 'US',
+    phone: phone ? String(phone).trim().slice(0, 30) : '',
+    isDefault: !!isDefault,
+    createdAt: new Date()
+  };
+  try {
+    const doc = await db.collection('userAddresses').findOne({ userId: req.userId });
+    const addresses = (doc && doc.addresses) || [];
+    if (address.isDefault) {
+      addresses.forEach(function(a) { a.isDefault = false; });
+    }
+    addresses.push(address);
+    await db.collection('userAddresses').updateOne(
+      { userId: req.userId },
+      { $set: { userId: req.userId, addresses, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    res.status(201).json(address);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// PUT /api/user/addresses/:id – update an address (auth required)
+app.put('/api/user/addresses/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const addrId = req.params.id;
+  try {
+    const doc = await db.collection('userAddresses').findOne({ userId: req.userId });
+    if (!doc) return res.status(404).json({ error: 'No addresses found' });
+    const addresses = doc.addresses || [];
+    const idx = addresses.findIndex(function(a) { return a.id === addrId; });
+    if (idx === -1) return res.status(404).json({ error: 'Address not found' });
+    const { label, name, line1, line2, city, state, zip, country, phone, isDefault } = req.body;
+    if (name) addresses[idx].name = String(name).trim().slice(0, 100);
+    if (line1) addresses[idx].line1 = String(line1).trim().slice(0, 200);
+    if (line2 !== undefined) addresses[idx].line2 = line2 ? String(line2).trim().slice(0, 200) : '';
+    if (city) addresses[idx].city = String(city).trim().slice(0, 100);
+    if (state) addresses[idx].state = String(state).trim().slice(0, 100);
+    if (zip) addresses[idx].zip = String(zip).trim().slice(0, 20);
+    if (country) addresses[idx].country = String(country).trim().slice(0, 100);
+    if (phone !== undefined) addresses[idx].phone = phone ? String(phone).trim().slice(0, 30) : '';
+    if (label) addresses[idx].label = String(label).trim().slice(0, 50);
+    if (isDefault) {
+      addresses.forEach(function(a) { a.isDefault = false; });
+      addresses[idx].isDefault = true;
+    }
+    await db.collection('userAddresses').updateOne(
+      { userId: req.userId },
+      { $set: { addresses, updatedAt: new Date() } }
+    );
+    res.json(addresses[idx]);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// DELETE /api/user/addresses/:id – delete an address (auth required)
+app.delete('/api/user/addresses/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const addrId = req.params.id;
+  try {
+    const doc = await db.collection('userAddresses').findOne({ userId: req.userId });
+    if (!doc) return res.status(404).json({ error: 'Address not found' });
+    const addresses = (doc.addresses || []).filter(function(a) { return a.id !== addrId; });
+    await db.collection('userAddresses').updateOne(
+      { userId: req.userId },
+      { $set: { addresses, updatedAt: new Date() } }
+    );
+    res.json({ message: 'Address deleted' });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// ── USER GALLERY ──────────────────────────────────────────────────────────────
+
+// GET /api/user/gallery – get gallery items (auth required)
+app.get('/api/user/gallery', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const doc = await db.collection('userGallery').findOne({ userId: req.userId });
+    res.json((doc && doc.items) || []);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// POST /api/user/gallery – add a gallery item (auth required)
+app.post('/api/user/gallery', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { url, caption } = req.body;
+  if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+    return res.status(400).json({ error: 'A valid image URL is required' });
+  }
+  const item = {
+    id: require('crypto').randomUUID(),
+    url: url.slice(0, 2000),
+    caption: caption ? String(caption).trim().slice(0, 200) : '',
+    createdAt: new Date()
+  };
+  try {
+    const doc = await db.collection('userGallery').findOne({ userId: req.userId });
+    const items = (doc && doc.items) || [];
+    if (items.length >= 50) return res.status(400).json({ error: 'Gallery limit reached (50 items)' });
+    items.push(item);
+    await db.collection('userGallery').updateOne(
+      { userId: req.userId },
+      { $set: { userId: req.userId, items, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    res.status(201).json(item);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// DELETE /api/user/gallery/:id – delete a gallery item (auth required)
+app.delete('/api/user/gallery/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const doc = await db.collection('userGallery').findOne({ userId: req.userId });
+    if (!doc) return res.status(404).json({ error: 'Item not found' });
+    const items = (doc.items || []).filter(function(i) { return i.id !== req.params.id; });
+    await db.collection('userGallery').updateOne(
+      { userId: req.userId },
+      { $set: { items, updatedAt: new Date() } }
+    );
+    res.json({ message: 'Item deleted' });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// ── GIFT CARDS ────────────────────────────────────────────────────────────────
+
+// GET /api/user/gift-cards – list gift cards applied to account (auth required)
+app.get('/api/user/gift-cards', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const cards = await db.collection('giftCards').find({ redeemedBy: req.userId }).toArray();
+    res.json(cards);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// POST /api/user/gift-cards/redeem – redeem a gift card code (auth required)
+app.post('/api/user/gift-cards/redeem', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { code } = req.body;
+  if (!code || typeof code !== 'string') return res.status(400).json({ error: 'Gift card code is required' });
+  const cleanCode = code.trim().toUpperCase().slice(0, 50);
+  try {
+    const card = await db.collection('giftCards').findOne({ code: cleanCode });
+    if (!card) return res.status(404).json({ error: 'Gift card code not found' });
+    if (card.redeemedBy) return res.status(409).json({ error: 'This gift card has already been redeemed' });
+    if (card.expiresAt && new Date(card.expiresAt) < new Date()) {
+      return res.status(410).json({ error: 'This gift card has expired' });
+    }
+    await db.collection('giftCards').updateOne(
+      { code: cleanCode },
+      { $set: { redeemedBy: req.userId, redeemedAt: new Date() } }
+    );
+    res.json({ message: 'Gift card redeemed successfully', balance: card.balance, currency: card.currency || 'USD' });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// ── TEXT ALERTS ───────────────────────────────────────────────────────────────
+
+// POST /api/user/text-alerts – sign up for text alerts (auth required)
+app.post('/api/user/text-alerts', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { phone, enabled } = req.body;
+  if (enabled && (!phone || typeof phone !== 'string')) {
+    return res.status(400).json({ error: 'Phone number is required to enable text alerts' });
+  }
+  const phoneClean = phone ? String(phone).replace(/[^\d\+\-\(\)\s]/g, '').trim().slice(0, 30) : '';
+  try {
+    await db.collection('userTextAlerts').updateOne(
+      { userId: req.userId },
+      { $set: { userId: req.userId, phone: phoneClean, enabled: !!enabled, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    res.json({ message: enabled ? 'Text alerts enabled' : 'Text alerts disabled', phone: phoneClean });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// GET /api/user/text-alerts – get text alert settings (auth required)
+app.get('/api/user/text-alerts', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const doc = await db.collection('userTextAlerts').findOne({ userId: req.userId });
+    res.json(doc || { phone: '', enabled: false });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// ── PRICE ALERTS ──────────────────────────────────────────────────────────────
+
+// GET /api/user/price-alerts – list price alerts (auth required)
+app.get('/api/user/price-alerts', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const doc = await db.collection('userPriceAlerts').findOne({ userId: req.userId });
+    res.json((doc && doc.alerts) || []);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// POST /api/user/price-alerts – add a price alert (auth required)
+app.post('/api/user/price-alerts', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { productId, productName, targetPrice } = req.body;
+  if (!productId || !productName || !targetPrice) {
+    return res.status(400).json({ error: 'productId, productName, and targetPrice are required' });
+  }
+  const parsed = parseFloat(targetPrice);
+  if (isNaN(parsed) || parsed <= 0) return res.status(400).json({ error: 'targetPrice must be a positive number' });
+  const alert = {
+    id: require('crypto').randomUUID(),
+    productId: String(productId).slice(0, 100),
+    productName: String(productName).trim().slice(0, 200),
+    targetPrice: parsed,
+    createdAt: new Date(),
+    triggered: false
+  };
+  try {
+    const doc = await db.collection('userPriceAlerts').findOne({ userId: req.userId });
+    const alerts = (doc && doc.alerts) || [];
+    if (alerts.length >= 50) return res.status(400).json({ error: 'Price alert limit reached (50)' });
+    alerts.push(alert);
+    await db.collection('userPriceAlerts').updateOne(
+      { userId: req.userId },
+      { $set: { userId: req.userId, alerts, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    res.status(201).json(alert);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// DELETE /api/user/price-alerts/:id – remove a price alert (auth required)
+app.delete('/api/user/price-alerts/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const doc = await db.collection('userPriceAlerts').findOne({ userId: req.userId });
+    if (!doc) return res.status(404).json({ error: 'Alert not found' });
+    const alerts = (doc.alerts || []).filter(function(a) { return a.id !== req.params.id; });
+    await db.collection('userPriceAlerts').updateOne(
+      { userId: req.userId },
+      { $set: { alerts, updatedAt: new Date() } }
+    );
+    res.json({ message: 'Price alert removed' });
+  } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// ── ERROR HANDLER ──────────────────────────────────────────────────────────────
 app.use(function(err, req, res, next) {
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
