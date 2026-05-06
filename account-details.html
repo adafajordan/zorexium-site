@@ -458,15 +458,44 @@
         <div id="gamerTab-gallery" class="gamer-tab-content hidden">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-gray-900 text-base">Gallery</h3>
-            <span class="text-xs text-gray-400 italic">Gallery coming soon</span>
-          </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-photo-video text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">0 videos &nbsp; 0 photos</p>
-            <p class="text-gray-400 text-sm mb-4">Share your setup photos and videos.</p>
-            <button onclick="adShowGalleryComingSoon()" class="inline-block px-5 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-semibold cursor-not-allowed" title="Gallery upload coming soon" aria-disabled="true">
-              <i class="fas fa-lock mr-1"></i> Add Media — Coming Soon
+            <button onclick="adShowAddGalleryModal()" class="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold transition-colors">
+              <i class="fas fa-plus text-xs"></i> Add Photo
             </button>
+          </div>
+          <div id="galleryGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4"></div>
+          <div id="galleryEmpty" class="hidden bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
+            <i class="fas fa-photo-video text-4xl text-gray-300 mb-4 block"></i>
+            <p class="text-gray-500 font-semibold text-sm mb-1">No photos yet</p>
+            <p class="text-gray-400 text-sm mb-4">Share your setup photos and tech builds.</p>
+            <button onclick="adShowAddGalleryModal()" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold transition-colors">
+              <i class="fas fa-plus mr-1"></i> Add Your First Photo
+            </button>
+          </div>
+        </div>
+
+        <!-- Add Gallery Photo Modal -->
+        <div id="adGalleryModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+          <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-base font-bold text-gray-900">Add Photo to Gallery</h2>
+              <button onclick="adCloseGalleryModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Image URL <span class="text-red-500">*</span></label>
+                <input type="url" id="adGalleryUrl" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 bg-gray-50" placeholder="https://...">
+                <p class="text-xs text-gray-400 mt-1">Paste a direct image link (JPG, PNG, GIF, WebP)</p>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">Caption (optional)</label>
+                <input type="text" id="adGalleryCaption" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 bg-gray-50" placeholder="My gaming setup..." maxlength="200">
+              </div>
+            </div>
+            <div id="adGalleryMsg" class="hidden mt-3 text-sm"></div>
+            <div class="flex gap-3 justify-end mt-5">
+              <button onclick="adCloseGalleryModal()" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+              <button onclick="adSaveGalleryPhoto()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-lg transition-colors">Add Photo</button>
+            </div>
           </div>
         </div>
 
@@ -1167,9 +1196,113 @@
     </script>
 
 <script>
-  function adShowGalleryComingSoon() {
-    if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Gallery media upload is coming soon. Stay tuned!', 'info');
+  const AD_BACKEND = 'https://zorexium-backend.onrender.com';
+  var adGalleryItems = [];
+
+  async function adLoadGallery() {
+    if (!ZrxSession.isLoggedIn()) return;
+    try {
+      var res = await ZrxSession.fetch(AD_BACKEND + '/api/user/gallery');
+      if (!res.ok) return;
+      adGalleryItems = await res.json();
+      adRenderGallery();
+    } catch (_) {}
   }
+
+  function adRenderGallery() {
+    var grid = document.getElementById('galleryGrid');
+    var empty = document.getElementById('galleryEmpty');
+    if (!grid) return;
+    if (!adGalleryItems || adGalleryItems.length === 0) {
+      grid.innerHTML = '';
+      if (empty) { empty.classList.remove('hidden'); }
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+    grid.innerHTML = adGalleryItems.map(function(item) {
+      return '<div class="relative group rounded-lg overflow-hidden aspect-square bg-gray-100 border border-gray-200">'
+        + '<img src="' + escHtml(item.url) + '" alt="' + escHtml(item.caption || '') + '" class="w-full h-full object-cover">'
+        + '<div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">'
+        + '<button onclick="adDeleteGalleryItem(\'' + item.id + '\')" class="bg-red-500 hover:bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs transition-colors"><i class="fas fa-trash"></i></button>'
+        + '</div>'
+        + (item.caption ? '<p class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 truncate">' + escHtml(item.caption) + '</p>' : '')
+        + '</div>';
+    }).join('');
+  }
+
+  function escHtml(str) {
+    var d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML;
+  }
+
+  function adShowAddGalleryModal() {
+    var modal = document.getElementById('adGalleryModal');
+    if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    document.getElementById('adGalleryUrl').value = '';
+    document.getElementById('adGalleryCaption').value = '';
+    var msg = document.getElementById('adGalleryMsg');
+    if (msg) msg.classList.add('hidden');
+  }
+
+  function adCloseGalleryModal() {
+    var modal = document.getElementById('adGalleryModal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  }
+
+  async function adSaveGalleryPhoto() {
+    var url = (document.getElementById('adGalleryUrl').value || '').trim();
+    var caption = (document.getElementById('adGalleryCaption').value || '').trim();
+    var msgEl = document.getElementById('adGalleryMsg');
+    if (!url || !/^https?:\/\//i.test(url)) {
+      msgEl.textContent = 'Please enter a valid image URL (must start with http:// or https://)';
+      msgEl.className = 'mt-3 text-sm text-red-600';
+      msgEl.classList.remove('hidden');
+      return;
+    }
+    if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
+    try {
+      var res = await ZrxSession.fetch(AD_BACKEND + '/api/user/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url, caption: caption })
+      });
+      if (res.ok) {
+        adCloseGalleryModal();
+        adLoadGallery();
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Photo added to gallery!', 'success');
+      } else {
+        var err = await res.json();
+        msgEl.textContent = err.error || 'Failed to add photo.';
+        msgEl.className = 'mt-3 text-sm text-red-600';
+        msgEl.classList.remove('hidden');
+      }
+    } catch (e) {
+      msgEl.textContent = 'Error adding photo. Please try again.';
+      msgEl.className = 'mt-3 text-sm text-red-600';
+      msgEl.classList.remove('hidden');
+    }
+  }
+
+  async function adDeleteGalleryItem(itemId) {
+    if (!ZrxSession.isLoggedIn()) return;
+    if (!confirm('Remove this photo from your gallery?')) return;
+    try {
+      var res = await ZrxSession.fetch(AD_BACKEND + '/api/user/gallery/' + itemId, { method: 'DELETE' });
+      if (res.ok) { adLoadGallery(); }
+    } catch (_) {}
+  }
+
+  // Load gallery when gallery tab is opened
+  var _origSwitchGamerTab = window.switchGamerTab;
+  window.switchGamerTab = function(tab) {
+    if (_origSwitchGamerTab) _origSwitchGamerTab(tab);
+    if (tab === 'gallery') adLoadGallery();
+  };
+
+  // Also close gallery modal on backdrop click
+  document.addEventListener('click', function(e) {
+    var modal = document.getElementById('adGalleryModal');
+    if (modal && e.target === modal) adCloseGalleryModal();
+  });
 </script>
 </body>
 </html>
