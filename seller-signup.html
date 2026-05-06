@@ -357,10 +357,68 @@
             </div>
           </div>
 
-          <!-- Step 2: Shop Details -->
+          <!-- Step 2: Seller Plan -->
+          <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-gray-900 mb-1 flex items-center">
+              <span class="step-badge">2</span>Choose Your Seller Plan
+            </h2>
+            <p class="text-gray-500 text-sm mb-4 ml-9">Select the plan that fits your selling needs. You can upgrade later from your dashboard.</p>
+            <div class="ml-9 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <!-- Starter -->
+              <label class="tier-option flex flex-col p-4 border-2 border-cyan-400 rounded-xl cursor-pointer transition-colors" id="tierStarterLabel">
+                <input type="radio" name="sellerTier" value="starter" checked class="sr-only" id="tierStarterRadio">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="font-bold text-gray-900 text-sm">Starter</span>
+                  <span class="text-xs font-bold text-cyan-600 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">Free</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">+ 8% transaction fee per sale</p>
+                <ul class="space-y-1 text-xs text-gray-600 flex-1">
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Up to 25 active listings</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Basic analytics dashboard</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Standard payout (3–5 days)</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Community support</li>
+                </ul>
+              </label>
+              <!-- Pro -->
+              <label class="tier-option flex flex-col p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-colors" id="tierProLabel">
+                <input type="radio" name="sellerTier" value="pro" class="sr-only" id="tierProRadio">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="font-bold text-gray-900 text-sm">Pro Seller</span>
+                  <span class="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">$19/mo</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">+ 5% transaction fee per sale</p>
+                <ul class="space-y-1 text-xs text-gray-600 flex-1">
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Unlimited active listings</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Advanced analytics &amp; insights</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority payout (1–2 days)</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority seller support</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Featured listing badges</li>
+                </ul>
+              </label>
+              <!-- Brand -->
+              <label class="tier-option flex flex-col p-4 border-2 border-gray-200 rounded-xl cursor-pointer transition-colors" id="tierBrandLabel">
+                <input type="radio" name="sellerTier" value="brand" class="sr-only" id="tierBrandRadio">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="font-bold text-gray-900 text-sm">Official Brand</span>
+                  <span class="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">Custom</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">Negotiated transaction fees</p>
+                <ul class="space-y-1 text-xs text-gray-600 flex-1">
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Official Brand badge &amp; storefront</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Homepage &amp; category features</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Dedicated account manager</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> API integrations &amp; bulk uploads</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Co-marketing opportunities</li>
+                </ul>
+              </label>
+            </div>
+            <p class="ml-9 text-xs text-gray-400 mt-3">All plans include buyer fraud protection, secure checkout, and listing tools.</p>
+          </div>
+
+          <!-- Step 3: Shop Details -->
           <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
-              <span class="step-badge">2</span>Shop Details
+              <span class="step-badge">3</span>Shop Details
             </h2>
             <div class="ml-9 space-y-5">
               <div>
@@ -376,10 +434,10 @@
             </div>
           </div>
 
-          <!-- Step 3: Business Info -->
+          <!-- Step 4: Business Info -->
           <div id="businessFields" class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
-              <span class="step-badge">3</span>Business Information
+              <span class="step-badge">4</span>Business Information
             </h2>
             <div class="ml-9 space-y-5">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -407,10 +465,10 @@
             </div>
           </div>
 
-          <!-- Step 3 (Individual): Personal Info -->
+          <!-- Step 4 (Individual): Personal Info -->
           <div id="individualFields" class="hidden bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
-              <span class="step-badge">3</span>Personal Information
+              <span class="step-badge">4</span>Personal Information
             </h2>
             <div class="ml-9 space-y-5">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -435,10 +493,10 @@
             </div>
           </div>
 
-          <!-- Step 4: Agreement -->
+          <!-- Step 5: Agreement -->
           <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
-              <span class="step-badge">4</span>Seller Agreement
+              <span class="step-badge">5</span>Seller Agreement
             </h2>
             <div class="ml-9 space-y-4">
               <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600 space-y-1.5">
@@ -554,6 +612,8 @@
     const shopName = document.getElementById('shopName').value.trim();
     const shopDescription = document.getElementById('shopDescription').value.trim();
     const selectedType = document.querySelector('input[name="accountType"]:checked').value;
+    const selectedTierEl = document.querySelector('input[name="sellerTier"]:checked');
+    const selectedTier = selectedTierEl ? selectedTierEl.value : 'starter';
     const businessEmail = document.getElementById('businessEmail').value.trim();
     const phoneNumber = document.getElementById('phoneNumber').value.trim();
     const businessAddress = document.getElementById('businessAddress').value.trim();
@@ -602,8 +662,8 @@
 
     const BACKEND_URL = 'https://zorexium-backend.onrender.com';
     const sellerPayload = selectedType === 'business'
-      ? { accountType: 'business', shopName, shopDescription, businessEmail, phoneNumber, businessAddress, businessCity, businessState, businessZip }
-      : { accountType: 'individual', shopName: shopName || personalName, shopDescription: shopDescription || 'Individual seller', personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip };
+      ? { accountType: 'business', shopName, shopDescription, businessEmail, phoneNumber, businessAddress, businessCity, businessState, businessZip, tier: selectedTier }
+      : { accountType: 'individual', shopName: shopName || personalName, shopDescription: shopDescription || 'Individual seller', personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip, tier: selectedTier };
 
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers', {
@@ -668,6 +728,28 @@
   });
   updateTypeLabels();
 
+  // Highlight selected tier card
+  function updateTierLabels() {
+    const val = document.querySelector('input[name="sellerTier"]:checked');
+    if (!val) return;
+    const tiers = ['starter', 'pro', 'brand'];
+    tiers.forEach(function(t) {
+      const label = document.getElementById('tier' + t.charAt(0).toUpperCase() + t.slice(1) + 'Label');
+      if (!label) return;
+      if (t === val.value) {
+        label.classList.add('border-cyan-400', 'bg-cyan-50');
+        label.classList.remove('border-gray-200');
+      } else {
+        label.classList.remove('border-cyan-400', 'bg-cyan-50');
+        label.classList.add('border-gray-200');
+      }
+    });
+  }
+  document.querySelectorAll('input[name="sellerTier"]').forEach(function(r) {
+    r.addEventListener('change', updateTierLabels);
+  });
+  updateTierLabels();
+
   // Preselect seller type from URL param if provided (e.g., ?type=business)
   (function preselectFromUrl(){
     try {
@@ -678,6 +760,15 @@
         if (el) {
           el.checked = true;
           el.dispatchEvent(new Event('change'));
+        }
+      }
+      // Preselect tier from URL param (e.g., ?tier=pro)
+      const tier = params.get('tier');
+      if (tier) {
+        const tierEl = document.querySelector('input[name="sellerTier"][value="' + tier + '"]');
+        if (tierEl) {
+          tierEl.checked = true;
+          updateTierLabels();
         }
       }
     } catch (err) {
