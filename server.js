@@ -678,6 +678,155 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 
+// ── PRO SELLER SUBSCRIPTION PLAN ─────────────────────────────────────────────
+// Cache the PayPal plan ID in memory; prefer the env var if pre-configured.
+let cachedProSellerPlanId = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
+
+async function ensurePayPalProSellerPlan() {
+  if (cachedProSellerPlanId) return cachedProSellerPlanId;
+  if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) return null;
+
+  try {
+    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+
+    // 1. Create a product (service)
+    const productRes = await fetch(`${PAYPAL_API}/v1/catalogs/products`, {
+      method: 'POST',
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Zorexium Pro Seller Subscription',
+        description: 'Monthly Pro Seller subscription on Zorexium ($19/month)',
+        type: 'SERVICE',
+        category: 'SOFTWARE'
+      })
+    });
+    const product = await productRes.json();
+    if (!productRes.ok) throw new Error(`PayPal product creation failed: ${product.message || JSON.stringify(product)}`);
+
+    // 2. Create a monthly billing plan
+    const planRes = await fetch(`${PAYPAL_API}/v1/billing/plans`, {
+      method: 'POST',
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id: product.id,
+        name: 'Pro Seller Monthly',
+        status: 'ACTIVE',
+        billing_cycles: [{
+          frequency: { interval_unit: 'MONTH', interval_count: 1 },
+          tenure_type: 'REGULAR',
+          sequence: 1,
+          total_cycles: 0,
+          pricing_scheme: {
+            fixed_price: { value: '19.00', currency_code: 'USD' }
+          }
+        }],
+        payment_preferences: {
+          auto_bill_outstanding: true,
+          setup_fee: { value: '0', currency_code: 'USD' },
+          setup_fee_failure_action: 'CONTINUE',
+          payment_failure_threshold: 3
+        }
+      })
+    });
+    const plan = await planRes.json();
+    if (!planRes.ok) throw new Error(`PayPal plan creation failed: ${plan.message || JSON.stringify(plan)}`);
+
+    cachedProSellerPlanId = plan.id;
+    console.log(`✅ PayPal Pro Seller plan created: ${cachedProSellerPlanId}`);
+    return cachedProSellerPlanId;
+  } catch (err) {
+    console.error('⚠️  Failed to create PayPal Pro Seller plan:', err.message);
+    return null;
+  }
+}
+
+// GET /api/sellers/pro-plan – return PayPal subscription plan ID for Pro Seller
+app.get('/api/sellers/pro-plan', async function(req, res) {
+  try {
+    const planId = await ensurePayPalProSellerPlan();
+    if (!planId) return res.status(503).json({ error: 'PayPal Pro Seller plan is not available. Please try again later.' });
+    res.json({ planId });
+  } catch (err) {
+    console.error('Error fetching pro seller plan:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/sellers/subscription/confirm – verify PayPal subscription and create Pro Seller profile
+app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const existing = await db.collection('sellers').findOne({ userId: req.userId });
+    if (existing) return res.status(400).json({ error: 'Seller profile already exists' });
+
+    const { subscriptionId, accountType, shopName, shopDescription, businessEmail, phoneNumber,
+      businessAddress, businessCity, businessState, businessZip,
+      personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip } = req.body;
+
+    if (!subscriptionId || typeof subscriptionId !== 'string' || subscriptionId.length > 128) {
+      return res.status(400).json({ error: 'subscriptionId is required' });
+    }
+    if (!accountType || !shopName) {
+      return res.status(400).json({ error: 'accountType and shopName are required' });
+    }
+
+    // Verify the subscription with PayPal
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+      return res.status(503).json({ error: 'PayPal is not configured on the server' });
+    }
+    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+    const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' }
+    });
+    const subData = await subRes.json();
+
+    if (!subRes.ok || !['ACTIVE', 'APPROVED'].includes(subData.status)) {
+      console.error('PayPal subscription verification failed:', subData);
+      return res.status(400).json({ error: 'PayPal subscription could not be verified. Please try again.' });
+    }
+
+    const seller = {
+      userId: req.userId,
+      accountType: String(accountType).slice(0, 20),
+      shopName: String(shopName).slice(0, 200),
+      shopDescription: String(shopDescription || '').slice(0, 2000),
+      businessEmail: String(businessEmail || '').slice(0, 200),
+      phoneNumber: String(phoneNumber || '').slice(0, 30),
+      businessAddress: String(businessAddress || '').slice(0, 200),
+      businessCity: String(businessCity || '').slice(0, 100),
+      businessState: String(businessState || '').slice(0, 100),
+      businessZip: String(businessZip || '').slice(0, 20),
+      personalName: String(personalName || '').slice(0, 200),
+      personalEmail: String(personalEmail || '').slice(0, 200),
+      shippingAddress: String(shippingAddress || '').slice(0, 200),
+      shippingCity: String(shippingCity || '').slice(0, 100),
+      shippingState: String(shippingState || '').slice(0, 100),
+      shippingZip: String(shippingZip || '').slice(0, 20),
+      joinDate: new Date(),
+      rating: 5,
+      totalSales: 0,
+      isVerified: false,
+      tier: 'pro',
+      proSubscriptionId: subscriptionId,
+      proSubscriptionStatus: subData.status,
+      createdAt: new Date()
+    };
+
+    const result = await db.collection('sellers').insertOne(seller);
+
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(req.userId) },
+      { $set: { isSeller: true, updatedAt: new Date() } }
+    );
+
+    res.status(201).json({ ...seller, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error confirming Pro Seller subscription:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── CREATE ORDER (No auth required - guest checkout) ────────────────────────────────────────
 app.post('/api/orders', async function(req, res) {
   try {
@@ -1459,6 +1608,11 @@ app.post('/api/sellers', verifyToken, async function(req, res) {
 
     const resolvedTier = (tier && VALID_SELLER_TIERS.includes(String(tier).toLowerCase())) ? String(tier).toLowerCase() : 'starter';
 
+    // Pro tier requires payment via /api/sellers/subscription/confirm
+    if (resolvedTier === 'pro') {
+      return res.status(400).json({ error: 'Pro Seller registration requires a PayPal subscription. Please use the subscription signup flow.' });
+    }
+
     const seller = {
       userId: req.userId,
       accountType: String(accountType).slice(0, 20),
@@ -1539,6 +1693,10 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
   if (req.body.tier !== undefined) {
     const newTier = String(req.body.tier).toLowerCase();
     if (VALID_SELLER_TIERS.includes(newTier)) updates.tier = newTier;
+  }
+  // Allow sellers to dismiss the downgrade notification
+  if (req.body.proTierDowngraded === false) {
+    updates.proTierDowngraded = false;
   }
 
   try {
@@ -2662,6 +2820,21 @@ async function assignStarterTierToExistingSellers() {
   }
 }
 
+async function downgradeProSellersToStarter() {
+  if (!mongoConnected) return;
+  try {
+    const result = await db.collection('sellers').updateMany(
+      { tier: 'pro' },
+      { $set: { tier: 'starter', updatedAt: new Date(), proTierDowngraded: true, proTierDowngradedAt: new Date() } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(`✅ Pro Seller downgrade migration: ${result.modifiedCount} seller(s) downgraded from pro to starter`);
+    }
+  } catch (err) {
+    console.error('⚠️  Pro Seller downgrade migration error:', err.message);
+  }
+}
+
 async function activateAllProducts() {
   if (!mongoConnected) return;
   try {
@@ -2687,6 +2860,7 @@ async function start() {
       console.log('✅ Database connected — starting HTTP server');
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
+      await downgradeProSellersToStarter();
       await activateAllProducts();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');

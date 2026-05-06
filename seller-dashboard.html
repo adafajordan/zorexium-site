@@ -336,6 +336,15 @@
       </div>
     </div>
 
+    <!-- Pro Seller Downgrade Notification -->
+    <div id="proDowngradeNotice" class="hidden mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-3">
+      <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
+      <div class="flex-1 text-sm text-amber-800">
+        <span class="font-semibold">Your account has been updated:</span> Your seller account has been downgraded from <strong>Pro Seller</strong> to <strong>Starter</strong> tier. Pro Seller subscriptions now require a verified $19/month PayPal subscription. You can upgrade to Pro again from your account settings or by re-registering.
+      </div>
+      <button onclick="dismissDowngradeNotice()" class="text-amber-600 hover:text-amber-800 flex-shrink-0 text-lg leading-none">&times;</button>
+    </div>
+
     <!-- Dashboard Layout: Sidebar + Content -->
     <div class="flex gap-6">
 
@@ -767,6 +776,12 @@
       tierBadge.className = 'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold border ' + cfg.cls;
     }
 
+    // Show downgrade notification if the account was recently downgraded from Pro
+    if (sellerData.proTierDowngraded) {
+      const notice = document.getElementById('proDowngradeNotice');
+      if (notice) notice.classList.remove('hidden');
+    }
+
     document.getElementById('totalProducts').textContent = sellerData.products.length;
     document.getElementById('totalSales').textContent = sellerData.totalSales || 0;
     const hasRating = !!sellerData.rating;
@@ -1082,6 +1097,18 @@
     ZrxNotify.showConfirm('Are you sure you want to log out?', function() {
       ZrxSession.logout(function() { window.location.href = 'index.html'; });
     });
+  }
+
+  function dismissDowngradeNotice() {
+    const notice = document.getElementById('proDowngradeNotice');
+    if (notice) notice.classList.add('hidden');
+    // Clear the flag on the server so the notice doesn't reappear
+    ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ proTierDowngraded: false })
+    }).catch(function() {});
   }
 
   async function updateCartBadge() {
