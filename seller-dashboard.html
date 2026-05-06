@@ -368,6 +368,9 @@
           <button onclick="switchTab('settings')" id="nav-settings" class="dash-nav-item w-full text-left">
             <i class="fas fa-cog w-4 text-center text-cyan-500"></i> Settings
           </button>
+          <button onclick="openUpgradeTierFromSidebar()" id="nav-upgrade-tier" class="dash-nav-item w-full text-left hidden">
+            <i class="fas fa-arrow-up w-4 text-center text-cyan-500"></i> Upgrade Seller Tier
+          </button>
           <div class="pt-2 mt-2 border-t border-gray-100">
             <a href="listing-wizard.html" class="dash-nav-item block">
               <i class="fas fa-magic w-4 text-center text-green-500"></i> Listing Wizard
@@ -1318,17 +1321,30 @@
     }
     var upgradeSection   = document.getElementById('upgradeToProSection');
     var downgradeSection = document.getElementById('downgradeToStarterSection');
+    var navUpgradeTier   = document.getElementById('nav-upgrade-tier');
     if (tier === 'starter') {
       if (upgradeSection)   upgradeSection.classList.remove('hidden');
       if (downgradeSection) downgradeSection.classList.add('hidden');
+      if (navUpgradeTier)   navUpgradeTier.classList.remove('hidden');
     } else if (tier === 'pro') {
       if (upgradeSection)   upgradeSection.classList.add('hidden');
       if (downgradeSection) downgradeSection.classList.remove('hidden');
+      if (navUpgradeTier)   navUpgradeTier.classList.add('hidden');
     } else {
       // brand or unknown – hide both action sections
       if (upgradeSection)   upgradeSection.classList.add('hidden');
       if (downgradeSection) downgradeSection.classList.add('hidden');
+      if (navUpgradeTier)   navUpgradeTier.classList.add('hidden');
     }
+  }
+
+  function openUpgradeTierFromSidebar() {
+    switchTab('settings');
+    if ((sellerData.tier || 'starter') !== 'starter') {
+      ZrxNotify.showNotification('You are already on a higher seller tier.', 'info');
+      return;
+    }
+    startTierUpgrade();
   }
 
   function startTierUpgrade() {
@@ -1544,4 +1560,3 @@
     </script>
 </body>
 </html>
-
