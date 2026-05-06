@@ -496,11 +496,18 @@
               <span class="w-7 h-7 bg-green-50 rounded-lg flex items-center justify-center"><i class="fas fa-university text-green-500 text-sm"></i></span>
               Payout Account
             </h3>
-            <p class="text-sm text-gray-600 mb-4">Keep your payout method up to date to ensure you receive your earnings without delays. You can connect or update your bank account from the Seller Dashboard.</p>
+            <div id="payoutsAccountConnected" class="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <i class="fas fa-check-circle text-green-500"></i>
+              <div>
+                <p class="text-sm font-semibold text-green-800">PayPal account connected</p>
+                <p class="text-xs text-green-700 mt-0.5" id="payoutsConnectedEmail">Receiving payouts via PayPal.</p>
+              </div>
+            </div>
+            <p class="text-sm text-gray-600 mb-4">Connect your PayPal account to receive payouts. You can add or update your PayPal email here.</p>
             <div class="flex flex-col sm:flex-row gap-3">
-              <a href="seller-dashboard.html#payouts" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm transition-colors">
-                <i class="fas fa-university"></i> Manage Payout Account
-              </a>
+              <button onclick="openPayoutsPaypalModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm transition-colors">
+                <i class="fab fa-paypal"></i> Manage Payout Account
+              </button>
               <a href="account-details.html" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 rounded-lg font-semibold text-sm transition-colors">
                 <i class="fas fa-user-cog text-gray-500"></i> Account Settings
               </a>
@@ -508,7 +515,7 @@
             <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
               <p class="text-xs text-blue-700 flex items-center gap-2">
                 <i class="fas fa-shield-alt text-blue-500"></i>
-                Payouts are processed securely. Your bank details are encrypted and never stored on our servers.
+                Your PayPal email is stored securely and used only for sending your earnings.
               </p>
             </div>
           </div>
@@ -521,6 +528,29 @@
   </div><!-- end flex layout -->
 
 </main>
+
+<!-- PayPal Payout Modal -->
+<div id="payoutsPaypalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+  <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <i class="fab fa-paypal text-blue-600"></i> Connect PayPal Account
+      </h3>
+      <button onclick="closePayoutsPaypalModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
+    </div>
+    <p class="text-sm text-gray-600 mb-4">Enter your PayPal email address to receive payouts from your sales.</p>
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1">PayPal Email Address</label>
+      <input type="email" id="payoutsPaypalEmailInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="your@paypal.com" autocomplete="email">
+    </div>
+    <div class="flex gap-3">
+      <button onclick="savePayoutsPaypalAccount()" id="savePayoutsPaypalBtn" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm">
+        <i class="fas fa-save"></i> Save Account
+      </button>
+      <button onclick="closePayoutsPaypalModal()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">Cancel</button>
+    </div>
+  </div>
+</div>
 
     <!-- Chat Bubble -->
     <div class="fixed bottom-6 right-6 z-50">
@@ -558,24 +588,31 @@
       const seller = await sellerRes.json();
       document.getElementById('sellerSubtitle').textContent =
         'Earnings for ' + escHtml(seller.shopName || 'your shop') + ' · 90% of each sale goes to you.';
+
+      // Show connected payout account if available
+      if (seller.payoutAccountId && seller.payoutVerified) {
+        var connectedEl = document.getElementById('payoutsAccountConnected');
+        var emailEl = document.getElementById('payoutsConnectedEmail');
+        if (connectedEl) connectedEl.classList.remove('hidden');
+        if (emailEl) emailEl.textContent = 'PayPal: ' + seller.payoutAccountId;
+        // Pre-fill modal input
+        var input = document.getElementById('payoutsPaypalEmailInput');
+        if (input) input.value = seller.payoutAccountId;
+      }
     } catch (_) {}
 
     loadEarnings();
   }
 
   async function loadEarnings() {
-    const user = ZrxSession.getUser();
-    const userId = user ? user.userId : null;
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts', {
         credentials: 'include'
       });
       if (res.ok) {
-        const allPayouts = await res.json();
-        // Filter payouts that belong to this seller by userId (from token)
-        sellerPayouts = allPayouts.filter(function(p) {
-          return p.sellerId && p.sellerId === userId;
-        });
+        const payouts = await res.json();
+        // Server now returns only the current seller's payouts
+        sellerPayouts = Array.isArray(payouts) ? payouts : [];
       }
     } catch (_) {
       sellerPayouts = [];
@@ -583,6 +620,49 @@
     renderEarnings();
     updateStats();
   }
+
+  function openPayoutsPaypalModal() {
+    document.getElementById('payoutsPaypalModal').classList.remove('hidden');
+    var input = document.getElementById('payoutsPaypalEmailInput');
+    if (input) input.focus();
+  }
+
+  function closePayoutsPaypalModal() {
+    document.getElementById('payoutsPaypalModal').classList.add('hidden');
+  }
+
+  async function savePayoutsPaypalAccount() {
+    var email = (document.getElementById('payoutsPaypalEmailInput').value || '').trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Please enter a valid PayPal email address.', 'error');
+      return;
+    }
+    var btn = document.getElementById('savePayoutsPaypalBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payoutAccountId: email, payoutVerified: true })
+      });
+      if (!res.ok) throw new Error('Save failed');
+      closePayoutsPaypalModal();
+      var connectedEl = document.getElementById('payoutsAccountConnected');
+      var emailEl = document.getElementById('payoutsConnectedEmail');
+      if (connectedEl) connectedEl.classList.remove('hidden');
+      if (emailEl) emailEl.textContent = 'PayPal: ' + email;
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('PayPal account saved successfully!', 'success');
+    } catch (_) {
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to save payout account. Please try again.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Account'; }
+    }
+  }
+
+  document.addEventListener('click', function(e) {
+    var modal = document.getElementById('payoutsPaypalModal');
+    if (modal && e.target === modal) closePayoutsPaypalModal();
+  });
 
   function renderEarnings() {
     var statusFilter = document.getElementById('statusFilter').value;

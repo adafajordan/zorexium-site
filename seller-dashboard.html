@@ -506,10 +506,10 @@
               <div class="flex gap-2">
                 <select id="orderStatusFilter" onchange="filterOrders()" class="border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400">
                   <option value="">All Statuses</option>
-                  <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
                   <option value="shipped">Shipped</option>
                   <option value="delivered">Delivered</option>
+                  <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
@@ -530,23 +530,24 @@
             <div class="flex items-center justify-between mb-4">
               <div>
                 <h2 class="text-lg font-semibold text-gray-900">Payment Account</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Direct bank transfer for receiving payouts</p>
+                <p class="text-sm text-gray-500 mt-0.5">PayPal account for receiving payouts</p>
               </div>
               <div id="payoutStatusBadge" class="text-sm font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600">Not Connected</div>
             </div>
             <div id="payoutConnectSection" class="mt-3">
-              <p class="text-sm text-gray-600 mb-4">Connect your bank account to receive payouts from your sales. It only takes a few minutes.</p>
-              <button onclick="startPayoutOnboarding()" class="btn-primary text-sm">
-                <i class="fas fa-university"></i> Connect Bank Account
+              <p class="text-sm text-gray-600 mb-4">Connect your PayPal account to receive payouts from your sales. It only takes a few minutes.</p>
+              <button onclick="openPayoutModal()" class="btn-primary text-sm">
+                <i class="fas fa-paypal"></i> Connect Bank Account
               </button>
             </div>
             <div id="payoutConnectedSection" class="hidden mt-3">
-              <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg mb-3">
                 <i class="fas fa-check-circle text-green-500 text-xl"></i>
-                <div>
-                  <p class="text-sm font-semibold text-green-800">Bank account connected</p>
-                  <p class="text-xs text-green-700 mt-0.5">You are set up to receive payouts from your sales.</p>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-green-800">PayPal account connected</p>
+                  <p class="text-xs text-green-700 mt-0.5" id="connectedPayoutEmail">You are set up to receive payouts.</p>
                 </div>
+                <button onclick="openPayoutModal()" class="text-xs text-cyan-600 hover:text-cyan-700 border border-cyan-200 rounded-md px-3 py-1.5 bg-white font-semibold">Update</button>
               </div>
             </div>
           </div>
@@ -722,6 +723,35 @@
   </div>
 </main>
 
+<!-- PayPal Payout Account Modal -->
+<div id="payoutModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+  <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <i class="fab fa-paypal text-blue-600"></i> Connect PayPal Account
+      </h3>
+      <button onclick="closePayoutModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
+    </div>
+    <p class="text-sm text-gray-600 mb-4">Enter your PayPal email address to receive payouts from your sales. Zorexium will send earnings directly to this account.</p>
+    <div class="mb-4">
+      <label class="form-label">PayPal Email Address</label>
+      <input type="email" id="payoutEmailInput" class="form-input" placeholder="your@paypal.com" autocomplete="email">
+    </div>
+    <div class="flex gap-3">
+      <button onclick="savePayoutAccount()" id="savePayoutBtn" class="btn-primary text-sm flex-1">
+        <i class="fas fa-save"></i> Save Account
+      </button>
+      <button onclick="closePayoutModal()" class="btn-secondary text-sm">Cancel</button>
+    </div>
+    <div class="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+      <p class="text-xs text-blue-700 flex items-center gap-2">
+        <i class="fas fa-shield-alt text-blue-500"></i>
+        Your PayPal email is stored securely and used only for sending your earnings.
+      </p>
+    </div>
+  </div>
+</div>
+
 <!-- Chat Bubble -->
 <div class="fixed bottom-6 right-6 z-50">
   <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
@@ -746,6 +776,7 @@
     var nav = document.getElementById('nav-' + name);
     if (tab) tab.classList.add('active');
     if (nav) nav.classList.add('active');
+    if (name === 'products') loadProducts();
     if (name === 'orders' && _allOrders.length === 0) loadOrders();
     if (name === 'payouts') loadPayouts();
   }
@@ -790,18 +821,25 @@
       sellerData = await sellerRes.json();
       sellerData.products = [];
 
-      _userId = await getUserIdFromSession();
+      // Use sellerId from the seller profile directly
+      _userId = sellerData.userId || null;
+      if (!_userId) _userId = await getUserIdFromSession();
+
       if (_userId) {
-        const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(_userId));
-        if (prodRes.ok) {
-          const bp = await prodRes.json();
-          if (Array.isArray(bp)) {
-            sellerData.products = bp.map(function(p) {
-              return { id: p._id ? String(p._id) : (p.id || ''), name: p.name || '', description: p.description || '',
-                price: p.price || 0, category: p.category || '', condition: p.condition || 'new',
-                image: p.image || '', specs: p.specifications || {}, status: p.status || 'active' };
-            });
+        try {
+          const prodRes = await ZrxSession.fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(_userId));
+          if (prodRes.ok) {
+            const bp = await prodRes.json();
+            if (Array.isArray(bp)) {
+              sellerData.products = bp.map(function(p) {
+                return { id: p._id ? String(p._id) : (p.id || ''), name: p.name || '', description: p.description || '',
+                  price: p.price || 0, category: p.category || '', condition: p.condition || 'new',
+                  image: p.image || '', specs: p.specifications || {}, status: p.status || 'active' };
+              });
+            }
           }
+        } catch (prodErr) {
+          console.warn('Could not load products:', prodErr);
         }
       }
     } catch (e) {
@@ -835,6 +873,10 @@
       document.getElementById('payoutStatusBadge').textContent = 'Connected';
       document.getElementById('payoutConnectSection').classList.add('hidden');
       document.getElementById('payoutConnectedSection').classList.remove('hidden');
+      var emailDisplay = document.getElementById('connectedPayoutEmail');
+      if (emailDisplay && sellerData.payoutAccountId) {
+        emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId);
+      }
     }
 
     // Show seller tier badge
@@ -994,14 +1036,13 @@
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders', { credentials: 'include' });
       if (!res.ok) return;
       const orders = await res.json();
-      _allOrders = Array.isArray(orders) ? orders : [];
+      // Only show completed/real orders – exclude pending and empty-status entries
+      const nonPendingOrders = (Array.isArray(orders) ? orders : []).filter(function(o) {
+        var s = (o.status || '').toLowerCase();
+        return s && s !== 'pending';
+      });
+      _allOrders = nonPendingOrders;
       renderRecentOrders(_allOrders.slice(0, 5));
-      const pending = _allOrders.filter(function(o) { return (o.status || '').toLowerCase() === 'pending' || !o.status; }).length;
-      if (pending > 0) {
-        var badge = document.getElementById('ordersBadge');
-        badge.textContent = pending;
-        badge.classList.remove('hidden');
-      }
     } catch(_) {
       document.getElementById('recentOrdersList').innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Could not load orders.</p>';
     }
@@ -1014,7 +1055,11 @@
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed');
       const orders = await res.json();
-      _allOrders = Array.isArray(orders) ? orders : [];
+      // Only show completed/real orders – exclude pending and empty-status entries
+      _allOrders = (Array.isArray(orders) ? orders : []).filter(function(o) {
+        var s = (o.status || '').toLowerCase();
+        return s && s !== 'pending';
+      });
       renderOrdersTable(_allOrders);
     } catch(_) {
       document.getElementById('ordersList').innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-exclamation-circle text-2xl mb-2 block"></i><p class="text-sm">Failed to load orders.</p></div>';
@@ -1023,7 +1068,7 @@
 
   function filterOrders() {
     var status = document.getElementById('orderStatusFilter').value.toLowerCase();
-    var filtered = status ? _allOrders.filter(function(o) { return (o.status || 'pending').toLowerCase() === status; }) : _allOrders;
+    var filtered = status ? _allOrders.filter(function(o) { return (o.status || '').toLowerCase() === status; }) : _allOrders;
     renderOrdersTable(filtered);
   }
 
@@ -1123,16 +1168,57 @@
     }
   }
 
-  async function startPayoutOnboarding() {
+  // ── Payout Account Modal ───────────────────────────────────────────────────────
+  function openPayoutModal() {
+    var input = document.getElementById('payoutEmailInput');
+    if (input && sellerData.payoutAccountId) input.value = sellerData.payoutAccountId;
+    document.getElementById('payoutModal').classList.remove('hidden');
+    if (input) input.focus();
+  }
+
+  function closePayoutModal() {
+    document.getElementById('payoutModal').classList.add('hidden');
+  }
+
+  async function savePayoutAccount() {
+    var email = (document.getElementById('payoutEmailInput').value || '').trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      ZrxNotify.showNotification('Please enter a valid PayPal email address.', 'error');
+      return;
+    }
+    var btn = document.getElementById('savePayoutBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
     try {
-      const res = await fetch('/onboard-seller', { method: 'POST' });
-      const data = await res.json();
-      if (data.url) { window.location.href = data.url; }
-      else { ZrxNotify.showNotification('Failed to connect payout account: ' + (data.error || 'Unknown error'), 'error'); }
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payoutAccountId: email, payoutVerified: true })
+      });
+      if (!res.ok) throw new Error('Save failed');
+      const updated = await res.json();
+      sellerData.payoutAccountId = updated.payoutAccountId || email;
+      sellerData.payoutVerified = true;
+      closePayoutModal();
+      // Refresh payout status UI
+      document.getElementById('payoutStatusBadge').className = 'text-sm font-semibold px-3 py-1 rounded-full bg-green-100 text-green-700';
+      document.getElementById('payoutStatusBadge').textContent = 'Connected';
+      document.getElementById('payoutConnectSection').classList.add('hidden');
+      document.getElementById('payoutConnectedSection').classList.remove('hidden');
+      var emailDisplay = document.getElementById('connectedPayoutEmail');
+      if (emailDisplay) emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId);
+      ZrxNotify.showNotification('PayPal account saved successfully!', 'success');
     } catch(_) {
-      ZrxNotify.showNotification('Failed to connect payout account. Please try again.', 'error');
+      ZrxNotify.showNotification('Failed to save payout account. Please try again.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Account'; }
     }
   }
+
+  // Close modal when clicking backdrop
+  document.addEventListener('click', function(e) {
+    var modal = document.getElementById('payoutModal');
+    if (modal && e.target === modal) closePayoutModal();
+  });
 
   // ── Settings Save ─────────────────────────────────────────────────────────────
   async function saveSettings() {
@@ -1157,6 +1243,8 @@
       sellerData.shopDescription = payload.shopDescription;
       sellerData.logoUrl = payload.logoUrl;
       sellerData.bannerUrl = payload.bannerUrl;
+      sellerData.contactEmail = payload.contactEmail;
+      sellerData.returnPolicy = payload.returnPolicy;
       document.getElementById('shopNameDisplay').textContent = payload.shopName || 'Your Shop';
       document.getElementById('shopDescDisplay').textContent = payload.shopDescription || '';
       ZrxNotify.showNotification('Shop settings saved!', 'success');
