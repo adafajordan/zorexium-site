@@ -1024,6 +1024,8 @@
   const MAX_IMAGE_SIZE_MB = 10;
   const MAX_DOCS_SIZE_MB = 25;
   const MAX_FEATURE_BULLETS = 10;
+  const STARTER_LISTING_LIMIT = 25;
+  const STARTER_LISTING_WARN_THRESHOLD = 22;
   let uploadedImages = []; // [{dataUrl, name}]
   let uploadedDocs   = []; // [{name, size}]
   let dragSrcIndex   = null;
@@ -1707,10 +1709,10 @@
               const activeCount = (Array.isArray(prods) ? prods : (prods.products || [])).filter(function(p) {
                 return p.status === 'active' || p.status === 'approved' || p.status === 'pending';
               }).length;
-              if (activeCount >= 25) {
-                ZrxNotify.showNotification('You have reached the Starter tier limit of 25 active listings. Upgrade to Pro for unlimited listings.', 'error');
-              } else if (activeCount >= 22) {
-                ZrxNotify.showNotification('Starter tier: ' + activeCount + '/25 active listings used. ' + (25 - activeCount) + ' remaining.', 'info');
+              if (activeCount >= STARTER_LISTING_LIMIT) {
+                ZrxNotify.showNotification('You have reached the Starter tier limit of ' + STARTER_LISTING_LIMIT + ' active listings. Upgrade to Pro for unlimited listings.', 'error');
+              } else if (activeCount >= STARTER_LISTING_WARN_THRESHOLD) {
+                ZrxNotify.showNotification('Starter tier: ' + activeCount + '/' + STARTER_LISTING_LIMIT + ' active listings used. ' + (STARTER_LISTING_LIMIT - activeCount) + ' remaining.', 'info');
               }
             }
           }

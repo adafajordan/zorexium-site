@@ -135,6 +135,11 @@ var publicApiRateLimit = rateLimit({
 });
 
 // ── CORS Middleware ────────────────────────────────────────────────────────────
+
+// ── Seller Tier Constants ──────────────────────────────────────────────────────
+const STARTER_LISTING_LIMIT = 25;
+const VALID_SELLER_TIERS = ['starter', 'pro', 'brand'];
+
 // Only allow credentialed requests from explicitly trusted origins.
 var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
   .split(',').map(function(o) { return o.trim(); }).filter(Boolean);
@@ -355,10 +360,9 @@ app.post('/api/products', verifyToken, async function(req, res) {
     const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft'];
     const resolvedStatus = (status && validStatuses.includes(status)) ? status : 'pending';
 
-    // Enforce Starter tier listing limit (max 25 active listings)
+    // Enforce Starter tier listing limit (max active listings)
     const seller = await db.collection('sellers').findOne({ userId: req.userId });
     if (seller && (seller.tier === 'starter' || !seller.tier)) {
-      const STARTER_LISTING_LIMIT = 25;
       const activeCount = await db.collection('products').countDocuments({
         sellerId: req.userId,
         status: { $in: ['active', 'approved', 'pending'] }
@@ -1453,8 +1457,7 @@ app.post('/api/sellers', verifyToken, async function(req, res) {
       return res.status(400).json({ error: 'accountType and shopName are required' });
     }
 
-    const VALID_TIERS = ['starter', 'pro', 'brand'];
-    const resolvedTier = (tier && VALID_TIERS.includes(String(tier).toLowerCase())) ? String(tier).toLowerCase() : 'starter';
+    const resolvedTier = (tier && VALID_SELLER_TIERS.includes(String(tier).toLowerCase())) ? String(tier).toLowerCase() : 'starter';
 
     const seller = {
       userId: req.userId,
@@ -1534,9 +1537,8 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
     updates.payoutVerified = Boolean(req.body.payoutVerified);
   }
   if (req.body.tier !== undefined) {
-    const VALID_TIERS = ['starter', 'pro', 'brand'];
     const newTier = String(req.body.tier).toLowerCase();
-    if (VALID_TIERS.includes(newTier)) updates.tier = newTier;
+    if (VALID_SELLER_TIERS.includes(newTier)) updates.tier = newTier;
   }
 
   try {
@@ -1554,7 +1556,7 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
 });
 
 // POST /api/sellers/assign-starter-tier – assign 'starter' tier to all sellers without a tier (auth required)
-app.post('/api/sellers/assign-starter-tier', verifyToken, async function(req, res) {
+app.post('/api/sellers/assign-starter-tier', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const result = await db.collection('sellers').updateMany(

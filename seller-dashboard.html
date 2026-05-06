@@ -649,6 +649,7 @@
 <script src="session.js"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const STARTER_LISTING_LIMIT = 25;
   let sellerData = {};
   let _userId = null;
   let _allOrders = [];
@@ -780,9 +781,9 @@
       const tier = sellerData.tier || 'starter';
       if (tier === 'starter') {
         const count = sellerData.products.length;
-        const remaining = Math.max(0, 25 - count);
-        listingsSubtitle.textContent = count + ' / 25 — ' + remaining + ' slot' + (remaining === 1 ? '' : 's') + ' left';
-        listingsSubtitle.className = count >= 25 ? 'text-xs text-red-500 mt-1 font-semibold' : 'text-xs text-gray-400 mt-1';
+        const remaining = Math.max(0, STARTER_LISTING_LIMIT - count);
+        listingsSubtitle.textContent = count + ' / ' + STARTER_LISTING_LIMIT + ' — ' + remaining + ' slot' + (remaining === 1 ? '' : 's') + ' left';
+        listingsSubtitle.className = count >= STARTER_LISTING_LIMIT ? 'text-xs text-red-500 mt-1 font-semibold' : 'text-xs text-gray-400 mt-1';
       } else {
         listingsSubtitle.textContent = 'Active listings (unlimited)';
         listingsSubtitle.className = 'text-xs text-gray-400 mt-1';
