@@ -1024,6 +1024,8 @@
   const MAX_IMAGE_SIZE_MB = 10;
   const MAX_DOCS_SIZE_MB = 25;
   const MAX_FEATURE_BULLETS = 10;
+  const STARTER_LISTING_LIMIT = 25;
+  const STARTER_LISTING_WARN_THRESHOLD = 22;
   let uploadedImages = []; // [{dataUrl, name}]
   let uploadedDocs   = []; // [{name, size}]
   let dragSrcIndex   = null;
@@ -1598,7 +1600,14 @@
       const method = editingProductId ? 'PUT' : 'POST';
       const res    = await ZrxSession.fetch(url, { method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(buildProductPayload(false)) });
       const data   = await res.json();
-      if (!res.ok || data.error) { ZrxNotify.showNotification('Error publishing: ' + (data.error || res.statusText), 'error'); return; }
+      if (!res.ok || data.error) {
+        if (data.code === 'LISTING_LIMIT_REACHED') {
+          ZrxNotify.showNotification(data.error, 'error');
+        } else {
+          ZrxNotify.showNotification('Error publishing: ' + (data.error || res.statusText), 'error');
+        }
+        return;
+      }
       ZrxNotify.showNotification('Product listing published successfully!', 'success');
       setTimeout(() => { window.location.href = 'seller-dashboard.html'; }, 1500);
     } catch (err) { ZrxNotify.showNotification('Failed to publish listing: ' + err.message, 'error'); }
@@ -1686,6 +1695,30 @@
       if (!res.ok) { window.location.href = 'seller-signup.html'; return; }
       _sellerData = await res.json();
     } catch (e) { window.location.href = 'seller-signup.html'; return; }
+
+    // Warn Starter tier sellers who are at or near their listing limit
+    if (!sessionStorage.getItem('editProductId')) {
+      const tier = _sellerData.tier || 'starter';
+      if (tier === 'starter') {
+        try {
+          const _userId = (ZrxSession.getUser() || {}).id || (ZrxSession.getUser() || {})._id || '';
+          if (_userId) {
+            const prodRes = await fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(_userId));
+            if (prodRes.ok) {
+              const prods = await prodRes.json();
+              const activeCount = (Array.isArray(prods) ? prods : (prods.products || [])).filter(function(p) {
+                return p.status === 'active' || p.status === 'approved' || p.status === 'pending';
+              }).length;
+              if (activeCount >= STARTER_LISTING_LIMIT) {
+                ZrxNotify.showNotification('You have reached the Starter tier limit of ' + STARTER_LISTING_LIMIT + ' active listings. Upgrade to Pro for unlimited listings.', 'error');
+              } else if (activeCount >= STARTER_LISTING_WARN_THRESHOLD) {
+                ZrxNotify.showNotification('Starter tier: ' + activeCount + '/' + STARTER_LISTING_LIMIT + ' active listings used. ' + (STARTER_LISTING_LIMIT - activeCount) + ' remaining.', 'info');
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
 
     updateProgressBar(1);
     showStep(1);

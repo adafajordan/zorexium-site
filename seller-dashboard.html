@@ -319,6 +319,7 @@
         <div class="flex items-center gap-3 mb-1">
           <h1 class="text-2xl font-bold text-gray-900" id="shopNameDisplay">Your Shop</h1>
           <span id="verifiedBadge" class="hidden inline-flex items-center gap-1 text-xs bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 rounded-full font-semibold"><i class="fas fa-check-circle"></i> Verified Seller</span>
+          <span id="tierBadge" class="hidden inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold border"></span>
         </div>
         <p class="text-gray-500 text-sm" id="shopDescDisplay"></p>
         <a href="#" id="viewProfileLink" aria-disabled="true" class="text-gray-400 text-sm font-medium mt-1 inline-flex items-center gap-1 cursor-not-allowed opacity-60" title="Loading profile…">
@@ -389,7 +390,7 @@
                 <span class="w-8 h-8 bg-cyan-50 rounded-lg flex items-center justify-center"><i class="fas fa-box text-cyan-500 text-sm"></i></span>
               </div>
               <p class="text-3xl font-bold text-gray-900" id="totalProducts">0</p>
-              <p class="text-xs text-gray-400 mt-1">Active listings</p>
+              <p class="text-xs text-gray-400 mt-1" id="listingsSubtitle">Active listings</p>
             </div>
             <div class="stat-card">
               <div class="flex items-center justify-between mb-3">
@@ -648,6 +649,7 @@
 <script src="session.js"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
+  const STARTER_LISTING_LIMIT = 25;
   let sellerData = {};
   let _userId = null;
   let _allOrders = [];
@@ -751,6 +753,20 @@
       document.getElementById('payoutConnectedSection').classList.remove('hidden');
     }
 
+    // Show seller tier badge
+    const tierBadge = document.getElementById('tierBadge');
+    if (tierBadge) {
+      const tier = sellerData.tier || 'starter';
+      const tierConfig = {
+        starter: { label: 'Starter', cls: 'bg-gray-100 text-gray-700 border-gray-300' },
+        pro:     { label: 'Pro Seller', cls: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
+        brand:   { label: 'Official Brand', cls: 'bg-amber-50 text-amber-700 border-amber-300' }
+      };
+      const cfg = tierConfig[tier] || tierConfig.starter;
+      tierBadge.textContent = cfg.label;
+      tierBadge.className = 'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold border ' + cfg.cls;
+    }
+
     document.getElementById('totalProducts').textContent = sellerData.products.length;
     document.getElementById('totalSales').textContent = sellerData.totalSales || 0;
     const hasRating = !!sellerData.rating;
@@ -758,6 +774,21 @@
     const ratingSubtitle = document.getElementById('sellerRatingSubtitle');
     if (ratingSubtitle) ratingSubtitle.textContent = hasRating ? 'Out of 5.0' : 'Not yet rated';
     document.getElementById('productsBadge').textContent = sellerData.products.length;
+
+    // Show listing count vs tier limit
+    const listingsSubtitle = document.getElementById('listingsSubtitle');
+    if (listingsSubtitle) {
+      const tier = sellerData.tier || 'starter';
+      if (tier === 'starter') {
+        const count = sellerData.products.length;
+        const remaining = Math.max(0, STARTER_LISTING_LIMIT - count);
+        listingsSubtitle.textContent = count + ' / ' + STARTER_LISTING_LIMIT + ' — ' + remaining + ' slot' + (remaining === 1 ? '' : 's') + ' left';
+        listingsSubtitle.className = count >= STARTER_LISTING_LIMIT ? 'text-xs text-red-500 mt-1 font-semibold' : 'text-xs text-gray-400 mt-1';
+      } else {
+        listingsSubtitle.textContent = 'Active listings (unlimited)';
+        listingsSubtitle.className = 'text-xs text-gray-400 mt-1';
+      }
+    }
 
     // Revenue estimate from products * sales (approximate)
     const revenue = (parseFloat(sellerData.totalRevenue) || 0);

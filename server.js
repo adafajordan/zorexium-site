@@ -135,6 +135,11 @@ var publicApiRateLimit = rateLimit({
 });
 
 // ── CORS Middleware ────────────────────────────────────────────────────────────
+
+// ── Seller Tier Constants ──────────────────────────────────────────────────────
+const STARTER_LISTING_LIMIT = 25;
+const VALID_SELLER_TIERS = ['starter', 'pro', 'brand'];
+
 // Only allow credentialed requests from explicitly trusted origins.
 var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
   .split(',').map(function(o) { return o.trim(); }).filter(Boolean);
@@ -354,6 +359,21 @@ app.post('/api/products', verifyToken, async function(req, res) {
     // Validate status if provided; allow draft on POST
     const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft'];
     const resolvedStatus = (status && validStatuses.includes(status)) ? status : 'pending';
+
+    // Enforce Starter tier listing limit (max active listings)
+    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    if (seller && (seller.tier === 'starter' || !seller.tier)) {
+      const activeCount = await db.collection('products').countDocuments({
+        sellerId: req.userId,
+        status: { $in: ['active', 'approved', 'pending'] }
+      });
+      if (activeCount >= STARTER_LISTING_LIMIT) {
+        return res.status(403).json({
+          error: `Starter tier sellers are limited to ${STARTER_LISTING_LIMIT} active listings. Upgrade to Pro to list unlimited products.`,
+          code: 'LISTING_LIMIT_REACHED'
+        });
+      }
+    }
 
     // Resolve display name: use provided sellerName/sellerUsername or fall back to user's firstName from DB
     let resolvedSellerName = (typeof sellerName === 'string' && sellerName.trim()) ? sellerName.trim()
@@ -1429,12 +1449,15 @@ app.post('/api/sellers', verifyToken, async function(req, res) {
     const {
       accountType, shopName, shopDescription, businessEmail, phoneNumber,
       businessAddress, businessCity, businessState, businessZip,
-      personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip
+      personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip,
+      tier
     } = req.body;
 
     if (!accountType || !shopName) {
       return res.status(400).json({ error: 'accountType and shopName are required' });
     }
+
+    const resolvedTier = (tier && VALID_SELLER_TIERS.includes(String(tier).toLowerCase())) ? String(tier).toLowerCase() : 'starter';
 
     const seller = {
       userId: req.userId,
@@ -1457,6 +1480,7 @@ app.post('/api/sellers', verifyToken, async function(req, res) {
       rating: 5,
       totalSales: 0,
       isVerified: false,
+      tier: resolvedTier,
       createdAt: new Date()
     };
 
@@ -1497,7 +1521,7 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
     'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
     'businessAddress', 'businessCity', 'businessState', 'businessZip',
     'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
-    'shippingState', 'shippingZip', 'payoutAccountId', 'payoutVerified'
+    'shippingState', 'shippingZip', 'payoutAccountId', 'payoutVerified', 'tier'
   ];
   const updates = { updatedAt: new Date() };
   const stringFields = [
@@ -1511,6 +1535,10 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
   }
   if (req.body.payoutVerified !== undefined) {
     updates.payoutVerified = Boolean(req.body.payoutVerified);
+  }
+  if (req.body.tier !== undefined) {
+    const newTier = String(req.body.tier).toLowerCase();
+    if (VALID_SELLER_TIERS.includes(newTier)) updates.tier = newTier;
   }
 
   try {
@@ -1527,9 +1555,23 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
   }
 });
 
+// POST /api/sellers/assign-starter-tier – assign 'starter' tier to all sellers without a tier (auth required)
+app.post('/api/sellers/assign-starter-tier', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const result = await db.collection('sellers').updateMany(
+      { tier: { $exists: false } },
+      { $set: { tier: 'starter', updatedAt: new Date() } }
+    );
+    res.json({ updated: result.modifiedCount, message: `Assigned starter tier to ${result.modifiedCount} sellers.` });
+  } catch (error) {
+    console.error('Error assigning starter tier:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/sellers/recover-missing – recover orphaned seller records (auth required)
 app.post('/api/sellers/recover-missing', verifyToken, async function(req, res) {
-  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const products = await db.collection('products').find({}, { projection: { sellerId: 1 } }).toArray();
     const sellerIds = [...new Set(products.map(function(p) { return p.sellerId; }).filter(Boolean))];
@@ -1557,6 +1599,7 @@ app.post('/api/sellers/recover-missing', verifyToken, async function(req, res) {
         rating: 5,
         totalSales: 0,
         isVerified: false,
+        tier: 'starter',
         createdAt: new Date()
       });
 
@@ -2565,6 +2608,7 @@ async function recoverMissingSellers() {
         rating: 5,
         totalSales: 0,
         isVerified: false,
+        tier: 'starter',
         createdAt: new Date()
       });
 
@@ -2603,6 +2647,21 @@ async function recoverMissingSellers() {
 }
 
 // Start server and connect to MongoDB
+async function assignStarterTierToExistingSellers() {
+  if (!mongoConnected) return;
+  try {
+    const result = await db.collection('sellers').updateMany(
+      { tier: { $exists: false } },
+      { $set: { tier: 'starter', updatedAt: new Date() } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(`✅ Seller tier migration: ${result.modifiedCount} seller(s) assigned to starter tier`);
+    }
+  } catch (err) {
+    console.error('⚠️  Seller tier migration error:', err.message);
+  }
+}
+
 async function activateAllProducts() {
   if (!mongoConnected) return;
   try {
@@ -2627,6 +2686,7 @@ async function start() {
     if (connected) {
       console.log('✅ Database connected — starting HTTP server');
       await recoverMissingSellers();
+      await assignStarterTierToExistingSellers();
       await activateAllProducts();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
