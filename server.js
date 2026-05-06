@@ -972,10 +972,12 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
         const firstItem = Array.isArray(order.items) && order.items[0] ? order.items[0] : {};
         await db.collection('payouts').insertOne({
           orderId: order.id,
+          sellerId: firstItem.sellerId || '',
           sellerUsername: firstItem.sellerUsername || '',
           sellerName: firstItem.sellerName || firstItem.sellerUsername || '',
           amount: payoutAmount,
           platformFee,
+          items: Array.isArray(order.items) ? order.items : [],
           status: 'pending_delivery',
           placedAt: order.createdAt || new Date(),
           createdAt: new Date()
@@ -1674,14 +1676,16 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
     'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
     'businessAddress', 'businessCity', 'businessState', 'businessZip',
     'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
-    'shippingState', 'shippingZip', 'payoutAccountId', 'payoutVerified', 'tier'
+    'shippingState', 'shippingZip', 'payoutAccountId', 'payoutVerified', 'tier',
+    'logoUrl', 'bannerUrl', 'contactEmail', 'returnPolicy'
   ];
   const updates = { updatedAt: new Date() };
   const stringFields = [
     'shopName', 'shopDescription', 'businessEmail', 'phoneNumber',
     'businessAddress', 'businessCity', 'businessState', 'businessZip',
     'personalName', 'personalEmail', 'shippingAddress', 'shippingCity',
-    'shippingState', 'shippingZip', 'payoutAccountId'
+    'shippingState', 'shippingZip', 'payoutAccountId',
+    'logoUrl', 'bannerUrl', 'contactEmail', 'returnPolicy'
   ];
   for (const field of stringFields) {
     if (req.body[field] !== undefined) updates[field] = String(req.body[field]).slice(0, 2000);
@@ -2057,12 +2061,24 @@ app.delete('/api/labs/:id', verifyToken, async function(req, res) {
 
 // ── PAYOUTS ───────────────────────────────────────────────────────────────────────
 
-// GET /api/payouts – get all payouts (auth required)
+// GET /api/payouts – get payouts for the current seller (auth required)
 app.get('/api/payouts', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const payouts = await db.collection('payouts').find().sort({ createdAt: -1 }).toArray();
+    // Look up the seller profile to get sellerUsername for matching legacy payouts
+    const seller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { shopName: 1 } });
+    const sellerUsername = seller ? (seller.shopName || '') : '';
+
+    // Return only payouts for this seller (by sellerId or sellerUsername fallback)
+    const query = {
+      $or: [
+        { sellerId: req.userId },
+        { sellerUsername: req.userEmail },
+        ...(sellerUsername ? [{ sellerUsername: sellerUsername }] : [])
+      ]
+    };
+    const payouts = await db.collection('payouts').find(query).sort({ createdAt: -1 }).toArray();
     res.json(payouts);
   } catch (error) {
     console.error('Error fetching payouts:', error);

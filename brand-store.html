@@ -250,17 +250,28 @@
 </header>
 
 <!-- Brand Hero Banner -->
-<div class="bg-white border-b border-gray-200">
+<div id="brandHero" class="bg-white border-b border-gray-200">
   <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row items-center md:items-start gap-6">
     <!-- Brand logo/icon -->
-    <div class="flex-shrink-0 w-24 h-24 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center">
+    <div class="flex-shrink-0 w-24 h-24 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+      <img id="brandLogoImg" src="" alt="Shop Logo" class="w-full h-full object-contain hidden">
       <i class="fas fa-microchip text-4xl text-cyan-500" id="brandIcon"></i>
     </div>
     <!-- Brand info -->
     <div class="flex-1">
       <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Brand Store</p>
       <h1 id="brandTitle" class="text-3xl font-bold text-gray-900 mb-1">Brand</h1>
-      <p id="brandSubtitle" class="text-gray-500 mb-4">Shop All Brand Products At Zorexium</p>
+      <p id="brandSubtitle" class="text-gray-500 mb-3">Shop All Brand Products At Zorexium</p>
+      <div class="flex flex-col gap-1 mb-3">
+        <div data-contact-row class="hidden flex items-center gap-2 text-sm text-gray-600">
+          <i class="fas fa-envelope text-gray-400 w-4 text-center"></i>
+          <a id="brandContactEmail" href="#" class="text-cyan-600 hover:text-cyan-700"></a>
+        </div>
+        <div data-policy-row class="hidden flex items-start gap-2 text-sm text-gray-600">
+          <i class="fas fa-undo text-gray-400 w-4 text-center mt-0.5 flex-shrink-0"></i>
+          <span id="brandReturnPolicy" class="text-gray-600"></span>
+        </div>
+      </div>
       <div class="flex flex-wrap gap-8">
         <div class="text-center">
           <p id="statOrders" class="text-2xl font-bold text-cyan-600">–</p>
@@ -470,7 +481,71 @@
 
     updateBrandPageTitle(brandName);
     updateCartBadge();
+
+    // Load seller profile to populate banner, logo, and description
+    if (sellerId) {
+      loadSellerProfile(sellerId);
+    }
+
     await loadProducts();
+  }
+
+  async function loadSellerProfile(sellerId) {
+    try {
+      const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(sellerId));
+      if (!res.ok) return;
+      const seller = await res.json();
+
+      // Update shop name
+      if (seller.shopName) updateBrandPageTitle(seller.shopName);
+
+      // Update description
+      if (seller.shopDescription) {
+        document.getElementById('brandSubtitle').textContent = seller.shopDescription;
+      }
+
+      // Update banner
+      if (seller.bannerUrl) {
+        const hero = document.getElementById('brandHero');
+        if (hero) {
+          hero.style.backgroundImage = 'linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url(' + escHtml(seller.bannerUrl) + ')';
+          hero.style.backgroundSize = 'cover';
+          hero.style.backgroundPosition = 'center';
+        }
+      }
+
+      // Update logo
+      const logoEl = document.getElementById('brandLogoImg');
+      const logoIcon = document.getElementById('brandIcon');
+      if (seller.logoUrl) {
+        if (logoEl) {
+          logoEl.src = seller.logoUrl;
+          logoEl.classList.remove('hidden');
+        }
+        if (logoIcon) logoIcon.classList.add('hidden');
+      }
+
+      // Show contact email if available
+      if (seller.contactEmail) {
+        const contactEl = document.getElementById('brandContactEmail');
+        if (contactEl) {
+          contactEl.href = 'mailto:' + escHtml(seller.contactEmail);
+          contactEl.textContent = seller.contactEmail;
+          contactEl.closest('[data-contact-row]').classList.remove('hidden');
+        }
+      }
+
+      // Show return policy if available
+      if (seller.returnPolicy) {
+        const policyEl = document.getElementById('brandReturnPolicy');
+        if (policyEl) {
+          policyEl.textContent = seller.returnPolicy;
+          policyEl.closest('[data-policy-row]').classList.remove('hidden');
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load seller profile:', e);
+    }
   }
 
   function toTitleCase(str) {
