@@ -398,6 +398,9 @@
   </div>
 </main>
 
+<script src="notifications.js"></script>
+<script src="session.js"></script>
+
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   const PLACEHOLDER_IMG = 'https://placehold.co/40x40/333/fff?text=U';
@@ -561,7 +564,21 @@
   }
 
   async function loadConversations(directContactId) {
-        try {
+    // Show a loading skeleton immediately so the user sees feedback right away
+    const list = document.getElementById('conversationsList');
+    list.innerHTML = `
+      <div class="p-2 space-y-1">
+        ${[1,2,3].map(() => `
+        <div class="animate-pulse flex items-center gap-3 px-3 py-2.5 rounded-lg">
+          <div class="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
+          <div class="flex-1 space-y-1.5">
+            <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+            <div class="h-2.5 bg-gray-100 rounded w-1/2"></div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+
+    try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/messages', {
         credentials: 'include'
       });
@@ -611,8 +628,14 @@
       return;
     }
 
-    for (const contactId of Object.keys(conversations)) {
-      const info = await fetchUserInfoById(contactId);
+    const contactIds = Object.keys(conversations);
+
+    // Fetch all user info in parallel for instant sidebar rendering
+    const infos = await Promise.all(contactIds.map(id => fetchUserInfoById(id)));
+
+    for (let i = 0; i < contactIds.length; i++) {
+      const contactId = contactIds[i];
+      const info = infos[i];
       const msgs = conversations[contactId] || [];
       const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
       const button = document.createElement('button');
@@ -819,9 +842,6 @@
 
   init();
 </script>
-
-<script src="notifications.js"></script>
-<script src="session.js"></script>
 
     <!-- Chat Bubble -->
     <div class="fixed bottom-6 right-6 z-50">
