@@ -677,6 +677,165 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 
+async function sendPayPalSellerPayout(order, options) {
+  const payoutMeta = options || {};
+  const firstItem = Array.isArray(order && order.items) && order.items[0] ? order.items[0] : {};
+  const totalAmount = parseFloat(order && order.total) || 0;
+  const platformFee = parseFloat((totalAmount * 0.1).toFixed(2));
+  const payoutAmount = parseFloat((totalAmount * 0.9).toFixed(2));
+  const sellerId = String(firstItem.sellerId || '').trim();
+  const sellerUsername = String(firstItem.sellerUsername || '').trim();
+  const sellerName = String(firstItem.sellerName || firstItem.sellerUsername || '').trim();
+  const now = new Date();
+
+  const payoutBase = {
+    orderId: order.id,
+    sellerId: sellerId,
+    sellerUsername: sellerUsername,
+    sellerName: sellerName,
+    amount: payoutAmount,
+    platformFee: platformFee,
+    items: Array.isArray(order && order.items) ? order.items : [],
+    method: 'PayPal',
+    placedAt: order.createdAt || now,
+    triggerSource: payoutMeta.triggerSource || 'order_completed',
+    updatedAt: now
+  };
+
+  await db.collection('payouts').updateOne(
+    { orderId: order.id },
+    {
+      $setOnInsert: {
+        ...payoutBase,
+        status: 'processing',
+        createdAt: now
+      },
+      $set: {
+        ...payoutBase,
+        lastAttemptAt: now
+      }
+    },
+    { upsert: true }
+  );
+
+  const payoutDoc = await db.collection('payouts').findOne({ orderId: order.id });
+  if (payoutDoc && payoutDoc.status === 'paid') {
+    return { ok: true, alreadyPaid: true, payout: payoutDoc };
+  }
+
+  if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+    const reason = 'PayPal is not configured on the server';
+    await db.collection('payouts').updateOne(
+      { orderId: order.id },
+      { $set: { status: 'failed', error: reason, updatedAt: new Date() } }
+    );
+    return { ok: false, error: reason };
+  }
+
+  if (!sellerId) {
+    const reason = 'Seller ID missing on order item';
+    await db.collection('payouts').updateOne(
+      { orderId: order.id },
+      { $set: { status: 'failed', error: reason, updatedAt: new Date() } }
+    );
+    return { ok: false, error: reason };
+  }
+
+  if (!(payoutAmount > 0)) {
+    const reason = 'Calculated payout amount must be greater than 0';
+    await db.collection('payouts').updateOne(
+      { orderId: order.id },
+      { $set: { status: 'failed', error: reason, updatedAt: new Date() } }
+    );
+    return { ok: false, error: reason };
+  }
+
+  const seller = await db.collection('sellers').findOne(
+    { userId: sellerId },
+    { projection: { payoutAccountId: 1, payoutVerified: 1, userId: 1, shopName: 1 } }
+  );
+  const receiverEmail = String(seller && seller.payoutAccountId ? seller.payoutAccountId : '').trim();
+  if (!seller || !receiverEmail || !seller.payoutVerified) {
+    const reason = 'Seller payout account is not connected or verified';
+    await db.collection('payouts').updateOne(
+      { orderId: order.id },
+      { $set: { status: 'failed', error: reason, updatedAt: new Date() } }
+    );
+    return { ok: false, error: reason };
+  }
+
+  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+  const senderBatchId = `zrx-${String(order.id || Date.now()).replace(/[^a-zA-Z0-9-]/g, '').slice(-24)}-${Date.now()}`;
+  const payoutPayload = {
+    sender_batch_header: {
+      sender_batch_id: senderBatchId,
+      email_subject: 'You have a payout from Zorexium',
+      email_message: `Your payout for order ${order.id} is on the way.`
+    },
+    items: [{
+      recipient_type: 'EMAIL',
+      amount: { value: payoutAmount.toFixed(2), currency: 'USD' },
+      receiver: receiverEmail,
+      note: `Seller payout for order ${order.id}`,
+      sender_item_id: String(order.id || senderBatchId).slice(0, 127)
+    }]
+  };
+
+  try {
+    const payoutRes = await fetch(`${PAYPAL_API}/v1/payments/payouts`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payoutPayload)
+    });
+    const payoutData = await payoutRes.json();
+
+    if (!payoutRes.ok) {
+      const apiErr = payoutData && (payoutData.message || payoutData.name || payoutData.error_description);
+      const reason = apiErr || 'PayPal payout request failed';
+      await db.collection('payouts').updateOne(
+        { orderId: order.id },
+        {
+          $set: {
+            status: 'failed',
+            error: reason,
+            paypalError: payoutData,
+            payoutAccountId: receiverEmail,
+            updatedAt: new Date()
+          }
+        }
+      );
+      return { ok: false, error: reason };
+    }
+
+    await db.collection('payouts').updateOne(
+      { orderId: order.id },
+      {
+        $set: {
+          status: 'paid',
+          payoutAccountId: receiverEmail,
+          paypalPayoutBatchId: payoutData && payoutData.batch_header ? payoutData.batch_header.payout_batch_id : null,
+          paypalBatchStatus: payoutData && payoutData.batch_header ? payoutData.batch_header.batch_status : null,
+          paypalPayoutResponse: payoutData,
+          paidAt: new Date(),
+          updatedAt: new Date(),
+          error: null
+        }
+      }
+    );
+
+    return { ok: true, payout: payoutData };
+  } catch (error) {
+    await db.collection('payouts').updateOne(
+      { orderId: order.id },
+      { $set: { status: 'failed', error: error.message, updatedAt: new Date() } }
+    );
+    return { ok: false, error: error.message };
+  }
+}
+
 // ── PRO SELLER SUBSCRIPTION PLAN ─────────────────────────────────────────────
 // Cache the PayPal plan ID in memory; prefer the env var if pre-configured.
 let cachedProSellerPlanId = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
@@ -962,29 +1121,18 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
       }
     );
 
-    // Auto-create payout entry for this order
+    // Auto-create and send seller payout for this order
     try {
-      const existingPayout = await db.collection('payouts').findOne({ orderId: order.id });
-      if (!existingPayout) {
-        const totalAmount = parseFloat(order.total) || 0;
-        const platformFee = parseFloat((totalAmount * 0.1).toFixed(2));
-        const payoutAmount = parseFloat((totalAmount * 0.9).toFixed(2));
-        const firstItem = Array.isArray(order.items) && order.items[0] ? order.items[0] : {};
-        await db.collection('payouts').insertOne({
-          orderId: order.id,
-          sellerId: firstItem.sellerId || '',
-          sellerUsername: firstItem.sellerUsername || '',
-          sellerName: firstItem.sellerName || firstItem.sellerUsername || '',
-          amount: payoutAmount,
-          platformFee,
-          items: Array.isArray(order.items) ? order.items : [],
-          status: 'pending_delivery',
-          placedAt: order.createdAt || new Date(),
-          createdAt: new Date()
-        });
+      const payoutResult = await sendPayPalSellerPayout(order, { triggerSource: 'capture' });
+      if (!payoutResult.ok) {
+        console.error('Automatic payout failed for order', order.id, '-', payoutResult.error);
+      } else if (payoutResult.alreadyPaid) {
+        console.log('Automatic payout skipped (already paid) for order', order.id);
+      } else {
+        console.log('Automatic payout sent for order', order.id);
       }
     } catch (payoutErr) {
-      console.error('Failed to create payout entry:', payoutErr.message);
+      console.error('Failed to process automatic payout:', payoutErr.message);
     }
 
     res.json({ orderId, paypalCaptureId: captureData.id, status: 'completed' });
@@ -2060,6 +2208,50 @@ app.delete('/api/labs/:id', verifyToken, async function(req, res) {
 });
 
 // ── PAYOUTS ───────────────────────────────────────────────────────────────────────
+
+// POST /api/payout – trigger/retry payout for a completed order (auth required)
+app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const orderId = String((req.body && req.body.orderId) || '').trim();
+  if (!orderId || orderId.length > 64) {
+    return res.status(400).json({ error: 'A valid orderId is required' });
+  }
+
+  try {
+    const order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'completed') {
+      return res.status(400).json({ error: 'Payouts can only be sent for completed orders' });
+    }
+
+    const firstItem = Array.isArray(order.items) && order.items[0] ? order.items[0] : {};
+    if (!firstItem.sellerId) {
+      return res.status(400).json({ error: 'Order does not include a seller payout target' });
+    }
+
+    if (String(firstItem.sellerId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Forbidden: you can only trigger payouts for your own orders' });
+    }
+
+    const payoutResult = await sendPayPalSellerPayout(order, { triggerSource: 'api' });
+    if (!payoutResult.ok) {
+      console.error('Manual payout trigger failed for order', orderId, '-', payoutResult.error);
+      return res.status(502).json({ error: payoutResult.error || 'Payout failed' });
+    }
+
+    const payout = await db.collection('payouts').findOne({ orderId: order.id });
+    res.json({
+      success: true,
+      alreadyPaid: !!payoutResult.alreadyPaid,
+      orderId: order.id,
+      payout: payout || null
+    });
+  } catch (error) {
+    console.error('Error triggering payout:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // GET /api/payouts – get payouts for the current seller (auth required)
 app.get('/api/payouts', publicApiRateLimit, verifyToken, async function(req, res) {
