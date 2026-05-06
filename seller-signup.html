@@ -423,10 +423,15 @@
             <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $19/month subscription is required for the Pro Seller tier. Complete payment via PayPal to continue your registration.</p>
             <div class="ml-9">
               <div id="paypal-subscription-container" class="min-h-[45px]"></div>
-              <div id="paypalSubError" class="hidden text-red-500 text-sm mt-3 flex items-center gap-2 flex-wrap">
-                <i class="fas fa-exclamation-circle flex-shrink-0"></i>
-                <span id="paypalSubErrorMsg">Failed to load PayPal. Please check your connection and try again.</span>
-                <button type="button" onclick="retryPaypalSubLoad()" class="underline text-red-700 hover:text-red-900 bg-transparent border-0 cursor-pointer text-sm ml-1">Retry</button>
+              <div id="paypalSubError" class="hidden text-red-600 text-sm mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex items-start gap-2 flex-wrap">
+                  <i class="fas fa-exclamation-circle flex-shrink-0 mt-0.5"></i>
+                  <span id="paypalSubErrorMsg">Failed to load PayPal. Please check your connection and try again.</span>
+                </div>
+                <div id="paypalSubActions" class="mt-2 flex gap-2 flex-wrap">
+                  <button type="button" id="paypalSubRetryBtn" onclick="retryPaypalSubLoad()" class="text-xs px-3 py-1.5 bg-white border border-red-300 text-red-700 rounded-md hover:bg-red-50 cursor-pointer">Retry</button>
+                  <button type="button" onclick="switchToStarterTier()" class="text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 cursor-pointer">Switch to Starter (Free)</button>
+                </div>
               </div>
               <div id="paypalSubConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
                 <i class="fas fa-check-circle text-green-500"></i>
@@ -689,14 +694,25 @@
   }
 
   function initProPayment() {
+    // TODO (developer): If the PayPal Pro Seller subscription plan is missing, you must supply
+    // a valid PayPal billing plan ID via the PAYPAL_PRO_SELLER_PLAN_ID environment variable on
+    // the backend (server.js). Without it, the Pro tier cannot accept subscriptions.
+    // Steps:
+    //   1. Log in to your PayPal Developer Dashboard and create a monthly billing plan for $19/month.
+    //   2. Set PAYPAL_PRO_SELLER_PLAN_ID=<your-plan-id> in your backend environment variables.
+    //   3. Redeploy the backend so /api/sellers/pro-plan returns the correct plan ID.
     fetch(BACKEND_URL + '/api/config')
       .then(function(r) { return r.json(); })
       .then(function(config) {
-        if (!config.paypalClientId) throw new Error('PayPal is not configured on this server. Please try again later or contact support.');
+        if (!config.paypalClientId) throw new Error('PayPal is not configured on this server. Please contact support.');
         return fetch(BACKEND_URL + '/api/sellers/pro-plan')
           .then(function(r) { return r.json(); })
           .then(function(planData) {
-            if (!planData.planId) throw new Error('Pro Seller subscription plan is unavailable. Please try again later.');
+            if (!planData.planId) {
+              // Plan is not configured — mark Pro as unavailable so the user can choose Starter
+              markProUnavailable();
+              throw new Error('The Pro Seller subscription plan is not currently available. Please select the Starter plan or try again later.');
+            }
             loadPayPalSubSDK(config.paypalClientId, planData.planId);
           });
       })
@@ -704,8 +720,45 @@
         console.error('Failed to init Pro payment:', err);
         var msgEl = document.getElementById('paypalSubErrorMsg');
         if (msgEl) msgEl.textContent = err.message || 'Failed to load PayPal. Please check your connection and try again.';
-        document.getElementById('paypalSubError').classList.remove('hidden');
+        var errEl = document.getElementById('paypalSubError');
+        if (errEl) errEl.classList.remove('hidden');
+        // Hide the retry button when the plan itself is unavailable (retrying won't help)
+        var isPlanUnavailable = err.message && err.message.includes('not currently available');
+        var retryBtn = document.getElementById('paypalSubRetryBtn');
+        if (retryBtn) retryBtn.style.display = isPlanUnavailable ? 'none' : '';
       });
+  }
+
+  function markProUnavailable() {
+    // Visually mark the Pro tier option as temporarily unavailable
+    var proLabel = document.getElementById('tierProLabel');
+    var proRadio = document.getElementById('tierProRadio');
+    if (proLabel && !proLabel.dataset.unavailable) {
+      proLabel.dataset.unavailable = 'true';
+      proLabel.style.opacity = '0.6';
+      proLabel.style.pointerEvents = 'none';
+      proLabel.style.cursor = 'not-allowed';
+      // Add an "Unavailable" badge next to the price badge
+      var header = proLabel.querySelector('.flex.items-center.justify-between');
+      if (header) {
+        var badge = document.createElement('span');
+        badge.id = 'proUnavailableBadge';
+        badge.className = 'text-xs font-bold text-red-700 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full ml-1';
+        badge.textContent = 'Temporarily Unavailable';
+        header.appendChild(badge);
+      }
+    }
+    if (proRadio) proRadio.disabled = true;
+    // Switch user to Starter automatically since Pro is unavailable
+    switchToStarterTier();
+  }
+
+  function switchToStarterTier() {
+    var starterRadio = document.querySelector('input[name="sellerTier"][value="starter"]');
+    if (starterRadio && !starterRadio.checked) {
+      starterRadio.checked = true;
+      starterRadio.dispatchEvent(new Event('change'));
+    }
   }
 
   function checkAuth() {
