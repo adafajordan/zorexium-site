@@ -877,7 +877,7 @@
   function updateTierLabels() {
     const val = document.querySelector('input[name="sellerTier"]:checked');
     if (!val) return;
-    const tiers = ['starter', 'pro'];
+    const tiers = ['starter', 'pro']; // 'brand' is excluded – it is disabled ("Coming Soon") and must never get active styles
     tiers.forEach(function(t) {
       const label = document.getElementById('tier' + t.charAt(0).toUpperCase() + t.slice(1) + 'Label');
       if (!label) return;

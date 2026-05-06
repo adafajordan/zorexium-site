@@ -1775,7 +1775,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
 
     await db.collection('sellers').updateOne(
       { userId: req.userId },
-      { $set: { tier: 'starter', updatedAt: new Date() },
+      { $set: { tier: 'starter', proTierDowngraded: true, proTierDowngradedAt: new Date(), updatedAt: new Date() },
         $unset: { proSubscriptionId: '', proSubscriptionStatus: '' } }
     );
     const updated = await db.collection('sellers').findOne({ userId: req.userId });
