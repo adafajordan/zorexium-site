@@ -415,10 +415,26 @@
             <p class="ml-9 text-xs text-gray-400 mt-3">All plans include buyer fraud protection, secure checkout, and listing tools.</p>
           </div>
 
+          <!-- Pro Seller Payment Step (shown only when Pro tier is selected) -->
+          <div id="proPaymentSection" class="hidden bg-white border-2 border-cyan-300 rounded-xl p-6 shadow-sm">
+            <h2 class="text-base font-bold text-gray-900 mb-1 flex items-center">
+              <span class="step-badge">3</span>Pro Seller Subscription Payment
+            </h2>
+            <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $19/month subscription is required for the Pro Seller tier. Complete payment via PayPal to continue your registration.</p>
+            <div class="ml-9">
+              <div id="paypal-subscription-container" class="min-h-[45px]"></div>
+              <p id="paypalSubError" class="hidden text-red-500 text-sm mt-3"><i class="fas fa-exclamation-circle mr-1"></i>Failed to load PayPal. Please check your connection and try again.</p>
+              <div id="paypalSubConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
+                <i class="fas fa-check-circle text-green-500"></i>
+                <span>Subscription confirmed! Complete the form below and click Submit to finish your registration.</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Step 3: Shop Details -->
           <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h2 class="text-base font-bold text-gray-900 mb-4 flex items-center">
-              <span class="step-badge">3</span>Shop Details
+              <span class="step-badge" id="shopDetailsStepNum">3</span>Shop Details
             </h2>
             <div class="ml-9 space-y-5">
               <div>
@@ -519,8 +535,8 @@
 
           <!-- Submit Buttons -->
           <div class="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3.5 px-8 rounded-xl text-base transition-colors flex items-center justify-center gap-2">
-              <i class="fas fa-rocket"></i> Submit
+            <button type="submit" id="submitBtn" class="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3.5 px-8 rounded-xl text-base transition-colors flex items-center justify-center gap-2">
+              <i class="fas fa-rocket"></i> <span id="submitBtnText">Submit</span>
             </button>
             <a href="sell-on-zorexium.html" class="px-8 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-center text-base transition-colors">
               Cancel
@@ -598,6 +614,84 @@
 <script src="notifications.js"></script>
 <script src="session.js"></script>
 <script>
+  var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+
+  // ── PayPal Subscription State ─────────────────────────────────────────────
+  var proSubscriptionId = null;
+  var paypalSubSDKLoaded = false;
+  var paypalSubSDKLoading = false;
+  var pendingProPlanId = null;
+
+  function loadPayPalSubSDK(clientId, planId) {
+    if (paypalSubSDKLoaded) {
+      renderPayPalSubscriptionButtons(planId);
+      return;
+    }
+    if (paypalSubSDKLoading) return;
+    paypalSubSDKLoading = true;
+    pendingProPlanId = planId;
+
+    var script = document.createElement('script');
+    script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(clientId) + '&vault=true&intent=subscription';
+    script.onload = function() {
+      paypalSubSDKLoaded = true;
+      paypalSubSDKLoading = false;
+      renderPayPalSubscriptionButtons(pendingProPlanId);
+    };
+    script.onerror = function() {
+      paypalSubSDKLoading = false;
+      document.getElementById('paypalSubError').classList.remove('hidden');
+    };
+    document.head.appendChild(script);
+  }
+
+  function renderPayPalSubscriptionButtons(planId) {
+    var container = document.getElementById('paypal-subscription-container');
+    container.innerHTML = '';
+    paypal.Buttons({
+      style: {
+        layout: 'vertical',
+        color: 'gold',
+        shape: 'rect',
+        label: 'subscribe'
+      },
+      createSubscription: function(data, actions) {
+        return actions.subscription.create({ 'plan_id': planId });
+      },
+      onApprove: function(data) {
+        proSubscriptionId = data.subscriptionID;
+        document.getElementById('paypalSubConfirmed').classList.remove('hidden');
+        document.getElementById('paypalSubError').classList.add('hidden');
+        ZrxNotify.showNotification('Subscription confirmed! Complete the form and click Submit.', 'success');
+      },
+      onError: function(err) {
+        console.error('PayPal subscription error:', err);
+        ZrxNotify.showNotification('Payment failed. Please try again.', 'error');
+      },
+      onCancel: function() {
+        ZrxNotify.showNotification('Payment cancelled. You must complete payment to register as Pro Seller.', 'info');
+      }
+    }).render('#paypal-subscription-container');
+  }
+
+  function initProPayment() {
+    fetch(BACKEND_URL + '/api/config')
+      .then(function(r) { return r.json(); })
+      .then(function(config) {
+        if (!config.paypalClientId) throw new Error('Missing PayPal client ID');
+        return fetch(BACKEND_URL + '/api/sellers/pro-plan')
+          .then(function(r) { return r.json(); })
+          .then(function(planData) {
+            if (!planData.planId) throw new Error('Missing PayPal plan ID');
+            loadPayPalSubSDK(config.paypalClientId, planData.planId);
+          });
+      })
+      .catch(function(err) {
+        console.error('Failed to init Pro payment:', err);
+        document.getElementById('paypalSubError').classList.remove('hidden');
+      });
+  }
+
   function checkAuth() {
     if (!ZrxSession.isLoggedIn()) {
       window.location.href = 'login-register.html';
@@ -662,30 +756,63 @@
       return;
     }
 
-    const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-    const sellerPayload = selectedType === 'business'
-      ? { accountType: 'business', shopName, shopDescription, businessEmail, phoneNumber, businessAddress, businessCity, businessState, businessZip, tier: selectedTier }
-      : { accountType: 'individual', shopName: shopName || personalName, shopDescription: shopDescription || 'Individual seller', personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip, tier: selectedTier };
+    // Pro tier requires a confirmed PayPal subscription
+    if (selectedTier === 'pro') {
+      if (!proSubscriptionId) {
+        errorAlert.textContent = 'Please complete the $19/month PayPal subscription payment before submitting as a Pro Seller.';
+        errorAlert.classList.remove('hidden');
+        document.getElementById('proPaymentSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+
+    const basePayload = selectedType === 'business'
+      ? { accountType: 'business', shopName, shopDescription, businessEmail, phoneNumber, businessAddress, businessCity, businessState, businessZip }
+      : { accountType: 'individual', shopName: shopName || personalName, shopDescription: shopDescription || 'Individual seller', personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip };
+
+    const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.classList.add('opacity-70', 'cursor-not-allowed'); }
+    if (submitBtnText) submitBtnText.textContent = 'Submitting...';
 
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(sellerPayload)
-      });
-      const data = await res.json();
+      let res, data;
+      if (selectedTier === 'pro') {
+        // Use the subscription confirm endpoint for Pro tier
+        const proPayload = { ...basePayload, subscriptionId: proSubscriptionId };
+        res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/subscription/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(proPayload)
+        });
+      } else {
+        // Starter and Brand tiers use the standard endpoint
+        const sellerPayload = { ...basePayload, tier: selectedTier };
+        res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(sellerPayload)
+        });
+      }
+
+      data = await res.json();
       if (!res.ok) {
         errorAlert.textContent = data.error || 'Failed to create seller profile.';
         errorAlert.classList.remove('hidden');
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.classList.remove('opacity-70', 'cursor-not-allowed'); }
+        if (submitBtnText) submitBtnText.textContent = 'Submit';
         return;
       }
-      successAlert.textContent = 'Welcome to Zorexium Sellers!';
+      successAlert.textContent = selectedTier === 'pro' ? 'Welcome to Zorexium Pro Sellers! Redirecting...' : 'Welcome to Zorexium Sellers!';
       successAlert.classList.remove('hidden');
       window.location.href = 'seller-dashboard.html';
     } catch (err) {
       errorAlert.textContent = 'Network error. Please try again.';
       errorAlert.classList.remove('hidden');
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.classList.remove('opacity-70', 'cursor-not-allowed'); }
+      if (submitBtnText) submitBtnText.textContent = 'Submit';
     }
   }
 
@@ -730,7 +857,7 @@
   });
   updateTypeLabels();
 
-  // Highlight selected tier card
+  // Highlight selected tier card and handle Pro payment section visibility
   function updateTierLabels() {
     const val = document.querySelector('input[name="sellerTier"]:checked');
     if (!val) return;
@@ -746,6 +873,22 @@
         label.classList.add('border-gray-200');
       }
     });
+
+    // Show/hide Pro payment section and update step numbers
+    const proPaymentSection = document.getElementById('proPaymentSection');
+    const shopDetailsStepNum = document.getElementById('shopDetailsStepNum');
+    if (val.value === 'pro') {
+      if (proPaymentSection) proPaymentSection.classList.remove('hidden');
+      if (shopDetailsStepNum) shopDetailsStepNum.textContent = '4';
+      // Lazy-load the PayPal subscription SDK
+      if (!paypalSubSDKLoaded && !paypalSubSDKLoading) {
+        initProPayment();
+      }
+    } else {
+      if (proPaymentSection) proPaymentSection.classList.add('hidden');
+      if (shopDetailsStepNum) shopDetailsStepNum.textContent = '3';
+      proSubscriptionId = null;
+    }
   }
   document.querySelectorAll('input[name="sellerTier"]').forEach(function(r) {
     r.addEventListener('change', updateTierLabels);
