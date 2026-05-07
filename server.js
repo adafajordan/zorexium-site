@@ -2536,6 +2536,21 @@ app.post('/api/auth/reset-password', authRateLimit, async function(req, res) {
 
 // ── REVIEWS ───────────────────────────────────────────────────────────────────
 
+// GET /api/reviews/mine – get current user's product reviews (auth required)
+app.get('/api/reviews/mine', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const reviews = await db.collection('reviews')
+      .find({ reviewerId: req.userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.json(reviews);
+  } catch (error) {
+    console.error('Error fetching own reviews:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/reviews?productId=xxx – get reviews for a product (public)
 app.get('/api/reviews', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
@@ -2643,6 +2658,267 @@ app.post('/api/reviews', publicApiRateLimit, verifyToken, async function(req, re
     res.status(201).json({ ...review, _id: result.insertedId });
   } catch (error) {
     console.error('Error submitting review:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/reviews/:id – delete a product review (auth required)
+app.delete('/api/reviews/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid review ID' });
+  }
+  try {
+    const review = await db.collection('reviews').findOne({ _id: objectId });
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+    if (review.reviewerId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    await db.collection('reviews').deleteOne({ _id: objectId });
+    res.json({ message: 'Review deleted' });
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── SELLER REVIEWS ────────────────────────────────────────────────────────────
+
+// GET /api/seller-reviews/mine – get current user's seller reviews (auth required)
+app.get('/api/seller-reviews/mine', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const reviews = await db.collection('sellerReviews')
+      .find({ reviewerId: req.userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.json(reviews);
+  } catch (error) {
+    console.error('Error fetching own seller reviews:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/seller-reviews?sellerId=xxx – get reviews for a seller (public)
+app.get('/api/seller-reviews', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { sellerId } = req.query;
+  if (!sellerId) return res.status(400).json({ error: 'sellerId is required' });
+  try {
+    const reviews = await db.collection('sellerReviews')
+      .find({ sellerId: String(sellerId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.json(reviews);
+  } catch (error) {
+    console.error('Error fetching seller reviews:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/seller-reviews – submit a seller review (auth required)
+app.post('/api/seller-reviews', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { sellerId, rating, title, body } = req.body;
+  if (!sellerId || !rating || !body) {
+    return res.status(400).json({ error: 'sellerId, rating, and body are required' });
+  }
+  const numRating = Number(rating);
+  if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
+    return res.status(400).json({ error: 'rating must be an integer between 1 and 5' });
+  }
+  if (typeof body !== 'string' || body.trim().length < 3 || body.length > 5000) {
+    return res.status(400).json({ error: 'Review body must be between 3 and 5000 characters' });
+  }
+  // Prevent reviewing yourself
+  if (String(sellerId) === req.userId) {
+    return res.status(400).json({ error: 'You cannot review yourself' });
+  }
+  try {
+    const existing = await db.collection('sellerReviews').findOne({ sellerId: String(sellerId), reviewerId: req.userId });
+    if (existing) return res.status(409).json({ error: 'You have already reviewed this seller' });
+
+    let sellerName = '';
+    try {
+      const seller = await db.collection('sellers').findOne({ userId: String(sellerId) });
+      if (seller) sellerName = seller.shopName || '';
+    } catch (_) {}
+
+    let reviewerName = req.userEmail;
+    try {
+      const userDoc = await db.collection('users').findOne({ _id: new ObjectId(req.userId) });
+      if (userDoc) {
+        const fullName = ((userDoc.firstName || '') + ' ' + (userDoc.lastName || '')).trim();
+        reviewerName = fullName || userDoc.email || req.userEmail;
+      }
+    } catch (_) {}
+
+    const review = {
+      sellerId: String(sellerId),
+      sellerName,
+      reviewerId: req.userId,
+      reviewerEmail: req.userEmail,
+      reviewerName,
+      rating: numRating,
+      title: title ? String(title).trim().slice(0, 200) : '',
+      body: body.trim(),
+      createdAt: new Date()
+    };
+
+    const result = await db.collection('sellerReviews').insertOne(review);
+
+    // Update seller's review stats
+    try {
+      const allReviews = await db.collection('sellerReviews').find({ sellerId: String(sellerId) }).toArray();
+      const avgRating = allReviews.reduce(function(sum, r) { return sum + r.rating; }, 0) / allReviews.length;
+      await db.collection('sellers').updateOne(
+        { userId: String(sellerId) },
+        { $set: { sellerReviewRating: Math.round(avgRating * 10) / 10, sellerReviewCount: allReviews.length, updatedAt: new Date() } }
+      );
+    } catch (_) {}
+
+    res.status(201).json({ ...review, _id: result.insertedId });
+  } catch (error) {
+    console.error('Error submitting seller review:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/seller-reviews/:id – delete a seller review (auth required)
+app.delete('/api/seller-reviews/:id', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid review ID' });
+  }
+  try {
+    const review = await db.collection('sellerReviews').findOne({ _id: objectId });
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+    if (review.reviewerId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    await db.collection('sellerReviews').deleteOne({ _id: objectId });
+    res.json({ message: 'Review deleted' });
+  } catch (error) {
+    console.error('Error deleting seller review:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── LIST ITEMS ────────────────────────────────────────────────────────────────
+
+// POST /api/lists/:id/items – add an item to a list (auth required)
+app.post('/api/lists/:id/items', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid list ID' });
+  }
+  const { productId, productName, price, image } = req.body;
+  if (!productId) return res.status(400).json({ error: 'productId is required' });
+  try {
+    const list = await db.collection('lists').findOne({ _id: objectId });
+    if (!list) return res.status(404).json({ error: 'List not found' });
+    if (list.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    const items = list.items || [];
+    if (items.some(function(i) { return i.productId === String(productId); })) {
+      return res.status(409).json({ error: 'Item already in list' });
+    }
+    if (items.length >= 100) return res.status(400).json({ error: 'List item limit reached (100)' });
+    const newItem = {
+      itemId: crypto.randomUUID(),
+      productId: String(productId).slice(0, 100),
+      productName: productName ? String(productName).trim().slice(0, 200) : '',
+      price: price != null ? parseFloat(price) || 0 : 0,
+      image: image && /^https?:\/\//i.test(image) ? image.slice(0, 2000) : '',
+      addedAt: new Date()
+    };
+    items.push(newItem);
+    await db.collection('lists').updateOne({ _id: objectId }, { $set: { items, updatedAt: new Date() } });
+    res.status(201).json(newItem);
+  } catch (error) {
+    console.error('Error adding item to list:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/lists/:id/items/:itemId – remove an item from a list (auth required)
+app.delete('/api/lists/:id/items/:itemId', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid list ID' });
+  }
+  try {
+    const list = await db.collection('lists').findOne({ _id: objectId });
+    if (!list) return res.status(404).json({ error: 'List not found' });
+    if (list.userId !== req.userId) return res.status(403).json({ error: 'Forbidden' });
+    const items = (list.items || []).filter(function(i) { return i.itemId !== req.params.itemId; });
+    await db.collection('lists').updateOne({ _id: objectId }, { $set: { items, updatedAt: new Date() } });
+    res.json({ message: 'Item removed' });
+  } catch (error) {
+    console.error('Error removing item from list:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── FOLLOWS ───────────────────────────────────────────────────────────────────
+
+// GET /api/follows – get follow info for current user (auth required)
+app.get('/api/follows', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const followingCount = await db.collection('follows').countDocuments({ followerId: req.userId });
+    const followersCount = await db.collection('follows').countDocuments({ followeeId: req.userId });
+    res.json({ followingCount, followersCount });
+  } catch (error) {
+    console.error('Error fetching follows:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/follows/status/:userId – check if current user follows userId (auth required)
+app.get('/api/follows/status/:userId', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const targetUserId = req.params.userId;
+  try {
+    const doc = await db.collection('follows').findOne({ followerId: req.userId, followeeId: targetUserId });
+    const followersCount = await db.collection('follows').countDocuments({ followeeId: targetUserId });
+    res.json({ isFollowing: !!doc, followersCount });
+  } catch (error) {
+    console.error('Error checking follow status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/follows/:userId – follow a user (auth required)
+app.post('/api/follows/:userId', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const targetUserId = req.params.userId;
+  if (targetUserId === req.userId) return res.status(400).json({ error: 'You cannot follow yourself' });
+  try {
+    const existing = await db.collection('follows').findOne({ followerId: req.userId, followeeId: targetUserId });
+    if (existing) return res.status(409).json({ error: 'Already following' });
+    await db.collection('follows').insertOne({
+      followerId: req.userId,
+      followeeId: targetUserId,
+      createdAt: new Date()
+    });
+    const followersCount = await db.collection('follows').countDocuments({ followeeId: targetUserId });
+    res.status(201).json({ message: 'Following', followersCount });
+  } catch (error) {
+    console.error('Error following user:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/follows/:userId – unfollow a user (auth required)
+app.delete('/api/follows/:userId', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const targetUserId = req.params.userId;
+  try {
+    await db.collection('follows').deleteOne({ followerId: req.userId, followeeId: targetUserId });
+    const followersCount = await db.collection('follows').countDocuments({ followeeId: targetUserId });
+    res.json({ message: 'Unfollowed', followersCount });
+  } catch (error) {
+    console.error('Error unfollowing user:', error);
     res.status(500).json({ error: error.message });
   }
 });

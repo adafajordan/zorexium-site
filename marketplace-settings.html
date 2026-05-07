@@ -903,6 +903,18 @@
 </main>
 
 <script>
+  var MS_BACKEND = 'https://zorexium-backend.onrender.com';
+
+  function msEsc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function msStars(n) {
+    var s = '';
+    for (var i = 1; i <= 5; i++) s += '<i class="fas fa-star text-xs ' + (i <= n ? 'text-yellow-400' : 'text-gray-300') + '"></i>';
+    return s;
+  }
+
   function toggleDropdown(id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -921,6 +933,73 @@
     var item = document.querySelector('[data-panel="' + panelId + '"]');
     if (panel) panel.classList.add('active');
     if (item) item.classList.add('active');
+    if (panelId === 'manage-reviews' && !window._msReviewsLoaded) {
+      window._msReviewsLoaded = true;
+      msLoadReviews();
+    }
+  }
+
+  // Load reviews for Manage Reviews panel
+  function msLoadReviews() {
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    var tbody = document.getElementById('msReviewsBody');
+    var empty = document.getElementById('msReviewsEmpty');
+
+    Promise.all([
+      ZrxSession.fetch(MS_BACKEND + '/api/reviews/mine', { credentials: 'include' }).then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; }),
+      ZrxSession.fetch(MS_BACKEND + '/api/seller-reviews/mine', { credentials: 'include' }).then(function(r) { return r.ok ? r.json() : []; }).catch(function() { return []; })
+    ]).then(function(results) {
+      var productReviews = results[0].map(function(r) { return Object.assign({}, r, { _type: 'product' }); });
+      var sellerReviews = results[1].map(function(r) { return Object.assign({}, r, { _type: 'seller' }); });
+      var all = productReviews.concat(sellerReviews).sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+      if (!all.length) {
+        if (empty) empty.style.display = '';
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+
+      var rows = all.map(function(rev) {
+        var date = rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : '';
+        var subject = rev._type === 'seller'
+          ? '<span class="inline-block px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded mr-1">Seller</span>' + msEsc(rev.sellerName || rev.sellerId)
+          : '<span class="inline-block px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded mr-1">Product</span>' + msEsc(rev.title || rev.productId);
+        var safeId = String(rev._id).replace(/'/g,'&#39;');
+        var safeType = rev._type === 'seller' ? 'seller' : 'product';
+        return '<tr>' +
+          '<td class="px-4 py-3">' + subject + '</td>' +
+          '<td class="px-4 py-3">' + msStars(rev.rating) + '</td>' +
+          '<td class="px-4 py-3 text-xs text-gray-600 max-w-xs truncate">' + msEsc(rev.body) + '</td>' +
+          '<td class="px-4 py-3 text-xs text-gray-400">' + date + '</td>' +
+          '<td class="px-4 py-3"><button onclick="msDeleteReview(\'' + safeId + '\',\'' + safeType + '\')" class="text-xs text-red-500 hover:text-red-700 font-medium">Delete</button></td>' +
+          '</tr>';
+      }).join('');
+
+      if (tbody) {
+        var emptyRow = document.getElementById('msReviewsEmpty');
+        tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
+        var newEmpty = document.getElementById('msReviewsEmpty');
+        if (newEmpty) newEmpty.style.display = 'none';
+      }
+    });
+  }
+
+  function msDeleteReview(id, type) {
+    if (!confirm('Delete this review? This cannot be undone.')) return;
+    var url = type === 'seller' ? MS_BACKEND + '/api/seller-reviews/' + encodeURIComponent(id) : MS_BACKEND + '/api/reviews/' + encodeURIComponent(id);
+    ZrxSession.fetch(url, { method: 'DELETE', credentials: 'include' })
+      .then(function(r) {
+        if (r.ok) {
+          window._msReviewsLoaded = false;
+          msLoadReviews();
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Review deleted.', 'success');
+        } else {
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to delete review.', 'error');
+        }
+      })
+      .catch(function() {
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Network error.', 'error');
+      });
   }
 
   // Toggle switches

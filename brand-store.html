@@ -291,9 +291,14 @@
       </div>
     </div>
     <!-- Back link -->
-    <a href="index.html" class="text-sm text-cyan-600 hover:text-cyan-700 flex items-center gap-1 whitespace-nowrap self-start mt-1">
-      <i class="fas fa-arrow-left text-xs"></i> All Products
-    </a>
+    <div class="flex flex-col items-end gap-2 self-start mt-1">
+      <a href="index.html" class="text-sm text-cyan-600 hover:text-cyan-700 flex items-center gap-1 whitespace-nowrap">
+        <i class="fas fa-arrow-left text-xs"></i> All Products
+      </a>
+      <button id="bsReviewBtn" class="hidden text-sm text-white bg-cyan-500 hover:bg-cyan-600 px-4 py-1.5 rounded-lg font-semibold transition-colors" onclick="bsOpenReviewModal()">
+        <i class="fas fa-star mr-1"></i> Review Seller
+      </button>
+    </div>
   </div>
 </div>
 
@@ -451,6 +456,41 @@
   </a>
 </div>
 
+<!-- Seller Review Modal -->
+<div id="bsReviewModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-base font-bold text-gray-900"><i class="fas fa-star text-cyan-500 mr-2"></i>Review this Seller</h2>
+      <button onclick="bsCloseReviewModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-2">Rating <span class="text-red-500">*</span></label>
+        <div id="bsStarRating" class="flex gap-2">
+          <button type="button" class="bs-star text-2xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="1" onclick="bsSetRating(1)"><i class="fas fa-star"></i></button>
+          <button type="button" class="bs-star text-2xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="2" onclick="bsSetRating(2)"><i class="fas fa-star"></i></button>
+          <button type="button" class="bs-star text-2xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="3" onclick="bsSetRating(3)"><i class="fas fa-star"></i></button>
+          <button type="button" class="bs-star text-2xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="4" onclick="bsSetRating(4)"><i class="fas fa-star"></i></button>
+          <button type="button" class="bs-star text-2xl text-gray-300 hover:text-yellow-400 transition-colors" data-value="5" onclick="bsSetRating(5)"><i class="fas fa-star"></i></button>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Title (optional)</label>
+        <input type="text" id="bsReviewTitle" maxlength="200" placeholder="Summarize your experience" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Review <span class="text-red-500">*</span></label>
+        <textarea id="bsReviewBody" rows="4" maxlength="5000" placeholder="Share your experience with this seller…" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-cyan-400 resize-none"></textarea>
+      </div>
+    </div>
+    <div id="bsReviewMsg" class="hidden mt-3 text-sm"></div>
+    <div class="flex gap-3 justify-end mt-5">
+      <button onclick="bsCloseReviewModal()" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+      <button id="bsReviewSubmitBtn" onclick="bsSubmitReview()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-lg transition-colors">Submit Review</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let allProducts = [];
@@ -476,7 +516,7 @@
     brandSlug = params.get('brand') || sellerParam || '';
     brandName = params.get('name') || toTitleCase(brandSlug.replace(/[-_]/g, ' ')) || 'Brand';
 
-    // Store sellerId for use in loadProducts
+    // Store sellerId for use in loadProducts and reviews
     window._brandStoreSellerId = sellerId;
 
     updateBrandPageTitle(brandName);
@@ -485,6 +525,11 @@
     // Load seller profile to populate banner, logo, and description
     if (sellerId) {
       loadSellerProfile(sellerId);
+      // Show review button for logged-in users visiting a seller store
+      if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
+        const reviewBtn = document.getElementById('bsReviewBtn');
+        if (reviewBtn) reviewBtn.classList.remove('hidden');
+      }
     }
 
     await loadProducts();
@@ -869,6 +914,101 @@
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden');
   }
+
+  // ── Seller Review Modal ─────────────────────────────────────────────────────
+  let _bsReviewRating = 0;
+
+  function bsOpenReviewModal() {
+    _bsReviewRating = 0;
+    document.getElementById('bsReviewTitle').value = '';
+    document.getElementById('bsReviewBody').value = '';
+    document.getElementById('bsReviewMsg').classList.add('hidden');
+    bsUpdateStars(0);
+    const modal = document.getElementById('bsReviewModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function bsCloseReviewModal() {
+    const modal = document.getElementById('bsReviewModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function bsSetRating(n) {
+    _bsReviewRating = n;
+    bsUpdateStars(n);
+  }
+
+  function bsUpdateStars(n) {
+    document.querySelectorAll('.bs-star').forEach(function(btn) {
+      var v = parseInt(btn.getAttribute('data-value'));
+      btn.className = 'bs-star text-2xl transition-colors ' + (v <= n ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-400');
+    });
+  }
+
+  async function bsSubmitReview() {
+    const sellerId = window._brandStoreSellerId;
+    if (!sellerId) {
+      const msgEl = document.getElementById('bsReviewMsg');
+      msgEl.textContent = 'No seller found for this store.';
+      msgEl.className = 'mt-3 text-sm text-red-600';
+      msgEl.classList.remove('hidden');
+      return;
+    }
+    const title = document.getElementById('bsReviewTitle').value.trim();
+    const body = document.getElementById('bsReviewBody').value.trim();
+    const msgEl = document.getElementById('bsReviewMsg');
+    const btn = document.getElementById('bsReviewSubmitBtn');
+
+    if (!_bsReviewRating) {
+      msgEl.textContent = 'Please select a star rating.';
+      msgEl.className = 'mt-3 text-sm text-red-600';
+      msgEl.classList.remove('hidden');
+      return;
+    }
+    if (!body) {
+      msgEl.textContent = 'Please write a review.';
+      msgEl.className = 'mt-3 text-sm text-red-600';
+      msgEl.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/seller-reviews', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId, rating: _bsReviewRating, title, body })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        msgEl.textContent = 'Review submitted! Thank you.';
+        msgEl.className = 'mt-3 text-sm text-green-600';
+        msgEl.classList.remove('hidden');
+        btn.textContent = 'Submitted!';
+        setTimeout(bsCloseReviewModal, 1500);
+      } else {
+        msgEl.textContent = data.error || 'Failed to submit review.';
+        msgEl.className = 'mt-3 text-sm text-red-600';
+        msgEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Submit Review';
+      }
+    } catch (_) {
+      msgEl.textContent = 'Network error. Please try again.';
+      msgEl.className = 'mt-3 text-sm text-red-600';
+      msgEl.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Submit Review';
+    }
+  }
+
+  document.getElementById('bsReviewModal').addEventListener('click', function(e) { if (e.target === this) bsCloseReviewModal(); });
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') bsCloseReviewModal(); });
 
   window.addEventListener('load', init);
 </script>

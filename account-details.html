@@ -432,26 +432,20 @@
             <h3 class="font-bold text-gray-900 text-base">Showcase</h3>
             <a href="build-showcase.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a>
           </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-desktop text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">0 lists</p>
-            <p class="text-gray-400 text-sm mb-4">Showcase Your Build</p>
-            <a href="build-showcase.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Add a Build</a>
+          <div id="adShowcaseContent">
+            <div class="text-center py-6"><i class="fas fa-spinner fa-spin text-cyan-400 text-2xl"></i></div>
           </div>
         </div>
 
         <!-- Public Wish Lists sub-tab -->
         <div id="gamerTab-wishLists" class="gamer-tab-content hidden">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-bold text-gray-900 text-base">Public Wish Lists</h3>
-            <a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">Manage Your Wish Lists</a>
+            <h3 class="font-bold text-gray-900 text-base">Wish Lists</h3>
+            <a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">Manage Wish Lists</a>
           </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-heart text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-400 text-sm mb-4">No public wish lists yet.</p>
-            <a href="wish-lists.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Create a Wish List</a>
+          <div id="adWishListsContent">
+            <div class="text-center py-6"><i class="fas fa-spinner fa-spin text-cyan-400 text-2xl"></i></div>
           </div>
-          <div class="mt-4 text-right"><a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All</a></div>
         </div>
 
         <!-- Gallery sub-tab -->
@@ -504,11 +498,8 @@
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-gray-900 text-base">Product Reviews</h3>
           </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-star text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p>
-            <p class="text-gray-400 text-sm mb-4">You haven't reviewed any products yet.</p>
-            <a href="index.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Products</a>
+          <div id="adProductReviewsContent">
+            <div class="text-center py-6"><i class="fas fa-spinner fa-spin text-cyan-400 text-2xl"></i></div>
           </div>
         </div>
 
@@ -517,11 +508,8 @@
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-gray-900 text-base">Seller Reviews</h3>
           </div>
-          <div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center">
-            <i class="fas fa-store text-4xl text-gray-300 mb-4 block"></i>
-            <p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p>
-            <p class="text-gray-400 text-sm mb-4">You haven't reviewed any sellers yet.</p>
-            <a href="index.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Sellers</a>
+          <div id="adSellerReviewsContent">
+            <div class="text-center py-6"><i class="fas fa-spinner fa-spin text-cyan-400 text-2xl"></i></div>
           </div>
         </div>
 
@@ -795,6 +783,13 @@
         if (dashBtn) dashBtn.classList.remove('hidden');
       }
     } catch (_) {}
+
+    // Load follower/following counts
+    adLoadFollows();
+
+    // Load showcase data for the default active tab
+    adLoadShowcase();
+    _adTabsLoaded['showcase'] = true;
   }
 
   async function handleProfileImageUpload(e) {
@@ -1070,6 +1065,121 @@
     const firstGamerContent = document.getElementById('gamerTab-showcase');
     if (firstGamerContent) { firstGamerContent.classList.add('active'); firstGamerContent.classList.remove('hidden'); }
   });
+
+  // ── Gamer-tab live data loaders ──────────────────────────────────────────────
+  function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderStars(n) {
+    var s = '';
+    for (var i = 1; i <= 5; i++) s += '<i class="fas fa-star text-xs ' + (i <= n ? 'text-yellow-400' : 'text-gray-300') + '"></i>';
+    return s;
+  }
+
+  async function adLoadShowcase() {
+    var el = document.getElementById('adShowcaseContent');
+    if (!el) return;
+    try {
+      var r = await ZrxSession.fetch(BACKEND_URL + '/api/lists?type=build', { credentials: 'include' });
+      var lists = r.ok ? await r.json() : [];
+      if (!lists.length) {
+        el.innerHTML = '<div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center"><i class="fas fa-desktop text-4xl text-gray-300 mb-4 block"></i><p class="text-gray-500 font-semibold text-sm mb-1">0 build lists</p><p class="text-gray-400 text-sm mb-4">Start planning your next build.</p><a href="build-lists.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">My Build Lists</a></div>';
+        return;
+      }
+      el.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' + lists.slice(0, 4).map(function(list) {
+        var count = (list.items || []).length;
+        var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><p class="font-semibold text-gray-800 text-sm mb-1">' + esc(list.name) + '</p><p class="text-xs text-gray-400">' + count + ' item' + (count !== 1 ? 's' : '') + (date ? ' &middot; ' + date : '') + '</p><a href="build-lists.html" class="text-cyan-600 hover:text-cyan-700 text-xs font-semibold mt-2 inline-block"><i class="fas fa-arrow-right mr-1"></i>View List</a></div>';
+      }).join('') + '</div>' + (lists.length > 4 ? '<div class="mt-4 text-right"><a href="build-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All (' + lists.length + ')</a></div>' : '');
+    } catch (_) {
+      el.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Unable to load build lists.</p>';
+    }
+  }
+
+  async function adLoadWishLists() {
+    var el = document.getElementById('adWishListsContent');
+    if (!el) return;
+    try {
+      var r = await ZrxSession.fetch(BACKEND_URL + '/api/lists?type=wish', { credentials: 'include' });
+      var lists = r.ok ? await r.json() : [];
+      if (!lists.length) {
+        el.innerHTML = '<div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center"><i class="fas fa-heart text-4xl text-gray-300 mb-4 block"></i><p class="text-gray-400 text-sm mb-4">No wish lists yet.</p><a href="wish-lists.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Create a Wish List</a></div>';
+        return;
+      }
+      el.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' + lists.slice(0, 4).map(function(list) {
+        var count = (list.items || []).length;
+        var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><p class="font-semibold text-gray-800 text-sm mb-1">' + esc(list.name) + '</p><p class="text-xs text-gray-400">' + count + ' item' + (count !== 1 ? 's' : '') + (date ? ' &middot; ' + date : '') + '</p><a href="wish-lists.html" class="text-cyan-600 hover:text-cyan-700 text-xs font-semibold mt-2 inline-block"><i class="fas fa-arrow-right mr-1"></i>View List</a></div>';
+      }).join('') + '</div>' + (lists.length > 4 ? '<div class="mt-4 text-right"><a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All (' + lists.length + ')</a></div>' : '');
+    } catch (_) {
+      el.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Unable to load wish lists.</p>';
+    }
+  }
+
+  async function adLoadProductReviews() {
+    var el = document.getElementById('adProductReviewsContent');
+    if (!el) return;
+    try {
+      var r = await ZrxSession.fetch(BACKEND_URL + '/api/reviews/mine', { credentials: 'include' });
+      var reviews = r.ok ? await r.json() : [];
+      if (!reviews.length) {
+        el.innerHTML = '<div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center"><i class="fas fa-star text-4xl text-gray-300 mb-4 block"></i><p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p><p class="text-gray-400 text-sm mb-4">You haven\'t reviewed any products yet.</p><a href="index.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Products</a></div>';
+        return;
+      }
+      el.innerHTML = '<div class="space-y-3">' + reviews.map(function(rev) {
+        var date = rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : '';
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><div class="flex items-start justify-between gap-2"><div><p class="font-semibold text-gray-800 text-sm">' + esc(rev.title || rev.productId) + '</p><div class="flex items-center gap-1 mt-0.5">' + renderStars(rev.rating) + '<span class="text-xs text-gray-400 ml-1">' + date + '</span></div></div></div><p class="text-sm text-gray-600 mt-2">' + esc(rev.body) + '</p></div>';
+      }).join('') + '</div>';
+    } catch (_) {
+      el.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Unable to load reviews.</p>';
+    }
+  }
+
+  async function adLoadSellerReviews() {
+    var el = document.getElementById('adSellerReviewsContent');
+    if (!el) return;
+    try {
+      var r = await ZrxSession.fetch(BACKEND_URL + '/api/seller-reviews/mine', { credentials: 'include' });
+      var reviews = r.ok ? await r.json() : [];
+      if (!reviews.length) {
+        el.innerHTML = '<div class="bg-gray-50 rounded-xl border border-dashed border-gray-300 p-10 text-center"><i class="fas fa-store text-4xl text-gray-300 mb-4 block"></i><p class="text-gray-500 font-semibold text-sm mb-1">0 reviews</p><p class="text-gray-400 text-sm mb-4">You haven\'t reviewed any sellers yet.</p><a href="marketplace.html" class="inline-block px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-semibold">Browse Sellers</a></div>';
+        return;
+      }
+      el.innerHTML = '<div class="space-y-3">' + reviews.map(function(rev) {
+        var date = rev.createdAt ? new Date(rev.createdAt).toLocaleDateString() : '';
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><div class="flex items-start justify-between gap-2"><div><p class="font-semibold text-gray-800 text-sm">' + esc(rev.sellerName || rev.sellerId) + '</p><div class="flex items-center gap-1 mt-0.5">' + renderStars(rev.rating) + '<span class="text-xs text-gray-400 ml-1">' + date + '</span></div></div></div>' + (rev.title ? '<p class="text-sm font-medium text-gray-700 mt-2">' + esc(rev.title) + '</p>' : '') + '<p class="text-sm text-gray-600 mt-1">' + esc(rev.body) + '</p></div>';
+      }).join('') + '</div>';
+    } catch (_) {
+      el.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Unable to load seller reviews.</p>';
+    }
+  }
+
+  async function adLoadFollows() {
+    try {
+      var r = await ZrxSession.fetch(BACKEND_URL + '/api/follows', { credentials: 'include' });
+      if (r.ok) {
+        var data = await r.json();
+        var fwEl = document.getElementById('followersCount');
+        var fgEl = document.getElementById('followingCount');
+        if (fwEl) fwEl.textContent = data.followersCount || 0;
+        if (fgEl) fgEl.textContent = data.followingCount || 0;
+      }
+    } catch (_) {}
+  }
+
+  // Override switchGamerTab to lazy-load data
+  var _adTabsLoaded = {};
+  var _origSwitchGamerTab = switchGamerTab;
+  switchGamerTab = function(tab) {
+    _origSwitchGamerTab(tab);
+    if (_adTabsLoaded[tab]) return;
+    _adTabsLoaded[tab] = true;
+    if (tab === 'showcase') adLoadShowcase();
+    else if (tab === 'wishLists') adLoadWishLists();
+    else if (tab === 'productReviews') adLoadProductReviews();
+    else if (tab === 'sellerReviews') adLoadSellerReviews();
+  };
 </script>
 <script src="profile-picture.js"></script>
 
@@ -1296,6 +1406,7 @@
   window.switchGamerTab = function(tab) {
     if (_origSwitchGamerTab) _origSwitchGamerTab(tab);
     if (tab === 'gallery') adLoadGallery();
+    // The first override handles showcase/wishLists/productReviews/sellerReviews
   };
 
   // Also close gallery modal on backdrop click

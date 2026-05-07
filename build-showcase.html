@@ -370,17 +370,10 @@
           </div>
         </div>
 
-        <div class="text-center py-14 bg-white border border-gray-200 rounded-lg">
-          <i class="fas fa-desktop text-5xl text-gray-200 mb-3 block"></i>
-          <p class="font-semibold text-gray-600 mb-1">No showcases yet</p>
-          <p class="text-sm text-gray-400 mb-5">Complete a build list and share it to inspire the community.</p>
-          <div class="flex gap-3 justify-center">
-            <a href="build-lists.html" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors">
-              <i class="fas fa-list mr-1"></i> My Build Lists
-            </a>
-            <a href="community-hub.html" class="bg-white border border-gray-300 hover:border-cyan-400 text-gray-600 hover:text-cyan-600 text-sm font-medium px-5 py-2 rounded-md transition-colors">
-              View Community Builds
-            </a>
+        <div id="bsListsContainer">
+          <div class="text-center py-10">
+            <i class="fas fa-spinner fa-spin text-3xl text-cyan-400 mb-3 block"></i>
+            <p class="text-sm text-gray-400">Loading your build lists…</p>
           </div>
         </div>
       </div>
@@ -389,6 +382,12 @@
 </main>
 
 <script>
+  var BACKEND_BS = 'https://zorexium-backend.onrender.com';
+
+  function bsEsc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   (function() {
     var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
     if (!isLoggedIn) {
@@ -396,8 +395,57 @@
     } else {
       document.getElementById('bsContent').classList.remove('hidden');
       document.getElementById('bsShareBtn').classList.remove('hidden');
+      bsLoadLists();
     }
   })();
+
+  function bsLoadLists() {
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_BS + '/api/lists?type=build', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .then(function(lists) { bsRenderLists(lists || []); })
+      .catch(function() { bsRenderLists([]); });
+  }
+
+  function bsRenderLists(lists) {
+    var container = document.getElementById('bsListsContainer');
+    if (!container) return;
+    if (!lists.length) {
+      container.innerHTML = '<div class="text-center py-14 bg-white border border-gray-200 rounded-lg">' +
+        '<i class="fas fa-desktop text-5xl text-gray-200 mb-3 block"></i>' +
+        '<p class="font-semibold text-gray-600 mb-1">No build lists yet</p>' +
+        '<p class="text-sm text-gray-400 mb-5">Create a build list and add products to it to showcase your build.</p>' +
+        '<div class="flex gap-3 justify-center">' +
+        '<a href="build-lists.html" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors"><i class="fas fa-list mr-1"></i> My Build Lists</a>' +
+        '<a href="community-hub.html" class="bg-white border border-gray-300 hover:border-cyan-400 text-gray-600 hover:text-cyan-600 text-sm font-medium px-5 py-2 rounded-md transition-colors">View Community Builds</a>' +
+        '</div></div>';
+      return;
+    }
+    container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
+      lists.map(function(list) {
+        var itemCount = (list.items || []).length;
+        var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
+        var safeId = bsEsc(String(list._id));
+        var safeName = bsEsc(list.name || '');
+        var itemsHtml = (list.items || []).slice(0, 3).map(function(item) {
+          var safeImg = item.image && /^https?:\/\//i.test(item.image) ? bsEsc(item.image) : '';
+          return '<div class="flex items-center gap-2 text-xs text-gray-600">' +
+            (safeImg ? '<img src="' + safeImg + '" class="w-6 h-6 object-cover rounded flex-shrink-0" onerror="this.style.display=\'none\'">' : '<i class="fas fa-microchip text-gray-300 w-6 text-center"></i>') +
+            '<span class="truncate">' + bsEsc(item.productName) + '</span>' +
+            (item.price ? '<span class="ml-auto text-cyan-600 font-medium flex-shrink-0">$' + Number(item.price).toFixed(2) + '</span>' : '') +
+            '</div>';
+        }).join('');
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-2">' +
+          '<div class="flex items-start justify-between gap-2">' +
+          '<p class="font-semibold text-gray-800 text-sm">' + safeName + '</p>' +
+          '</div>' +
+          '<p class="text-xs text-gray-400">' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + (date ? ' &middot; Created ' + date : '') + '</p>' +
+          (itemsHtml ? '<div class="space-y-1 mt-1">' + itemsHtml + '</div>' : '') +
+          '<a href="build-lists.html" class="inline-block mt-auto text-cyan-600 hover:text-cyan-700 text-xs font-semibold"><i class="fas fa-list mr-1"></i>Manage List</a>' +
+          '</div>';
+      }).join('') + '</div>';
+  }
+
   function bsShare() {
     var shareUrl = window.location.href;
     if (navigator.clipboard && navigator.clipboard.writeText) {
