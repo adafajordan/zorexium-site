@@ -295,9 +295,6 @@
       <a href="index.html" class="text-sm text-cyan-600 hover:text-cyan-700 flex items-center gap-1 whitespace-nowrap">
         <i class="fas fa-arrow-left text-xs"></i> All Products
       </a>
-      <button id="bsReviewBtn" class="hidden text-sm text-white bg-cyan-500 hover:bg-cyan-600 px-4 py-1.5 rounded-lg font-semibold transition-colors" onclick="bsOpenReviewModal()">
-        <i class="fas fa-star mr-1"></i> Review Seller
-      </button>
     </div>
   </div>
 </div>
@@ -525,11 +522,6 @@
     // Load seller profile to populate banner, logo, and description
     if (sellerId) {
       loadSellerProfile(sellerId);
-      // Show review button for logged-in users visiting a seller store
-      if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
-        const reviewBtn = document.getElementById('bsReviewBtn');
-        if (reviewBtn) reviewBtn.classList.remove('hidden');
-      }
     }
 
     await loadProducts();

@@ -1061,9 +1061,7 @@
   window.addEventListener('load', function() {
     checkAuth();
     renderPurchaseFiles();
-    // Set gamerProfile as default active gamer tab
-    const firstGamerContent = document.getElementById('gamerTab-showcase');
-    if (firstGamerContent) { firstGamerContent.classList.add('active'); firstGamerContent.classList.remove('hidden'); }
+    switchGamerTab('showcase');
   });
 
   // ── Gamer-tab live data loaders ──────────────────────────────────────────────
@@ -1090,7 +1088,15 @@
       el.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' + lists.slice(0, 4).map(function(list) {
         var count = (list.items || []).length;
         var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
-        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><p class="font-semibold text-gray-800 text-sm mb-1">' + esc(list.name) + '</p><p class="text-xs text-gray-400">' + count + ' item' + (count !== 1 ? 's' : '') + (date ? ' &middot; ' + date : '') + '</p><a href="build-lists.html" class="text-cyan-600 hover:text-cyan-700 text-xs font-semibold mt-2 inline-block"><i class="fas fa-arrow-right mr-1"></i>View List</a></div>';
+        var itemsHtml = (list.items || []).slice(0, 2).map(function(item) {
+          var safeImg = item.image && /^https?:\/\//i.test(item.image) ? String(item.image).replace(/"/g,'&quot;') : '';
+          return '<div class="flex items-center gap-2 text-xs text-gray-600">' +
+            (safeImg ? '<img src="' + safeImg + '" class="w-6 h-6 object-cover rounded flex-shrink-0" onerror="this.style.display=\'none\'">' : '<i class="fas fa-microchip text-gray-300 w-6 text-center"></i>') +
+            '<span class="truncate">' + esc(item.productName || 'Product') + '</span>' +
+            (item.price ? '<span class="ml-auto text-cyan-600 font-medium flex-shrink-0">$' + Number(item.price).toFixed(2) + '</span>' : '') +
+            '</div>';
+        }).join('');
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><p class="font-semibold text-gray-800 text-sm mb-1">' + esc(list.name) + '</p><p class="text-xs text-gray-400">' + count + ' item' + (count !== 1 ? 's' : '') + (date ? ' &middot; ' + date : '') + '</p>' + (itemsHtml ? '<div class="space-y-1 mt-2">' + itemsHtml + '</div>' : '') + '<a href="build-lists.html" class="text-cyan-600 hover:text-cyan-700 text-xs font-semibold mt-2 inline-block"><i class="fas fa-arrow-right mr-1"></i>View List</a></div>';
       }).join('') + '</div>' + (lists.length > 4 ? '<div class="mt-4 text-right"><a href="build-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All (' + lists.length + ')</a></div>' : '');
     } catch (_) {
       el.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Unable to load build lists.</p>';
@@ -1110,7 +1116,15 @@
       el.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' + lists.slice(0, 4).map(function(list) {
         var count = (list.items || []).length;
         var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
-        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><p class="font-semibold text-gray-800 text-sm mb-1">' + esc(list.name) + '</p><p class="text-xs text-gray-400">' + count + ' item' + (count !== 1 ? 's' : '') + (date ? ' &middot; ' + date : '') + '</p><a href="wish-lists.html" class="text-cyan-600 hover:text-cyan-700 text-xs font-semibold mt-2 inline-block"><i class="fas fa-arrow-right mr-1"></i>View List</a></div>';
+        var itemsHtml = (list.items || []).slice(0, 2).map(function(item) {
+          var safeImg = item.image && /^https?:\/\//i.test(item.image) ? String(item.image).replace(/"/g,'&quot;') : '';
+          return '<div class="flex items-center gap-2 text-xs text-gray-600">' +
+            (safeImg ? '<img src="' + safeImg + '" class="w-6 h-6 object-cover rounded flex-shrink-0" onerror="this.style.display=\'none\'">' : '<i class="fas fa-heart text-pink-300 w-6 text-center"></i>') +
+            '<span class="truncate">' + esc(item.productName || 'Product') + '</span>' +
+            (item.price ? '<span class="ml-auto text-cyan-600 font-medium flex-shrink-0">$' + Number(item.price).toFixed(2) + '</span>' : '') +
+            '</div>';
+        }).join('');
+        return '<div class="bg-white border border-gray-200 rounded-lg p-4"><p class="font-semibold text-gray-800 text-sm mb-1">' + esc(list.name) + '</p><p class="text-xs text-gray-400">' + count + ' item' + (count !== 1 ? 's' : '') + (date ? ' &middot; ' + date : '') + '</p>' + (itemsHtml ? '<div class="space-y-1 mt-2">' + itemsHtml + '</div>' : '') + '<a href="wish-lists.html" class="text-cyan-600 hover:text-cyan-700 text-xs font-semibold mt-2 inline-block"><i class="fas fa-arrow-right mr-1"></i>View List</a></div>';
       }).join('') + '</div>' + (lists.length > 4 ? '<div class="mt-4 text-right"><a href="wish-lists.html" class="text-cyan-600 text-sm font-semibold hover:underline">See All (' + lists.length + ')</a></div>' : '');
     } catch (_) {
       el.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Unable to load wish lists.</p>';
@@ -1170,9 +1184,9 @@
 
   // Override switchGamerTab to lazy-load data
   var _adTabsLoaded = {};
-  var _origSwitchGamerTab = switchGamerTab;
+  var _adBaseSwitchGamerTab = switchGamerTab;
   switchGamerTab = function(tab) {
-    _origSwitchGamerTab(tab);
+    _adBaseSwitchGamerTab(tab);
     if (_adTabsLoaded[tab]) return;
     _adTabsLoaded[tab] = true;
     if (tab === 'showcase') adLoadShowcase();
@@ -1402,9 +1416,9 @@
   }
 
   // Load gallery when gallery tab is opened
-  var _origSwitchGamerTab = window.switchGamerTab;
+  var _adLazySwitchGamerTab = window.switchGamerTab;
   window.switchGamerTab = function(tab) {
-    if (_origSwitchGamerTab) _origSwitchGamerTab(tab);
+    if (_adLazySwitchGamerTab) _adLazySwitchGamerTab(tab);
     if (tab === 'gallery') adLoadGallery();
     // The first override handles showcase/wishLists/productReviews/sellerReviews
   };
@@ -1417,4 +1431,3 @@
 </script>
 </body>
 </html>
-

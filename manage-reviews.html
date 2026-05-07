@@ -624,8 +624,7 @@
   }
 
   function mrLoad() {
-    if (!userEmail) { mrListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-10 text-gray-400"><p class="text-sm">Could not identify user.</p></div>'; return; }
-    ZrxSession.fetch(BACKEND + '/api/reviews?userId=' + encodeURIComponent(userEmail), { credentials: 'include' })
+    ZrxSession.fetch(BACKEND + '/api/reviews/mine', { credentials: 'include' })
       .then(function(r){ return r.ok ? r.json() : []; })
       .then(function(reviews){
         if (!reviews || reviews.length === 0) {
