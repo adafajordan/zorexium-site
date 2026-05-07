@@ -905,9 +905,10 @@
     var isWish = type === 'wish';
     var textEl = document.getElementById(isWish ? 'pdWishToggleText' : 'pdBuildToggleText');
     var iconEl = document.getElementById(isWish ? 'pdWishToggleIcon' : 'pdBuildToggleIcon');
-    if (textEl) textEl.textContent = inList
-      ? (isWish ? 'Remove from wish list' : 'Add to build list')
-      : (isWish ? 'Add to wish list' : 'Add to build list');
+    if (textEl) {
+      if (isWish) textEl.textContent = inList ? 'Remove from wish list' : 'Add to wish list';
+      else textEl.textContent = inList ? 'In build list — add again' : 'Add to build list';
+    }
     if (iconEl) {
       if (isWish) iconEl.className = (inList ? 'fas' : 'far') + ' fa-heart w-4 text-center ' + (inList ? 'text-pink-500' : 'text-gray-400');
       else iconEl.className = 'fas fa-list w-4 text-center ' + (inList ? 'text-cyan-500' : 'text-gray-400');
@@ -1746,14 +1747,18 @@
 </div>
 
 <script>
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') pdCloseBuildSelectModal();
-  });
-  document.getElementById('pdBuildSelectModal').addEventListener('click', function(e) {
-    if (e.target === this) pdCloseBuildSelectModal();
-  });
-  document.getElementById('pdBuildNewListName').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') pdCreateAndAddBuild();
+  document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') pdCloseBuildSelectModal();
+    });
+    var bsModal = document.getElementById('pdBuildSelectModal');
+    if (bsModal) bsModal.addEventListener('click', function(e) {
+      if (e.target === this) pdCloseBuildSelectModal();
+    });
+    var bsNameInput = document.getElementById('pdBuildNewListName');
+    if (bsNameInput) bsNameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') pdCreateAndAddBuild();
+    });
   });
 </script>
 
