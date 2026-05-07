@@ -405,6 +405,38 @@
   </div>
 </div>
 
+<!-- Add Product to Build List Modal -->
+<div id="blAddItemModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="blAddItemTitle">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+    <h2 id="blAddItemTitle" class="text-lg font-bold text-gray-900 mb-4"><i class="fas fa-plus-circle text-cyan-500 mr-2"></i>Add Product to Build</h2>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Product Name <span class="text-red-500">*</span></label>
+        <input id="blItemProductName" type="text" maxlength="200" placeholder="e.g. ASUS RTX 4090 TUF Gaming" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Price ($)</label>
+          <input id="blItemProductPrice" type="number" min="0" step="0.01" placeholder="0.00" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 mb-1">Product ID (optional)</label>
+          <input id="blItemProductId" type="text" maxlength="100" placeholder="Leave blank for manual" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 mb-1">Image URL (optional)</label>
+        <input id="blItemProductImage" type="url" maxlength="500" placeholder="https://..." class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+      </div>
+    </div>
+    <div id="blItemModalError" class="hidden text-red-600 text-xs mt-3"></div>
+    <div class="flex gap-3 justify-end mt-5">
+      <button onclick="blCloseAddItemModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
+      <button id="blItemModalSave" onclick="blSaveItem()" class="px-4 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors">Add to List</button>
+    </div>
+  </div>
+</div>
+
 <script>
   var BACKEND_BL = 'https://zorexium-backend.onrender.com';
   var _blLists = [];
@@ -449,15 +481,103 @@
         var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
         var safeId = String(list._id);
         var safeName = String(list.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        var itemsHtml = (list.items || []).slice(0, 3).map(function(item) {
+          var safeItemId = String(item.itemId || '');
+          return '<div class="flex items-center gap-2 text-xs text-gray-600">' +
+            (item.image ? '<img src="' + String(item.image).replace(/"/g,'&quot;') + '" class="w-6 h-6 object-cover rounded flex-shrink-0" onerror="this.style.display=\'none\'">' : '<i class="fas fa-microchip text-gray-300 w-6 text-center flex-shrink-0"></i>') +
+            '<span class="truncate">' + String(item.productName || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>' +
+            (item.price ? '<span class="ml-auto text-cyan-600 font-medium flex-shrink-0">$' + Number(item.price).toFixed(2) + '</span>' : '') +
+            '<button onclick="blRemoveItem(\'' + safeId + '\',\'' + safeItemId + '\')" class="text-gray-300 hover:text-red-400 transition-colors ml-1 flex-shrink-0" title="Remove"><i class="fas fa-times text-xs"></i></button>' +
+            '</div>';
+        }).join('');
         return '<div class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-2">' +
           '<div class="flex items-start justify-between gap-2">' +
           '<p class="font-semibold text-gray-800 text-sm">' + safeName + '</p>' +
           '<button onclick="blConfirmDelete(\'' + safeId + '\')" class="text-gray-400 hover:text-red-500 transition-colors text-xs" title="Delete list"><i class="fas fa-trash"></i></button>' +
           '</div>' +
           '<p class="text-xs text-gray-400">' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + (date ? ' &middot; Created ' + date : '') + '</p>' +
-          '<a href="build-showcase.html" class="inline-block mt-auto text-cyan-600 hover:text-cyan-700 text-xs font-semibold"><i class="fas fa-arrow-right mr-1"></i>Open List</a>' +
-          '</div>';
+          (itemsHtml ? '<div class="space-y-1 mt-1">' + itemsHtml + (itemCount > 3 ? '<p class="text-xs text-gray-400 mt-1">+' + (itemCount - 3) + ' more</p>' : '') + '</div>' : '') +
+          '<div class="flex gap-2 mt-auto pt-2">' +
+          '<button onclick="blOpenAddItem(\'' + safeId + '\')" class="flex-1 text-center text-xs font-semibold text-cyan-600 border border-cyan-200 hover:bg-cyan-50 rounded px-2 py-1 transition-colors"><i class="fas fa-plus mr-1"></i>Add Product</button>' +
+          '<a href="build-showcase.html" class="flex-1 text-center text-xs font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 rounded px-2 py-1 transition-colors"><i class="fas fa-award mr-1"></i>Showcase</a>' +
+          '</div></div>';
       }).join('') + '</div>';
+  }
+
+  var _blAddItemListId = null;
+
+  function blOpenAddItem(listId) {
+    _blAddItemListId = listId;
+    document.getElementById('blItemProductId').value = '';
+    document.getElementById('blItemProductName').value = '';
+    document.getElementById('blItemProductPrice').value = '';
+    document.getElementById('blItemProductImage').value = '';
+    document.getElementById('blItemModalError').classList.add('hidden');
+    document.getElementById('blItemModalError').textContent = '';
+    var modal = document.getElementById('blAddItemModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('blItemProductName').focus();
+  }
+
+  function blCloseAddItemModal() {
+    _blAddItemListId = null;
+    var modal = document.getElementById('blAddItemModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function blSaveItem() {
+    if (!_blAddItemListId) return;
+    var productId = document.getElementById('blItemProductId').value.trim();
+    var productName = document.getElementById('blItemProductName').value.trim();
+    var price = document.getElementById('blItemProductPrice').value.trim();
+    var image = document.getElementById('blItemProductImage').value.trim();
+    var errEl = document.getElementById('blItemModalError');
+    if (!productName) { errEl.textContent = 'Please enter a product name.'; errEl.classList.remove('hidden'); return; }
+    if (!productId) productId = 'manual-' + Date.now();
+    var btn = document.getElementById('blItemModalSave');
+    btn.disabled = true; btn.textContent = 'Adding…';
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_BL + '/api/lists/' + encodeURIComponent(_blAddItemListId) + '/items', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId: productId, productName: productName, price: parseFloat(price) || 0, image: image })
+    })
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(res) {
+      btn.disabled = false; btn.textContent = 'Add to List';
+      if (!res.ok) { errEl.textContent = res.data.error || 'Failed to add item.'; errEl.classList.remove('hidden'); return; }
+      blCloseAddItemModal();
+      // Update local state
+      var list = _blLists.find(function(l) { return String(l._id) === _blAddItemListId; });
+      if (list) { list.items = list.items || []; list.items.push(res.data); }
+      blRenderLists();
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Product added to build list!', 'success');
+    })
+    .catch(function() {
+      btn.disabled = false; btn.textContent = 'Add to List';
+      errEl.textContent = 'Network error. Please try again.'; errEl.classList.remove('hidden');
+    });
+  }
+
+  function blRemoveItem(listId, itemId) {
+    if (!itemId) return;
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    fetchFn(BACKEND_BL + '/api/lists/' + encodeURIComponent(listId) + '/items/' + encodeURIComponent(itemId), { method: 'DELETE', credentials: 'include' })
+      .then(function(r) {
+        if (r.ok) {
+          var list = _blLists.find(function(l) { return String(l._id) === listId; });
+          if (list) list.items = (list.items || []).filter(function(i) { return i.itemId !== itemId; });
+          blRenderLists();
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Item removed.', 'success');
+        } else {
+          if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to remove item.', 'error');
+        }
+      })
+      .catch(function() {
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Network error.', 'error');
+      });
   }
 
   function blCreate() {
@@ -540,12 +660,13 @@
 
   // Close modals on Escape
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { blCloseModal(); blCloseDeleteModal(); }
+    if (e.key === 'Escape') { blCloseModal(); blCloseDeleteModal(); blCloseAddItemModal(); }
   });
 
   // Close modals on backdrop click
   document.getElementById('blCreateModal').addEventListener('click', function(e) { if (e.target === this) blCloseModal(); });
   document.getElementById('blDeleteModal').addEventListener('click', function(e) { if (e.target === this) blCloseDeleteModal(); });
+  document.getElementById('blAddItemModal').addEventListener('click', function(e) { if (e.target === this) blCloseAddItemModal(); });
 
   // Submit on Enter in name input
   document.getElementById('blListName').addEventListener('keypress', function(e) { if (e.key === 'Enter') blSaveList(); });
