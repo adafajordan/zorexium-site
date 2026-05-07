@@ -438,13 +438,13 @@
         var safeId = String(list._id);
         var safeName = String(list.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         var itemsHtml = (list.items || []).slice(0, 3).map(function(item) {
-          var attrSafeItemId = String(item.itemId || '').replace(/'/g,'&#39;');
+          var escapedItemId = String(item.itemId || '').replace(/'/g,'&#39;');
           var safeImg = item.image && /^https?:\/\//i.test(item.image) ? String(item.image).replace(/"/g,'&quot;') : '';
           return '<div class="flex items-center gap-2 text-xs text-gray-600">' +
             (safeImg ? '<img src="' + safeImg + '" class="w-6 h-6 object-cover rounded flex-shrink-0" onerror="this.style.display=\'none\'">' : '<i class="fas fa-heart text-pink-300 w-6 text-center flex-shrink-0"></i>') +
             '<span class="truncate">' + String(item.productName || 'Product').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>' +
             (item.price ? '<span class="ml-auto text-cyan-600 font-medium flex-shrink-0">$' + Number(item.price).toFixed(2) + '</span>' : '') +
-            '<button onclick="wlRemoveItem(\'' + safeId + '\',\'' + attrSafeItemId + '\')" class="text-gray-300 hover:text-red-400 transition-colors ml-1 flex-shrink-0" title="Remove"><i class="fas fa-times text-xs"></i></button>' +
+            '<button onclick="wlRemoveItem(\'' + safeId + '\',\'' + escapedItemId + '\')" class="text-gray-300 hover:text-red-400 transition-colors ml-1 flex-shrink-0" title="Remove"><i class="fas fa-times text-xs"></i></button>' +
             '</div>';
         }).join('');
         return '<div class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-2">' +
