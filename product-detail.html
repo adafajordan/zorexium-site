@@ -935,15 +935,15 @@
       var wishRes = await ZrxSession.fetch(BACKEND_URL + '/api/lists?type=wish', { credentials: 'include' });
       var wishLists = wishRes.ok ? await wishRes.json() : [];
       _pdListCache.wish = wishLists[0] || null;
-      var wishInList = _pdListCache.wish && (_pdListCache.wish.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
-      pdSetListButtonState('wish', !!wishInList);
+      var isInWishList = _pdListCache.wish && (_pdListCache.wish.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
+      pdSetListButtonState('wish', !!isInWishList);
     } catch (_) { pdSetListButtonState('wish', false); }
     try {
       var buildRes = await ZrxSession.fetch(BACKEND_URL + '/api/lists?type=build', { credentials: 'include' });
       var buildLists = buildRes.ok ? await buildRes.json() : [];
       _pdListCache.build = buildLists[0] || null;
-      var buildInList = _pdListCache.build && (_pdListCache.build.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
-      pdSetListButtonState('build', !!buildInList);
+      var isInBuildList = _pdListCache.build && (_pdListCache.build.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
+      pdSetListButtonState('build', !!isInBuildList);
     } catch (_) { pdSetListButtonState('build', false); }
   }
 
@@ -973,7 +973,12 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ productId: currentProductId, productName: currentProduct.name || '', price: parseFloat(currentProduct.price) || 0, image: currentProduct.image || '' })
+          body: JSON.stringify({
+            productId: currentProductId,
+            productName: currentProduct.name || '',
+            price: parseFloat(currentProduct.price) || 0,
+            image: currentProduct.image || ''
+          })
         });
         var addData = await addRes.json();
         if (!addRes.ok) throw new Error(addData && addData.error ? addData.error : 'Failed to add item');

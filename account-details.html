@@ -1184,9 +1184,9 @@
 
   // Override switchGamerTab to lazy-load data
   var _adTabsLoaded = {};
-  var _adBaseSwitchGamerTab = switchGamerTab;
+  var _adOriginalSwitchGamerTab = switchGamerTab;
   switchGamerTab = function(tab) {
-    _adBaseSwitchGamerTab(tab);
+    _adOriginalSwitchGamerTab(tab);
     if (_adTabsLoaded[tab]) return;
     _adTabsLoaded[tab] = true;
     if (tab === 'showcase') adLoadShowcase();
@@ -1416,9 +1416,9 @@
   }
 
   // Load gallery when gallery tab is opened
-  var _adLazySwitchGamerTab = window.switchGamerTab;
+  var _adSwitchGamerTabWithData = window.switchGamerTab;
   window.switchGamerTab = function(tab) {
-    if (_adLazySwitchGamerTab) _adLazySwitchGamerTab(tab);
+    if (_adSwitchGamerTabWithData) _adSwitchGamerTabWithData(tab);
     if (tab === 'gallery') adLoadGallery();
     // The first override handles showcase/wishLists/productReviews/sellerReviews
   };
