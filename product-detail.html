@@ -360,7 +360,7 @@
             </button>
           </li>
           <li>
-            <button id="pdBuildToggleBtn" onclick="toggleListItem('build')" class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
+            <button id="pdBuildToggleBtn" onclick="pdShowBuildSelectModal()" class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
               <i id="pdBuildToggleIcon" class="fas fa-list w-4 text-center text-gray-400"></i> <span id="pdBuildToggleText">Add to build list</span>
             </button>
           </li>
@@ -899,12 +899,16 @@
 
   // ── Utility ───────────────────────────────────────────────────────────────
   var _pdListCache = { wish: null, build: null };
+  var _pdBuildLists = [];
 
   function pdSetListButtonState(type, inList) {
     var isWish = type === 'wish';
     var textEl = document.getElementById(isWish ? 'pdWishToggleText' : 'pdBuildToggleText');
     var iconEl = document.getElementById(isWish ? 'pdWishToggleIcon' : 'pdBuildToggleIcon');
-    if (textEl) textEl.textContent = inList ? (isWish ? 'Remove from wish list' : 'Remove from build list') : (isWish ? 'Add to wish list' : 'Add to build list');
+    if (textEl) {
+      if (isWish) textEl.textContent = inList ? 'Remove from wish list' : 'Add to wish list';
+      else textEl.textContent = inList ? 'In build list — add again' : 'Add to build list';
+    }
     if (iconEl) {
       if (isWish) iconEl.className = (inList ? 'fas' : 'far') + ' fa-heart w-4 text-center ' + (inList ? 'text-pink-500' : 'text-gray-400');
       else iconEl.className = 'fas fa-list w-4 text-center ' + (inList ? 'text-cyan-500' : 'text-gray-400');
@@ -941,9 +945,13 @@
     try {
       var buildRes = await ZrxSession.fetch(BACKEND_URL + '/api/lists?type=build', { credentials: 'include' });
       var buildLists = buildRes.ok ? await buildRes.json() : [];
-      _pdListCache.build = buildLists[0] || null;
-      var isInBuildList = _pdListCache.build && (_pdListCache.build.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
-      pdSetListButtonState('build', !!isInBuildList);
+      _pdBuildLists = buildLists || [];
+      // Product is considered "in build list" if it exists in ANY build list
+      var isInAnyBuild = _pdBuildLists.some(function(bl) {
+        return (bl.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
+      });
+      _pdListCache.build = _pdBuildLists[0] || null;
+      pdSetListButtonState('build', isInAnyBuild);
     } catch (_) { pdSetListButtonState('build', false); }
   }
 
@@ -1607,8 +1615,153 @@
     badge.classList.add('hidden');
   }
 
+  // ── Build List Selector ───────────────────────────────────────────────────
+  async function pdShowBuildSelectModal() {
+    if (!ZrxSession.isLoggedIn()) {
+      ZrxNotify.showNotification('Please log in to manage your build lists', 'info');
+      var loginUrl = 'login-register.html';
+      if (window.ZrxSpa && ZrxSpa.navigate(loginUrl)) return;
+      window.location.href = loginUrl;
+      return;
+    }
+    if (!currentProduct || !currentProductId) {
+      ZrxNotify.showNotification('Product not loaded yet.', 'error');
+      return;
+    }
+    // Fetch build lists
+    try {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/lists?type=build', { credentials: 'include' });
+      _pdBuildLists = res.ok ? (await res.json()) : [];
+    } catch (_) { _pdBuildLists = []; }
+
+    var modal = document.getElementById('pdBuildSelectModal');
+    if (!modal) return;
+    var listEl = document.getElementById('pdBuildSelectList');
+    if (listEl) {
+      if (_pdBuildLists.length === 0) {
+        listEl.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">No build lists yet. Create one below.</p>';
+      } else {
+        listEl.innerHTML = _pdBuildLists.map(function(bl) {
+          var safeBLId = String(bl._id).replace(/'/g, '&#39;');
+          var safeBLName = String(bl.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          var alreadyIn = (bl.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
+          return '<button onclick="pdAddToBuild(\'' + safeBLId + '\')" ' +
+            'class="w-full text-left flex items-center justify-between gap-2 px-3 py-2.5 rounded-md border ' +
+            (alreadyIn ? 'border-cyan-300 bg-cyan-50 text-cyan-700' : 'border-gray-200 hover:border-cyan-300 hover:bg-cyan-50 text-gray-700') +
+            ' transition-colors text-sm">' +
+            '<span><i class="fas fa-list text-cyan-500 mr-2"></i>' + safeBLName + '</span>' +
+            (alreadyIn ? '<span class="text-xs text-cyan-500 font-medium"><i class="fas fa-check mr-1"></i>Added</span>' : '') +
+            '</button>';
+        }).join('');
+      }
+    }
+    document.getElementById('pdBuildNewListName').value = '';
+    document.getElementById('pdBuildSelectError').classList.add('hidden');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function pdCloseBuildSelectModal() {
+    var modal = document.getElementById('pdBuildSelectModal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  }
+
+  async function pdAddToBuild(listId) {
+    try {
+      var list = _pdBuildLists.find(function(l) { return String(l._id) === listId; });
+      var alreadyIn = list && (list.items || []).some(function(i) { return String(i.productId) === String(currentProductId); });
+      if (alreadyIn) {
+        ZrxNotify.showNotification('Product is already in this build list.', 'info');
+        pdCloseBuildSelectModal();
+        return;
+      }
+      var addRes = await ZrxSession.fetch(BACKEND_URL + '/api/lists/' + encodeURIComponent(listId) + '/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          productId: currentProductId,
+          productName: currentProduct.name || '',
+          price: parseFloat(currentProduct.price) || 0,
+          image: currentProduct.image || ''
+        })
+      });
+      var addData = await addRes.json();
+      if (!addRes.ok) throw new Error(addData && addData.error ? addData.error : 'Failed to add item');
+      if (list) { list.items = list.items || []; list.items.push(addData); }
+      _pdListCache.build = list || null;
+      pdRefreshListStates();
+      pdCloseBuildSelectModal();
+      var listName = list ? (String(list.name || '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')) : 'build list';
+      ZrxNotify.showNotification('Added to "' + listName + '"!', 'success');
+    } catch (e) {
+      ZrxNotify.showNotification((e && e.message) || 'Failed to add to build list', 'error');
+    }
+  }
+
+  async function pdCreateAndAddBuild() {
+    var nameInput = document.getElementById('pdBuildNewListName');
+    var errEl = document.getElementById('pdBuildSelectError');
+    var name = nameInput ? nameInput.value.trim() : '';
+    if (!name) { errEl.textContent = 'Please enter a name for the build list.'; errEl.classList.remove('hidden'); return; }
+    var btn = document.getElementById('pdBuildCreateBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
+    try {
+      var createRes = await ZrxSession.fetch(BACKEND_URL + '/api/lists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: name, type: 'build' })
+      });
+      var newList = await createRes.json();
+      if (!createRes.ok) throw new Error(newList && newList.error ? newList.error : 'Failed to create list');
+      _pdBuildLists.push(newList);
+      await pdAddToBuild(String(newList._id));
+    } catch (e) {
+      errEl.textContent = (e && e.message) || 'Failed to create list.'; errEl.classList.remove('hidden');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Create & Add'; }
+    }
+  }
+
   window.addEventListener('load', init);
 </script>
+
+<!-- Build List Selector Modal -->
+<div id="pdBuildSelectModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="pdBuildSelectTitle">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="pdBuildSelectTitle" class="text-lg font-bold text-gray-900"><i class="fas fa-list text-cyan-500 mr-2"></i>Add to Build List</h2>
+      <button onclick="pdCloseBuildSelectModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+    </div>
+    <div id="pdBuildSelectList" class="space-y-2 max-h-56 overflow-y-auto mb-4"></div>
+    <div class="border-t border-gray-100 pt-4">
+      <p class="text-xs font-semibold text-gray-600 mb-2">Create a new build list &amp; add:</p>
+      <div class="flex gap-2">
+        <input id="pdBuildNewListName" type="text" maxlength="100" placeholder="Build list name…" class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-300">
+        <button id="pdBuildCreateBtn" onclick="pdCreateAndAddBuild()" class="px-3 py-2 text-sm font-semibold text-white bg-cyan-500 hover:bg-cyan-600 rounded-md transition-colors whitespace-nowrap">Create &amp; Add</button>
+      </div>
+    </div>
+    <div id="pdBuildSelectError" class="hidden text-red-600 text-xs mt-2"></div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') pdCloseBuildSelectModal();
+    });
+    var bsModal = document.getElementById('pdBuildSelectModal');
+    if (bsModal) bsModal.addEventListener('click', function(e) {
+      if (e.target === this) pdCloseBuildSelectModal();
+    });
+    var bsNameInput = document.getElementById('pdBuildNewListName');
+    if (bsNameInput) bsNameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') pdCreateAndAddBuild();
+    });
+  });
+</script>
+
 <script src="notifications.js"></script>
 <script src="session.js"></script>
 

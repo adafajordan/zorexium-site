@@ -433,32 +433,50 @@
         '</div></div>';
       return;
     }
-    container.innerHTML = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' +
-      _wlLists.map(function(list) {
-        var itemCount = (list.items || []).length;
-        var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
-        var safeId = String(list._id);
-        var safeName = String(list.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        var itemsHtml = (list.items || []).slice(0, 3).map(function(item) {
-          var escapedItemId = String(item.itemId || '').replace(/'/g,'&#39;');
-          var safeImg = item.image && /^https?:\/\//i.test(item.image) ? String(item.image).replace(/"/g,'&quot;') : '';
-          return '<div class="flex items-center gap-2 text-xs text-gray-600">' +
-            (safeImg ? '<img src="' + safeImg + '" class="w-6 h-6 object-cover rounded flex-shrink-0" onerror="this.style.display=\'none\'">' : '<i class="fas fa-heart text-pink-300 w-6 text-center flex-shrink-0"></i>') +
-            '<span class="truncate">' + String(item.productName || 'Product').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>' +
-            (item.price ? '<span class="ml-auto text-cyan-600 font-medium flex-shrink-0">$' + Number(item.price).toFixed(2) + '</span>' : '') +
-            '<button onclick="wlRemoveItem(\'' + safeId + '\',\'' + escapedItemId + '\')" class="text-gray-300 hover:text-red-400 transition-colors ml-1 flex-shrink-0" title="Remove"><i class="fas fa-times text-xs"></i></button>' +
-            '</div>';
-        }).join('');
-        return '<div class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-2">' +
-          '<div class="flex items-start justify-between gap-2">' +
-          '<p class="font-semibold text-gray-800 text-sm">' + safeName + '</p>' +
-          '<button onclick="wlConfirmDelete(\'' + safeId + '\')" class="text-gray-400 hover:text-red-500 transition-colors text-xs" title="Delete list"><i class="fas fa-trash"></i></button>' +
+    container.innerHTML = _wlLists.map(function(list) {
+      var itemCount = (list.items || []).length;
+      var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
+      var safeId = String(list._id).replace(/'/g,'&#39;');
+      var safeName = String(list.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      var productsHtml = (list.items || []).map(function(item) {
+        var escapedItemId = String(item.itemId || '').replace(/'/g,'&#39;');
+        var safeImg = item.image && /^https?:\/\//i.test(item.image) ? String(item.image).replace(/"/g,'&quot;') : '';
+        var safeProdId = String(item.productId || '').replace(/"/g,'&quot;');
+        var safeProdName = String(item.productName || 'Product').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        var detailUrl = safeProdId && !/^manual-/i.test(safeProdId) ? 'product-detail.html?id=' + encodeURIComponent(item.productId || '') : '';
+        return '<div class="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">' +
+          '<div class="bg-gray-50 h-36 flex items-center justify-center overflow-hidden">' +
+          (safeImg
+            ? '<img src="' + safeImg + '" alt="' + safeProdName + '" class="max-h-full max-w-full object-contain p-2" onerror="this.src=\'https://placehold.co/200x144/f3f4f6/9ca3af?text=No+Image\'">'
+            : '<img src="https://placehold.co/200x144/f3f4f6/9ca3af?text=No+Image" alt="' + safeProdName + '" class="max-h-full max-w-full object-contain p-2">') +
           '</div>' +
-          '<p class="text-xs text-gray-400">' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + (date ? ' &middot; Created ' + date : '') + '</p>' +
-          (itemsHtml ? '<div class="space-y-1 mt-1">' + itemsHtml + (itemCount > 3 ? '<p class="text-xs text-gray-400 mt-1">+' + (itemCount - 3) + ' more</p>' : '') + '</div>' : '') +
-          '<a href="index.html" class="inline-block mt-auto text-cyan-600 hover:text-cyan-700 text-xs font-semibold"><i class="fas fa-arrow-right mr-1"></i>Add Items</a>' +
-          '</div>';
-      }).join('') + '</div>';
+          '<div class="p-3 flex flex-col flex-1">' +
+          '<h3 class="text-sm font-medium text-gray-900 line-clamp-2 mb-2 leading-snug">' + safeProdName + '</h3>' +
+          '<div class="mt-auto">' +
+          (item.price ? '<span class="text-lg font-bold text-gray-900">$' + Number(item.price).toFixed(2) + '</span>' : '') +
+          '<div class="flex gap-2 mt-2">' +
+          (detailUrl ? '<a href="' + detailUrl + '" class="flex-1 border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-medium py-1.5 rounded text-center transition-colors">View</a>' : '<span class="flex-1"></span>') +
+          '<button onclick="wlRemoveItem(\'' + safeId + '\',\'' + escapedItemId + '\')" class="flex-1 bg-red-50 border border-red-200 hover:bg-red-100 text-red-500 text-xs font-medium py-1.5 rounded transition-colors">Remove</button>' +
+          '</div></div></div></div>';
+      }).join('');
+      return '<div class="mb-6">' +
+        '<div class="flex items-center justify-between mb-3">' +
+        '<div>' +
+        '<h2 class="text-base font-semibold text-gray-800">' + safeName + '</h2>' +
+        '<p class="text-xs text-gray-400">' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + (date ? ' &middot; Created ' + date : '') + '</p>' +
+        '</div>' +
+        '<div class="flex gap-2">' +
+        '<a href="index.html" class="text-xs font-semibold text-cyan-600 hover:text-cyan-700 border border-cyan-200 hover:bg-cyan-50 rounded px-3 py-1 transition-colors"><i class="fas fa-plus mr-1"></i>Add Items</a>' +
+        '<button onclick="wlConfirmDelete(\'' + safeId + '\')" class="text-gray-400 hover:text-red-500 transition-colors text-xs border border-gray-200 hover:border-red-300 rounded px-2 py-1" title="Delete list"><i class="fas fa-trash"></i></button>' +
+        '</div></div>' +
+        (itemCount === 0
+          ? '<div class="text-center py-10 bg-white border border-gray-200 rounded-lg">' +
+            '<i class="fas fa-heart text-3xl text-pink-100 mb-2 block"></i>' +
+            '<p class="text-sm text-gray-400">No products yet. <a href="index.html" class="text-cyan-600 hover:underline">Browse the marketplace</a> to add items.</p>' +
+            '</div>'
+          : '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">' + productsHtml + '</div>') +
+        '</div>';
+    }).join('');
   }
 
   function wlRemoveItem(listId, itemId) {
