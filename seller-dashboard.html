@@ -940,7 +940,8 @@
     document.getElementById('settingsReturnPolicy').value = sellerData.returnPolicy || '';
 
     if (sellerData.accountType === 'business') {
-      document.getElementById('nav-labs').classList.remove('hidden');
+      const labsNav = document.getElementById('nav-labs');
+      if (labsNav) labsNav.classList.remove('hidden');
     }
 
     loadTierSection();
