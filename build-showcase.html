@@ -428,8 +428,9 @@
         var safeId = bsEsc(String(list._id));
         var safeName = bsEsc(list.name || '');
         var itemsHtml = (list.items || []).slice(0, 3).map(function(item) {
+          var safeImg = item.image && /^https?:\/\//i.test(item.image) ? bsEsc(item.image) : '';
           return '<div class="flex items-center gap-2 text-xs text-gray-600">' +
-            (item.image ? '<img src="' + bsEsc(item.image) + '" class="w-6 h-6 object-cover rounded flex-shrink-0">' : '<i class="fas fa-microchip text-gray-300 w-6 text-center"></i>') +
+            (safeImg ? '<img src="' + safeImg + '" class="w-6 h-6 object-cover rounded flex-shrink-0" onerror="this.style.display=\'none\'">' : '<i class="fas fa-microchip text-gray-300 w-6 text-center"></i>') +
             '<span class="truncate">' + bsEsc(item.productName) + '</span>' +
             (item.price ? '<span class="ml-auto text-cyan-600 font-medium flex-shrink-0">$' + Number(item.price).toFixed(2) + '</span>' : '') +
             '</div>';

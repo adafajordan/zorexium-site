@@ -2823,7 +2823,7 @@ app.post('/api/lists/:id/items', publicApiRateLimit, verifyToken, async function
     }
     if (items.length >= 100) return res.status(400).json({ error: 'List item limit reached (100)' });
     const newItem = {
-      itemId: require('crypto').randomUUID(),
+      itemId: crypto.randomUUID(),
       productId: String(productId).slice(0, 100),
       productName: productName ? String(productName).trim().slice(0, 200) : '',
       price: price != null ? parseFloat(price) || 0 : 0,
