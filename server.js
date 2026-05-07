@@ -145,10 +145,10 @@ const VALID_SELLER_TIERS = ['starter', 'pro', 'brand'];
 var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
   .split(',').map(function(o) { return o.trim(); }).filter(Boolean);
 // Always allow the production frontend and backend origins
-ALLOWED_ORIGINS.push('https://zorexiumlabs.com');
+ALLOWED_ORIGINS.push('https://zorexium.io');
 ALLOWED_ORIGINS.push('https://zorexium-backend.onrender.com');
 ALLOWED_ORIGINS.push('https://zorexium-site.vercel.app');
-ALLOWED_ORIGINS.push('https://www.zorexiumlabs.com');
+ALLOWED_ORIGINS.push('https://www.zorexium.io');
 
 app.use(function(req, res, next) {
   var origin = req.headers.origin;
