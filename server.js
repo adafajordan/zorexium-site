@@ -1,4 +1,5 @@
 'use strict';
+npm install @sendgrid/mail
 // SendGrid email setup
 SENDGRID_API_KEY=your_real_key_here
 const sgMail = require('@sendgrid/mail');
