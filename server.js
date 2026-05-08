@@ -156,10 +156,10 @@ var ALLOWED_ORIGINS = Array.from(new Set(
 
 app.use(function(req, res, next) {
   var origin = req.headers.origin;
+  res.append('Vary', 'Origin');
   if (origin && ALLOWED_ORIGINS.indexOf(origin) !== -1) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Vary', 'Origin');
   }
   // Unknown origins or same-origin requests: no CORS headers set
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -178,7 +178,7 @@ function getTokenFromRequest(req) {
   var token = '';
   if (typeof authHeader === 'string' && authHeader.trim()) {
     var authValue = authHeader.trim();
-    var bearerMatch = authValue.match(/^Bearer\s+(.+)$/i);
+    var bearerMatch = authValue.match(/^Bearer\s+(\S+)$/i);
     token = bearerMatch ? bearerMatch[1].trim() : authValue;
   }
   if (!token) {
