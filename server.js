@@ -84,29 +84,33 @@ function buildCookieHeader(name, value, options) {
 
 var COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 var isProduction = process.env.NODE_ENV === 'production';
+var AUTH_COOKIE_SAME_SITE = isProduction ? 'None' : 'Lax';
+var AUTH_COOKIE_SECURE = isProduction;
 
 function setAuthCookies(res, token, email, username, userId) {
+  // For split frontend/backend deployments, production cookies must be
+  // SameSite=None; Secure so browsers allow cross-origin credential requests.
   var userPayload = JSON.stringify({ email: email, username: username || email, userId: userId || '' });
   res.setHeader('Set-Cookie', [
     buildCookieHeader('authToken', token, {
       httpOnly: true,
       maxAge: COOKIE_MAX_AGE,
-      sameSite: 'Lax',
-      secure: isProduction
+      sameSite: AUTH_COOKIE_SAME_SITE,
+      secure: AUTH_COOKIE_SECURE
     }),
     buildCookieHeader('_zrx_user', userPayload, {
       httpOnly: false,
       maxAge: COOKIE_MAX_AGE,
-      sameSite: 'Lax',
-      secure: isProduction
+      sameSite: AUTH_COOKIE_SAME_SITE,
+      secure: AUTH_COOKIE_SECURE
     })
   ]);
 }
 
 function clearAuthCookies(res) {
   res.setHeader('Set-Cookie', [
-    buildCookieHeader('authToken', '', { httpOnly: true, maxAge: 0, sameSite: 'Lax', secure: isProduction }),
-    buildCookieHeader('_zrx_user', '', { httpOnly: false, maxAge: 0, sameSite: 'Lax', secure: isProduction })
+    buildCookieHeader('authToken', '', { httpOnly: true, maxAge: 0, sameSite: AUTH_COOKIE_SAME_SITE, secure: AUTH_COOKIE_SECURE }),
+    buildCookieHeader('_zrx_user', '', { httpOnly: false, maxAge: 0, sameSite: AUTH_COOKIE_SAME_SITE, secure: AUTH_COOKIE_SECURE })
   ]);
 }
 
@@ -141,17 +145,18 @@ var publicApiRateLimit = rateLimit({
 const STARTER_LISTING_LIMIT = 25;
 const VALID_SELLER_TIERS = ['starter', 'pro', 'brand'];
 
-// Only allow credentialed requests from explicitly trusted origins.
-var ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || '')
-  .split(',').map(function(o) { return o.trim(); }).filter(Boolean);
-// Always allow the production frontend and backend origins
-ALLOWED_ORIGINS.push('https://zorexium.io');
-ALLOWED_ORIGINS.push('https://zorexium-backend.onrender.com');
-ALLOWED_ORIGINS.push('https://zorexium-site.vercel.app');
-ALLOWED_ORIGINS.push('https://www.zorexium.io');
+// Only allow credentialed requests from explicitly trusted frontend origins.
+// Required for GitHub Pages/custom-domain frontend -> Render backend requests.
+var REQUIRED_FRONTEND_ORIGINS = ['https://zorexium.io', 'https://www.zorexium.io'];
+var ALLOWED_ORIGINS = Array.from(new Set(
+  REQUIRED_FRONTEND_ORIGINS.concat(
+    (process.env.CORS_ORIGINS || '').split(',').map(function(o) { return o.trim(); }).filter(Boolean)
+  )
+));
 
 app.use(function(req, res, next) {
   var origin = req.headers.origin;
+  res.append('Vary', 'Origin');
   if (origin && ALLOWED_ORIGINS.indexOf(origin) !== -1) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -166,13 +171,31 @@ app.use(function(req, res, next) {
 });
 
 // ── JWT Middleware ────────────────────────────────────────────────────────────
-function verifyToken(req, res, next) {
-  // Accept token from Authorization header (Bearer) or HTTP-only cookie
-  var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
+function getTokenFromRequest(req) {
+  // Accept either "Authorization: Bearer <token>" or a raw JWT token value
+  // (some clients store JWT in localStorage and attach it directly).
+  var authHeader = req.headers.authorization;
+  var token = '';
+  if (typeof authHeader === 'string' && authHeader.trim()) {
+    var authValue = authHeader.trim();
+    var bearerMatch = authValue.match(/^Bearer\s+([A-Za-z0-9._-]+)$/i);
+    var jwtPattern = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+    if (bearerMatch && jwtPattern.test(bearerMatch[1])) {
+      token = bearerMatch[1];
+    } else if (jwtPattern.test(authValue)) {
+      token = authValue;
+    }
+  }
   if (!token) {
     var cookies = parseCookies(req.headers.cookie);
     token = cookies['authToken'];
   }
+  return token;
+}
+
+function verifyToken(req, res, next) {
+  // Primary auth path: Authorization header (JWT). Cookie is fallback.
+  var token = getTokenFromRequest(req);
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
@@ -1719,8 +1742,7 @@ app.delete('/api/user/profile', authRateLimit, verifyToken, async function(req, 
 // GET /api/user/preferences – get user preferences (auth optional, uses userId or sessionId)
 app.get('/api/user/preferences', prefsRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
-  if (!token) { var c = parseCookies(req.headers.cookie); token = c['authToken']; }
+  var token = getTokenFromRequest(req);
   var userId = null;
   if (token) {
     try { var d = jwt.verify(token, JWT_SECRET); userId = d.userId; } catch (_) {}
@@ -1737,8 +1759,7 @@ app.get('/api/user/preferences', prefsRateLimit, async function(req, res) {
 // POST /api/user/preferences – save user preferences (auth optional)
 app.post('/api/user/preferences', prefsRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  var token = req.headers.authorization && req.headers.authorization.split(' ')[1];
-  if (!token) { var c = parseCookies(req.headers.cookie); token = c['authToken']; }
+  var token = getTokenFromRequest(req);
   var userId = null;
   if (token) {
     try { var d = jwt.verify(token, JWT_SECRET); userId = d.userId; } catch (_) {}
