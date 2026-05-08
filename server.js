@@ -14,9 +14,10 @@ if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
 }
 
-// Keep the JSON parser ceiling high so backend aggregate payload size is not the limiting factor for image uploads.
-// Per-image validation below is the only enforced image size limit (10 MB each).
-app.use(express.json({ limit: '250mb' }));
+// Keep parser headroom above legacy 25 MB so large multi-image listing payloads are accepted.
+// 150 MB comfortably covers up to 9 images at 10 MB each when sent as base64 data URLs.
+// Per-image validation below is still the enforced upload-size rule.
+app.use(express.json({ limit: '150mb' }));
 // Only serve files from /public – never expose server.js, package.json, .env.example, etc.
 app.use(express.static(path.join(__dirname, 'public')));
 
