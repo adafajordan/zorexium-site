@@ -1,7 +1,6 @@
 'use strict';
 npm install @sendgrid/mail
 // SendGrid email setup
-SENDGRID_API_KEY=your_real_key_here
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Place your API key in your environment!
 // Utility function to send emails
