@@ -786,10 +786,11 @@
     const productId = String(p._id || p.id || '');
 
     return `<div class="product-card overflow-hidden cursor-pointer js-card-view" data-id="${escHtml(productId)}">
-  <div class="relative bg-gray-50 h-44 flex items-center justify-center overflow-hidden">
+  <!-- Make the product image fill the card's top media half for stronger visual hierarchy. -->
+  <div class="relative bg-gray-50 h-48 overflow-hidden">
     <img src="${escHtml(p.image || '')}" alt="${escHtml(p.name || '')}"
-      class="max-h-full max-w-full object-contain p-2"
-      onerror="this.src='https://placehold.co/300x176/f3f4f6/9ca3af?text=No+Image'">
+      class="w-full h-full object-cover"
+      onerror="this.src='https://placehold.co/300x192/f3f4f6/9ca3af?text=No+Image'">
     ${savePct >= 5 ? `<span class="save-badge absolute top-2 left-2">Save ${savePct}%</span>` : ''}
   </div>
   <div class="p-3">

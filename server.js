@@ -14,10 +14,24 @@ if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
 }
 
-// Allow up to 25 MB JSON bodies to safely accommodate multiple base64-encoded images (each up to 10 MB).
-app.use(express.json({ limit: '25mb' }));
+// Keep the JSON parser ceiling high so backend aggregate payload size is not the limiting factor for image uploads.
+// Per-image validation below is the only enforced image size limit (10 MB each).
+app.use(express.json({ limit: '250mb' }));
 // Only serve files from /public – never expose server.js, package.json, .env.example, etc.
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Shared 10 MB per-image limit used by all image upload endpoints.
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+
+// Parse and measure base64 data URL payload size in bytes so backend checks match real per-file size.
+function getDataUrlPayloadBytes(dataUrl) {
+  if (typeof dataUrl !== 'string') return null;
+  const commaIdx = dataUrl.indexOf(',');
+  if (commaIdx === -1) return null;
+  const payload = dataUrl.slice(commaIdx + 1).replace(/\s/g, '');
+  if (!payload) return null;
+  return Buffer.byteLength(payload, 'base64');
+}
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
@@ -539,6 +553,17 @@ app.post('/api/products', verifyToken, async function(req, res) {
       }
     }
 
+    // Enforce backend per-image size only (10 MB each) for listing uploads encoded as data URLs.
+    const incomingImages = [];
+    if (typeof image === 'string' && image) incomingImages.push(image);
+    if (Array.isArray(images)) incomingImages.push(...images);
+    for (const img of incomingImages) {
+      if (typeof img !== 'string' || !img.startsWith('data:image/')) continue;
+      const bytes = getDataUrlPayloadBytes(img);
+      if (bytes === null) return res.status(400).json({ error: 'Invalid image data URL' });
+      if (bytes > MAX_IMAGE_SIZE_BYTES) return res.status(400).json({ error: 'Image too large. Max: 10 MB per image.' });
+    }
+
     const parsedSalePrice = (salePrice != null && salePrice !== '') ? parseFloat(salePrice) : null;
     const parsedOriginalPrice = (originalPrice != null && originalPrice !== '') ? parseFloat(originalPrice) : null;
 
@@ -670,8 +695,23 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
     if (subcategory !== undefined) updates.subcategory = subcategory;
     if (description !== undefined) updates.description = description;
     if (shortDescription !== undefined) updates.shortDescription = shortDescription;
+    // Enforce backend per-image size only (10 MB each) for listing image updates.
+    if (image !== undefined && typeof image === 'string' && image.startsWith('data:image/')) {
+      const bytes = getDataUrlPayloadBytes(image);
+      if (bytes === null) return res.status(400).json({ error: 'Invalid image data URL' });
+      if (bytes > MAX_IMAGE_SIZE_BYTES) return res.status(400).json({ error: 'Image too large. Max: 10 MB per image.' });
+    }
     if (image !== undefined) updates.image = image;
-    if (images !== undefined) updates.images = Array.isArray(images) ? images : [];
+    if (images !== undefined) {
+      const imagesArr = Array.isArray(images) ? images : [];
+      for (const img of imagesArr) {
+        if (typeof img !== 'string' || !img.startsWith('data:image/')) continue;
+        const bytes = getDataUrlPayloadBytes(img);
+        if (bytes === null) return res.status(400).json({ error: 'Invalid image data URL' });
+        if (bytes > MAX_IMAGE_SIZE_BYTES) return res.status(400).json({ error: 'Image too large. Max: 10 MB per image.' });
+      }
+      updates.images = imagesArr;
+    }
     if (condition !== undefined) updates.condition = condition;
     if (specifications !== undefined) updates.specifications = specifications;
     if (brand !== undefined) updates.brand = brand;
@@ -1705,9 +1745,13 @@ app.put('/api/user/profile-picture', verifyToken, async function(req, res) {
     return res.status(400).json({ error: 'profileImage must be a base64 data URL (data:image/...)' });
   }
 
-  // Limit to 10 MB (base64 overhead makes a 10 MB file ~13.1 MB as a data URL string)
-  if (profileImage.length > 13107200) {
-    return res.status(400).json({ error: 'Image too large. Max: 10 MB.' });
+  // Enforce 10 MB max based on decoded bytes (not raw string length).
+  const profileImageBytes = getDataUrlPayloadBytes(profileImage);
+  if (profileImageBytes === null) {
+    return res.status(400).json({ error: 'Invalid image data URL' });
+  }
+  if (profileImageBytes > MAX_IMAGE_SIZE_BYTES) {
+    return res.status(400).json({ error: 'Image too large. Max: 10 MB per image.' });
   }
 
   try {
@@ -1843,9 +1887,13 @@ app.put('/api/user/profile', verifyToken, async function(req, res) {
     if (typeof coverImage !== 'string' || !coverImage.startsWith('data:image/')) {
       return res.status(400).json({ error: 'coverImage must be a base64 data URL (data:image/...)' });
     }
-    // Limit to 10 MB (base64 overhead makes a 10 MB file ~13.1 MB as a data URL string)
-    if (coverImage.length > 13107200) {
-      return res.status(400).json({ error: 'Image too large. Max: 10 MB.' });
+    // Enforce 10 MB max based on decoded bytes (not raw string length).
+    const coverImageBytes = getDataUrlPayloadBytes(coverImage);
+    if (coverImageBytes === null) {
+      return res.status(400).json({ error: 'Invalid image data URL' });
+    }
+    if (coverImageBytes > MAX_IMAGE_SIZE_BYTES) {
+      return res.status(400).json({ error: 'Image too large. Max: 10 MB per image.' });
     }
     updates.coverImage = coverImage;
   }
@@ -2384,8 +2432,13 @@ app.post('/api/labs', verifyToken, async function(req, res) {
     for (const f of files) {
       if (!f || typeof f.data !== 'string') continue;
       if (!f.data.startsWith('data:')) continue;
-      if (f.data.length > 13107200) {
-        return res.status(400).json({ error: 'Image too large. Max: 10 MB.' });
+      // Enforce 10 MB max based on decoded bytes (not raw string length).
+      const fileBytes = getDataUrlPayloadBytes(f.data);
+      if (fileBytes === null) {
+        return res.status(400).json({ error: 'Invalid image data URL' });
+      }
+      if (fileBytes > MAX_IMAGE_SIZE_BYTES) {
+        return res.status(400).json({ error: 'Image too large. Max: 10 MB per image.' });
       }
       sanitizedFiles.push({
         name: String(f.name || '').slice(0, 200),
