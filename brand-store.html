@@ -23,7 +23,7 @@
     }
     .nav-dropdown-trigger:hover .marketplace-mega-menu,
     .nav-dropdown-trigger.active .marketplace-mega-menu { transform: translateY(0); }
-    .product-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; transition: box-shadow 0.2s, transform 0.2s; }
+    .product-card { background: #fff; border-radius: 8px; transition: box-shadow 0.2s, transform 0.2s; }
     .product-card:hover { box-shadow: 0 8px 24px rgba(34,197,94,0.12); transform: translateY(-2px); }
     .filter-section-title { cursor: pointer; user-select: none; }
     .filter-checkbox:checked { accent-color: #22d3ee; }
@@ -254,6 +254,7 @@
   <div class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row items-center md:items-start gap-6">
     <!-- Brand logo/icon -->
     <div class="flex-shrink-0 w-24 h-24 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+      <img id="brandProfilePic" src="" alt="Seller profile picture" class="w-full h-full object-cover hidden">
       <img id="brandLogoImg" src="" alt="Shop Logo" class="w-full h-full object-contain hidden">
       <i class="fas fa-microchip text-4xl text-cyan-500" id="brandIcon"></i>
     </div>
@@ -261,7 +262,6 @@
     <div class="flex-1">
       <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Brand Store</p>
       <div class="flex items-center gap-2 mb-1">
-        <img id="brandProfilePic" src="" alt="Seller profile picture" class="w-9 h-9 rounded-full object-cover border border-gray-200 flex-shrink-0 hidden">
         <h1 id="brandTitle" class="text-3xl font-bold text-gray-900">Brand</h1>
       </div>
       <p id="brandSubtitle" class="text-gray-500 mb-3">Shop All Brand Products At Zorexium</p>
@@ -555,24 +555,22 @@
         }
       }
 
-      // Update logo
+      // Update logo box: profile picture takes priority, then logo, then default icon
       const logoEl = document.getElementById('brandLogoImg');
       const logoIcon = document.getElementById('brandIcon');
-      if (seller.logoUrl) {
+      const picEl = document.getElementById('brandProfilePic');
+      if (seller.profileImage) {
+        if (picEl) {
+          picEl.src = seller.profileImage;
+          picEl.classList.remove('hidden');
+        }
+        if (logoIcon) logoIcon.classList.add('hidden');
+      } else if (seller.logoUrl) {
         if (logoEl) {
           logoEl.src = seller.logoUrl;
           logoEl.classList.remove('hidden');
         }
         if (logoIcon) logoIcon.classList.add('hidden');
-      }
-
-      // Show profile picture if available
-      if (seller.profileImage) {
-        const picEl = document.getElementById('brandProfilePic');
-        if (picEl) {
-          picEl.src = seller.profileImage;
-          picEl.classList.remove('hidden');
-        }
       }
 
       // Show contact email only if the seller has opted in via showContactEmail
