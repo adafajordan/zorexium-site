@@ -724,6 +724,10 @@
               <div>
                 <label class="form-label">Contact Email</label>
                 <input type="email" id="settingsContactEmail" class="form-input" placeholder="shop@example.com">
+                <label class="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                  <input type="checkbox" id="settingsShowContactEmail" class="accent-cyan-500 w-4 h-4">
+                  <span class="text-xs text-gray-600">Show email publicly on brand store page</span>
+                </label>
               </div>
               <div>
                 <label class="form-label">Return Policy (optional)</label>
@@ -995,6 +999,7 @@
     document.getElementById('settingsLogoUrl').value = sellerData.logoUrl || '';
     document.getElementById('settingsBannerUrl').value = sellerData.bannerUrl || '';
     document.getElementById('settingsContactEmail').value = sellerData.contactEmail || (ZrxSession.getUser() || {}).email || '';
+    document.getElementById('settingsShowContactEmail').checked = sellerData.showContactEmail === true;
     document.getElementById('settingsReturnPolicy').value = sellerData.returnPolicy || '';
     // Mirror current profile picture into settings preview so sellers can see the active image before uploading.
     const settingsProfileImage = document.getElementById('settingsSellerProfileImage');
@@ -1299,6 +1304,7 @@
         logoUrl: document.getElementById('settingsLogoUrl').value.trim(),
         bannerUrl: document.getElementById('settingsBannerUrl').value.trim(),
         contactEmail: document.getElementById('settingsContactEmail').value.trim(),
+        showContactEmail: document.getElementById('settingsShowContactEmail').checked,
         returnPolicy: document.getElementById('settingsReturnPolicy').value.trim(),
       };
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
@@ -1312,6 +1318,7 @@
       sellerData.logoUrl = payload.logoUrl;
       sellerData.bannerUrl = payload.bannerUrl;
       sellerData.contactEmail = payload.contactEmail;
+      sellerData.showContactEmail = payload.showContactEmail;
       sellerData.returnPolicy = payload.returnPolicy;
       document.getElementById('shopNameDisplay').textContent = payload.shopName || 'Your Shop';
       document.getElementById('shopDescDisplay').textContent = payload.shopDescription || '';
