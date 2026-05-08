@@ -418,6 +418,7 @@
 
     <!-- Dropdown toggle script: supports hover (CSS) and click (JS) -->
     <script>
+        var FEEDBACK_BACKEND = 'https://zorexium-backend.onrender.com';
         function updateCommentCount(el) {
             document.getElementById('commentCount').textContent = el.value.length;
         }
@@ -432,6 +433,10 @@
 
             var purpose = document.getElementById('feedbackPurpose').value;
             var comments = document.getElementById('feedbackComments').value.trim();
+            var email = document.getElementById('feedbackEmail').value.trim();
+            var satisfactionEl = document.querySelector('input[name="satisfaction"]:checked');
+            var satisfaction = satisfactionEl ? satisfactionEl.value : '';
+            var includeScreenshot = !!document.getElementById('feedbackScreenshot').checked;
             if (!purpose) {
                 errMsg.textContent = 'Please select the purpose of your visit.';
                 errEl.classList.remove('hidden');
@@ -442,10 +447,32 @@
                 errEl.classList.remove('hidden');
                 return;
             }
-            // Show success (feedback submission is client-side only)
-            successEl.classList.remove('hidden');
-            document.getElementById('feedbackForm').reset();
-            document.getElementById('commentCount').textContent = '0';
+            if (!email) {
+                errMsg.textContent = 'Please enter your email address.';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            fetch(FEEDBACK_BACKEND + '/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    purpose: purpose,
+                    comments: comments,
+                    email: email,
+                    satisfaction: satisfaction,
+                    includeScreenshot: includeScreenshot
+                })
+            }).then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) throw new Error((data && data.error) || 'Failed to submit feedback.');
+                    successEl.classList.remove('hidden');
+                    document.getElementById('feedbackForm').reset();
+                    document.getElementById('commentCount').textContent = '0';
+                });
+            }).catch(function(err) {
+                errMsg.textContent = err.message || 'Something went wrong. Please try again.';
+                errEl.classList.remove('hidden');
+            });
         }
 
         function toggleDropdown(id) {
@@ -571,4 +598,3 @@
     <script src="profile-picture.js"></script>
 </body>
 </html>
-

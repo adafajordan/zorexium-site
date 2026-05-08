@@ -365,21 +365,21 @@
               <p class="text-sm font-medium text-gray-800">Order Confirmation</p>
               <p class="text-xs text-gray-400">Receive an email when your order is placed.</p>
             </div>
-            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track on" data-category="order_confirmation" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
           <div class="notif-row">
             <div>
               <p class="text-sm font-medium text-gray-800">Shipping Updates</p>
               <p class="text-xs text-gray-400">Get notified when your order ships and at delivery.</p>
             </div>
-            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track on" data-category="shipping_updates" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
           <div class="notif-row">
             <div>
               <p class="text-sm font-medium text-gray-800">Return &amp; Refund Status</p>
               <p class="text-xs text-gray-400">Updates when your return is received and refund issued.</p>
             </div>
-            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track on" data-category="return_refund_status" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
         </div>
 
@@ -393,21 +393,21 @@
               <p class="text-sm font-medium text-gray-800">Price Drop Alerts</p>
               <p class="text-xs text-gray-400">When items on your Wish List drop in price.</p>
             </div>
-            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track on" data-category="price_drop_alerts" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
           <div class="notif-row">
             <div>
               <p class="text-sm font-medium text-gray-800">Weekly Deals Digest</p>
               <p class="text-xs text-gray-400">Top deals curated for your hardware interests.</p>
             </div>
-            <div class="toggle-track" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track" data-category="weekly_deals_digest" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
           <div class="notif-row">
             <div>
               <p class="text-sm font-medium text-gray-800">Back-in-Stock Alerts</p>
               <p class="text-xs text-gray-400">When a saved out-of-stock item becomes available.</p>
             </div>
-            <div class="toggle-track" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track" data-category="back_in_stock_alerts" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
         </div>
 
@@ -421,21 +421,21 @@
               <p class="text-sm font-medium text-gray-800">Community Replies</p>
               <p class="text-xs text-gray-400">When someone replies to your post in Community Hub.</p>
             </div>
-            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track on" data-category="community_replies" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
           <div class="notif-row">
             <div>
               <p class="text-sm font-medium text-gray-800">Security Alerts</p>
               <p class="text-xs text-gray-400">Sign-ins from new devices and password changes.</p>
             </div>
-            <div class="toggle-track on" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track on" data-category="security_alerts" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
           <div class="notif-row">
             <div>
               <p class="text-sm font-medium text-gray-800">Zorexium Newsletter</p>
               <p class="text-xs text-gray-400">Monthly product highlights and platform news.</p>
             </div>
-            <div class="toggle-track" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
+            <div class="toggle-track" data-category="newsletter" onclick="enToggle(this)"><div class="toggle-thumb"></div></div>
           </div>
         </div>
 
@@ -448,16 +448,56 @@
 </main>
 
 <script>
+  var EN_BACKEND = 'https://zorexium-backend.onrender.com';
+  function enAuthFetch(url, options) {
+    if (typeof ZrxSession !== 'undefined' && ZrxSession.fetch) return ZrxSession.fetch(url, options || {});
+    var opts = Object.assign({ credentials: 'include' }, options || {});
+    var token = null;
+    try { token = localStorage.getItem('authToken'); } catch (_) {}
+    if (token) opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + token });
+    return fetch(url, opts);
+  }
   (function() {
     var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : !!localStorage.getItem('authToken');
     if (!isLoggedIn) {
       document.getElementById('enAuthGate').classList.remove('hidden');
     } else {
       document.getElementById('enContent').classList.remove('hidden');
+      enLoadSettings();
     }
   })();
-  function enToggle(track) {
+  async function enToggle(track) {
     track.classList.toggle('on');
+    var category = track.getAttribute('data-category');
+    if (!category) return;
+    var enabled = track.classList.contains('on');
+    try {
+      var res = await enAuthFetch(EN_BACKEND + '/api/user/email-notifications/' + encodeURIComponent(category), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: enabled })
+      });
+      if (!res.ok) throw new Error('Failed to save setting');
+      if (typeof ZrxNotify !== 'undefined') {
+        ZrxNotify.showNotification(enabled ? 'Email alert enabled.' : 'Email alert disabled.', 'success');
+      }
+    } catch (err) {
+      track.classList.toggle('on');
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Could not update setting. Please try again.', 'error');
+    }
+  }
+  async function enLoadSettings() {
+    try {
+      var res = await enAuthFetch(EN_BACKEND + '/api/user/email-notifications');
+      if (!res.ok) return;
+      var data = await res.json();
+      var settings = (data && data.settings) || {};
+      document.querySelectorAll('.toggle-track[data-category]').forEach(function(track) {
+        var category = track.getAttribute('data-category');
+        var enabled = settings[category] !== false;
+        track.classList.toggle('on', enabled);
+      });
+    } catch (_) {}
   }
   function enSave() {
     if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Notification preferences saved!', 'success');

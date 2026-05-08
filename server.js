@@ -4,14 +4,26 @@
 // Ensure SENDGRID_API_KEY is set as an environment variable (e.g. in Render dashboard).
 // To install: npm install @sendgrid/mail
 const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // API key sourced from environment — never hardcoded
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@zorexium.io';
+const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexiumlabs.com';
+const APP_BASE_URL = process.env.BASE_URL || 'https://zorexium.io';
+if (SENDGRID_API_KEY.startsWith('SG.')) {
+  sgMail.setApiKey(SENDGRID_API_KEY); // API key sourced from environment — never hardcoded
+} else {
+  console.warn('⚠️  SENDGRID_API_KEY is missing or invalid. Email sends will be skipped.');
+}
 
 // Utility function to send emails via SendGrid
 async function sendEmail({ to, subject, text, html }) {
+  if (!SENDGRID_API_KEY.startsWith('SG.')) {
+    console.warn('Skipping email send because SENDGRID_API_KEY is not configured.', { to, subject });
+    return { success: false, error: 'SENDGRID_API_KEY is not configured' };
+  }
   try {
     await sgMail.send({
       to,                          // recipient address, e.g. 'user@example.com'
-      from: 'noreply@zorexium.io', // must be a domain-authenticated sender in SendGrid
+      from: SENDGRID_FROM_EMAIL, // must be a domain-authenticated sender in SendGrid
       subject,
       text,
       html,
@@ -33,7 +45,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ObjectId } = require('mongodb');
 const rateLimit = require('express-rate-limit');
-const nodemailer = require('nodemailer');
 
 if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
@@ -71,24 +82,93 @@ if (JWT_SECRET === DEFAULT_JWT_SECRET) {
   console.warn('⚠️  JWT_SECRET is not set – using insecure default. Set JWT_SECRET env var before deploying to production.');
 }
 
-// ── Nodemailer transporter (configured via SMTP_* env vars) ──────────────────
-let mailTransporter = null;
-if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-  mailTransporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+function makeAbsoluteUrl(path) {
+  return APP_BASE_URL + (String(path || '').startsWith('/') ? path : '/' + String(path || ''));
+}
+
+async function sendEventEmail(to, subject, html, linkPath) {
+  if (!to) return;
+  const eventLink = makeAbsoluteUrl(linkPath || '/');
+  const bodyHtml = html + `<p style="margin-top:16px;"><a href="${eventLink}">${eventLink}</a></p>`;
+  await sendEmail({
+    to,
+    subject,
+    text: `${subject}\n\n${eventLink}`,
+    html: bodyHtml
   });
 }
-const SMTP_FROM = process.env.SMTP_FROM || 'Zorexium <noreply@zorexium.io>';
 
-async function sendMail(to, subject, html) {
-  if (!mailTransporter) {
-    console.log('[DEV EMAIL] To:', to, '| Subject:', subject, '| Body:', html);
-    return;
+async function sendEventEmailSafe(to, subject, html, linkPath) {
+  try {
+    await sendEventEmail(to, subject, html, linkPath);
+  } catch (mailErr) {
+    console.error('Failed to send email:', subject, mailErr.message);
   }
-  await mailTransporter.sendMail({ from: SMTP_FROM, to, subject, html });
+}
+
+function normalizeEmail(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getRequestClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function buildDeviceFingerprint(req) {
+  const userAgent = String(req.headers['user-agent'] || '').slice(0, 300);
+  const acceptLanguage = String(req.headers['accept-language'] || '').slice(0, 100);
+  const ip = getRequestClientIp(req);
+  const raw = `${userAgent}|${acceptLanguage}|${ip}`;
+  return crypto.createHash('sha256').update(raw).digest('hex');
+}
+
+async function getUserEmailNotificationSettings(userId) {
+  const defaults = {
+    order_confirmation: true,
+    shipping_updates: true,
+    return_refund_status: true,
+    price_drop_alerts: false,
+    weekly_deals_digest: false,
+    back_in_stock_alerts: false,
+    community_replies: true,
+    security_alerts: true,
+    newsletter: false,
+    login_notifications: true
+  };
+  const doc = await db.collection('userEmailNotificationSettings').findOne({ userId: String(userId) });
+  return { ...defaults, ...(doc && doc.settings ? doc.settings : {}) };
+}
+
+async function isEmailAlertEnabled(userId, categoryKey) {
+  const settings = await getUserEmailNotificationSettings(userId);
+  return settings[categoryKey] !== false;
+}
+
+async function maybeSendPreferenceNotificationEmail(userId, categoryKey, subject, html, linkPath) {
+  if (!userId) return;
+  try {
+    const enabled = await isEmailAlertEnabled(userId, categoryKey);
+    if (!enabled) return;
+    const user = await db.collection('users').findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } });
+    const to = user && user.email ? normalizeEmail(user.email) : '';
+    if (!to) return;
+    await sendEventEmailSafe(to, subject, html, linkPath);
+  } catch (error) {
+    console.error('Failed preference email send for category', categoryKey, error.message);
+  }
 }
 let db;
 let mongoClient;
@@ -306,12 +386,13 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
   
   try {
     const { email, password, firstName, lastName } = req.body;
+    const normalizedEmail = normalizeEmail(email);
     
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
     
-    const existingUser = await db.collection('users').findOne({ email });
+    const existingUser = await db.collection('users').findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
     }
@@ -319,7 +400,7 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const result = await db.collection('users').insertOne({
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
       firstName: firstName || '',
       lastName: lastName || '',
@@ -328,13 +409,20 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
     });
 
     const token = jwt.sign(
-      { userId: result.insertedId.toString(), email, isAdmin: false },
+      { userId: result.insertedId.toString(), email: normalizedEmail, isAdmin: false },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    setAuthCookies(res, token, email, firstName || email, result.insertedId.toString());
-    res.json({ message: 'User created successfully', userId: result.insertedId, token, user: { email, firstName: firstName || '' } });
+    setAuthCookies(res, token, normalizedEmail, firstName || normalizedEmail, result.insertedId.toString());
+    res.json({ message: 'User created successfully', userId: result.insertedId, token, user: { email: normalizedEmail, firstName: firstName || '' } });
+    // Send welcome email asynchronously so registration flow is never blocked by email provider delays.
+    sendEventEmailSafe(
+      normalizedEmail,
+      'Welcome to Zorexium',
+      `<p>Welcome to Zorexium${firstName ? ', ' + firstName : ''}!</p><p>Your account is ready. Visit your account page to get started.</p>`,
+      '/account-details.html'
+    );
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: error.message });
@@ -346,12 +434,13 @@ app.post('/api/auth/login', authRateLimit, async function(req, res) {
   
   try {
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
     
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
     
-    const user = await db.collection('users').findOne({ email });
+    const user = await db.collection('users').findOne({ email: normalizedEmail });
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -368,6 +457,26 @@ app.post('/api/auth/login', authRateLimit, async function(req, res) {
     );
 
     setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
+    // Detect first-time/new device sign-in and notify the user when login notifications are enabled.
+    const deviceFingerprint = buildDeviceFingerprint(req);
+    const knownDeviceFingerprints = Array.isArray(user.knownDeviceFingerprints) ? user.knownDeviceFingerprints : [];
+    const isNewDevice = !knownDeviceFingerprints.includes(deviceFingerprint);
+    const updatedFingerprints = isNewDevice
+      ? [deviceFingerprint].concat(knownDeviceFingerprints).slice(0, 20)
+      : knownDeviceFingerprints;
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { knownDeviceFingerprints: updatedFingerprints, lastLoginAt: new Date(), updatedAt: new Date() } }
+    );
+    if (isNewDevice) {
+      await maybeSendPreferenceNotificationEmail(
+        user._id.toString(),
+        'login_notifications',
+        'New device sign-in detected',
+        `<p>We detected a sign-in to your Zorexium account from a new device.</p><p>If this was you, no action is needed. If not, please review your security settings immediately.</p>`,
+        '/marketplace-settings.html#panel-security'
+      );
+    }
     res.json({
       token,
       user: {
@@ -422,20 +531,22 @@ app.post('/api/auth/otc-request', authRateLimit, async function(req, res) {
     if (!user) {
       return res.json({ message: 'If that email is registered, a one-time code will be sent.' });
     }
-    // Generate a 6-digit numeric OTC (valid for 15 minutes) using cryptographically secure random
+    // Generate a 6-digit numeric OTC (valid for 30 minutes) using cryptographically secure random.
+    // Each request issues a fresh single-use code.
     const otcCode = String(crypto.randomInt(100000, 1000000));
-    const otcExpiry = new Date(Date.now() + 15 * 60 * 1000);
+    const otcExpiry = new Date(Date.now() + 30 * 60 * 1000);
     await db.collection('users').updateOne(
       { _id: user._id },
       { $set: { otcCode, otcExpiry } }
     );
     try {
-      await sendMail(
+      await sendEventEmail(
         normalizedEmail,
-        'Your Zorexium sign-in code',
+        'Your Zorexium one-time sign-in code',
         `<p>Your one-time sign-in code is: <strong>${otcCode}</strong></p>
-<p>This code expires in 15 minutes. Do not share it with anyone.</p>
-<p>If you did not request this code, you can ignore this email.</p>`
+<p>This code expires in 30 minutes and can only be used once.</p>
+<p>If you did not request this code, you can ignore this email.</p>`,
+        '/login-register.html'
       );
     } catch (mailErr) {
       console.error('Failed to send OTC email:', mailErr.message);
@@ -475,6 +586,25 @@ app.post('/api/auth/otc-login', authRateLimit, async function(req, res) {
       { expiresIn: '7d' }
     );
     setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
+    const deviceFingerprint = buildDeviceFingerprint(req);
+    const knownDeviceFingerprints = Array.isArray(user.knownDeviceFingerprints) ? user.knownDeviceFingerprints : [];
+    const isNewDevice = !knownDeviceFingerprints.includes(deviceFingerprint);
+    const updatedFingerprints = isNewDevice
+      ? [deviceFingerprint].concat(knownDeviceFingerprints).slice(0, 20)
+      : knownDeviceFingerprints;
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { knownDeviceFingerprints: updatedFingerprints, lastLoginAt: new Date(), updatedAt: new Date() } }
+    );
+    if (isNewDevice) {
+      await maybeSendPreferenceNotificationEmail(
+        user._id.toString(),
+        'login_notifications',
+        'New device sign-in detected',
+        `<p>We detected a sign-in to your Zorexium account from a new device.</p><p>If this was you, no action is needed. If not, please review your security settings immediately.</p>`,
+        '/marketplace-settings.html#panel-security'
+      );
+    }
     res.json({
       token,
       user: {
@@ -521,7 +651,7 @@ app.get('/api/products', publicApiRateLimit, async function(req, res) {
 });
 
 // ── POST /api/products – create a product (auth required) ─────────────────────
-app.post('/api/products', verifyToken, async function(req, res) {
+app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -634,6 +764,20 @@ app.post('/api/products', verifyToken, async function(req, res) {
     };
 
     const result = await db.collection('products').insertOne(product);
+    try {
+      const sellerUser = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
+      const sellerEmail = normalizeEmail(sellerUser && sellerUser.email);
+      if (sellerEmail) {
+        await sendEventEmailSafe(
+          sellerEmail,
+          'Your product is now listed on Zorexium',
+          `<p>Your item <strong>${product.name}</strong> has been listed successfully.</p><p>You can manage this listing any time from your seller dashboard.</p>`,
+          '/product-detail.html?id=' + encodeURIComponent(String(result.insertedId))
+        );
+      }
+    } catch (mailErr) {
+      console.error('Failed to send product listed email:', mailErr.message);
+    }
     res.status(201).json({ ...product, _id: result.insertedId });
   } catch (error) {
     console.error('Error creating product:', error);
@@ -1255,6 +1399,27 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
       { $set: { isSeller: true, updatedAt: new Date() } }
     );
 
+    try {
+      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1, firstName: 1 } });
+      const to = normalizeEmail(user && user.email);
+      if (to) {
+        await sendEventEmailSafe(
+          to,
+          'Welcome to Zorexium Sellers',
+          `<p>Welcome${user && user.firstName ? ', ' + user.firstName : ''}! Your seller profile is now active.</p><p>Thanks for joining the Zorexium seller community.</p>`,
+          '/seller-dashboard.html'
+        );
+        await sendEventEmailSafe(
+          to,
+          'Thanks for purchasing Pro Seller status',
+          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$19/month</strong> subscription.</p>`,
+          '/seller-dashboard.html#tier'
+        );
+      }
+    } catch (mailErr) {
+      console.error('Failed to send Pro seller signup emails:', mailErr.message);
+    }
+
     res.status(201).json({ ...seller, _id: result.insertedId });
   } catch (error) {
     console.error('Error confirming Pro Seller subscription:', error);
@@ -1263,7 +1428,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
 });
 
 // ── CREATE ORDER (No auth required - guest checkout) ────────────────────────────────────────
-app.post('/api/orders', async function(req, res) {
+app.post('/api/orders', publicApiRateLimit, async function(req, res) {
   try {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
@@ -1275,6 +1440,16 @@ app.post('/api/orders', async function(req, res) {
       return res.status(400).json({ error: 'No items in order' });
     }
     
+    // Resolve products so orders retain seller/product references for transactional emails and seller analytics.
+    const rawProductIds = items.map(function(item) { return item && item.id ? String(item.id) : ''; }).filter(Boolean);
+    const objectIds = rawProductIds
+      .filter(function(id) { return ObjectId.isValid(id); })
+      .map(function(id) { return new ObjectId(id); });
+    const products = objectIds.length > 0
+      ? await db.collection('products').find({ _id: { $in: objectIds } }).toArray()
+      : [];
+    const productById = new Map(products.map(function(product) { return [String(product._id), product]; }));
+
     let subtotal = 0;
     const orderItems = items.map(item => {
       const itemTotal = item.price * item.quantity;
@@ -1286,6 +1461,20 @@ app.post('/api/orders', async function(req, res) {
           currency_code: 'USD',
           value: parseFloat(item.price).toFixed(2)
         }
+      };
+    });
+    const normalizedOrderItems = items.map(function(item) {
+      const itemId = item && item.id ? String(item.id) : '';
+      const product = productById.get(itemId) || null;
+      return {
+        id: itemId,
+        name: item && item.name ? String(item.name) : (product && product.name ? String(product.name) : ''),
+        price: Number(item && item.price ? item.price : (product && product.price ? product.price : 0)),
+        quantity: Number(item && item.quantity ? item.quantity : 1),
+        image: item && item.image ? String(item.image) : (product && product.image ? String(product.image) : ''),
+        sellerId: item && item.sellerId ? String(item.sellerId) : (product && product.sellerId ? String(product.sellerId) : ''),
+        sellerName: item && item.sellerName ? String(item.sellerName) : (product && (product.sellerName || product.sellerUsername) ? String(product.sellerName || product.sellerUsername) : ''),
+        productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html')
       };
     });
     
@@ -1339,8 +1528,9 @@ app.post('/api/orders', async function(req, res) {
     await db.collection('orders').insertOne({
       id: orderId,
       paypalOrderId: paypalOrder.id,
-      items,
+      items: normalizedOrderItems,
       buyer,
+      buyerEmail: normalizeEmail(buyer && buyer.email),
       shippingMethod,
       subtotal,
       shipping,
@@ -1358,7 +1548,7 @@ app.post('/api/orders', async function(req, res) {
 });
 
 // ── CAPTURE ORDER (No auth required - guest checkout) ────────────────────────────────────────
-app.post('/api/orders/:orderId/capture', async function(req, res) {
+app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req, res) {
   try {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
@@ -1410,6 +1600,45 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
       }
     } catch (payoutErr) {
       console.error('Failed to process automatic payout:', payoutErr.message);
+    }
+
+    // Send transactional purchase emails (buyer thank-you + seller sold notification).
+    const buyerEmail = normalizeEmail(order.buyerEmail || (order.buyer && order.buyer.email) || '');
+    if (buyerEmail) {
+      await sendEventEmailSafe(
+        buyerEmail,
+        'Thank you for your purchase on Zorexium',
+        `<p>Thanks for your order${order.buyer && order.buyer.firstName ? ', ' + order.buyer.firstName : ''}!</p><p>Your order <strong>${order.id}</strong> has been confirmed.</p>`,
+        '/payment-success.html?orderId=' + encodeURIComponent(order.id)
+      );
+    }
+
+    const sellerItemsMap = new Map();
+    (Array.isArray(order.items) ? order.items : []).forEach(function(item) {
+      const sellerId = item && item.sellerId ? String(item.sellerId) : '';
+      if (!sellerId) return;
+      if (!sellerItemsMap.has(sellerId)) sellerItemsMap.set(sellerId, []);
+      sellerItemsMap.get(sellerId).push(item);
+    });
+
+    for (const [sellerId, sellerItems] of sellerItemsMap.entries()) {
+      try {
+        const sellerUser = await db.collection('users').findOne({ _id: new ObjectId(sellerId) }, { projection: { email: 1, firstName: 1 } });
+        const sellerEmail = normalizeEmail(sellerUser && sellerUser.email);
+        if (!sellerEmail) continue;
+        const firstItem = sellerItems[0] || {};
+        const soldItemLink = firstItem.id
+          ? '/product-detail.html?id=' + encodeURIComponent(String(firstItem.id))
+          : '/seller-dashboard.html';
+        await sendEventEmailSafe(
+          sellerEmail,
+          'Your product sold on Zorexium',
+          `<p>Great news${sellerUser && sellerUser.firstName ? ', ' + sellerUser.firstName : ''}! Your listing just sold.</p><p>Order <strong>${order.id}</strong> includes <strong>${sellerItems.length}</strong> item(s) from your shop.</p>`,
+          soldItemLink
+        );
+      } catch (sellerMailErr) {
+        console.error('Failed to send seller sold email:', sellerMailErr.message);
+      }
     }
 
     res.json({ orderId, paypalCaptureId: captureData.id, status: 'completed' });
@@ -1641,7 +1870,7 @@ app.get('/api/posts', async function(req, res) {
 });
 
 // POST /api/posts/:postId/replies – add a reply to a post (auth required)
-app.post('/api/posts/:postId/replies', verifyToken, async function(req, res) {
+app.post('/api/posts/:postId/replies', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { postId } = req.params;
@@ -1684,6 +1913,20 @@ app.post('/api/posts/:postId/replies', verifyToken, async function(req, res) {
     );
     if (result.matchedCount === 0) {
       return res.status(404).json({ error: 'Post not found' });
+    }
+    try {
+      const post = await db.collection('posts').findOne({ _id: objectId }, { projection: { userId: 1, title: 1 } });
+      if (post && post.userId && post.userId !== req.userId) {
+        await maybeSendPreferenceNotificationEmail(
+          String(post.userId),
+          'community_replies',
+          'New reply to your community post',
+          `<p>${escapeHtml(username)} replied to your post: <strong>${escapeHtml(post.title || 'Untitled post')}</strong>.</p>`,
+          '/community-hub.html'
+        );
+      }
+    } catch (mailErr) {
+      console.error('Failed to send community reply email:', mailErr.message);
     }
     res.status(201).json(reply);
   } catch (error) {
@@ -2018,6 +2261,13 @@ app.post('/api/auth/change-password', authRateLimit, verifyToken, async function
       { _id: new ObjectId(req.userId) },
       { $set: { password: hashed, updatedAt: new Date() } }
     );
+    await maybeSendPreferenceNotificationEmail(
+      req.userId,
+      'security_alerts',
+      'Your password was changed',
+      '<p>Your Zorexium account password was just changed.</p><p>If this was not you, please secure your account immediately.</p>',
+      '/marketplace-settings.html#panel-security'
+    );
     res.json({ message: 'Password updated' });
   } catch (error) {
     console.error('Error changing password:', error);
@@ -2040,7 +2290,7 @@ app.get('/api/user/is-seller', verifyToken, async function(req, res) {
 // ── SELLERS ──────────────────────────────────────────────────────────────────────
 
 // POST /api/sellers – create seller profile (auth required)
-app.post('/api/sellers', verifyToken, async function(req, res) {
+app.post('/api/sellers', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -2097,6 +2347,21 @@ app.post('/api/sellers', verifyToken, async function(req, res) {
       { _id: new ObjectId(req.userId) },
       { $set: { isSeller: true, updatedAt: new Date() } }
     );
+
+    try {
+      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1, firstName: 1 } });
+      const to = normalizeEmail(user && user.email);
+      if (to) {
+        await sendEventEmailSafe(
+          to,
+          'Welcome to Zorexium Sellers',
+          `<p>Welcome aboard${user && user.firstName ? ', ' + user.firstName : ''}! Your seller profile is now active.</p><p>You can start listing items and managing sales from your seller dashboard.</p>`,
+          '/seller-dashboard.html'
+        );
+      }
+    } catch (mailErr) {
+      console.error('Failed to send seller welcome email:', mailErr.message);
+    }
 
     res.status(201).json({ ...seller, _id: result.insertedId });
   } catch (error) {
@@ -2218,6 +2483,20 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
                 proTierDowngraded: false, updatedAt: new Date() } }
     );
     const updated = await db.collection('sellers').findOne({ userId: req.userId });
+    try {
+      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
+      const to = normalizeEmail(user && user.email);
+      if (to) {
+        await sendEventEmailSafe(
+          to,
+          'Thanks for upgrading to Pro Seller',
+          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$19/month</strong> subscription.</p>`,
+          '/seller-dashboard.html#tier'
+        );
+      }
+    } catch (mailErr) {
+      console.error('Failed to send Pro upgrade email:', mailErr.message);
+    }
     res.json(updated);
   } catch (error) {
     console.error('Error upgrading seller to Pro:', error);
@@ -2597,7 +2876,7 @@ app.get('/api/payouts', publicApiRateLimit, verifyToken, async function(req, res
 
 // PUT /api/payouts/:id – update payout status (auth required)
 // Sellers may only update their own payouts; admins may update any payout.
-app.put('/api/payouts/:id', verifyToken, async function(req, res) {
+app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   let objectId;
@@ -2628,6 +2907,22 @@ app.put('/api/payouts/:id', verifyToken, async function(req, res) {
 
     await db.collection('payouts').updateOne({ _id: objectId }, { $set: updates });
     const updated = await db.collection('payouts').findOne({ _id: objectId });
+    if (status === 'ready_to_pay' && payout.sellerId) {
+      try {
+        const sellerUser = await db.collection('users').findOne({ _id: new ObjectId(payout.sellerId) }, { projection: { email: 1 } });
+        const sellerEmail = normalizeEmail(sellerUser && sellerUser.email);
+        if (sellerEmail) {
+          await sendEventEmailSafe(
+            sellerEmail,
+            'Order received — invite your buyer to leave a review',
+            `<p>An order tied to your listing was marked as received.</p><p>Now is a great time to encourage a buyer review to build trust in your store.</p>`,
+            '/manage-reviews.html'
+          );
+        }
+      } catch (mailErr) {
+        console.error('Failed to send order received email to seller:', mailErr.message);
+      }
+    }
     res.json(updated);
   } catch (error) {
     console.error('Error updating payout:', error);
@@ -2757,13 +3052,14 @@ app.post('/api/auth/forgot-password', authRateLimit, async function(req, res) {
     const baseUrl = process.env.BASE_URL || 'https://zorexium.io';
     const resetLink = `${baseUrl}/login-register.html?reset=${encodeURIComponent(resetToken)}`;
     try {
-      await sendMail(
+      await sendEventEmail(
         normalizedEmail,
         'Reset your Zorexium password',
         `<p>Hello,</p>
 <p>Click the link below to reset your password. This link expires in 1 hour.</p>
 <p><a href="${resetLink}">${resetLink}</a></p>
-<p>If you did not request a password reset, you can ignore this email.</p>`
+<p>If you did not request a password reset, you can ignore this email.</p>`,
+        '/login-register.html?reset=' + encodeURIComponent(resetToken)
       );
     } catch (mailErr) {
       console.error('Failed to send password reset email:', mailErr.message);
@@ -3239,6 +3535,115 @@ app.put('/api/notifications/:id/read', publicApiRateLimit, verifyToken, async fu
     console.error('Error marking notification as read:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ── EMAIL NOTIFICATION PREFERENCES ────────────────────────────────────────────
+const VALID_EMAIL_NOTIFICATION_CATEGORIES = new Set([
+  'order_confirmation',
+  'shipping_updates',
+  'return_refund_status',
+  'price_drop_alerts',
+  'weekly_deals_digest',
+  'back_in_stock_alerts',
+  'community_replies',
+  'security_alerts',
+  'newsletter',
+  'login_notifications'
+]);
+
+app.get('/api/user/email-notifications', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const settings = await getUserEmailNotificationSettings(req.userId);
+    res.json({ settings });
+  } catch (error) {
+    console.error('Error loading email notification settings:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/user/email-notifications/:category', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const category = String(req.params.category || '').trim();
+  if (!VALID_EMAIL_NOTIFICATION_CATEGORIES.has(category)) {
+    return res.status(400).json({ error: 'Invalid notification category' });
+  }
+  const enabled = req.body && req.body.enabled === true;
+  try {
+    await db.collection('userEmailNotificationSettings').updateOne(
+      { userId: req.userId },
+      { $set: { userId: req.userId, [`settings.${category}`]: enabled, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    if (enabled) {
+      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
+      const to = normalizeEmail(user && user.email);
+      if (to) {
+        await sendEventEmailSafe(
+          to,
+          'Email alert enabled on your Zorexium account',
+          `<p>You successfully enabled the <strong>${category.replace(/_/g, ' ')}</strong> email alert category.</p><p>We'll email you when matching events occur.</p>`,
+          '/email-notifications.html'
+        );
+      }
+    }
+    res.json({ category, enabled });
+  } catch (error) {
+    console.error('Error saving email notification setting:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── SUPPORT / FEEDBACK SUBMISSIONS ────────────────────────────────────────────
+app.post('/api/support', publicApiRateLimit, async function(req, res) {
+  const category = String((req.body && req.body.category) || '').trim();
+  const subject = String((req.body && req.body.subject) || '').trim().slice(0, 200);
+  const description = String((req.body && req.body.description) || '').trim().slice(0, 5000);
+  const priority = String((req.body && req.body.priority) || 'normal').trim().slice(0, 20);
+  const email = normalizeEmail(req.body && req.body.email);
+  if (!category || !subject || description.length < 10 || !email) {
+    return res.status(400).json({ error: 'category, subject, description, and email are required' });
+  }
+
+  const supportPageLink = '/contact-support.html';
+  await sendEventEmailSafe(
+    ADMIN_NOTIFICATION_EMAIL,
+    'New support request submitted',
+    `<p><strong>Category:</strong> ${escapeHtml(category)}</p><p><strong>Priority:</strong> ${escapeHtml(priority)}</p><p><strong>From:</strong> ${escapeHtml(email)}</p><p><strong>Subject:</strong> ${escapeHtml(subject)}</p><p><strong>Description:</strong><br>${escapeHtml(description).replace(/\n/g, '<br>')}</p>`,
+    supportPageLink
+  );
+  await sendEventEmailSafe(
+    email,
+    'We received your support request',
+    `<p>Thanks for contacting Zorexium Support.</p><p>We received your request and will respond swiftly.</p><p><strong>Subject:</strong> ${escapeHtml(subject)}</p>`,
+    '/contact-support.html'
+  );
+  res.json({ message: 'Support request submitted successfully' });
+});
+
+app.post('/api/feedback', publicApiRateLimit, async function(req, res) {
+  const purpose = String((req.body && req.body.purpose) || '').trim().slice(0, 200);
+  const comments = String((req.body && req.body.comments) || '').trim().slice(0, 5000);
+  const email = normalizeEmail(req.body && req.body.email);
+  const satisfaction = String((req.body && req.body.satisfaction) || '').trim().slice(0, 50);
+  const includeScreenshot = !!(req.body && req.body.includeScreenshot);
+  if (!purpose || !comments || !email) {
+    return res.status(400).json({ error: 'purpose, comments, and email are required' });
+  }
+
+  await sendEventEmailSafe(
+    ADMIN_NOTIFICATION_EMAIL,
+    'New feedback submission',
+    `<p><strong>Purpose:</strong> ${escapeHtml(purpose)}</p><p><strong>From:</strong> ${escapeHtml(email)}</p><p><strong>Satisfaction:</strong> ${escapeHtml(satisfaction || 'Not selected')}</p><p><strong>Include screenshot:</strong> ${includeScreenshot ? 'Yes' : 'No'}</p><p><strong>Comments:</strong><br>${escapeHtml(comments).replace(/\n/g, '<br>')}</p>`,
+    '/feedback.html'
+  );
+  await sendEventEmailSafe(
+    email,
+    'We received your feedback',
+    '<p>Thanks for sharing your feedback with Zorexium.</p><p>Our team has received it and will follow up swiftly when needed.</p>',
+    '/feedback.html'
+  );
+  res.json({ message: 'Feedback submitted successfully' });
 });
 
 // ── REPLY INTERACTIONS ────────────────────────────────────────────────────────
