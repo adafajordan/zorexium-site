@@ -9,6 +9,7 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@zorexium.io';
 const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexiumlabs.com';
 const APP_BASE_URL = process.env.BASE_URL || 'https://zorexium.io';
+const TEST_SMS_MESSAGE_PREFIX = 'Zorexium SMS test: your Twilio setup is working. Visit ';
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_SMS_FROM = process.env.TWILIO_SMS_FROM || '';
@@ -148,10 +149,7 @@ function normalizePhoneE164(value) {
   if (!trimmed.startsWith('+')) return '';
   const digitsOnly = trimmed.slice(1);
   if (!digitsOnly || digitsOnly.length < 8 || digitsOnly.length > 15) return '';
-  for (let i = 0; i < digitsOnly.length; i += 1) {
-    const code = digitsOnly.charCodeAt(i);
-    if (code < 48 || code > 57) return '';
-  }
+  if (!/^\d+$/.test(digitsOnly)) return '';
   return '+' + digitsOnly;
 }
 
@@ -4217,7 +4215,7 @@ app.post('/api/test-sms', publicApiRateLimit, async function(req, res) {
 
   const result = await sendSMS({
     to: phone,
-    body: `Zorexium SMS test: your Twilio setup is working. Visit ${makeAbsoluteUrl('/email-notifications.html')} to manage alerts.`,
+    body: `${TEST_SMS_MESSAGE_PREFIX}${makeAbsoluteUrl('/email-notifications.html')} to manage alerts.`,
   });
   if (result.success) {
     return res.json({ success: true, message: 'SMS sent successfully.' });
