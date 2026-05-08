@@ -402,7 +402,7 @@
 <script src="session.js"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-  // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
+  // Use ZrxSession.fetch() so bearer-token auth works from the static Pages frontend
   let allPayouts = [];
 
   async function loadPayouts() {
@@ -657,7 +657,7 @@
             // Cart badge update (requires auth)
             try{
                 if(loggedIn){
-                    fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                    ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                         .then(function(r){ return r.ok ? r.json() : null; })
                         .then(function(data){
                             var count = (data && data.items) ? data.items.length : 0;
