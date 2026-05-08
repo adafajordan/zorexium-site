@@ -555,7 +555,7 @@
             // Cart badge update (requires auth)
             try{
                 if(loggedIn){
-                    ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                    fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                         .then(function(r){ return r.ok ? r.json() : null; })
                         .then(function(data){
                             var count = (data && data.items) ? data.items.length : 0;
