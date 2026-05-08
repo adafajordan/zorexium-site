@@ -9,7 +9,7 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@zorexium.io';
 const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexiumlabs.com';
 const APP_BASE_URL = process.env.BASE_URL || 'https://zorexium.io';
-const TEST_SMS_MESSAGE_PREFIX = 'Zorexium SMS test: your Twilio setup is working. Visit ';
+const TEST_SMS_MESSAGE_TEMPLATE = 'Zorexium SMS test: your Twilio setup is working. Visit {{url}} to manage alerts.';
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_SMS_FROM = process.env.TWILIO_SMS_FROM || '';
@@ -4215,7 +4215,7 @@ app.post('/api/test-sms', publicApiRateLimit, async function(req, res) {
 
   const result = await sendSMS({
     to: phone,
-    body: `${TEST_SMS_MESSAGE_PREFIX}${makeAbsoluteUrl('/email-notifications.html')} to manage alerts.`,
+    body: TEST_SMS_MESSAGE_TEMPLATE.replace('{{url}}', makeAbsoluteUrl('/email-notifications.html')),
   });
   if (result.success) {
     return res.json({ success: true, message: 'SMS sent successfully.' });
