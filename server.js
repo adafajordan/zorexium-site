@@ -1,14 +1,17 @@
 'use strict';
-npm install @sendgrid/mail
+
 // SendGrid email setup
+// Ensure SENDGRID_API_KEY is set as an environment variable (e.g. in Render dashboard).
+// To install: npm install @sendgrid/mail
 const sgMail = require('@sendgrid/mail');
-sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Place your API key in your environment!
-// Utility function to send emails
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // API key sourced from environment — never hardcoded
+
+// Utility function to send emails via SendGrid
 async function sendEmail({ to, subject, text, html }) {
   try {
     await sgMail.send({
-      to, // recipient (e.g., 'user@example.com')
-      from: 'your_verified_sender@zorexium.io', // must be a domain-authenticated sender
+      to,                          // recipient address, e.g. 'user@example.com'
+      from: 'noreply@zorexium.io', // must be a domain-authenticated sender in SendGrid
       subject,
       text,
       html,
@@ -3725,6 +3728,30 @@ async function activateAllProducts() {
     console.error('⚠️  Product activation migration error:', err.message);
   }
 }
+
+// ── SendGrid test route ───────────────────────────────────────────────────────
+// POST /api/send-test-email  { "email": "recipient@example.com" }
+// Use this route to verify your SendGrid integration is working on Render.
+app.post('/api/send-test-email', publicApiRateLimit, async function(req, res) {
+  const { email } = req.body || {};
+  // Use a simple linear check instead of a backtracking regex to avoid ReDoS.
+  const atIdx = typeof email === 'string' ? email.indexOf('@') : -1;
+  const domainPart = atIdx > 0 ? email.slice(atIdx + 1) : '';
+  const dotIdx = domainPart.lastIndexOf('.');
+  if (!email || atIdx < 1 || !domainPart || dotIdx < 1 || dotIdx === domainPart.length - 1 || email.length > 254) {
+    return res.status(400).json({ error: 'A valid recipient email address is required.' });
+  }
+  const result = await sendEmail({
+    to: email,
+    subject: 'Hello from Zorexium!',
+    text: 'This is a test email sent via SendGrid from your Zorexium backend.',
+    html: '<p>This is a <strong>test email</strong> sent via SendGrid from your Zorexium backend.</p>',
+  });
+  if (result.success) {
+    return res.json({ message: 'Email sent successfully!' });
+  }
+  return res.status(500).json({ error: 'Failed to send email.', detail: result.error });
+});
 
 async function start() {
   console.log('🚀 Starting server...');
