@@ -2119,6 +2119,9 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
   if (req.body.payoutVerified !== undefined) {
     updates.payoutVerified = Boolean(req.body.payoutVerified);
   }
+  if (req.body.showContactEmail !== undefined) {
+    updates.showContactEmail = Boolean(req.body.showContactEmail);
+  }
   if (req.body.tier !== undefined) {
     const newTier = String(req.body.tier).toLowerCase();
     if (VALID_SELLER_TIERS.includes(newTier)) updates.tier = newTier;
