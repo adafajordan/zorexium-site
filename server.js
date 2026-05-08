@@ -150,7 +150,7 @@ function normalizePhoneE164(value) {
   const trimmed = value.trim();
   if (!trimmed.startsWith('+')) return '';
   const digitsOnly = trimmed.slice(1);
-  if (!digitsOnly || digitsOnly.length < MIN_E164_DIGITS || digitsOnly.length > MAX_E164_DIGITS) return '';
+  if (digitsOnly.length < MIN_E164_DIGITS || digitsOnly.length > MAX_E164_DIGITS) return '';
   if (!/^\d+$/.test(digitsOnly)) return '';
   return '+' + digitsOnly;
 }
