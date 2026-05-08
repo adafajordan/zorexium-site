@@ -4,14 +4,25 @@
 // Ensure SENDGRID_API_KEY is set as an environment variable (e.g. in Render dashboard).
 // To install: npm install @sendgrid/mail
 const sgMail = require('@sendgrid/mail');
+const twilio = require('twilio');
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@zorexium.io';
 const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexiumlabs.com';
 const APP_BASE_URL = process.env.BASE_URL || 'https://zorexium.io';
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
+const TWILIO_SMS_FROM = process.env.TWILIO_SMS_FROM || '';
 if (SENDGRID_API_KEY.startsWith('SG.')) {
   sgMail.setApiKey(SENDGRID_API_KEY); // API key sourced from environment — never hardcoded
 } else {
   console.warn('⚠️  SENDGRID_API_KEY is missing or invalid. Email sends will be skipped.');
+}
+const twilioConfigured = TWILIO_ACCOUNT_SID.startsWith('AC') && !!TWILIO_AUTH_TOKEN && !!TWILIO_SMS_FROM;
+const twilioClient = twilioConfigured
+  ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+  : null;
+if (!twilioConfigured) {
+  console.warn('⚠️  Twilio SMS is not fully configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_SMS_FROM.');
 }
 
 // Utility function to send emails via SendGrid
@@ -34,6 +45,27 @@ async function sendEmail({ to, subject, text, html }) {
     if (error.response && error.response.body) {
       console.error(error.response.body);
     }
+    return { success: false, error: error.message };
+  }
+}
+
+// Reusable utility to send SMS via Twilio.
+// Use this utility in the same event paths where sendEventEmail/sendEventEmailSafe are called,
+// so future notification flows can trigger both channels (email + SMS) in parallel.
+async function sendSMS({ to, body }) {
+  if (!twilioConfigured || !twilioClient) {
+    console.warn('Skipping SMS send because Twilio environment variables are not configured.', { to });
+    return { success: false, error: 'Twilio SMS is not configured' };
+  }
+  try {
+    await twilioClient.messages.create({
+      to,
+      from: TWILIO_SMS_FROM,
+      body,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Twilio SMS error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -110,6 +142,19 @@ function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
+function normalizePhoneE164(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('+')) return '';
+  const digitsOnly = trimmed.slice(1);
+  if (!digitsOnly || digitsOnly.length < 8 || digitsOnly.length > 15) return '';
+  for (let i = 0; i < digitsOnly.length; i += 1) {
+    const code = digitsOnly.charCodeAt(i);
+    if (code < 48 || code > 57) return '';
+  }
+  return '+' + digitsOnly;
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -170,6 +215,9 @@ async function maybeSendPreferenceNotificationEmail(userId, categoryKey, subject
     console.error('Failed preference email send for category', categoryKey, error.message);
   }
 }
+// Future SMS notification wiring:
+// add a maybeSendPreferenceNotificationSMS companion and call it wherever maybeSendPreferenceNotificationEmail is used
+// (checkout confirmations, seller events, security alerts, support/feedback acknowledgements) to keep channel behavior aligned.
 let db;
 let mongoClient;
 let mongoConnected = false;
@@ -4156,6 +4204,25 @@ app.post('/api/send-test-email', publicApiRateLimit, async function(req, res) {
     return res.json({ message: 'Email sent successfully!' });
   }
   return res.status(500).json({ error: 'Failed to send email.', detail: result.error });
+});
+
+// ── Twilio test route ──────────────────────────────────────────────────────────
+// POST /api/test-sms  { "phone": "+15555555555" }
+// This route validates E.164 format and sends a test text through the shared sendSMS utility.
+app.post('/api/test-sms', publicApiRateLimit, async function(req, res) {
+  const phone = normalizePhoneE164(req.body && req.body.phone);
+  if (!phone) {
+    return res.status(400).json({ error: 'A valid phone number in E.164 format is required (example: +15555555555).' });
+  }
+
+  const result = await sendSMS({
+    to: phone,
+    body: `Zorexium SMS test: your Twilio setup is working. Visit ${makeAbsoluteUrl('/email-notifications.html')} to manage alerts.`,
+  });
+  if (result.success) {
+    return res.json({ success: true, message: 'SMS sent successfully.' });
+  }
+  return res.status(500).json({ success: false, error: 'Failed to send SMS.', detail: result.error });
 });
 
 async function start() {
