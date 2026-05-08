@@ -6,6 +6,7 @@
 const sgMail = require('@sendgrid/mail');
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@zorexium.io';
+const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexiumlabs.com';
 const APP_BASE_URL = process.env.BASE_URL || 'https://zorexium.io';
 if (SENDGRID_API_KEY.startsWith('SG.')) {
   sgMail.setApiKey(SENDGRID_API_KEY); // API key sourced from environment — never hardcoded
@@ -650,7 +651,7 @@ app.get('/api/products', publicApiRateLimit, async function(req, res) {
 });
 
 // ── POST /api/products – create a product (auth required) ─────────────────────
-app.post('/api/products', verifyToken, async function(req, res) {
+app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -1427,7 +1428,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
 });
 
 // ── CREATE ORDER (No auth required - guest checkout) ────────────────────────────────────────
-app.post('/api/orders', async function(req, res) {
+app.post('/api/orders', publicApiRateLimit, async function(req, res) {
   try {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
@@ -1547,7 +1548,7 @@ app.post('/api/orders', async function(req, res) {
 });
 
 // ── CAPTURE ORDER (No auth required - guest checkout) ────────────────────────────────────────
-app.post('/api/orders/:orderId/capture', async function(req, res) {
+app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req, res) {
   try {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
@@ -1638,17 +1639,6 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
       } catch (sellerMailErr) {
         console.error('Failed to send seller sold email:', sellerMailErr.message);
       }
-    }
-
-    // Optional preference-based duplicate confirmation for users who explicitly keep order confirmation alerts enabled.
-    if (order.userId) {
-      await maybeSendPreferenceNotificationEmail(
-        String(order.userId),
-        'order_confirmation',
-        'Order confirmation',
-        `<p>Your Zorexium order <strong>${order.id}</strong> is complete.</p>`,
-        '/payment-success.html?orderId=' + encodeURIComponent(order.id)
-      );
     }
 
     res.json({ orderId, paypalCaptureId: captureData.id, status: 'completed' });
@@ -1880,7 +1870,7 @@ app.get('/api/posts', async function(req, res) {
 });
 
 // POST /api/posts/:postId/replies – add a reply to a post (auth required)
-app.post('/api/posts/:postId/replies', verifyToken, async function(req, res) {
+app.post('/api/posts/:postId/replies', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { postId } = req.params;
@@ -2300,7 +2290,7 @@ app.get('/api/user/is-seller', verifyToken, async function(req, res) {
 // ── SELLERS ──────────────────────────────────────────────────────────────────────
 
 // POST /api/sellers – create seller profile (auth required)
-app.post('/api/sellers', verifyToken, async function(req, res) {
+app.post('/api/sellers', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -2886,7 +2876,7 @@ app.get('/api/payouts', publicApiRateLimit, verifyToken, async function(req, res
 
 // PUT /api/payouts/:id – update payout status (auth required)
 // Sellers may only update their own payouts; admins may update any payout.
-app.put('/api/payouts/:id', verifyToken, async function(req, res) {
+app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   let objectId;
@@ -3615,12 +3605,12 @@ app.post('/api/support', publicApiRateLimit, async function(req, res) {
     return res.status(400).json({ error: 'category, subject, description, and email are required' });
   }
 
-  const adminLink = '/contact-support.html';
+  const supportPageLink = '/contact-support.html';
   await sendEventEmailSafe(
-    'admin@zorexiumlabs.com',
+    ADMIN_NOTIFICATION_EMAIL,
     'New support request submitted',
     `<p><strong>Category:</strong> ${escapeHtml(category)}</p><p><strong>Priority:</strong> ${escapeHtml(priority)}</p><p><strong>From:</strong> ${escapeHtml(email)}</p><p><strong>Subject:</strong> ${escapeHtml(subject)}</p><p><strong>Description:</strong><br>${escapeHtml(description).replace(/\n/g, '<br>')}</p>`,
-    adminLink
+    supportPageLink
   );
   await sendEventEmailSafe(
     email,
@@ -3642,7 +3632,7 @@ app.post('/api/feedback', publicApiRateLimit, async function(req, res) {
   }
 
   await sendEventEmailSafe(
-    'admin@zorexiumlabs.com',
+    ADMIN_NOTIFICATION_EMAIL,
     'New feedback submission',
     `<p><strong>Purpose:</strong> ${escapeHtml(purpose)}</p><p><strong>From:</strong> ${escapeHtml(email)}</p><p><strong>Satisfaction:</strong> ${escapeHtml(satisfaction || 'Not selected')}</p><p><strong>Include screenshot:</strong> ${includeScreenshot ? 'Yes' : 'No'}</p><p><strong>Comments:</strong><br>${escapeHtml(comments).replace(/\n/g, '<br>')}</p>`,
     '/feedback.html'

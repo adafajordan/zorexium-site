@@ -451,6 +451,7 @@
 
     <!-- Dropdown toggle script: supports hover (CSS) and click (JS) -->
     <script>
+        var SUPPORT_BACKEND = 'https://zorexium-backend.onrender.com';
         function updateDescCount(el) {
             document.getElementById('descCount').textContent = el.value.length;
         }
@@ -475,7 +476,7 @@
             if (!description || description.length < 10) { errMsg.textContent = 'Please describe your issue (at least 10 characters).'; errEl.classList.remove('hidden'); return; }
             if (!email) { errMsg.textContent = 'Please enter your email address.'; errEl.classList.remove('hidden'); return; }
 
-            fetch('https://zorexium-backend.onrender.com/api/support', {
+            fetch(SUPPORT_BACKEND + '/api/support', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

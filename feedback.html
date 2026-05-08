@@ -418,6 +418,7 @@
 
     <!-- Dropdown toggle script: supports hover (CSS) and click (JS) -->
     <script>
+        var FEEDBACK_BACKEND = 'https://zorexium-backend.onrender.com';
         function updateCommentCount(el) {
             document.getElementById('commentCount').textContent = el.value.length;
         }
@@ -451,7 +452,7 @@
                 errEl.classList.remove('hidden');
                 return;
             }
-            fetch('https://zorexium-backend.onrender.com/api/feedback', {
+            fetch(FEEDBACK_BACKEND + '/api/feedback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
