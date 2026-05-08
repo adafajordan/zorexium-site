@@ -456,7 +456,7 @@
   })();
 
   function blLoadLists() {
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_BL + '/api/lists?type=build', { credentials: 'include' })
       .then(function(r) { return r.ok ? r.json() : []; })
       .then(function(lists) { _blLists = lists || []; blRenderLists(); })
@@ -558,7 +558,7 @@
     if (!productId) productId = 'manual-' + Date.now();
     var btn = document.getElementById('blItemModalSave');
     btn.disabled = true; btn.textContent = 'Adding…';
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_BL + '/api/lists/' + encodeURIComponent(_blAddItemListId) + '/items', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -583,7 +583,7 @@
 
   function blRemoveItem(listId, itemId) {
     if (!itemId) return;
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_BL + '/api/lists/' + encodeURIComponent(listId) + '/items/' + encodeURIComponent(itemId), { method: 'DELETE', credentials: 'include' })
       .then(function(r) {
         if (r.ok) {
@@ -622,7 +622,7 @@
     if (!name) { errEl.textContent = 'Please enter a name for your build list.'; errEl.classList.remove('hidden'); return; }
     var btn = document.getElementById('blModalSave');
     btn.disabled = true; btn.textContent = 'Saving…';
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_BL + '/api/lists', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -662,7 +662,7 @@
     if (!_blDeleteId) return;
     var id = _blDeleteId;
     blCloseDeleteModal();
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_BL + '/api/lists/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })
       .then(function(r) {
         if (r.ok) {
@@ -747,7 +747,7 @@
         }
         try{
             if(loggedIn){
-                fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                     .then(function(r){ return r.ok ? r.json() : null; })
                     .then(function(data){
                         var count = (data && data.items) ? data.items.length : 0;

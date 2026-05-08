@@ -412,7 +412,7 @@
   })();
 
   function wlLoadLists() {
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_WL + '/api/lists?type=wish', { credentials: 'include' })
       .then(function(r) { return r.ok ? r.json() : []; })
       .then(function(lists) { _wlLists = lists || []; wlRenderLists(); })
@@ -481,7 +481,7 @@
 
   function wlRemoveItem(listId, itemId) {
     if (!itemId) return;
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_WL + '/api/lists/' + encodeURIComponent(listId) + '/items/' + encodeURIComponent(itemId), { method: 'DELETE', credentials: 'include' })
       .then(function(r) {
         if (r.ok) {
@@ -520,7 +520,7 @@
     if (!name) { errEl.textContent = 'Please enter a name for your wish list.'; errEl.classList.remove('hidden'); return; }
     var btn = document.getElementById('wlModalSave');
     btn.disabled = true; btn.textContent = 'Saving…';
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_WL + '/api/lists', {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -560,7 +560,7 @@
     if (!_wlDeleteId) return;
     var id = _wlDeleteId;
     wlCloseDeleteModal();
-    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    var fetchFn = ZrxSession.fetch.bind(ZrxSession);
     fetchFn(BACKEND_WL + '/api/lists/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })
       .then(function(r) {
         if (r.ok) {
@@ -639,7 +639,7 @@
         }
         try{
             if(loggedIn){
-                fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                     .then(function(r){ return r.ok ? r.json() : null; })
                     .then(function(data){
                         var count = (data && data.items) ? data.items.length : 0;

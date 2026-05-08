@@ -327,7 +327,8 @@
 
             <section>
                 <h2 class="text-3xl font-semibold text-cyan-400 mb-6">Base URL</h2>
-                <div class="code-block">https://api.zorexium.io/v1</div>
+                <p class="text-gray-600 mb-3">The static GitHub Pages frontend currently talks to the separately hosted Render backend.</p>
+                <div class="code-block">https://zorexium-backend.onrender.com</div>
             </section>
 
             <section>
@@ -469,7 +470,7 @@ PUT /orders/{id} - Update order status</div>
             // Cart badge update (requires auth)
             try{
                 if(loggedIn){
-                    fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                    ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                         .then(function(r){ return r.ok ? r.json() : null; })
                         .then(function(data){
                             var count = (data && data.items) ? data.items.length : 0;
@@ -524,4 +525,3 @@ PUT /orders/{id} - Update order status</div>
     <script src="profile-picture.js"></script>
 </body>
 </html>
-
