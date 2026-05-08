@@ -1,5 +1,26 @@
 'use strict';
-
+// SendGrid email setup
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY); // Place your API key in your environment!
+// Utility function to send emails
+async function sendEmail({ to, subject, text, html }) {
+  try {
+    await sgMail.send({
+      to, // recipient (e.g., 'user@example.com')
+      from: 'your_verified_sender@zorexium.io', // must be a domain-authenticated sender
+      subject,
+      text,
+      html,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('SendGrid error:', error);
+    if (error.response && error.response.body) {
+      console.error(error.response.body);
+    }
+    return { success: false, error: error.message };
+  }
+}
 const express = require('express');
 const app = express();
 const path = require('path');
