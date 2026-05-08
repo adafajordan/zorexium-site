@@ -604,7 +604,7 @@
                 <p class="text-xs text-gray-500">Get notified by email whenever your account is accessed from a new device</p>
               </div>
               <label class="toggle-switch">
-                <input type="checkbox" checked>
+                <input id="msLoginNotificationsToggle" type="checkbox" checked>
                 <div class="toggle-track"><div class="toggle-thumb"></div></div>
               </label>
             </div>
@@ -1026,6 +1026,7 @@
       }
     }
   });
+
 </script>
 
     <script src="notifications.js"></script>
@@ -1121,6 +1122,41 @@
             if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
             var pwdInput = document.getElementById('headerLoginPassword');
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
+
+            // Persist the Security & Privacy "Login Notifications" toggle to backend email preferences.
+            var loginToggle = document.getElementById('msLoginNotificationsToggle');
+            if (loginToggle && loggedIn) {
+                var syncLoginToggleVisual = function() {
+                    var track = loginToggle.closest('.toggle-switch').querySelector('.toggle-track');
+                    var thumb = track ? track.querySelector('.toggle-thumb') : null;
+                    if (track) track.style.background = loginToggle.checked ? '#0891b2' : '#d1d5db';
+                    if (thumb) thumb.style.transform = loginToggle.checked ? 'translateX(18px)' : '';
+                };
+                ZrxSession.fetch(BACKEND_URL + '/api/user/email-notifications')
+                    .then(function(r){ return r.ok ? r.json() : null; })
+                    .then(function(data){
+                        if (!data || !data.settings) return;
+                        loginToggle.checked = data.settings.login_notifications !== false;
+                        syncLoginToggleVisual();
+                    })
+                    .catch(function(){});
+                loginToggle.addEventListener('change', function() {
+                    var enabled = !!loginToggle.checked;
+                    syncLoginToggleVisual();
+                    ZrxSession.fetch(BACKEND_URL + '/api/user/email-notifications/login_notifications', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ enabled: enabled })
+                    }).then(function(r){
+                        if (!r.ok) throw new Error('Failed');
+                        ZrxNotify.showNotification(enabled ? 'Login notifications enabled.' : 'Login notifications disabled.', 'success');
+                    }).catch(function(){
+                        loginToggle.checked = !enabled;
+                        syncLoginToggleVisual();
+                        ZrxNotify.showNotification('Could not update login notifications.', 'error');
+                    });
+                });
+            }
 
             // ── Account Settings: load real user data ──────────────────────────────
             if(loggedIn){

@@ -1009,7 +1009,7 @@
                         var items = [];
                         if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
                         var existing = items.find(function(item) { return item.id === productId; });
-                        if (existing) { existing.quantity += 1; } else { items.push({ id: productId, name: name, price: price, quantity: 1, image: image, sellerName: product.sellerName || '' }); }
+                        if (existing) { existing.quantity += 1; } else { items.push({ id: productId, name: name, price: price, quantity: 1, image: image, sellerId: product.sellerId || '', sellerName: product.sellerName || '' }); }
                         await ZrxSession.fetch(BACKEND_URL + '/api/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ items: items }) });
                         var badge = document.getElementById('cartBadgeHeader');
                         if (badge) { badge.textContent = items.length; badge.classList.toggle('hidden', items.length === 0); }
@@ -1022,7 +1022,7 @@
                     var guestCart = [];
                     try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (err) { console.error('Failed to read guest cart:', err); }
                     var existingGuest = guestCart.find(function(item) { return item.id === productId; });
-                    if (existingGuest) { existingGuest.quantity += 1; } else { guestCart.push({ id: productId, name: name, price: price, quantity: 1, image: image, sellerName: product.sellerName || '' }); }
+                    if (existingGuest) { existingGuest.quantity += 1; } else { guestCart.push({ id: productId, name: name, price: price, quantity: 1, image: image, sellerId: product.sellerId || '', sellerName: product.sellerName || '' }); }
                     try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (err) { console.error('Failed to save guest cart:', err); }
                 }
                 if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');

@@ -1383,6 +1383,7 @@
             price: currentProduct.price,
             quantity: quantity,
             image: currentProduct.image || 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product',
+            sellerId: currentProduct.sellerId || '',
             sellerName: document.getElementById('sellerName').innerText
           });
         }
@@ -1411,6 +1412,7 @@
           price: currentProduct.price,
           quantity: quantity,
           image: currentProduct.image || 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product',
+          sellerId: currentProduct.sellerId || '',
           sellerName: document.getElementById('sellerName').innerText
         });
       }

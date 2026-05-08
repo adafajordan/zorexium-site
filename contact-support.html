@@ -467,16 +467,35 @@
             var subject = document.getElementById('supportSubject').value.trim();
             var description = document.getElementById('supportDescription').value.trim();
             var email = document.getElementById('supportEmail').value.trim();
+            var priorityEl = document.querySelector('input[name="supportPriority"]:checked');
+            var priority = priorityEl ? priorityEl.value : 'normal';
 
             if (!category) { errMsg.textContent = 'Please select an issue category.'; errEl.classList.remove('hidden'); return; }
             if (!subject) { errMsg.textContent = 'Please enter a subject.'; errEl.classList.remove('hidden'); return; }
             if (!description || description.length < 10) { errMsg.textContent = 'Please describe your issue (at least 10 characters).'; errEl.classList.remove('hidden'); return; }
             if (!email) { errMsg.textContent = 'Please enter your email address.'; errEl.classList.remove('hidden'); return; }
 
-            // Show success (ticket submission is client-side)
-            successEl.classList.remove('hidden');
-            document.getElementById('supportForm').reset();
-            document.getElementById('descCount').textContent = '0';
+            fetch('https://zorexium-backend.onrender.com/api/support', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    category: category,
+                    subject: subject,
+                    description: description,
+                    email: email,
+                    priority: priority
+                })
+            }).then(function(res) {
+                return res.json().then(function(data) {
+                    if (!res.ok) throw new Error((data && data.error) || 'Failed to submit support request.');
+                    successEl.classList.remove('hidden');
+                    document.getElementById('supportForm').reset();
+                    document.getElementById('descCount').textContent = '0';
+                });
+            }).catch(function(err) {
+                errMsg.textContent = err.message || 'Something went wrong. Please try again.';
+                errEl.classList.remove('hidden');
+            });
         }
 
         function toggleDropdown(id) {
@@ -599,4 +618,3 @@
     <script src="profile-picture.js"></script>
 </body>
 </html>
-
