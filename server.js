@@ -172,14 +172,19 @@ app.use(function(req, res, next) {
 
 // ── JWT Middleware ────────────────────────────────────────────────────────────
 function getTokenFromRequest(req) {
-  // Accept either "Authorization: Bearer <token>" or a raw token value
+  // Accept either "Authorization: Bearer <token>" or a raw JWT token value
   // (some clients store JWT in localStorage and attach it directly).
   var authHeader = req.headers.authorization;
   var token = '';
   if (typeof authHeader === 'string' && authHeader.trim()) {
     var authValue = authHeader.trim();
-    var bearerMatch = authValue.match(/^Bearer\s+(\S+)$/i);
-    token = bearerMatch ? bearerMatch[1].trim() : authValue;
+    var bearerMatch = authValue.match(/^Bearer\s+([A-Za-z0-9._-]+)$/i);
+    var jwtPattern = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+    if (bearerMatch && jwtPattern.test(bearerMatch[1])) {
+      token = bearerMatch[1].trim();
+    } else if (jwtPattern.test(authValue)) {
+      token = authValue;
+    }
   }
   if (!token) {
     var cookies = parseCookies(req.headers.cookie);
