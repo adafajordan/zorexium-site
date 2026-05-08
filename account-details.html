@@ -794,6 +794,11 @@
 
   async function handleProfileImageUpload(e) {
     const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      ZrxNotify.showNotification('Image too large. Max: 10 MB.', 'error');
+      e.target.value = '';
+      return;
+    }
     const fileInput = e.target;
     const reader = new FileReader();
     reader.onload = async function(ev) {
@@ -826,6 +831,11 @@
 
   async function handleCoverImageUpload(e) {
     const file = e.target.files[0]; if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      ZrxNotify.showNotification('Image too large. Max: 10 MB.', 'error');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = async function(ev) {
       const dataUrl = ev.target.result;
