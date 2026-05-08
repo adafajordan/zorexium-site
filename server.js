@@ -10,6 +10,8 @@ const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@zorexium
 const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexiumlabs.com';
 const APP_BASE_URL = process.env.BASE_URL || 'https://zorexium.io';
 const TEST_SMS_MESSAGE_TEMPLATE = 'Zorexium SMS test: your Twilio setup is working. Visit {{url}} to manage alerts.';
+const MIN_E164_DIGITS = 8;
+const MAX_E164_DIGITS = 15;
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_SMS_FROM = process.env.TWILIO_SMS_FROM || '';
@@ -148,7 +150,7 @@ function normalizePhoneE164(value) {
   const trimmed = value.trim();
   if (!trimmed.startsWith('+')) return '';
   const digitsOnly = trimmed.slice(1);
-  if (!digitsOnly || digitsOnly.length < 8 || digitsOnly.length > 15) return '';
+  if (!digitsOnly || digitsOnly.length < MIN_E164_DIGITS || digitsOnly.length > MAX_E164_DIGITS) return '';
   if (!/^\d+$/.test(digitsOnly)) return '';
   return '+' + digitsOnly;
 }
