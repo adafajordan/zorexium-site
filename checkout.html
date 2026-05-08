@@ -860,7 +860,7 @@ fetch(BACKEND_URL + '/api/config')
       .then(function(result) {
         // Clear cart after successful purchase
         if (ZrxSession.isLoggedIn()) {
-          ZrxSession.fetch('https://zorexium-backend.onrender.com' + '/api/cart', {
+          fetch('https://zorexium-backend.onrender.com' + '/api/cart', {
             method: 'DELETE',
             credentials: 'include'
           }).catch(function() {});
@@ -979,7 +979,7 @@ fetch(BACKEND_URL + '/api/config')
             // Cart badge update (requires auth)
             try{
                 if(loggedIn){
-                    ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                    fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                         .then(function(r){ return r.ok ? r.json() : null; })
                         .then(function(data){
                             var count = (data && data.items) ? data.items.length : 0;

@@ -886,7 +886,7 @@
 
   function updateCartBadge() {
     if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
-      ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+      fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
         .then(r => r.ok ? r.json() : null)
         .then(d => {
           const count = (d && d.items) ? d.items.length : 0;
@@ -1060,7 +1060,7 @@
     }
 
     if (loggedIn) {
-      ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+      fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
         .then(function(r){ return r.ok ? r.json() : null; })
         .then(function(data){
           var count = (data && data.items) ? data.items.length : 0;
