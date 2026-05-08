@@ -181,7 +181,7 @@ function getTokenFromRequest(req) {
     var bearerMatch = authValue.match(/^Bearer\s+([A-Za-z0-9._-]+)$/i);
     var jwtPattern = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
     if (bearerMatch && jwtPattern.test(bearerMatch[1])) {
-      token = bearerMatch[1].trim();
+      token = bearerMatch[1];
     } else if (jwtPattern.test(authValue)) {
       token = authValue;
     }
