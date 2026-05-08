@@ -695,6 +695,23 @@
                 <textarea id="settingsShopDesc" class="form-input" rows="3" placeholder="Describe what you sell…" maxlength="500"></textarea>
               </div>
               <div>
+                <label class="form-label">Seller Profile Picture</label>
+                <div class="flex items-center gap-4 rounded-lg border border-gray-200 p-3 bg-gray-50">
+                  <img id="settingsSellerProfileImage" src="https://placehold.co/96x96/e5e7eb/9ca3af?text=U" alt="Seller profile preview" class="w-16 h-16 rounded-full object-cover border border-gray-200">
+                  <div class="flex-1">
+                    <p class="text-xs text-gray-500">Upload a profile photo used on your seller dashboard and storefront.</p>
+                    <!-- Browser-side upload control explicitly documents and enforces the 10 MB per-image limit. -->
+                    <p class="text-xs text-gray-400 mt-1">Max file size: 10 MB per image.</p>
+                    <div class="mt-2">
+                      <button type="button" onclick="document.getElementById('settingsProfileImageFile').click()" class="btn-secondary text-xs">
+                        <i class="fas fa-upload"></i> Upload Picture
+                      </button>
+                      <input id="settingsProfileImageFile" type="file" accept="image/*" class="hidden" onchange="handleSellerProfileImageUpload(event)">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
                 <label class="form-label">Shop Logo URL</label>
                 <input type="url" id="settingsLogoUrl" class="form-input" placeholder="https://example.com/logo.png">
                 <p class="text-xs text-gray-400 mt-1">Publicly visible on your brand store profile.</p>
@@ -767,6 +784,7 @@
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   const STARTER_LISTING_LIMIT = 25;
+  const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
   let sellerData = {};
   let _userId = null;
   let _allOrders = [];
@@ -794,6 +812,46 @@
   }
 
   function escHtml(s) { return (''+s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  async function handleSellerProfileImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    // Enforce the seller dashboard's client-side per-image limit at 10 MB.
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      ZrxNotify.showNotification('Image too large. Max: 10 MB per image.', 'error');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const dataUrl = ev.target.result;
+      const preview = document.getElementById('settingsSellerProfileImage');
+      if (preview) preview.src = dataUrl;
+      try {
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/profile-picture', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ profileImage: dataUrl })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(function() { return {}; });
+          throw new Error(err.error || 'Failed to upload profile picture');
+        }
+        const headerImg = document.getElementById('userProfileImage');
+        if (headerImg) headerImg.src = dataUrl;
+        if (window.ZrxProfilePicture && typeof window.ZrxProfilePicture.update === 'function') {
+          window.ZrxProfilePicture.update(dataUrl);
+        }
+        ZrxNotify.showNotification('Profile picture updated!', 'success');
+      } catch (err) {
+        ZrxNotify.showNotification(err.message || 'Failed to upload profile picture', 'error');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
 
   function fmtDate(val) {
     if (!val) return '—';
@@ -938,6 +996,12 @@
     document.getElementById('settingsBannerUrl').value = sellerData.bannerUrl || '';
     document.getElementById('settingsContactEmail').value = sellerData.contactEmail || (ZrxSession.getUser() || {}).email || '';
     document.getElementById('settingsReturnPolicy').value = sellerData.returnPolicy || '';
+    // Mirror current profile picture into settings preview so sellers can see the active image before uploading.
+    const settingsProfileImage = document.getElementById('settingsSellerProfileImage');
+    const headerProfileImage = document.getElementById('userProfileImage');
+    if (settingsProfileImage && headerProfileImage && headerProfileImage.src) {
+      settingsProfileImage.src = headerProfileImage.src;
+    }
 
     if (sellerData.accountType === 'business') {
       const labsNav = document.getElementById('nav-labs');

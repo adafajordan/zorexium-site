@@ -956,8 +956,9 @@
                 }).join('');
                 var detailUrl = 'product-detail.html?id=' + encodeURIComponent(id);
                 return '<div class="product-card overflow-hidden cursor-pointer" onclick="if(window.ZrxSpa){ZrxSpa.navigate(\'' + escHtml(detailUrl) + '\')}else{window.location.href=\'' + escHtml(detailUrl) + '\'}">' +
-                    '<div class="relative bg-gray-50 h-44 flex items-center justify-center overflow-hidden">' +
-                    '<img src="' + escHtml(img) + '" alt="' + escHtml(name) + '" class="max-h-full max-w-full object-contain p-2" onerror="this.src=\'https://placehold.co/300x176/f3f4f6/9ca3af?text=No+Image\'">' +
+                    // Make the image visually dominant: fill the full top media half of each card.
+                    '<div class="relative bg-gray-50 h-48 overflow-hidden">' +
+                    '<img src="' + escHtml(img) + '" alt="' + escHtml(name) + '" class="w-full h-full object-cover" onerror="this.src=\'https://placehold.co/300x192/f3f4f6/9ca3af?text=No+Image\'">' +
                     (savePct >= 5 ? '<span class="save-badge absolute top-2 left-2">Save ' + savePct + '%</span>' : '') +
                     '</div>' +
                     '<div class="p-3">' +
@@ -1075,13 +1076,13 @@
                 var catNorm = categoryKey.toLowerCase();
                 var subNorm = subKey ? subKey.toLowerCase() : '';
 
-                // Try subcategory match first; fall back to category-only if nothing matches
+                // Keep subcategory filtering strict so products appear only in their true subcategory.
                 var filtered = subNorm
-                    ? all.filter(function(p) { return (p.subcategory || '').toLowerCase().trim() === subNorm; })
-                    : [];
-                if (filtered.length === 0) {
-                    filtered = all.filter(function(p) { return (p.category || '').toLowerCase().trim() === catNorm; });
-                }
+                    ? all.filter(function(p) {
+                        return (p.category || '').toLowerCase().trim() === catNorm &&
+                               (p.subcategory || '').toLowerCase().trim() === subNorm;
+                    })
+                    : all.filter(function(p) { return (p.category || '').toLowerCase().trim() === catNorm; });
 
                 window._renderHomeProducts(filtered);
                 // Scroll main area to top
@@ -1095,4 +1096,3 @@
 <script src="spa-router.js"></script>
 </body>
 </html>
-
