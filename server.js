@@ -14,7 +14,8 @@ if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
 }
 
-app.use(express.json());
+// Allow up to 25 MB JSON bodies to safely accommodate multiple base64-encoded images (each up to 10 MB).
+app.use(express.json({ limit: '25mb' }));
 // Only serve files from /public – never expose server.js, package.json, .env.example, etc.
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -1704,9 +1705,9 @@ app.put('/api/user/profile-picture', verifyToken, async function(req, res) {
     return res.status(400).json({ error: 'profileImage must be a base64 data URL (data:image/...)' });
   }
 
-  // Limit to ~5 MB (base64 ~6.7 MB raw limit)
-  if (profileImage.length > 7 * 1024 * 1024) {
-    return res.status(400).json({ error: 'Profile image is too large (max ~5 MB)' });
+  // Limit to 10 MB (base64 overhead makes a 10 MB file ~13.1 MB as a data URL string)
+  if (profileImage.length > 13107200) {
+    return res.status(400).json({ error: 'Image too large. Max: 10 MB.' });
   }
 
   try {
@@ -1833,11 +1834,21 @@ app.get('/api/user/profile', verifyToken, async function(req, res) {
 app.put('/api/user/profile', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
-  const { firstName, lastName, phone } = req.body;
+  const { firstName, lastName, phone, coverImage } = req.body;
   const updates = { updatedAt: new Date() };
   if (firstName !== undefined) updates.firstName = String(firstName).slice(0, 100);
   if (lastName !== undefined) updates.lastName = String(lastName).slice(0, 100);
   if (phone !== undefined) updates.phone = String(phone).slice(0, 30);
+  if (coverImage !== undefined) {
+    if (typeof coverImage !== 'string' || !coverImage.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'coverImage must be a base64 data URL (data:image/...)' });
+    }
+    // Limit to 10 MB (base64 overhead makes a 10 MB file ~13.1 MB as a data URL string)
+    if (coverImage.length > 13107200) {
+      return res.status(400).json({ error: 'Image too large. Max: 10 MB.' });
+    }
+    updates.coverImage = coverImage;
+  }
 
   try {
     await db.collection('users').updateOne(
@@ -2373,8 +2384,8 @@ app.post('/api/labs', verifyToken, async function(req, res) {
     for (const f of files) {
       if (!f || typeof f.data !== 'string') continue;
       if (!f.data.startsWith('data:')) continue;
-      if (f.data.length > 7 * 1024 * 1024) {
-        return res.status(400).json({ error: 'One or more files are too large (max ~5 MB each, base64 limit ~7 MB)' });
+      if (f.data.length > 13107200) {
+        return res.status(400).json({ error: 'Image too large. Max: 10 MB.' });
       }
       sanitizedFiles.push({
         name: String(f.name || '').slice(0, 200),
