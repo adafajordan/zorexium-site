@@ -599,7 +599,7 @@
     document.getElementById('lrStepPassword').classList.remove('hidden');
   }
 
-  function lrRequestOTC() {
+  async function lrRequestOTC() {
     var email = (document.getElementById('lrLoginEmail').value || '').trim();
     var errEl = document.getElementById('lrLoginError');
     var errMsg = document.getElementById('lrLoginErrorMsg');
@@ -608,6 +608,16 @@
       errMsg.textContent = 'Please enter your email address.';
       errEl.classList.remove('hidden');
       return;
+    }
+    try {
+      await fetch(LR_BACKEND + '/api/auth/otc-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email })
+      });
+    } catch (_) {
+      // Silently proceed – server always returns success to prevent enumeration
     }
     document.getElementById('lrStepEmail').classList.add('hidden');
     document.getElementById('lrStepOTC').classList.remove('hidden');
@@ -879,7 +889,7 @@
         }
         try{
             if(loggedIn){
-                fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
                     .then(function(r){ return r.ok ? r.json() : null; })
                     .then(function(data){
                         var count = (data && data.items) ? data.items.length : 0;

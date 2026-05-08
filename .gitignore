@@ -7,3 +7,9 @@ node_modules/
 .idea/
 messages_data.json
 listings_data.json
+
+# Never commit backup codes or secrets
+stripe_backup_code.txt
+*_backup_code.txt
+*.patch
+*.zip

@@ -8,19 +8,47 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ObjectId } = require('mongodb');
 const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
 
 if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
 }
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+// Only serve files from /public – never expose server.js, package.json, .env.example, etc.
+app.use(express.static(path.join(__dirname, 'public')));
 
 // MongoDB Connection
 const MONGO_URI = process.env.MONGO_URI;
 console.log('🔍 MONGO_URI exists:', !!MONGO_URI);
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// JWT_SECRET must be set via environment variable in production.
+// If missing, fall back to a hardcoded default and emit a warning – never ship without a real secret.
+const DEFAULT_JWT_SECRET = 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_JWT_SECRET;
+if (JWT_SECRET === DEFAULT_JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET is not set – using insecure default. Set JWT_SECRET env var before deploying to production.');
+}
+
+// ── Nodemailer transporter (configured via SMTP_* env vars) ──────────────────
+let mailTransporter = null;
+if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  mailTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  });
+}
+const SMTP_FROM = process.env.SMTP_FROM || 'Zorexium <noreply@zorexium.io>';
+
+async function sendMail(to, subject, html) {
+  if (!mailTransporter) {
+    console.log('[DEV EMAIL] To:', to, '| Subject:', subject, '| Body:', html);
+    return;
+  }
+  await mailTransporter.sendMail({ from: SMTP_FROM, to, subject, html });
+}
 let db;
 let mongoClient;
 let mongoConnected = false;
@@ -204,10 +232,19 @@ function verifyToken(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.userId = decoded.userId;
     req.userEmail = decoded.email;
+    req.isAdmin = decoded.isAdmin === true;
     next();
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
   }
+}
+
+// Middleware: require admin role (must follow verifyToken)
+function requireAdmin(req, res, next) {
+  if (!req.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
 }
 
 // ── Health check endpoint ────────────────────────────────────────────────────────
@@ -245,11 +282,12 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
       password: hashedPassword,
       firstName: firstName || '',
       lastName: lastName || '',
+      isAdmin: false,
       createdAt: new Date()
     });
 
     const token = jwt.sign(
-      { userId: result.insertedId.toString(), email },
+      { userId: result.insertedId.toString(), email, isAdmin: false },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -283,7 +321,7 @@ app.post('/api/auth/login', authRateLimit, async function(req, res) {
     }
     
     const token = jwt.sign(
-      { userId: user._id.toString(), email: user.email },
+      { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -325,6 +363,90 @@ app.get('/api/auth/session', authRateLimit, verifyToken, async function(req, res
 app.post('/api/auth/logout', authRateLimit, function(req, res) {
   clearAuthCookies(res);
   res.json({ message: 'Logged out' });
+});
+
+// ── ONE-TIME CODE (OTC) LOGIN ─────────────────────────────────────────────────
+
+// POST /api/auth/otc-request – generate and email a one-time login code
+app.post('/api/auth/otc-request', authRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { email } = req.body;
+  if (!email || typeof email !== 'string' || email.length > 254) {
+    return res.status(400).json({ error: 'Valid email is required' });
+  }
+  const normalizedEmail = email.trim().toLowerCase();
+  try {
+    const user = await db.collection('users').findOne({ email: normalizedEmail });
+    // Always respond with success to prevent email enumeration
+    if (!user) {
+      return res.json({ message: 'If that email is registered, a one-time code will be sent.' });
+    }
+    // Generate a 6-digit numeric OTC (valid for 15 minutes) using cryptographically secure random
+    const otcCode = String(crypto.randomInt(100000, 1000000));
+    const otcExpiry = new Date(Date.now() + 15 * 60 * 1000);
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { otcCode, otcExpiry } }
+    );
+    try {
+      await sendMail(
+        normalizedEmail,
+        'Your Zorexium sign-in code',
+        `<p>Your one-time sign-in code is: <strong>${otcCode}</strong></p>
+<p>This code expires in 15 minutes. Do not share it with anyone.</p>
+<p>If you did not request this code, you can ignore this email.</p>`
+      );
+    } catch (mailErr) {
+      console.error('Failed to send OTC email:', mailErr.message);
+    }
+    res.json({ message: 'If that email is registered, a one-time code will be sent.' });
+  } catch (error) {
+    console.error('Error in otc-request:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/auth/otc-login – verify OTC and issue JWT
+app.post('/api/auth/otc-login', authRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { email, code } = req.body;
+  if (!email || !code) {
+    return res.status(400).json({ error: 'email and code are required' });
+  }
+  const normalizedEmail = (typeof email === 'string' ? email : '').trim().toLowerCase();
+  try {
+    const user = await db.collection('users').findOne({
+      email: normalizedEmail,
+      otcCode: String(code).trim(),
+      otcExpiry: { $gt: new Date() }
+    });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid or expired code' });
+    }
+    // Clear the OTC after successful use
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $unset: { otcCode: '', otcExpiry: '' } }
+    );
+    const token = jwt.sign(
+      { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName
+      }
+    });
+  } catch (error) {
+    console.error('Error in otc-login:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ── PRODUCTS ────────────────────────────────────────────────────────────────────
@@ -1231,11 +1353,21 @@ app.post('/api/orders/:orderId/capture', async function(req, res) {
 });
 
 // ── GET USER ORDERS ────────────────────────────────────────────────────────────
-app.get('/api/orders', verifyToken, async function(req, res) {
+// Returns only orders that belong to the authenticated user.
+// Admins may pass ?all=true to retrieve all orders for support/admin use.
+app.get('/api/orders', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
-    const orders = await db.collection('orders').find({}).toArray();
+    let query;
+    if (req.isAdmin && req.query.all === 'true') {
+      // Admin-only: return all orders when explicitly requested
+      query = {};
+    } else {
+      // Scope to the authenticated user only
+      query = { $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] };
+    }
+    const orders = await db.collection('orders').find(query).sort({ createdAt: -1 }).toArray();
     res.json(orders);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -2340,21 +2472,28 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
 });
 
 // GET /api/payouts – get payouts for the current seller (auth required)
+// Admins may pass ?all=true to retrieve all payouts for admin management.
 app.get('/api/payouts', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    // Look up the seller profile to get sellerUsername for matching legacy payouts
-    const seller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { shopName: 1 } });
-    const sellerUsername = seller ? (seller.shopName || '') : '';
+    let query;
+    if (req.isAdmin && req.query.all === 'true') {
+      // Admin: return all payouts
+      query = {};
+    } else {
+      // Look up the seller profile to get sellerUsername for matching legacy payouts
+      const seller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { shopName: 1 } });
+      const sellerUsername = seller ? (seller.shopName || '') : '';
 
-    // Return only payouts for this seller (by sellerId or shopName fallback for legacy payouts)
-    const query = {
-      $or: [
-        { sellerId: req.userId },
-        ...(sellerUsername ? [{ sellerUsername: sellerUsername }] : [])
-      ]
-    };
+      // Return only payouts for this seller (by sellerId or shopName fallback for legacy payouts)
+      query = {
+        $or: [
+          { sellerId: req.userId },
+          ...(sellerUsername ? [{ sellerUsername: sellerUsername }] : [])
+        ]
+      };
+    }
     const payouts = await db.collection('payouts').find(query).sort({ createdAt: -1 }).toArray();
     res.json(payouts);
   } catch (error) {
@@ -2364,6 +2503,7 @@ app.get('/api/payouts', publicApiRateLimit, verifyToken, async function(req, res
 });
 
 // PUT /api/payouts/:id – update payout status (auth required)
+// Sellers may only update their own payouts; admins may update any payout.
 app.put('/api/payouts/:id', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
@@ -2383,6 +2523,11 @@ app.put('/api/payouts/:id', verifyToken, async function(req, res) {
   try {
     const payout = await db.collection('payouts').findOne({ _id: objectId });
     if (!payout) return res.status(404).json({ error: 'Payout not found' });
+
+    // Ownership check: only the payout's seller or an admin may update
+    if (!req.isAdmin && payout.sellerId !== req.userId) {
+      return res.status(403).json({ error: 'Forbidden: you do not own this payout' });
+    }
 
     const updates = { status, updatedAt: new Date() };
     if (status === 'ready_to_pay') updates.deliveredAt = new Date();
@@ -2515,12 +2660,22 @@ app.post('/api/auth/forgot-password', authRateLimit, async function(req, res) {
       { _id: user._id },
       { $set: { passwordResetToken: resetToken, passwordResetExpiry: resetExpiry } }
     );
-    // In production, send an email with the reset link. For now, return token in dev mode.
-    const isDev = process.env.NODE_ENV !== 'production';
-    res.json({
-      message: 'If that email is registered, a reset link will be sent.',
-      ...(isDev && { devResetToken: resetToken })
-    });
+    // Send reset link by email (or log to console in dev when SMTP is not configured)
+    const baseUrl = process.env.BASE_URL || 'https://zorexium.io';
+    const resetLink = `${baseUrl}/login-register.html?reset=${encodeURIComponent(resetToken)}`;
+    try {
+      await sendMail(
+        normalizedEmail,
+        'Reset your Zorexium password',
+        `<p>Hello,</p>
+<p>Click the link below to reset your password. This link expires in 1 hour.</p>
+<p><a href="${resetLink}">${resetLink}</a></p>
+<p>If you did not request a password reset, you can ignore this email.</p>`
+      );
+    } catch (mailErr) {
+      console.error('Failed to send password reset email:', mailErr.message);
+    }
+    res.json({ message: 'If that email is registered, a reset link will be sent.' });
   } catch (error) {
     console.error('Error in forgot-password:', error);
     res.status(500).json({ error: error.message });
