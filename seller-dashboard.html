@@ -340,7 +340,7 @@
     <div id="proDowngradeNotice" class="hidden mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-3">
       <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
       <div class="flex-1 text-sm text-amber-800">
-        <span class="font-semibold">Your account has been updated:</span> Your seller account has been downgraded from <strong>Pro Seller</strong> to <strong>Starter</strong> tier. Pro Seller subscriptions now require a verified $19/month PayPal subscription. You can upgrade to Pro again from your account settings or by re-registering.
+        <span class="font-semibold">Your account has been updated:</span> Your seller account has been downgraded from <strong>Pro Seller</strong> to <strong>Starter</strong> tier. Pro Seller subscriptions now require a verified $1/month PayPal subscription. You can upgrade to Pro again from your account settings or by re-registering.
       </div>
       <button onclick="dismissDowngradeNotice()" class="text-amber-600 hover:text-amber-800 flex-shrink-0 text-lg leading-none">&times;</button>
     </div>
@@ -618,7 +618,7 @@
                 <div class="flex items-start gap-3">
                   <i class="fas fa-rocket text-cyan-500 mt-0.5 flex-shrink-0"></i>
                   <div>
-                    <p class="text-sm font-semibold text-cyan-900 mb-1">Upgrade to Pro Seller – $19/month</p>
+                    <p class="text-sm font-semibold text-cyan-900 mb-1">Upgrade to Pro Seller – $1/month</p>
                     <ul class="text-xs text-cyan-800 space-y-0.5 mb-3">
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Unlimited active listings (vs 25 on Starter)</li>
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Advanced analytics &amp; insights</li>
@@ -634,7 +634,7 @@
               <!-- PayPal subscription panel (hidden until Upgrade clicked) -->
               <div id="upgradePayPalPanel" class="hidden border-2 border-cyan-300 rounded-xl p-5 bg-white">
                 <p class="text-sm font-semibold text-gray-800 mb-1">Complete PayPal subscription to activate Pro</p>
-                <p class="text-xs text-gray-500 mb-3">A recurring $19/month subscription is required. Cancel anytime from your PayPal account.</p>
+                <p class="text-xs text-gray-500 mb-3">A recurring $1/month subscription is required. Cancel anytime from your PayPal account.</p>
                 <div id="dashPaypalContainer" class="min-h-[45px]"></div>
                 <p id="dashPaypalError" class="hidden text-red-600 text-sm mt-3 flex items-center gap-2">
                   <i class="fas fa-exclamation-circle"></i>
@@ -652,7 +652,7 @@
             <!-- Downgrade to Starter (shown when on Pro) -->
             <div id="downgradeToStarterSection" class="hidden">
               <div class="border border-gray-200 rounded-xl p-4">
-                <p class="text-sm text-gray-700 mb-3">You are currently on the <strong>Pro Seller</strong> plan ($19/month). Downgrading to Starter will take effect immediately and cancel your Pro subscription.</p>
+                <p class="text-sm text-gray-700 mb-3">You are currently on the <strong>Pro Seller</strong> plan ($1/month). Downgrading to Starter will take effect immediately and cancel your Pro subscription.</p>
                 <div id="downgradeConfirmBox" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
                   <p class="text-sm text-red-700 font-medium mb-2">Are you sure you want to downgrade to Starter?</p>
                   <p class="text-xs text-red-600 mb-3">You will lose unlimited listings, priority support, and advanced analytics. Active listings above 25 will remain but no new listings can be added once you reach the Starter limit.</p>
@@ -1380,7 +1380,7 @@
     var tier = sellerData.tier || 'starter';
     var tierConfig = {
       starter: { label: 'Starter',        badge: 'Free',     badgeCls: 'bg-gray-100 text-gray-600 border-gray-300' },
-      pro:     { label: 'Pro Seller',      badge: '$19/mo',   badgeCls: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
+      pro:     { label: 'Pro Seller',      badge: '$1/mo',    badgeCls: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
       brand:   { label: 'Official Brand',  badge: 'Custom',   badgeCls: 'bg-amber-50 text-amber-700 border-amber-300' }
     };
     var cfg = tierConfig[tier] || tierConfig.starter;
