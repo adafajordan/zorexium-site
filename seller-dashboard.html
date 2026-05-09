@@ -554,22 +554,22 @@
           <div class="bg-white border border-gray-200 rounded-xl p-5">
             <div class="flex items-center justify-between mb-4">
               <div>
-                <h2 class="text-lg font-semibold text-gray-900">Payment Account</h2>
-                <p class="text-sm text-gray-500 mt-0.5">PayPal account for receiving payouts</p>
+                <h2 class="text-lg font-semibold text-gray-900">Payout Account</h2>
+                <p class="text-sm text-gray-500 mt-0.5">PayPal payout destination with linked bank transfer details</p>
               </div>
               <div id="payoutStatusBadge" class="text-sm font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600">Not Connected</div>
             </div>
             <div id="payoutConnectSection" class="mt-3">
-              <p class="text-sm text-gray-600 mb-4">Connect your PayPal payout account to receive payouts from your sales. Your bank details stay managed in PayPal.</p>
+              <p class="text-sm text-gray-600 mb-4">Connect PayPal, complete PayPal bank onboarding, then verify to unlock payouts. Raw bank details stay managed by PayPal.</p>
               <button onclick="openPayoutModal()" class="btn-primary text-sm">
-                <i class="fas fa-paypal"></i> Connect PayPal Payouts
+                <i class="fas fa-university"></i> Set Up Bank Payouts
               </button>
             </div>
             <div id="payoutConnectedSection" class="hidden mt-3">
               <div class="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg mb-3">
                 <i class="fas fa-check-circle text-green-500 text-xl"></i>
                 <div class="flex-1">
-                  <p class="text-sm font-semibold text-green-800">PayPal account connected</p>
+                  <p class="text-sm font-semibold text-green-800">Bank payout route connected</p>
                   <p class="text-xs text-green-700 mt-0.5" id="connectedPayoutEmail">You are set up to receive payouts.</p>
                 </div>
                 <button onclick="openPayoutModal()" class="text-xs text-cyan-600 hover:text-cyan-700 border border-cyan-200 rounded-md px-3 py-1.5 bg-white font-semibold">Update</button>
@@ -770,24 +770,32 @@
   </div>
 </main>
 
-<!-- PayPal Payout Account Modal -->
+<!-- PayPal Bank Payout Account Modal -->
 <div id="payoutModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
   <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-        <i class="fab fa-paypal text-blue-600"></i> Connect PayPal Account
+        <i class="fas fa-university text-blue-600"></i> Bank Payout Setup (PayPal)
       </h3>
       <button onclick="closePayoutModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
     </div>
-    <p class="text-sm text-gray-600 mb-4">Enter the PayPal email that receives your payouts. Add/update your linked bank account inside PayPal, then verify your payout destination here.</p>
+    <p class="text-sm text-gray-600 mb-4">Enter the PayPal payout email, complete secure bank setup inside PayPal, then verify your payout destination here.</p>
     <div class="mb-4">
       <label class="form-label">PayPal Email Address</label>
       <input type="email" id="payoutEmailInput" class="form-input" placeholder="your@paypal.com" autocomplete="email">
     </div>
+    <div class="mb-4 flex gap-2">
+      <button onclick="openPayPalBankOnboarding()" id="openPayPalBankOnboardingBtn" class="btn-secondary text-sm flex-1" disabled>
+        <i class="fab fa-paypal"></i> Open PayPal Bank Setup
+      </button>
+      <button onclick="confirmBankLinked()" id="confirmBankLinkedBtn" class="btn-secondary text-sm flex-1">
+        <i class="fas fa-link"></i> I Linked My Bank
+      </button>
+    </div>
     <div class="mb-4">
       <label class="form-label">Verification Code (check your email after saving)</label>
       <input type="text" id="payoutVerificationCodeInput" class="form-input" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-      <p class="text-xs text-gray-500 mt-1">Save your PayPal email first, then enter the emailed code to finish setup.</p>
+      <p class="text-xs text-gray-500 mt-1">Save your PayPal email, finish bank setup in PayPal, click “I Linked My Bank”, then enter your emailed code.</p>
     </div>
     <div class="flex gap-3">
       <button onclick="savePayoutAccount()" id="savePayoutBtn" class="btn-primary text-sm flex-1">
@@ -824,6 +832,7 @@
   let _userId = null;
   let _allOrders = [];
   let _payoutReadiness = { availableAmount: 0, blockedAmount: 0, loaded: false };
+  let _payoutOnboardingUrl = '';
 
   // ── Tab Navigation ────────────────────────────────────────────────────────────
   function switchTab(name) {
@@ -984,13 +993,14 @@
     var hasEmail = !!(sellerData && sellerData.payoutAccountId);
     var isVerified = !!(sellerData && sellerData.payoutVerified);
     var onboardingStatus = String(sellerData && sellerData.payoutOnboardingStatus ? sellerData.payoutOnboardingStatus : '').toLowerCase();
+    var bankStatus = String(sellerData && sellerData.payoutProviderBankStatus ? sellerData.payoutProviderBankStatus : '').toLowerCase();
     var hasReadyPayouts = (_payoutReadiness.loaded && _payoutReadiness.availableAmount > 0);
 
     if (!badge || !connectSection || !connectedSection) return;
     connectSection.classList.add('hidden');
     connectedSection.classList.add('hidden');
 
-    if (isVerified && hasEmail) {
+    if (isVerified && hasEmail && (!bankStatus || bankStatus === 'connected')) {
       if (hasReadyPayouts) {
         badge.className = 'text-sm font-semibold px-3 py-1 rounded-full bg-blue-100 text-blue-700';
         badge.textContent = 'Ready';
@@ -999,12 +1009,21 @@
         badge.textContent = 'Connected';
       }
       connectedSection.classList.remove('hidden');
-      if (emailDisplay) emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId);
+      if (emailDisplay) emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId) + ' · Bank linked in PayPal';
       if (hint) {
         hint.textContent = hasReadyPayouts
           ? 'Ready. You have shipped order earnings eligible for payout transfer.'
           : 'Connected. Shipped orders become eligible for real payouts.';
       }
+      return;
+    }
+
+    if (hasEmail && (onboardingStatus === 'pending_provider' || bankStatus === 'pending_provider')) {
+      badge.className = 'text-sm font-semibold px-3 py-1 rounded-full bg-orange-100 text-orange-700';
+      badge.textContent = 'Pending Bank Link';
+      connectedSection.classList.remove('hidden');
+      if (emailDisplay) emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId) + ' (complete bank setup in PayPal)';
+      if (hint) hint.textContent = 'Open PayPal bank setup, link your bank account there, then confirm in this modal to request verification.';
       return;
     }
 
@@ -1441,6 +1460,41 @@
   }
 
   // ── Payouts ────────────────────────────────────────────────────────────────────
+  async function pushPayoutForOrder(orderId) {
+    var safeOrderId = String(orderId || '').trim();
+    if (!safeOrderId) {
+      ZrxNotify.showNotification('Missing order ID for payout.', 'error');
+      return;
+    }
+    const bankStatus = String(sellerData && sellerData.payoutProviderBankStatus ? sellerData.payoutProviderBankStatus : '').toLowerCase();
+    if (!sellerData.payoutVerified || (bankStatus && bankStatus !== 'connected')) {
+      ZrxNotify.showNotification('Complete and verify your PayPal bank payout setup before pushing payouts.', 'error');
+      return;
+    }
+    var btn = document.getElementById('pushPayoutBtn-' + encodeURIComponent(safeOrderId));
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…';
+    }
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/payout', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: safeOrderId })
+      });
+      const payload = await res.json().catch(function() { return {}; });
+      if (!res.ok) throw new Error(payload.error || 'Payout failed');
+      ZrxNotify.showNotification(payload.alreadyPaid ? 'Payout already completed for this order.' : 'Payout initiated successfully.', 'success');
+      await loadPayouts();
+    } catch (err) {
+      ZrxNotify.showNotification(err.message || 'Failed to push payout.', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Push Payout';
+      }
+    }
+  }
+
   async function loadPayouts() {
     document.getElementById('payoutsList').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-2xl text-gray-400 mb-2 block"></i><p class="text-sm text-gray-500">Loading…</p></div>';
     try {
@@ -1503,14 +1557,21 @@
         '<th class="px-4 py-3 font-semibold text-gray-600">Gross Sale</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Your Earnings (90%)</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Status</th>' +
+        '<th class="px-4 py-3 font-semibold text-gray-600">Action</th>' +
         '</tr></thead>' +
         '<tbody>' + rows.map(function(row) {
+          var canPush = row.status === 'ready_to_pay' || row.status === 'failed';
+          var safeOrderId = String(row.orderId || '');
+          var actionHtml = canPush
+            ? '<button id="pushPayoutBtn-' + encodeURIComponent(safeOrderId) + '" type="button" data-order-id="' + escHtml(safeOrderId) + '" class="push-payout-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-cyan-600 text-white hover:bg-cyan-700"><i class="fas fa-paper-plane"></i> Push Payout</button>'
+            : '<span class="text-xs text-gray-400">—</span>';
           return '<tr class="border-b border-gray-100">' +
             '<td class="px-4 py-3 font-mono text-xs text-cyan-600 font-semibold">' + escHtml(row.orderId.slice(0, 14)) + '…</td>' +
             '<td class="px-4 py-3 text-gray-700">' + fmtDate(row.createdAt) + '</td>' +
             '<td class="px-4 py-3 text-gray-700">' + fmtCurrency(row.grossAmount) + '</td>' +
             '<td class="px-4 py-3 font-semibold text-gray-900">' + fmtCurrency(row.amount) + '</td>' +
             '<td class="px-4 py-3">' + payoutStatusBadge(row.status) + '</td>' +
+            '<td class="px-4 py-3">' + actionHtml + '</td>' +
             '</tr>';
         }).join('') +
         '</tbody></table></div>';
@@ -1525,6 +1586,9 @@
   function openPayoutModal() {
     var input = document.getElementById('payoutEmailInput');
     if (input && sellerData.payoutAccountId) input.value = sellerData.payoutAccountId;
+    _payoutOnboardingUrl = sellerData.payoutProviderBankOnboardingUrl || _payoutOnboardingUrl || '';
+    var openBankBtn = document.getElementById('openPayPalBankOnboardingBtn');
+    if (openBankBtn) openBankBtn.disabled = !_payoutOnboardingUrl;
     var codeInput = document.getElementById('payoutVerificationCodeInput');
     if (codeInput) codeInput.value = '';
     document.getElementById('payoutModal').classList.remove('hidden');
@@ -1533,6 +1597,35 @@
 
   function closePayoutModal() {
     document.getElementById('payoutModal').classList.add('hidden');
+  }
+
+  function openPayPalBankOnboarding() {
+    if (!_payoutOnboardingUrl) {
+      ZrxNotify.showNotification('Save your PayPal payout email first to start bank onboarding.', 'error');
+      return;
+    }
+    window.open(_payoutOnboardingUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async function confirmBankLinked() {
+    var btn = document.getElementById('confirmBankLinkedBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirming…'; }
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/bank-linked', {
+        method: 'POST', credentials: 'include'
+      });
+      const body = await res.json().catch(function() { return {}; });
+      if (!res.ok) throw new Error(body.error || 'Failed to confirm bank setup');
+      sellerData.payoutVerified = false;
+      sellerData.payoutOnboardingStatus = body.onboardingStatus || 'pending_verification';
+      sellerData.payoutProviderBankStatus = body.providerBankStatus || 'pending_verification';
+      renderPayoutAccountUi();
+      ZrxNotify.showNotification('Verification code sent. Enter it to activate bank payouts.', 'success');
+    } catch (err) {
+      ZrxNotify.showNotification(err.message || 'Failed to confirm bank setup. Please try again.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> I Linked My Bank'; }
+    }
   }
 
   async function savePayoutAccount() {
@@ -1553,11 +1646,17 @@
         var setupErr = await res.json().catch(function() { return {}; });
         throw new Error(setupErr.error || 'Save failed');
       }
+      var setupData = await res.json().catch(function() { return {}; });
       sellerData.payoutAccountId = email;
       sellerData.payoutVerified = false;
-      sellerData.payoutOnboardingStatus = 'pending_verification';
+      sellerData.payoutOnboardingStatus = setupData.onboardingStatus || 'pending_provider';
+      sellerData.payoutProviderBankStatus = setupData.providerBankStatus || 'pending_provider';
+      sellerData.payoutProviderBankOnboardingUrl = setupData.onboardingUrl || '';
+      _payoutOnboardingUrl = sellerData.payoutProviderBankOnboardingUrl;
+      var openBankBtn = document.getElementById('openPayPalBankOnboardingBtn');
+      if (openBankBtn) openBankBtn.disabled = !_payoutOnboardingUrl;
       renderPayoutAccountUi();
-      ZrxNotify.showNotification('Verification code sent to your PayPal email. Enter it to finish setup.', 'success');
+      ZrxNotify.showNotification('Saved. Open PayPal bank setup, then click “I Linked My Bank” to receive a verification code.', 'success');
     } catch(err) {
       ZrxNotify.showNotification(err.message || 'Failed to save payout account. Please try again.', 'error');
     } finally {
@@ -1587,10 +1686,11 @@
       sellerData.payoutAccountId = updated.payoutAccountId || sellerData.payoutAccountId;
       sellerData.payoutVerified = true;
       sellerData.payoutOnboardingStatus = 'connected';
+      sellerData.payoutProviderBankStatus = updated.providerBankStatus || 'connected';
       closePayoutModal();
       renderPayoutAccountUi();
       await loadPayouts();
-      ZrxNotify.showNotification('PayPal payout account verified. Future eligible payouts can be sent.', 'success');
+      ZrxNotify.showNotification('Bank payout account verified. Future eligible payouts can now be pushed.', 'success');
     } catch(err) {
       ZrxNotify.showNotification(err.message || 'Failed to verify payout account. Please try again.', 'error');
     } finally {
@@ -1602,6 +1702,11 @@
   document.addEventListener('click', function(e) {
     var modal = document.getElementById('payoutModal');
     if (modal && e.target === modal) closePayoutModal();
+    var pushBtn = e.target && e.target.closest ? e.target.closest('.push-payout-btn') : null;
+    if (pushBtn) {
+      var orderId = pushBtn.getAttribute('data-order-id') || '';
+      pushPayoutForOrder(orderId);
+    }
   });
 
   // ── Settings Save ─────────────────────────────────────────────────────────────

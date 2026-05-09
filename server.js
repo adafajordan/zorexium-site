@@ -435,7 +435,10 @@ app.get('/health', function(req, res) {
 // ── Config endpoint ────────────────────────────────────────────────────────────
 app.get('/api/config', function(req, res) {
   const clientId = process.env.PAYPAL_CLIENT_ID || null;
-  res.json({ paypalClientId: clientId });
+  const paypalBankOnboardingUrl = PAYPAL_MODE === 'sandbox'
+    ? 'https://www.sandbox.paypal.com/myaccount/money/banks/new'
+    : 'https://www.paypal.com/myaccount/money/banks/new';
+  res.json({ paypalClientId: clientId, paypalBankOnboardingUrl: paypalBankOnboardingUrl });
 });
 
 // ── USER AUTHENTICATION ────────────────────────────────────────────────────────
@@ -1111,6 +1114,13 @@ const PAYOUT_BATCH_UUID_SLICE = 16;
 const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
+const PAYPAL_BANK_ONBOARDING_URL = PAYPAL_MODE === 'sandbox'
+  ? 'https://www.sandbox.paypal.com/myaccount/money/banks/new'
+  : 'https://www.paypal.com/myaccount/money/banks/new';
+
+function buildPayPalBankOnboardingUrl() {
+  return PAYPAL_BANK_ONBOARDING_URL;
+}
 
 function normalizeCountryCode(value) {
   const countryCode = String(value || '').trim().toUpperCase();
@@ -1267,7 +1277,8 @@ function getLinkedSellerPayoutDestination(order, sellerId) {
     if (String(item && item.sellerId ? item.sellerId : '') !== targetSellerId) return;
     const payoutAccountId = normalizeEmail(item && item.sellerPayoutAccountId ? item.sellerPayoutAccountId : '');
     if (payoutAccountId) payoutAccountIds.add(payoutAccountId);
-    if (item && item.sellerPayoutVerified === true) hasVerifiedDestination = true;
+    const bankStatus = String(item && item.sellerPayoutBankStatus ? item.sellerPayoutBankStatus : '').toLowerCase();
+    if (item && item.sellerPayoutVerified === true && (!bankStatus || bankStatus === 'connected')) hasVerifiedDestination = true;
   });
   // A shipment payout needs one unambiguous receiver per seller for the order.
   if (payoutAccountIds.size !== 1) return { accountId: '', verified: false };
@@ -1319,10 +1330,11 @@ async function buildPayoutSnapshot(order, options) {
     linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
     seller = await db.collection('sellers').findOne(
       { userId: sellerInfo.sellerId },
-      { projection: { payoutAccountId: 1, payoutVerified: 1, userId: 1, shopName: 1 } }
+      { projection: { payoutAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, userId: 1, shopName: 1 } }
     );
     sellerPayoutAccountId = normalizeEmail(seller && seller.payoutAccountId ? seller.payoutAccountId : '');
-    hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified);
+    const providerBankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
+    hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified && (!providerBankStatus || providerBankStatus === 'connected'));
     hasLinkedVerifiedAccount = !!linkedPayoutDestination.verified;
     if (linkedPayoutDestination.accountId && hasLinkedVerifiedAccount) {
       // Prefer the payout destination captured on sold order items when it was verified.
@@ -2237,7 +2249,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       ? await db.collection('sellers')
           .find(
             { userId: { $in: sellerIds } },
-            { projection: { userId: 1, payoutAccountId: 1, payoutVerified: 1, payoutOnboardingStatus: 1 } }
+            { projection: { userId: 1, payoutAccountId: 1, payoutVerified: 1, payoutOnboardingStatus: 1, payoutProviderBankStatus: 1 } }
           )
           .toArray()
       : [];
@@ -2290,6 +2302,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         sellerPayoutAccountId: normalizeEmail(sellerPayoutProfile && sellerPayoutProfile.payoutAccountId ? sellerPayoutProfile.payoutAccountId : ''),
         sellerPayoutVerified: !!(sellerPayoutProfile && sellerPayoutProfile.payoutVerified),
         sellerPayoutOnboardingStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutOnboardingStatus ? sellerPayoutProfile.payoutOnboardingStatus : ''),
+        sellerPayoutBankStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutProviderBankStatus ? sellerPayoutProfile.payoutProviderBankStatus : ''),
         productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html')
       });
       orderItems.push({
@@ -3577,6 +3590,64 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
     );
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
 
+    const now = new Date();
+    const onboardingUrl = buildPayPalBankOnboardingUrl();
+    await db.collection('sellers').updateOne(
+      { userId: req.userId },
+      {
+        $set: {
+          // Bank details are entered in PayPal only; we store safe linkage/status metadata in our DB.
+          payoutAccountId: payoutAccountId,
+          payoutProvider: 'paypal',
+          payoutProviderDestinationType: 'paypal_wallet_bank',
+          payoutProviderBankStatus: 'pending_provider',
+          payoutProviderBankOnboardingUrl: onboardingUrl,
+          payoutProviderBankOnboardingStartedAt: now,
+          payoutProviderBankLinked: false,
+          payoutVerified: false,
+          payoutOnboardingStatus: 'pending_provider',
+          payoutOnboardingStartedAt: now,
+          updatedAt: now
+        },
+        $unset: {
+          payoutVerificationCodeHash: '',
+          payoutVerificationCodeExpiresAt: '',
+          payoutVerificationMethod: '',
+          payoutProviderBankLinkedAt: '',
+          payoutOnboardingCompletedAt: ''
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      payoutAccountId: payoutAccountId,
+      provider: 'paypal',
+      providerBankStatus: 'pending_provider',
+      onboardingStatus: 'pending_provider',
+      onboardingUrl: onboardingUrl
+    });
+  } catch (error) {
+    console.error('Error starting payout onboarding:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sellers/me/payout-account/bank-linked – seller confirms PayPal bank linking and requests verification code (auth required)
+app.post('/api/sellers/me/payout-account/bank-linked', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  try {
+    const seller = await db.collection('sellers').findOne(
+      { userId: req.userId },
+      { projection: { payoutAccountId: 1 } }
+    );
+    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
+    const payoutAccountId = normalizeEmail(seller && seller.payoutAccountId ? seller.payoutAccountId : '');
+    if (!payoutAccountId || !isLikelyEmail(payoutAccountId)) {
+      return res.status(409).json({ error: 'Save a valid PayPal payout email before confirming bank setup' });
+    }
+
     const code = generatePayoutVerificationCode();
     const now = new Date();
     const expiresAt = new Date(now.getTime() + PAYOUT_VERIFICATION_CODE_EXPIRATION_MS);
@@ -3584,7 +3655,11 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
       { userId: req.userId },
       {
         $set: {
-          payoutAccountId: payoutAccountId,
+          payoutProvider: 'paypal',
+          payoutProviderDestinationType: 'paypal_wallet_bank',
+          payoutProviderBankStatus: 'pending_verification',
+          payoutProviderBankLinked: true,
+          payoutProviderBankLinkedAt: now,
           payoutVerified: false,
           payoutOnboardingStatus: 'pending_verification',
           payoutOnboardingStartedAt: now,
@@ -3600,7 +3675,7 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
       payoutAccountId,
       'Verify your Zorexium payout account',
       `<p>Your payout verification code is <strong>${escapeHtml(code)}</strong>.</p>` +
-      `<p>Enter this code in your seller dashboard to finish connecting this PayPal payout account.</p>` +
+      `<p>Enter this code in your seller dashboard to confirm your PayPal payout destination for bank transfers.</p>` +
       `<p>This code expires in 15 minutes.</p>`,
       '/seller-dashboard.html#payouts'
     );
@@ -3608,11 +3683,13 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
     res.json({
       success: true,
       payoutAccountId: payoutAccountId,
+      provider: 'paypal',
+      providerBankStatus: 'pending_verification',
       onboardingStatus: 'pending_verification',
       expiresAt: expiresAt
     });
   } catch (error) {
-    console.error('Error starting payout onboarding:', error);
+    console.error('Error confirming payout bank linking:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -3629,9 +3706,12 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
   try {
     const seller = await db.collection('sellers').findOne(
       { userId: req.userId },
-      { projection: { payoutAccountId: 1, payoutVerificationCodeHash: 1, payoutVerificationCodeExpiresAt: 1 } }
+      { projection: { payoutAccountId: 1, payoutOnboardingStatus: 1, payoutVerificationCodeHash: 1, payoutVerificationCodeExpiresAt: 1 } }
     );
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
+    if (String(seller.payoutOnboardingStatus || '').toLowerCase() === 'pending_provider') {
+      return res.status(409).json({ error: 'Complete PayPal bank onboarding first, then request a verification code.' });
+    }
     if (!seller.payoutVerificationCodeHash || !seller.payoutVerificationCodeExpiresAt) {
       return res.status(409).json({ error: 'Start payout setup first to request a verification code' });
     }
@@ -3651,6 +3731,11 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
       { userId: req.userId },
       {
         $set: {
+          payoutProvider: 'paypal',
+          payoutProviderDestinationType: 'paypal_wallet_bank',
+          payoutProviderBankStatus: 'connected',
+          payoutProviderBankLinked: true,
+          payoutProviderBankLinkedAt: now,
           payoutVerified: true,
           payoutOnboardingStatus: 'connected',
           payoutOnboardingCompletedAt: now,
@@ -3669,6 +3754,8 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
     res.json({
       success: true,
       payoutAccountId: updatedSeller && updatedSeller.payoutAccountId ? updatedSeller.payoutAccountId : null,
+      provider: 'paypal',
+      providerBankStatus: 'connected',
       payoutVerified: true,
       onboardingStatus: 'connected',
       retrySummary: retrySummary
@@ -4074,6 +4161,14 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
     if (String(sellerInfo.sellerId) !== String(req.userId)) {
       return res.status(403).json({ error: 'Forbidden: you can only trigger payouts for orders sold by your seller account' });
     }
+    const seller = await db.collection('sellers').findOne(
+      { userId: req.userId },
+      { projection: { payoutVerified: 1, payoutProviderBankStatus: 1 } }
+    );
+    const bankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
+    if (!seller || !seller.payoutVerified || (bankStatus && bankStatus !== 'connected')) {
+      return res.status(409).json({ error: 'Complete and verify your PayPal bank payout onboarding before pushing payouts' });
+    }
 
     const payoutResult = await sendPayPalSellerPayout(order, { triggerSource: 'api' });
     if (!payoutResult.ok) {
@@ -4218,6 +4313,14 @@ app.post('/api/payouts/:id/send', publicApiRateLimit, verifyToken, async functio
     if (!orderId) return res.status(400).json({ error: 'Payout order ID is missing' });
     const order = await db.collection('orders').findOne({ id: orderId });
     if (!order) return res.status(404).json({ error: 'Order not found for payout' });
+    const seller = await db.collection('sellers').findOne(
+      { userId: String(payout.sellerId || req.userId || '') },
+      { projection: { payoutVerified: 1, payoutProviderBankStatus: 1 } }
+    );
+    const bankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
+    if (!seller || !seller.payoutVerified || (bankStatus && bankStatus !== 'connected')) {
+      return res.status(409).json({ error: 'Seller payout bank onboarding is incomplete or unverified' });
+    }
     if (String(order.status || '').toLowerCase() !== 'completed') {
       return res.status(409).json({ error: 'Payouts can only be sent for completed orders' });
     }
