@@ -1220,6 +1220,56 @@ function getOrderSellerInfo(order) {
   };
 }
 
+function getSellerFinancials(order, sellerId) {
+  const targetSellerId = String(sellerId || '').trim();
+  if (!targetSellerId) {
+    return { grossAmount: 0, payoutAmount: 0, platformFee: 0 };
+  }
+
+  const sellerSummaries = Array.isArray(order && order.sellerSummaries) ? order.sellerSummaries : [];
+  const sellerSummary = sellerSummaries.find(function(summary) {
+    return String(summary && summary.sellerId ? summary.sellerId : '') === targetSellerId;
+  });
+  if (sellerSummary) {
+    const grossAmount = parseFloat(sellerSummary.grossTotal) || 0;
+    const summaryNet = parseFloat(sellerSummary.netTotal);
+    const payoutAmount = Number.isFinite(summaryNet)
+      ? parseFloat(summaryNet.toFixed(2))
+      : parseFloat((grossAmount * (1 - PLATFORM_FEE_RATE)).toFixed(2));
+    const summaryFee = parseFloat(sellerSummary.platformFee);
+    const platformFee = Number.isFinite(summaryFee)
+      ? parseFloat(summaryFee.toFixed(2))
+      : parseFloat((grossAmount - payoutAmount).toFixed(2));
+    return { grossAmount, payoutAmount, platformFee };
+  }
+
+  const sellerItems = (Array.isArray(order && order.items) ? order.items : []).filter(function(item) {
+    return String(item && item.sellerId ? item.sellerId : '') === targetSellerId;
+  });
+  const grossAmount = parseFloat(sellerItems.reduce(function(sum, item) {
+    const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+    const unitPrice = parseFloat(item && item.price) || 0;
+    return sum + parseFloat((unitPrice * quantity).toFixed(2));
+  }, 0).toFixed(2));
+  const payoutAmount = parseFloat((grossAmount * (1 - PLATFORM_FEE_RATE)).toFixed(2));
+  const platformFee = parseFloat((grossAmount - payoutAmount).toFixed(2));
+  return { grossAmount, payoutAmount, platformFee };
+}
+
+function getLinkedSellerPayoutDestination(order, sellerId) {
+  const targetSellerId = String(sellerId || '').trim();
+  const destinations = new Set();
+  let hasVerifiedDestination = false;
+  (Array.isArray(order && order.items) ? order.items : []).forEach(function(item) {
+    if (String(item && item.sellerId ? item.sellerId : '') !== targetSellerId) return;
+    const payoutAccountId = normalizeEmail(item && item.sellerPayoutAccountId ? item.sellerPayoutAccountId : '');
+    if (payoutAccountId) destinations.add(payoutAccountId);
+    if (item && item.sellerPayoutVerified === true) hasVerifiedDestination = true;
+  });
+  if (destinations.size !== 1) return { accountId: '', verified: hasVerifiedDestination };
+  return { accountId: Array.from(destinations)[0], verified: hasVerifiedDestination };
+}
+
 function generatePayoutVerificationCode() {
   let code = '';
   for (let i = 0; i < PAYOUT_VERIFICATION_CODE_LENGTH; i++) {
@@ -1245,14 +1295,17 @@ async function buildPayoutSnapshot(order, options) {
   const payoutMeta = options || {};
   const orderId = String(order && order.id ? order.id : '').trim();
   const sellerInfo = getOrderSellerInfo(order);
-  const totalAmount = parseFloat(order && order.total) || 0;
-  const payoutAmount = parseFloat((totalAmount * (1 - PLATFORM_FEE_RATE)).toFixed(2));
-  const platformFee = parseFloat((totalAmount - payoutAmount).toFixed(2));
+  // Seller payouts are calculated from seller item totals only (not order-level shipping/tax).
+  const sellerFinancials = getSellerFinancials(order, sellerInfo.sellerId);
+  const grossAmount = sellerFinancials.grossAmount;
+  const payoutAmount = sellerFinancials.payoutAmount;
+  const platformFee = sellerFinancials.platformFee;
   const payoutCurrency = /^[A-Z]{3}$/.test(String(order && order.currency ? order.currency : '').toUpperCase())
     ? String(order.currency).toUpperCase()
     : 'USD';
   const now = new Date();
   let seller = null;
+  const linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
   let receiverEmail = '';
   if (sellerInfo.sellerId) {
     seller = await db.collection('sellers').findOne(
@@ -1260,12 +1313,23 @@ async function buildPayoutSnapshot(order, options) {
       { projection: { payoutAccountId: 1, payoutVerified: 1, userId: 1, shopName: 1 } }
     );
     receiverEmail = normalizeEmail(seller && seller.payoutAccountId ? seller.payoutAccountId : '');
+    if (!receiverEmail && linkedPayoutDestination.accountId) {
+      // Fallback to the payout destination snapshot captured on the sold order item linkage.
+      receiverEmail = linkedPayoutDestination.accountId;
+    }
   }
 
   let status = 'pending_delivery';
   let blockedReason = '';
   if (String(order && order.shippingStatus ? order.shippingStatus : '').toLowerCase() === 'shipped') {
-    if (!seller || !receiverEmail || !seller.payoutVerified) {
+    const hasVerifiedDestination = !!(
+      receiverEmail &&
+      (
+        (seller && seller.payoutVerified) ||
+        linkedPayoutDestination.verified
+      )
+    );
+    if (!hasVerifiedDestination) {
       status = 'blocked_onboarding';
       blockedReason = 'Complete payout account setup to receive this payout.';
     } else {
@@ -1278,6 +1342,7 @@ async function buildPayoutSnapshot(order, options) {
     sellerId: sellerInfo.sellerId || '',
     sellerUsername: sellerInfo.sellerUsername || '',
     sellerName: sellerInfo.sellerName || '',
+    grossAmount: grossAmount,
     amount: payoutAmount,
     platformFee: platformFee,
     currency: payoutCurrency,
@@ -1288,6 +1353,7 @@ async function buildPayoutSnapshot(order, options) {
     shippingStatus: String(order && order.shippingStatus ? order.shippingStatus : ''),
     triggerSource: payoutMeta.triggerSource || 'order_completed',
     payoutAccountId: receiverEmail || null,
+    linkedPayoutAccountId: linkedPayoutDestination.accountId || null,
     updatedAt: now
   };
 
@@ -2136,6 +2202,20 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       ? await db.collection('products').find({ _id: { $in: objectIds } }).toArray()
       : [];
     const productById = new Map(products.map(function(product) { return [String(product._id), product]; }));
+    const sellerIds = Array.from(new Set(products.map(function(product) {
+      return String(product && product.sellerId ? product.sellerId : '').trim();
+    }).filter(Boolean)));
+    const sellerPayoutProfiles = sellerIds.length > 0
+      ? await db.collection('sellers')
+          .find(
+            { userId: { $in: sellerIds } },
+            { projection: { userId: 1, payoutAccountId: 1, payoutVerified: 1 } }
+          )
+          .toArray()
+      : [];
+    const sellerPayoutByUserId = new Map(sellerPayoutProfiles.map(function(profile) {
+      return [String(profile && profile.userId ? profile.userId : ''), profile];
+    }));
     const normalizedOrderItems = [];
     const orderItems = [];
     let subtotal = 0;
@@ -2166,15 +2246,19 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       }
       const lineSubtotal = parseFloat((unitPrice * quantity).toFixed(2));
       subtotal += lineSubtotal;
+      const sellerId = String(product && product.sellerId ? product.sellerId : (item && item.sellerId ? item.sellerId : ''));
+      const sellerPayoutProfile = sellerPayoutByUserId.get(sellerId) || null;
       normalizedOrderItems.push({
         id: itemId,
         name: String(product && product.name ? product.name : (item && item.name ? item.name : 'Item')).slice(0, 200),
         price: unitPrice,
         quantity: quantity,
         image: product && product.image ? String(product.image) : '',
-        sellerId: String(product && product.sellerId ? product.sellerId : (item && item.sellerId ? item.sellerId : '')),
+        sellerId: sellerId,
         sellerName: String(product && (product.sellerName || product.sellerUsername) ? (product.sellerName || product.sellerUsername) : (item && item.sellerName ? item.sellerName : '')),
         sellerUsername: String(product && product.sellerUsername ? product.sellerUsername : ''),
+        sellerPayoutAccountId: normalizeEmail(sellerPayoutProfile && sellerPayoutProfile.payoutAccountId ? sellerPayoutProfile.payoutAccountId : ''),
+        sellerPayoutVerified: !!(sellerPayoutProfile && sellerPayoutProfile.payoutVerified),
         productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html')
       });
       orderItems.push({
@@ -2389,15 +2473,19 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
 
     const payoutSeller = getOrderSellerInfo(syncedOrder);
     if (payoutSeller.sellerId) {
+      const payoutSent = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && !payoutResult.processing);
+      const payoutProcessing = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && payoutResult.processing);
       await upsertOrderNotification(
         { userId: payoutSeller.sellerId, type: 'payout_update', orderId: syncedOrder.id },
         {
           userId: payoutSeller.sellerId,
           type: 'payout_update',
           orderId: syncedOrder.id,
-          title: payoutResult && payoutResult.ok && !payoutResult.deferred ? 'Payout sent' : 'Payout status updated',
-          body: payoutResult && payoutResult.ok && !payoutResult.deferred
+          title: payoutSent ? 'Payout sent' : (payoutProcessing ? 'Payout processing' : 'Payout status updated'),
+          body: payoutSent
             ? `Your payout for order ${syncedOrder.id} was sent.`
+            : payoutProcessing
+              ? `Your payout for order ${syncedOrder.id} is processing with PayPal.`
             : `Order ${syncedOrder.id} payout is currently ${payoutResult && payoutResult.reason ? payoutResult.reason.toLowerCase() : 'pending review'}.`,
           linkUrl: '/seller-payouts.html'
         }
@@ -2647,7 +2735,7 @@ app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async fun
         ? (
           payoutResult.deferred
             ? (String(payoutResult.reason || '').toLowerCase().includes('not yet marked as shipped') ? 'pending_delivery' : 'blocked_onboarding')
-            : 'paid'
+            : (payoutResult.processing ? 'processing' : 'paid')
         )
         : 'failed'
     });
