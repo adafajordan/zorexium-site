@@ -415,6 +415,7 @@
           <div>
             <label class="form-label" for="country">Country *</label>
             <select id="country" class="form-input">
+              <option value="">Select country</option>
               <option value="US">United States</option>
               <option value="CA">Canada</option>
               <option value="GB">United Kingdom</option>
@@ -422,8 +423,8 @@
               <option value="DE">Germany</option>
               <option value="FR">France</option>
               <option value="JP">Japan</option>
-              <option value="OTHER">Other</option>
             </select>
+            <p class="error-msg" id="countryErr">Please select a valid country.</p>
           </div>
         </div>
       </div>
@@ -675,12 +676,14 @@ fetch(BACKEND_URL + '/api/config')
     { id: 'city',      errId: 'cityErr' },
     { id: 'state',     errId: 'stateErr' },
     { id: 'zip',       errId: 'zipErr' },
+    { id: 'country',   errId: 'countryErr', type: 'country' },
   ];
 
   function isFieldValid({ id, type }) {
     const val = document.getElementById(id).value.trim();
     if (!val) return false;
     if (type === 'email') return EMAIL_REGEX.test(val);
+    if (type === 'country') return /^[A-Z]{2}$/.test(val.toUpperCase());
     return true;
   }
 
@@ -704,13 +707,16 @@ fetch(BACKEND_URL + '/api/config')
 
   // Re-validate on input to give real-time feedback
   required.forEach(field => {
-    document.getElementById(field.id).addEventListener('input', () => {
+    const fieldEl = document.getElementById(field.id);
+    const handleFieldChange = () => {
       if (isFieldValid(field)) {
         document.getElementById(field.id).classList.remove('error');
         document.getElementById(field.errId).classList.remove('visible');
       }
       updatePaypalState();
-    });
+    };
+    fieldEl.addEventListener('input', handleFieldChange);
+    fieldEl.addEventListener('change', handleFieldChange);
   });
 
   function isFormReady() {

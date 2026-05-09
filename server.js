@@ -1082,13 +1082,9 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 const PAYPAL_PRO_SELLER_PLAN_ID = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
-// TEMPORARY TROUBLESHOOTING OVERRIDE:
-// Force all checkout and Pro Seller subscription charges to $1.00.
-// Revert by removing these constants and restoring dynamic amount logic in
-// /api/orders and ensurePayPalProSellerPlan().
-const FORCED_TEST_CHECKOUT_TOTAL_USD = '1.00';
-const FORCED_TEST_PRO_SUBSCRIPTION_USD = '1.00';
-const FORCED_TEST_PRO_PLAN_ID = process.env.PAYPAL_PRO_SELLER_TEST_PLAN_ID || null;
+const PRO_SELLER_MONTHLY_PRICE_USD = '19.00';
+const DEFAULT_SHIPPING_PER_ITEM_USD = 10.99;
+const DEFAULT_SALES_TAX_RATE = 0.10;
 const envPlatformFeeRate = Number(process.env.PLATFORM_FEE_RATE);
 const PLATFORM_FEE_RATE = Number.isFinite(envPlatformFeeRate) && envPlatformFeeRate >= 0 && envPlatformFeeRate < 1
   ? envPlatformFeeRate
@@ -1097,6 +1093,32 @@ const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
 const PAYOUT_BATCH_UUID_SLICE = 16;
+
+function normalizeCountryCode(value) {
+  const countryCode = String(value || '').trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(countryCode) ? countryCode : '';
+}
+
+async function fetchPayPalAccessToken() {
+  if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+    throw new Error('PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server');
+  }
+  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+  const tokenRes = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: 'grant_type=client_credentials'
+  });
+  const tokenData = await tokenRes.json();
+  const accessToken = tokenData && tokenData.access_token;
+  if (!tokenRes.ok || !accessToken) {
+    throw new Error((tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) || 'Failed to authenticate with PayPal');
+  }
+  return accessToken;
+}
 
 function getOrderSellerInfo(order) {
   const items = Array.isArray(order && order.items) ? order.items : [];
@@ -1215,19 +1237,11 @@ async function sendPayPalSellerPayout(order, options) {
     return { ok: false, error: reason };
   }
 
-  const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
-  const tokenRes = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: 'grant_type=client_credentials'
-  });
-  const tokenData = await tokenRes.json();
-  const accessToken = tokenData && tokenData.access_token;
-  if (!tokenRes.ok || !accessToken) {
-    const reason = (tokenData && (tokenData.error_description || tokenData.error)) || 'Failed to authenticate with PayPal';
+  let accessToken = '';
+  try {
+    accessToken = await fetchPayPalAccessToken();
+  } catch (tokenError) {
+    const reason = tokenError.message || 'Failed to authenticate with PayPal';
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
@@ -1314,26 +1328,22 @@ async function sendPayPalSellerPayout(order, options) {
 }
 
 // ── PRO SELLER SUBSCRIPTION PLAN ─────────────────────────────────────────────
-// TEMPORARY TROUBLESHOOTING OVERRIDE:
-// Do not reuse PAYPAL_PRO_SELLER_PLAN_ID because existing plans may charge
-// non-$1 amounts. Use PAYPAL_PRO_SELLER_TEST_PLAN_ID to reuse a known $1 test plan.
-// Revert to PAYPAL_PRO_SELLER_PLAN_ID after troubleshooting.
-let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID ?? PAYPAL_PRO_SELLER_PLAN_ID;
+let cachedProSellerPlanId = PAYPAL_PRO_SELLER_PLAN_ID;
 
 async function ensurePayPalProSellerPlan() {
   if (cachedProSellerPlanId) return cachedProSellerPlanId;
   if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) return null;
 
   try {
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+    const accessToken = await fetchPayPalAccessToken();
 
     // 1. Create a product (service)
     const productRes = await fetch(`${PAYPAL_API}/v1/catalogs/products`, {
       method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Zorexium Pro Seller Subscription',
-        description: 'Monthly Pro Seller subscription on Zorexium ($1/month)',
+        description: 'Monthly Pro Seller subscription on Zorexium ($19/month)',
         type: 'SERVICE',
         category: 'SOFTWARE'
       })
@@ -1344,7 +1354,7 @@ async function ensurePayPalProSellerPlan() {
     // 2. Create a monthly billing plan
     const planRes = await fetch(`${PAYPAL_API}/v1/billing/plans`, {
       method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         product_id: product.id,
         name: 'Pro Seller Monthly',
@@ -1355,7 +1365,7 @@ async function ensurePayPalProSellerPlan() {
           sequence: 1,
           total_cycles: 0,
           pricing_scheme: {
-            fixed_price: { value: FORCED_TEST_PRO_SUBSCRIPTION_USD, currency_code: 'USD' }
+            fixed_price: { value: PRO_SELLER_MONTHLY_PRICE_USD, currency_code: 'USD' }
           }
         }],
         payment_preferences: {
@@ -1413,9 +1423,9 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
       return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+    const accessToken = await fetchPayPalAccessToken();
     const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' }
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
     });
     const subData = await subRes.json();
 
@@ -1471,7 +1481,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
         await sendEventEmailSafe(
           to,
           'Thanks for purchasing Pro Seller status',
-          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$1/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$19/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
@@ -1501,6 +1511,16 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'No items in order' });
     }
+    if (!buyer || !buyer.address || !buyer.firstName || !buyer.lastName || !buyer.email) {
+      return res.status(400).json({ error: 'Buyer details are required' });
+    }
+    if (!buyer.address.line1 || !buyer.address.city || !buyer.address.state || !buyer.address.zip) {
+      return res.status(400).json({ error: 'Complete shipping address is required' });
+    }
+    const countryCode = normalizeCountryCode(buyer.address.country);
+    if (!countryCode) {
+      return res.status(400).json({ error: 'Please select a valid 2-letter shipping country code' });
+    }
     
     // Resolve products so orders retain seller/product references for transactional emails and seller analytics.
     const rawProductIds = items.map(function(item) { return item && item.id ? String(item.id) : ''; }).filter(Boolean);
@@ -1511,47 +1531,55 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       ? await db.collection('products').find({ _id: { $in: objectIds } }).toArray()
       : [];
     const productById = new Map(products.map(function(product) { return [String(product._id), product]; }));
-
-    // TEMPORARY TROUBLESHOOTING OVERRIDE:
-    // Force PayPal checkout charge to $1.00 regardless of cart prices.
-    // Revert by restoring subtotal/shipping/tax calculations from cart items.
-    const orderItems = [{
-      name: 'Temporary checkout troubleshooting charge',
-      quantity: '1',
-      unit_amount: {
-        currency_code: 'USD',
-        value: FORCED_TEST_CHECKOUT_TOTAL_USD
-      }
-    }];
-    // Keep original item metadata in the order record for seller notifications and
-    // fulfillment even while the temporary checkout charge is forced to $1.00.
-    const normalizedOrderItems = items.map(function(item) {
+    const normalizedOrderItems = [];
+    const orderItems = [];
+    let subtotal = 0;
+    items.forEach(function(item) {
       const itemId = item && item.id ? String(item.id) : '';
       const product = productById.get(itemId) || null;
-      return {
+      if (!product) {
+        throw new Error('One or more products in your cart are unavailable. Please refresh and try again.');
+      }
+      const quantity = Math.max(1, Math.min(99, parseInt(item && item.quantity, 10) || 1));
+      const unitPrice = Number(product && product.price);
+      if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+        throw new Error('One or more products have invalid pricing. Please refresh and try again.');
+      }
+      const lineSubtotal = parseFloat((unitPrice * quantity).toFixed(2));
+      subtotal += lineSubtotal;
+      normalizedOrderItems.push({
         id: itemId,
-        name: item && item.name ? String(item.name) : (product && product.name ? String(product.name) : ''),
-        price: Number(item && item.price ? item.price : (product && product.price ? product.price : 0)),
-        quantity: Number(item && item.quantity ? item.quantity : 1),
-        image: item && item.image ? String(item.image) : (product && product.image ? String(product.image) : ''),
-        sellerId: item && item.sellerId ? String(item.sellerId) : (product && product.sellerId ? String(product.sellerId) : ''),
-        sellerName: item && item.sellerName ? String(item.sellerName) : (product && (product.sellerName || product.sellerUsername) ? String(product.sellerName || product.sellerUsername) : ''),
+        name: String(product && product.name ? product.name : (item && item.name ? item.name : 'Item')).slice(0, 200),
+        price: unitPrice,
+        quantity: quantity,
+        image: product && product.image ? String(product.image) : '',
+        sellerId: String(product && product.sellerId ? product.sellerId : (item && item.sellerId ? item.sellerId : '')),
+        sellerName: String(product && (product.sellerName || product.sellerUsername) ? (product.sellerName || product.sellerUsername) : (item && item.sellerName ? item.sellerName : '')),
+        sellerUsername: String(product && product.sellerUsername ? product.sellerUsername : ''),
         productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html')
-      };
+      });
+      orderItems.push({
+        name: String(product && product.name ? product.name : (item && item.name ? item.name : 'Item')).slice(0, 127),
+        quantity: String(quantity),
+        unit_amount: {
+          currency_code: 'USD',
+          value: unitPrice.toFixed(2)
+        }
+      });
     });
-    
-    const subtotal = parseFloat(FORCED_TEST_CHECKOUT_TOTAL_USD);
-    // Shipping/tax are set to 0 so the final charged amount remains exactly $1.00.
-    const shipping = 0;
-    const tax = 0;
-    // Keep explicit totals for PayPal breakdown + persisted order totals.
-    const total = FORCED_TEST_CHECKOUT_TOTAL_USD;
-    
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+    subtotal = parseFloat(subtotal.toFixed(2));
+    const shipping = parseFloat((normalizedOrderItems.length * DEFAULT_SHIPPING_PER_ITEM_USD).toFixed(2));
+    const tax = parseFloat((subtotal * DEFAULT_SALES_TAX_RATE).toFixed(2));
+    const total = parseFloat((subtotal + shipping + tax).toFixed(2));
+    if (!(total > 0)) {
+      return res.status(400).json({ error: 'Order total must be greater than $0.00' });
+    }
+
+    const accessToken = await fetchPayPalAccessToken();
     const paypalResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${auth}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -1559,7 +1587,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         purchase_units: [{
           amount: {
             currency_code: 'USD',
-            value: total,
+            value: total.toFixed(2),
             breakdown: {
               item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
               shipping: { currency_code: 'USD', value: shipping.toFixed(2) },
@@ -1575,7 +1603,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
               admin_area_2: buyer.address.city,
               admin_area_1: buyer.address.state,
               postal_code: buyer.address.zip,
-              country_code: buyer.address.country
+              country_code: countryCode
             }
           }
         }]
@@ -1594,18 +1622,29 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       id: orderId,
       paypalOrderId: paypalOrder.id,
       items: normalizedOrderItems,
-      buyer,
+      buyer: {
+        ...buyer,
+        address: {
+          ...(buyer && buyer.address ? buyer.address : {}),
+          country: countryCode
+        }
+      },
       buyerEmail: normalizeEmail(buyer && buyer.email),
       shippingMethod,
       subtotal,
       shipping,
       tax,
       total,
+      currency: 'USD',
       status: 'pending',
       createdAt: new Date()
     });
     
-    res.json({ orderId, paypalOrderId: paypalOrder.id });
+    res.json({
+      orderId,
+      paypalOrderId: paypalOrder.id,
+      totals: { subtotal, shipping, tax, total, currency: 'USD' }
+    });
   } catch (error) {
     console.error('Order creation error:', error);
     res.status(500).json({ error: error.message });
@@ -1629,11 +1668,11 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       return res.status(404).json({ error: 'Order not found' });
     }
     
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+    const accessToken = await fetchPayPalAccessToken();
     const captureResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders/${order.paypalOrderId}/capture`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${auth}`,
+        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       }
     });
@@ -2534,9 +2573,9 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
       return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
-    const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+    const accessToken = await fetchPayPalAccessToken();
     const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
-      headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' }
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
     });
     const subData = await subRes.json();
 
@@ -2558,7 +2597,7 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
         await sendEventEmailSafe(
           to,
           'Thanks for upgrading to Pro Seller',
-          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$1/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$19/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
