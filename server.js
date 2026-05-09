@@ -1175,7 +1175,7 @@ async function sendPayPalSellerPayout(order, options) {
   }
 
   if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-    const reason = 'PayPal is not configured on the server';
+    const reason = 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server';
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       { $set: { status: 'failed', error: reason, updatedAt: new Date() } }
@@ -1621,7 +1621,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
     }
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal is not configured on the server' });
+      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
 
     const { orderId } = req.params;
@@ -2534,7 +2534,7 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
     }
 
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal is not configured on the server' });
+      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
     const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
