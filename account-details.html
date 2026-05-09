@@ -570,6 +570,20 @@
       <div id="purchases" class="tab-content hidden mt-8">
         <div class="profile-section">
           <h3 class="section-title">Order History</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+              <p class="text-gray-400 text-xs">Total Orders</p>
+              <p id="purchaseOrderCount" class="text-2xl font-bold text-cyan-500 mt-0.5">0</p>
+            </div>
+            <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+              <p class="text-gray-400 text-xs">Total Spent</p>
+              <p id="purchaseTotalSpent" class="text-2xl font-bold text-cyan-500 mt-0.5">$0.00</p>
+            </div>
+            <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
+              <p class="text-gray-400 text-xs">Latest Receipt</p>
+              <p id="purchaseLatestReceipt" class="text-sm font-semibold text-gray-700 mt-1">—</p>
+            </div>
+          </div>
           <div id="orderHistory" class="space-y-4">
             <div class="text-center py-10">
               <i class="fas fa-inbox text-4xl text-gray-300 mb-3 block"></i>
@@ -577,8 +591,7 @@
             </div>
           </div>
           <div class="mt-4 border-t border-gray-100 pt-4">
-            <label class="text-gray-400 text-sm">Upload Purchase File / Receipt</label>
-            <input type="file" id="purchaseFileInput" class="w-full mt-2 text-sm" onchange="uploadPurchaseFile(event)">
+            <label class="text-gray-400 text-sm">Saved Receipts</label>
             <div id="purchaseFilesList" class="mt-3 text-sm text-gray-300"></div>
           </div>
         </div>
@@ -608,8 +621,8 @@
             <h3 class="section-title">Sales Stats</h3>
             <div class="grid grid-cols-2 gap-4 max-w-xs">
               <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
-                <p class="text-gray-400 text-xs">Total Sales</p>
-                <p id="totalSales" class="text-2xl font-bold text-cyan-500 mt-0.5">$0.00</p>
+                <p class="text-gray-400 text-xs">Orders Sold</p>
+                <p id="totalSales" class="text-2xl font-bold text-cyan-500 mt-0.5">0</p>
               </div>
               <div class="bg-gray-50 rounded-xl px-5 py-3 border border-gray-100">
                 <p class="text-gray-400 text-xs">Avg Rating</p>
@@ -776,13 +789,15 @@
 
         document.getElementById('shopName').value = _sellerData.shopName || '';
         document.getElementById('shopDescription').value = _sellerData.shopDescription || '';
-        document.getElementById('totalSales').textContent = '$' + (_sellerData.totalSales || 0).toFixed(2);
+        document.getElementById('totalSales').textContent = String(_sellerData.totalSales || 0);
         document.getElementById('avgRating').textContent = _sellerData.rating ? _sellerData.rating.toFixed(1) + '★' : 'N/A';
 
         const dashBtn = document.getElementById('myDashboardBtn');
         if (dashBtn) dashBtn.classList.remove('hidden');
       }
     } catch (_) {}
+
+    loadPurchaseHistory();
 
     // Load follower/following counts
     adLoadFollows();
@@ -883,15 +898,78 @@
     }
   }
 
-  function uploadPurchaseFile(e) {
-    ZrxNotify.showNotification('File uploads are being migrated to cloud storage. Please check back soon.', 'info');
-    e.target.value = '';
+  async function loadPurchaseHistory() {
+    const historyEl = document.getElementById('orderHistory');
+    if (!historyEl || !ZrxSession.isLoggedIn()) return;
+    historyEl.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-gray-300 mb-3 block"></i><p class="text-gray-400 text-sm">Loading purchases…</p></div>';
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      const orders = res.ok ? await res.json() : [];
+      const safeOrders = Array.isArray(orders) ? orders.filter(function(order) {
+        return String(order && order.status ? order.status : '').toLowerCase() !== 'pending';
+      }) : [];
+
+      document.getElementById('purchaseOrderCount').textContent = String(_profileData && _profileData.totalPurchases ? _profileData.totalPurchases : safeOrders.length);
+      document.getElementById('purchaseTotalSpent').textContent = '$' + ((parseFloat(_profileData && _profileData.totalSpent) || safeOrders.reduce(function(sum, order) {
+        return sum + (parseFloat(order && order.total) || 0);
+      }, 0)).toFixed(2));
+      const latestReceipt = safeOrders[0] && (safeOrders[0].receiptId || (safeOrders[0].receipt && safeOrders[0].receipt.receiptId));
+      document.getElementById('purchaseLatestReceipt').textContent = latestReceipt || '—';
+
+      if (!safeOrders.length) {
+        historyEl.innerHTML = '<div class="text-center py-10"><i class="fas fa-inbox text-4xl text-gray-300 mb-3 block"></i><p class="text-gray-400 text-sm">No purchase history yet</p></div>';
+        renderPurchaseFiles([]);
+        return;
+      }
+
+      historyEl.innerHTML = safeOrders.map(function(order) {
+        var publicOrderId = order.id || order.orderId || order._id || '';
+        var receiptId = order.receiptId || (order.receipt && order.receipt.receiptId) || 'Pending';
+        var purchasedAt = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '—';
+        var total = '$' + (parseFloat(order.total) || 0).toFixed(2);
+        var itemSummary = (order.items || []).slice(0, 3).map(function(item) {
+          return '<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5 mr-1 mb-1">' + escHtml(item.name || 'Item') + '</span>';
+        }).join('');
+        return '<div class="bg-white border border-gray-200 rounded-xl p-4 flex flex-wrap justify-between gap-4">' +
+          '<div class="min-w-0 flex-1">' +
+          '<div class="flex flex-wrap items-center gap-2 mb-2">' +
+          '<span class="font-semibold text-gray-800 text-sm">Order #' + escHtml(publicOrderId.toString().slice(-8).toUpperCase()) + '</span>' +
+          '<span class="text-xs px-2 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-100">' + escHtml(order.status || 'Completed') + '</span>' +
+          '</div>' +
+          '<p class="text-xs text-gray-400 mb-2">' + escHtml(purchasedAt + ' · ' + total + ' · Receipt ' + receiptId) + '</p>' +
+          '<div>' + (itemSummary || '<span class="text-xs text-gray-400">No items listed</span>') + '</div>' +
+          '</div>' +
+          '<div class="flex gap-2 flex-shrink-0">' +
+          '<a href="track-your-order.html?order=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
+          '<a href="payment-success.html?orderId=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Receipt</a>' +
+          '</div>' +
+          '</div>';
+      }).join('');
+      renderPurchaseFiles(safeOrders);
+    } catch (e) {
+      historyEl.innerHTML = '<div class="text-center py-10 text-gray-400"><i class="fas fa-exclamation-circle text-3xl mb-3 block text-red-400"></i><p class="text-sm">Could not load purchase history.</p></div>';
+      renderPurchaseFiles([]);
+    }
   }
 
-  function renderPurchaseFiles() {
+  function renderPurchaseFiles(orders) {
     const el = document.getElementById('purchaseFilesList');
     if (!el) return;
-    el.innerHTML = '<div class="text-gray-400 text-xs">Purchase files are managed server-side. Contact support for your downloads.</div>';
+    if (!orders || orders.length === 0) {
+      el.innerHTML = '<div class="text-gray-400 text-xs">Your receipts will appear here after your first completed purchase.</div>';
+      return;
+    }
+    el.innerHTML = orders.slice(0, 5).map(function(order) {
+      var publicOrderId = order.id || order.orderId || order._id || '';
+      var receiptId = order.receiptId || (order.receipt && order.receipt.receiptId) || publicOrderId;
+      return '<div class="flex items-center justify-between gap-3 py-2 border-b border-gray-100 last:border-b-0">' +
+        '<div>' +
+        '<p class="text-sm text-gray-700 font-medium">' + escHtml(receiptId) + '</p>' +
+        '<p class="text-xs text-gray-400">Order ' + escHtml(publicOrderId) + '</p>' +
+        '</div>' +
+        '<a href="payment-success.html?orderId=' + encodeURIComponent(publicOrderId) + '" class="text-sm text-cyan-600 hover:text-cyan-700 font-semibold">Open</a>' +
+        '</div>';
+    }).join('');
   }
 
   function switchTab(tab) {

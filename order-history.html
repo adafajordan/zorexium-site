@@ -431,6 +431,7 @@
           return;
         }
         listEl.innerHTML = orders.map(function(o) {
+          var publicOrderId = o.id || o.orderId || o._id || '';
           var status = o.status || 'Processing';
           var sc = statusClass(status);
           var si = statusIcon(status);
@@ -442,14 +443,15 @@
           return '<div class="order-card flex flex-wrap gap-4 items-center">' +
             '<div class="flex-1 min-w-0">' +
             '<div class="flex items-center gap-2 mb-1">' +
-            '<span class="font-semibold text-sm text-gray-800">Order #' + (o._id || o.orderId || '---').toString().slice(-8).toUpperCase() + '</span>' +
+            '<span class="font-semibold text-sm text-gray-800">Order #' + publicOrderId.toString().slice(-8).toUpperCase() + '</span>' +
             '<span class="order-status ' + sc + '"><i class="' + si + '"></i>' + status + '</span>' +
             '</div>' +
             '<div class="text-xs text-gray-400 mb-2">' + date + (total ? ' · ' + total : '') + '</div>' +
             '<div>' + items + '</div>' +
             '</div>' +
             '<div class="flex gap-2 flex-shrink-0">' +
-            '<a href="track-your-order.html?order=' + encodeURIComponent(o._id || '') + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
+            '<a href="track-your-order.html?order=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
+            '<a href="payment-success.html?orderId=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Receipt</a>' +
             '<a href="returns-history.html" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Return</a>' +
             '</div>' +
             '</div>';

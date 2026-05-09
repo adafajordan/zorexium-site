@@ -753,7 +753,7 @@
       var invoiceOrders = _allOrders.filter(function(o) {
         if (cutoff && o.createdAt && new Date(o.createdAt).getTime() < cutoff) return false;
         if (query) {
-          var id = ((o._id || o.orderId || '') + '').toLowerCase();
+          var id = ((o.id || o.orderId || o._id || '') + '').toLowerCase();
           if (!id.includes(query)) return false;
         }
         return true;
@@ -772,7 +772,7 @@
         return;
       }
       var tableRows = invoiceOrders.map(function(o) {
-        var ordNum = ('#' + ((o._id || o.orderId || '---') + '').slice(-8).toUpperCase());
+        var ordNum = ('#' + ((o.id || o.orderId || o._id || '---') + '').slice(-8).toUpperCase());
         var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—';
         var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '—';
         var status = o.status || 'Processing';
@@ -795,7 +795,7 @@
     var filtered = _allOrders.filter(function (o) {
       if (cutoff && o.createdAt && new Date(o.createdAt).getTime() < cutoff) return false;
       if (query) {
-        var id = ((o._id || o.orderId || '') + '').toLowerCase();
+        var id = ((o.id || o.orderId || o._id || '') + '').toLowerCase();
         var items = (o.items || []).map(function (i) { return (i.name || '').toLowerCase(); }).join(' ');
         if (!id.includes(query) && !items.includes(query)) return false;
       }
@@ -819,6 +819,7 @@
     }
 
     listEl.innerHTML = filtered.map(function (o) {
+      var publicOrderId = o.id || o.orderId || o._id || '';
       var status = o.status || 'Processing';
       var sc = statusClass(status);
       var si = statusIcon(status);
@@ -830,14 +831,15 @@
       return '<div class="order-card flex flex-wrap gap-4 items-center">' +
         '<div class="flex-1 min-w-0">' +
         '<div class="flex items-center gap-2 mb-1">' +
-        '<span class="font-semibold text-sm text-gray-800">Order #' + ((o._id || o.orderId || '---') + '').slice(-8).toUpperCase() + '</span>' +
+        '<span class="font-semibold text-sm text-gray-800">Order #' + publicOrderId.toString().slice(-8).toUpperCase() + '</span>' +
         '<span class="order-status ' + sc + '"><i class="' + si + '"></i> ' + status + '</span>' +
         '</div>' +
         '<div class="text-xs text-gray-400 mb-2">' + date + (total ? ' &middot; ' + total : '') + '</div>' +
         '<div>' + (items || '<span class="text-xs text-gray-400">No items listed</span>') + '</div>' +
         '</div>' +
         '<div class="flex gap-2 flex-shrink-0">' +
-        '<a href="track-your-order.html?order=' + encodeURIComponent(o._id || '') + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
+        '<a href="track-your-order.html?order=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
+        '<a href="payment-success.html?orderId=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Receipt</a>' +
         '<a href="returns-history.html" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Return</a>' +
         '</div>' +
         '</div>';
@@ -1010,4 +1012,3 @@
 </script>
 </body>
 </html>
-

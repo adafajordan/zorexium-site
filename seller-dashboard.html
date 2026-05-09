@@ -1106,7 +1106,7 @@
   // ── Orders ─────────────────────────────────────────────────────────────────────
   async function loadOrdersPreview() {
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/sold', { credentials: 'include' });
       if (!res.ok) return;
       const orders = await res.json();
       // Only show completed/real orders – exclude pending and empty-status entries
@@ -1125,7 +1125,7 @@
     if (_allOrders.length > 0) { renderOrdersTable(_allOrders); return; }
     document.getElementById('ordersList').innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4 block"></i><p class="text-gray-500">Loading…</p></div>';
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/sold', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed');
       const orders = await res.json();
       // Only show completed/real orders – exclude pending and empty-status entries
@@ -1157,7 +1157,7 @@
         return '<tr class="order-row border-b border-gray-50">' +
           '<td class="py-2.5 pr-4 font-mono text-xs text-gray-500">' + escHtml((o.id || o._id || '').slice(0, 12) + '…') + '</td>' +
           '<td class="py-2.5 pr-4 text-gray-700">' + fmtDate(o.createdAt) + '</td>' +
-          '<td class="py-2.5 pr-4 font-semibold text-gray-900">' + fmtCurrency(o.total || o.amount) + '</td>' +
+          '<td class="py-2.5 pr-4 font-semibold text-gray-900">' + fmtCurrency(o.sellerGrossTotal || o.total || o.amount) + '</td>' +
           '<td class="py-2.5">' + statusBadge(o.status) + '</td>' +
           '</tr>';
       }).join('') +
@@ -1180,14 +1180,14 @@
       '<th class="px-4 py-3 font-semibold text-gray-600">Status</th>' +
       '</tr></thead>' +
       '<tbody>' + orders.map(function(o) {
-        var buyer = (o.buyer && (o.buyer.email || o.buyer.name)) || (o.shippingAddress && o.shippingAddress.name) || '—';
-        var items = (o.items || []).length;
+        var buyer = o.buyerDisplayName || (o.buyer && (o.buyer.email || o.buyer.name)) || (o.shippingAddress && o.shippingAddress.name) || '—';
+        var items = o.sellerItemCount || (o.sellerItems || []).length || (o.items || []).length;
         return '<tr class="order-row border-b border-gray-100">' +
           '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + escHtml((o.id || o._id || '').slice(0, 14) + '…') + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + fmtDate(o.createdAt) + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + escHtml(buyer) + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + items + ' item' + (items !== 1 ? 's' : '') + '</td>' +
-          '<td class="px-4 py-3 font-semibold text-gray-900">' + fmtCurrency(o.total || o.amount) + '</td>' +
+          '<td class="px-4 py-3 font-semibold text-gray-900">' + fmtCurrency(o.sellerGrossTotal || o.total || o.amount) + '</td>' +
           '<td class="px-4 py-3">' + statusBadge(o.status) + '</td>' +
           '</tr>';
       }).join('') +
