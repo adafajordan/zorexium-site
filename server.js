@@ -2540,7 +2540,11 @@ app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async fun
       shippingStatus: 'shipped',
       shippedAt: now,
       payoutStatus: payoutResult && payoutResult.ok
-        ? (payoutResult.deferred ? 'blocked_onboarding' : 'paid')
+        ? (
+          payoutResult.deferred
+            ? (String(payoutResult.reason || '').toLowerCase().includes('not yet marked as shipped') ? 'pending_delivery' : 'blocked_onboarding')
+            : 'paid'
+        )
         : 'failed'
     });
   } catch (error) {
@@ -3413,7 +3417,9 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
     }
     const incomingHash = hashPayoutVerificationCode(code);
     const storedHash = String(seller.payoutVerificationCodeHash || '');
-    if (storedHash.length !== incomingHash.length || !crypto.timingSafeEqual(Buffer.from(incomingHash), Buffer.from(storedHash))) {
+    const incomingBuffer = Buffer.from(incomingHash, 'hex');
+    const storedBuffer = Buffer.from(storedHash, 'hex');
+    if (incomingBuffer.length !== storedBuffer.length || !crypto.timingSafeEqual(incomingBuffer, storedBuffer)) {
       return res.status(400).json({ error: 'Invalid verification code' });
     }
 
