@@ -1577,15 +1577,19 @@ async function sendPayPalSellerPayout(order, options) {
   let accessToken = '';
   try {
     accessToken = await fetchPayPalAccessToken();
-  } catch (paypalAuthError) {
-    const reason = paypalAuthError.message || 'Failed to authenticate with PayPal';
+  } catch (tokenFetchError) {
+    const reason = tokenFetchError.message || 'Failed to authenticate with PayPal';
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
         $set: {
           status: 'failed',
           error: reason,
-          paypalError: { message: paypalAuthError.message || reason },
+          paypalError: {
+            name: tokenFetchError.name || 'Error',
+            message: tokenFetchError.message || reason,
+            stack: tokenFetchError.stack || null
+          },
           updatedAt: new Date()
         }
       }
