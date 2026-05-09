@@ -27,6 +27,7 @@ After buyer approval:
 
 `sendPayPalSellerPayout` routing logic:
 - Computes payout as `order.total * (1 - PLATFORM_FEE_RATE)`; default fee 10% (`server.js:1090-1093`, `server.js:1155-1157`).
+- Includes a guard that refuses payout when computed amount is not greater than 0 (`server.js:1219-1226`), which prevents accidental zero/negative payout sends.
 - Looks up seller payout target from `sellers.payoutAccountId` and requires `payoutVerified === true` (`server.js:1228-1234`).
 - Sends PayPal Payout to `receiver: payoutAccountId` (`server.js:1268-1274`, `server.js:1277-1285`).
 
@@ -67,9 +68,10 @@ After buyer approval:
 1. **Cannot identify exact merchant email/account from repo alone.**  
    Code only references credentials via env vars; check deployment secrets and PayPal dashboard to confirm destination account (`README.md:11-24`, `server.js:1082-1083`).
 
-2. **Seller payout “verification” is self-asserted today.**  
+2. **Critical: seller payout “verification” is self-asserted today.**  
    Frontend sets `payoutVerified: true`, and backend accepts it without PayPal ownership proof (`seller-dashboard.html:1268`, `server.js:2522-2524`).  
-   Recommendation: verify payout ownership server-side (OAuth onboarding or verification challenge) before allowing `payoutVerified=true`.
+   Risk: a malicious seller account can point payouts to an arbitrary email and mark it verified.  
+   Recommendation: prioritize server-side ownership verification (PayPal OAuth/onboarding or verification challenge) and prevent direct client control of `payoutVerified`.
 
 3. **Payout failure does not block checkout success.**  
    Capture can succeed while payout fails; system logs failure and still returns completed order (`server.js:1704-1716`).  
