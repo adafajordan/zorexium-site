@@ -22,7 +22,6 @@ Set the following in your Render service's **Environment** tab:
 | `PAYPAL_SECRET` | Optional | PayPal secret |
 | `PAYPAL_MODE`   | Optional | `sandbox` or `live` |
 | `PAYPAL_PRO_SELLER_PLAN_ID` | Optional | Existing PayPal billing plan ID for Pro Seller subscriptions (must match `PAYPAL_MODE`) |
-| `PAYPAL_PRO_SELLER_TEST_PLAN_ID` | Optional | Temporary $1/month test plan used by the current troubleshooting override |
 | `PAYPAL_WEBHOOK_ID` | Optional | Reserved for a future PayPal webhook implementation; no webhook endpoint is registered yet |
 | `SMTP_HOST`     | Optional | SMTP host for email delivery (password reset, OTC login) |
 | `SMTP_PORT`     | Optional | SMTP port (default: 587) |
