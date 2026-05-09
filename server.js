@@ -1087,6 +1087,7 @@ const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 // /api/orders and ensurePayPalProSellerPlan().
 const FORCED_TEST_CHECKOUT_TOTAL_USD = '1.00';
 const FORCED_TEST_PRO_SUBSCRIPTION_USD = '1.00';
+const FORCED_TEST_PRO_PLAN_ID = process.env.PAYPAL_PRO_SELLER_TEST_PLAN_ID || null;
 const envPlatformFeeRate = Number(process.env.PLATFORM_FEE_RATE);
 const PLATFORM_FEE_RATE = Number.isFinite(envPlatformFeeRate) && envPlatformFeeRate >= 0 && envPlatformFeeRate < 1
   ? envPlatformFeeRate
@@ -1314,8 +1315,9 @@ async function sendPayPalSellerPayout(order, options) {
 // ── PRO SELLER SUBSCRIPTION PLAN ─────────────────────────────────────────────
 // TEMPORARY TROUBLESHOOTING OVERRIDE:
 // Do not reuse PAYPAL_PRO_SELLER_PLAN_ID because existing plans may charge
-// non-$1 amounts. Revert to env-var preference after troubleshooting.
-let cachedProSellerPlanId = null;
+// non-$1 amounts. Use PAYPAL_PRO_SELLER_TEST_PLAN_ID to reuse a known $1 test plan.
+// Revert to PAYPAL_PRO_SELLER_PLAN_ID after troubleshooting.
+let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID;
 
 async function ensurePayPalProSellerPlan() {
   if (cachedProSellerPlanId) return cachedProSellerPlanId;
@@ -1535,6 +1537,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     });
     
     const subtotal = parseFloat(FORCED_TEST_CHECKOUT_TOTAL_USD);
+    // Shipping/tax are set to 0 so the final charged amount remains exactly $1.00.
     const shipping = 0;
     const tax = 0;
     // Keep explicit totals for PayPal breakdown + persisted order totals.
