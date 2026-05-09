@@ -594,6 +594,7 @@
                 <p class="text-2xl font-bold text-orange-500" id="pendingPayout">$0.00</p>
               </div>
             </div>
+            <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts will show once shipped orders are eligible.</p>
             <div class="flex items-center justify-between">
               <p class="text-sm text-gray-600">View full earnings history and request payouts</p>
               <a href="seller-payouts.html" class="btn-primary text-sm">
@@ -783,9 +784,17 @@
       <label class="form-label">PayPal Email Address</label>
       <input type="email" id="payoutEmailInput" class="form-input" placeholder="your@paypal.com" autocomplete="email">
     </div>
+    <div class="mb-4">
+      <label class="form-label">Verification Code (check your email after saving)</label>
+      <input type="text" id="payoutVerificationCodeInput" class="form-input" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+      <p class="text-xs text-gray-500 mt-1">Save your PayPal email first, then enter the emailed code to finish setup.</p>
+    </div>
     <div class="flex gap-3">
       <button onclick="savePayoutAccount()" id="savePayoutBtn" class="btn-primary text-sm flex-1">
         <i class="fas fa-save"></i> Save Account
+      </button>
+      <button onclick="verifyPayoutAccount()" id="verifyPayoutBtn" class="btn-secondary text-sm flex-1">
+        <i class="fas fa-check"></i> Verify Code
       </button>
       <button onclick="closePayoutModal()" class="btn-secondary text-sm">Cancel</button>
     </div>
@@ -936,10 +945,71 @@
   }
 
   function payoutStatusBadge(status) {
-    var labels = { pending_delivery: 'Pending Delivery', ready_to_pay: 'Ready for Payout', paid: 'Paid' };
-    var classes = { pending_delivery: 'badge-pending', ready_to_pay: 'badge-shipped', paid: 'badge-new' };
+    var labels = {
+      pending_delivery: 'Pending Delivery',
+      blocked_onboarding: 'Blocked: Setup Required',
+      ready_to_pay: 'Ready for Payout',
+      processing: 'Processing',
+      paid: 'Paid',
+      failed: 'Failed'
+    };
+    var classes = {
+      pending_delivery: 'badge-pending',
+      blocked_onboarding: 'badge-cancelled',
+      ready_to_pay: 'badge-shipped',
+      processing: 'badge-new',
+      paid: 'badge-new',
+      failed: 'badge-cancelled'
+    };
     var key = String(status || '').toLowerCase();
     return '<span class="badge-status ' + (classes[key] || 'badge-pending') + '">' + (labels[key] || 'Pending Delivery') + '</span>';
+  }
+
+  function getEffectivePayoutStatus(order, payout) {
+    var payoutStatus = String(payout && payout.status ? payout.status : '').toLowerCase();
+    if (payoutStatus) return payoutStatus;
+    if (order && order.shippingStatus === 'shipped') {
+      return sellerData && sellerData.payoutVerified ? 'ready_to_pay' : 'blocked_onboarding';
+    }
+    return 'pending_delivery';
+  }
+
+  function renderPayoutAccountUi() {
+    var badge = document.getElementById('payoutStatusBadge');
+    var connectSection = document.getElementById('payoutConnectSection');
+    var connectedSection = document.getElementById('payoutConnectedSection');
+    var emailDisplay = document.getElementById('connectedPayoutEmail');
+    var hint = document.getElementById('payoutReadinessHint');
+    var hasEmail = !!(sellerData && sellerData.payoutAccountId);
+    var isVerified = !!(sellerData && sellerData.payoutVerified);
+    var onboardingStatus = String(sellerData && sellerData.payoutOnboardingStatus ? sellerData.payoutOnboardingStatus : '').toLowerCase();
+
+    if (!badge || !connectSection || !connectedSection) return;
+    connectSection.classList.add('hidden');
+    connectedSection.classList.add('hidden');
+
+    if (isVerified && hasEmail) {
+      badge.className = 'text-sm font-semibold px-3 py-1 rounded-full bg-green-100 text-green-700';
+      badge.textContent = 'Connected';
+      connectedSection.classList.remove('hidden');
+      if (emailDisplay) emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId);
+      if (hint) hint.textContent = 'Connected. Shipped orders are eligible for real payouts.';
+      return;
+    }
+
+    if (hasEmail && onboardingStatus === 'pending_verification') {
+      badge.className = 'text-sm font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700';
+      badge.textContent = 'Verification Required';
+      connectedSection.classList.remove('hidden');
+      if (emailDisplay) emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId) + ' (verify to enable payouts)';
+      if (hint) hint.textContent = 'Your payout account is saved but not verified. Funds remain blocked until verification is complete.';
+      return;
+    }
+
+    badge.className = 'text-sm font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600';
+    badge.textContent = 'Not Connected';
+    connectSection.classList.remove('hidden');
+    if (hint) hint.textContent = 'Connect and verify your payout account to receive real payout transfers.';
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────────
@@ -1003,15 +1073,8 @@
 
     if (sellerData.payoutVerified) {
       document.getElementById('verifiedBadge').classList.remove('hidden');
-      document.getElementById('payoutStatusBadge').className = 'text-sm font-semibold px-3 py-1 rounded-full bg-green-100 text-green-700';
-      document.getElementById('payoutStatusBadge').textContent = 'Connected';
-      document.getElementById('payoutConnectSection').classList.add('hidden');
-      document.getElementById('payoutConnectedSection').classList.remove('hidden');
-      var emailDisplay = document.getElementById('connectedPayoutEmail');
-      if (emailDisplay && sellerData.payoutAccountId) {
-        emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId);
-      }
     }
+    renderPayoutAccountUi();
 
     // Show seller tier badge
     const tierBadge = document.getElementById('tierBadge');
@@ -1382,11 +1445,7 @@
         var orderId = String(order.id || order._id || '');
         var payout = payoutByOrderId.get(orderId);
         var amount = getSellerOrderNet(order);
-        // Keep shipment-driven state as the source of truth for pending vs ready,
-        // but let a paid payout record override both when a payout has completed.
-        var status = payout && String(payout.status).toLowerCase() === 'paid'
-          ? 'paid'
-          : (order.shippingStatus === 'shipped' ? 'ready_to_pay' : 'pending_delivery');
+        var status = getEffectivePayoutStatus(order, payout);
         return {
           orderId: orderId,
           createdAt: order.createdAt,
@@ -1398,11 +1457,15 @@
 
       var lifetime = 0;
       var monthly = 0;
-      var pending = 0;
+      var unpaidTotal = 0;
+      var available = 0;
+      var blocked = 0;
       var now = new Date();
       rows.forEach(function(row) {
         lifetime += row.amount;
-        if (row.status === 'pending_delivery') pending += row.amount;
+        if (row.status !== 'paid') unpaidTotal += row.amount;
+        if (row.status === 'ready_to_pay' || row.status === 'processing') available += row.amount;
+        if (row.status === 'blocked_onboarding') blocked += row.amount;
         var d = new Date(row.createdAt);
         if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
           monthly += row.amount;
@@ -1410,7 +1473,11 @@
       });
       document.getElementById('lifetimeEarnings').textContent = fmtCurrency(lifetime);
       document.getElementById('monthlyEarnings').textContent = fmtCurrency(monthly);
-      document.getElementById('pendingPayout').textContent = fmtCurrency(pending);
+      document.getElementById('pendingPayout').textContent = fmtCurrency(unpaidTotal);
+      var hint = document.getElementById('payoutReadinessHint');
+      if (hint) {
+        hint.textContent = 'Available: ' + fmtCurrency(available) + ' · Blocked (setup required): ' + fmtCurrency(blocked);
+      }
 
       if (!rows.length) {
         document.getElementById('payoutsList').innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-receipt text-3xl mb-2 block"></i><p class="text-sm">No payout history yet.</p></div>';
@@ -1443,6 +1510,8 @@
   function openPayoutModal() {
     var input = document.getElementById('payoutEmailInput');
     if (input && sellerData.payoutAccountId) input.value = sellerData.payoutAccountId;
+    var codeInput = document.getElementById('payoutVerificationCodeInput');
+    if (codeInput) codeInput.value = '';
     document.getElementById('payoutModal').classList.remove('hidden');
     if (input) input.focus();
   }
@@ -1460,28 +1529,57 @@
     var btn = document.getElementById('savePayoutBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
-        method: 'PUT', credentials: 'include',
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/start', {
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payoutAccountId: email, payoutVerified: true })
+        body: JSON.stringify({ payoutAccountId: email })
       });
-      if (!res.ok) throw new Error('Save failed');
-      const updated = await res.json();
-      sellerData.payoutAccountId = updated.payoutAccountId || email;
-      sellerData.payoutVerified = true;
-      closePayoutModal();
-      // Refresh payout status UI
-      document.getElementById('payoutStatusBadge').className = 'text-sm font-semibold px-3 py-1 rounded-full bg-green-100 text-green-700';
-      document.getElementById('payoutStatusBadge').textContent = 'Connected';
-      document.getElementById('payoutConnectSection').classList.add('hidden');
-      document.getElementById('payoutConnectedSection').classList.remove('hidden');
-      var emailDisplay = document.getElementById('connectedPayoutEmail');
-      if (emailDisplay) emailDisplay.textContent = 'PayPal: ' + escHtml(sellerData.payoutAccountId);
-      ZrxNotify.showNotification('PayPal account saved successfully!', 'success');
-    } catch(_) {
-      ZrxNotify.showNotification('Failed to save payout account. Please try again.', 'error');
+      if (!res.ok) {
+        var setupErr = await res.json().catch(function() { return {}; });
+        throw new Error(setupErr.error || 'Save failed');
+      }
+      sellerData.payoutAccountId = email;
+      sellerData.payoutVerified = false;
+      sellerData.payoutOnboardingStatus = 'pending_verification';
+      renderPayoutAccountUi();
+      ZrxNotify.showNotification('Verification code sent to your PayPal email. Enter it to finish setup.', 'success');
+    } catch(err) {
+      ZrxNotify.showNotification(err.message || 'Failed to save payout account. Please try again.', 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Account'; }
+    }
+  }
+
+  async function verifyPayoutAccount() {
+    var code = (document.getElementById('payoutVerificationCodeInput').value || '').trim();
+    if (!/^\d{6}$/.test(code)) {
+      ZrxNotify.showNotification('Enter the 6-digit verification code sent to your PayPal email.', 'error');
+      return;
+    }
+    var btn = document.getElementById('verifyPayoutBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…'; }
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/verify', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+      });
+      if (!res.ok) {
+        var verifyErr = await res.json().catch(function() { return {}; });
+        throw new Error(verifyErr.error || 'Verification failed');
+      }
+      const updated = await res.json();
+      sellerData.payoutAccountId = updated.payoutAccountId || sellerData.payoutAccountId;
+      sellerData.payoutVerified = true;
+      sellerData.payoutOnboardingStatus = 'connected';
+      closePayoutModal();
+      renderPayoutAccountUi();
+      await loadPayouts();
+      ZrxNotify.showNotification('PayPal payout account verified. Future eligible payouts can be sent.', 'success');
+    } catch(err) {
+      ZrxNotify.showNotification(err.message || 'Failed to verify payout account. Please try again.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Verify Code'; }
     }
   }
 
