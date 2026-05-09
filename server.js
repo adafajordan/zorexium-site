@@ -1330,7 +1330,7 @@ async function ensurePayPalProSellerPlan() {
       headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Zorexium Pro Seller Subscription',
-        description: 'Monthly Pro Seller subscription on Zorexium ($1/month temporary troubleshooting override)',
+        description: 'Monthly Pro Seller subscription on Zorexium ($1/month)',
         type: 'SERVICE',
         category: 'SOFTWARE'
       })
@@ -1537,6 +1537,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     const subtotal = parseFloat(FORCED_TEST_CHECKOUT_TOTAL_USD);
     const shipping = 0;
     const tax = 0;
+    // Keep explicit totals for PayPal breakdown + persisted order totals.
     const total = FORCED_TEST_CHECKOUT_TOTAL_USD;
     
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
