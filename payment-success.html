@@ -47,6 +47,10 @@
         <span id="orderTotal" class="text-cyan-400 font-bold">—</span>
       </div>
       <div class="flex justify-between items-center px-6 py-3">
+        <span class="text-gray-400 text-base">Receipt</span>
+        <span id="receiptId" class="text-white font-mono text-base break-all text-right ml-4">—</span>
+      </div>
+      <div class="flex justify-between items-center px-6 py-3">
         <span class="text-gray-400 text-base">Shipping Method</span>
         <span id="orderShipping" class="text-white text-base capitalize">—</span>
       </div>
@@ -70,6 +74,26 @@
       </ul>
     </div>
 
+    <div class="bg-[#181b21] rounded-lg border border-gray-700 p-4 mb-8">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div>
+          <p class="text-gray-300 text-base font-semibold">Receipt summary</p>
+          <p class="text-gray-500 text-sm">Saved after payment capture so buyers can re-open or download it later.</p>
+        </div>
+        <div class="flex gap-2">
+          <button id="downloadReceiptBtn" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-colors">
+            <i class="fas fa-download mr-2"></i>Download Receipt
+          </button>
+          <button id="printReceiptBtn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-semibold transition-colors">
+            <i class="fas fa-print mr-2"></i>Print
+          </button>
+        </div>
+      </div>
+      <div id="receiptBreakdown" class="space-y-2 text-sm text-gray-300">
+        <p class="text-gray-500">Receipt details will appear here once the order finishes loading.</p>
+      </div>
+    </div>
+
     <!-- Actions -->
     <div class="space-y-3">
       <a href="index.html" class="block w-full text-center px-8 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold transition-colors">
@@ -91,6 +115,92 @@
       const BACKEND_URL = 'https://zorexium-backend.onrender.com';
       const params = new URLSearchParams(window.location.search);
       const orderId = params.get('orderId');
+      let currentOrder = null;
+
+      function money(value) {
+        return '$' + (parseFloat(value) || 0).toFixed(2);
+      }
+
+      function escHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function buildReceiptText(order) {
+        if (!order) return 'Receipt unavailable';
+        const receipt = order.receipt || {};
+        const lines = ['Zorexium Receipt', ''];
+        lines.push('Receipt ID: ' + (receipt.receiptId || order.receiptId || 'Pending'));
+        lines.push('Order ID: ' + (order.id || order.orderId || orderId || '—'));
+        lines.push('Date: ' + (receipt.issuedAt ? new Date(receipt.issuedAt).toLocaleString() : new Date(order.createdAt || Date.now()).toLocaleString()));
+        lines.push('');
+        lines.push('Items:');
+        (receipt.items || order.items || []).forEach(function(item) {
+          const quantity = parseInt(item && item.quantity, 10) || 1;
+          const unitPrice = parseFloat(item && (item.unitPrice != null ? item.unitPrice : item.price)) || 0;
+          const lineTotal = parseFloat(item && item.lineTotal) || (unitPrice * quantity);
+          lines.push('- ' + (item && item.name ? item.name : 'Item') + ' x' + quantity + ' @ ' + money(unitPrice) + ' = ' + money(lineTotal));
+        });
+        lines.push('');
+        const totals = receipt.totals || {
+          subtotal: order.subtotal,
+          shipping: order.shipping,
+          tax: order.tax,
+          total: order.total
+        };
+        lines.push('Subtotal: ' + money(totals.subtotal));
+        lines.push('Shipping: ' + money(totals.shipping));
+        lines.push('Tax: ' + money(totals.tax));
+        lines.push('Total: ' + money(totals.total));
+        return lines.join('\n');
+      }
+
+      function renderReceipt(order) {
+        const receipt = order && order.receipt ? order.receipt : null;
+        const receiptId = receipt && receipt.receiptId ? receipt.receiptId : (order && order.receiptId ? order.receiptId : 'Pending');
+        document.getElementById('receiptId').textContent = receiptId;
+        const totals = receipt && receipt.totals ? receipt.totals : {
+          subtotal: order && order.subtotal,
+          shipping: order && order.shipping,
+          tax: order && order.tax,
+          total: order && order.total
+        };
+        const receiptItems = receipt && Array.isArray(receipt.items) && receipt.items.length ? receipt.items : (order && order.items ? order.items : []);
+        document.getElementById('receiptBreakdown').innerHTML = [
+          receiptItems.map(function(item) {
+            const quantity = parseInt(item && item.quantity, 10) || 1;
+            const unitPrice = parseFloat(item && (item.unitPrice != null ? item.unitPrice : item.price)) || 0;
+            const lineTotal = parseFloat(item && item.lineTotal) || (unitPrice * quantity);
+            return '<div class="flex justify-between gap-4"><span>' + escHtml((item && item.name ? item.name : 'Item') + ' ×' + quantity) + '</span><span>' + money(lineTotal) + '</span></div>';
+          }).join(''),
+          '<div class="border-t border-gray-700 pt-3 mt-3 space-y-1">',
+          '<div class="flex justify-between"><span class="text-gray-400">Subtotal</span><span>' + money(totals.subtotal) + '</span></div>',
+          '<div class="flex justify-between"><span class="text-gray-400">Shipping</span><span>' + money(totals.shipping) + '</span></div>',
+          '<div class="flex justify-between"><span class="text-gray-400">Tax</span><span>' + money(totals.tax) + '</span></div>',
+          '<div class="flex justify-between text-white font-semibold"><span>Total</span><span>' + money(totals.total) + '</span></div>',
+          '</div>'
+        ].join('');
+      }
+
+      document.getElementById('downloadReceiptBtn').addEventListener('click', function() {
+        const blob = new Blob([buildReceiptText(currentOrder)], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = (currentOrder && currentOrder.receiptId ? currentOrder.receiptId : 'zorexium-receipt') + '.txt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('printReceiptBtn').addEventListener('click', function() {
+        window.print();
+      });
 
       // Display order ID from URL param
       if (orderId) {
@@ -104,6 +214,7 @@
         const res = await fetch(BACKEND_URL + '/api/orders/' + encodeURIComponent(orderId));
         if (!res.ok) return;
         const order = await res.json();
+        currentOrder = order;
 
         // Date
         if (order.createdAt) {
@@ -121,6 +232,8 @@
         if (order.total != null) {
           document.getElementById('orderTotal').textContent = '$' + parseFloat(order.total).toFixed(2);
         }
+
+        renderReceipt(order);
 
         // Shipping method
         if (order.shippingMethod) {

@@ -97,7 +97,8 @@
     var unread = notifData.filter(function(n) { return !n.read; });
     var items = notifData.map(function(n) {
       var link = '';
-      if (n.type === 'new_message') link = '<a href="messages.html" style="font-size:11px;color:#0891b2;white-space:nowrap;align-self:center;flex-shrink:0;">View</a>';
+      if (n.linkUrl) link = '<a href="' + escHtml(n.linkUrl) + '" style="font-size:11px;color:#0891b2;white-space:nowrap;align-self:center;flex-shrink:0;">View</a>';
+      else if (n.type === 'new_message') link = '<a href="messages.html" style="font-size:11px;color:#0891b2;white-space:nowrap;align-self:center;flex-shrink:0;">View</a>';
       else if (n.type === 'new_review' && n.productId) link = '<a href="product-detail.html?id=' + escHtml(n.productId) + '" style="font-size:11px;color:#0891b2;white-space:nowrap;align-self:center;flex-shrink:0;">View</a>';
       return '<div style="padding:10px 16px;border-bottom:1px solid #f3f4f6;background:' + (n.read ? '#fff' : '#ecfeff') + ';display:flex;gap:10px;align-items:flex-start;cursor:pointer;" data-notif-id="' + escHtml(String(n._id)) + '">'
         + '<div style="width:8px;height:8px;border-radius:50%;background:' + (n.read ? 'transparent' : '#06b6d4') + ';flex-shrink:0;margin-top:6px;"></div>'

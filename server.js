@@ -1145,6 +1145,341 @@ function getOrderSellerInfo(order) {
   };
 }
 
+function getOptionalCheckoutUser(req) {
+  const authHeader = String(req && req.headers && req.headers.authorization ? req.headers.authorization : '').trim();
+  if (!authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildSellerOrderSummaries(order) {
+  const sellerMap = new Map();
+  (Array.isArray(order && order.items) ? order.items : []).forEach(function(item) {
+    const sellerId = String(item && item.sellerId ? item.sellerId : '').trim();
+    if (!sellerId) return;
+
+    const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+    const unitPrice = parseFloat(item && item.price) || 0;
+    const grossTotal = parseFloat((unitPrice * quantity).toFixed(2));
+    if (!sellerMap.has(sellerId)) {
+      sellerMap.set(sellerId, {
+        sellerId: sellerId,
+        sellerName: String(item && item.sellerName ? item.sellerName : '').trim(),
+        sellerUsername: String(item && item.sellerUsername ? item.sellerUsername : '').trim(),
+        itemCount: 0,
+        grossTotal: 0,
+        items: []
+      });
+    }
+
+    const summary = sellerMap.get(sellerId);
+    summary.itemCount += quantity;
+    summary.grossTotal = parseFloat((summary.grossTotal + grossTotal).toFixed(2));
+    summary.items.push({
+      id: String(item && item.id ? item.id : ''),
+      name: String(item && item.name ? item.name : 'Item'),
+      quantity: quantity,
+      unitPrice: unitPrice,
+      lineTotal: grossTotal
+    });
+  });
+
+  return Array.from(sellerMap.values()).map(function(summary) {
+    const platformFee = parseFloat((summary.grossTotal * PLATFORM_FEE_RATE).toFixed(2));
+    return {
+      ...summary,
+      platformFee: platformFee,
+      netTotal: parseFloat((summary.grossTotal - platformFee).toFixed(2))
+    };
+  });
+}
+
+function buildReceiptSnapshot(order, sellerSummaries) {
+  const receiptId = String(
+    order && order.receipt && order.receipt.receiptId
+      ? order.receipt.receiptId
+      : 'RCT-' + Date.now() + '-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
+  ).slice(0, 64);
+  const issuedAt = order && order.receipt && order.receipt.issuedAt
+    ? new Date(order.receipt.issuedAt)
+    : (order && order.completedAt ? new Date(order.completedAt) : new Date());
+  const buyer = order && order.buyer ? order.buyer : {};
+  const buyerAddress = buyer && buyer.address ? buyer.address : {};
+  const summaries = Array.isArray(sellerSummaries) && sellerSummaries.length > 0
+    ? sellerSummaries
+    : buildSellerOrderSummaries(order);
+
+  return {
+    receiptId: receiptId,
+    orderId: String(order && order.id ? order.id : ''),
+    issuedAt: issuedAt,
+    currency: String(order && order.currency ? order.currency : 'USD').toUpperCase(),
+    status: String(order && order.status ? order.status : 'completed'),
+    buyer: {
+      name: [buyer.firstName, buyer.lastName].filter(Boolean).join(' ').trim(),
+      email: normalizeEmail(order && (order.buyerEmail || (buyer && buyer.email)) || ''),
+      address: {
+        line1: String(buyerAddress.line1 || ''),
+        line2: String(buyerAddress.line2 || ''),
+        city: String(buyerAddress.city || ''),
+        state: String(buyerAddress.state || ''),
+        zip: String(buyerAddress.zip || ''),
+        country: String(buyerAddress.country || '')
+      }
+    },
+    items: (Array.isArray(order && order.items) ? order.items : []).map(function(item) {
+      const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+      const unitPrice = parseFloat(item && item.price) || 0;
+      return {
+        id: String(item && item.id ? item.id : ''),
+        name: String(item && item.name ? item.name : 'Item'),
+        quantity: quantity,
+        unitPrice: unitPrice,
+        lineTotal: parseFloat((unitPrice * quantity).toFixed(2)),
+        sellerId: String(item && item.sellerId ? item.sellerId : ''),
+        sellerName: String(item && (item.sellerName || item.sellerUsername) ? (item.sellerName || item.sellerUsername) : '')
+      };
+    }),
+    sellerSummaries: summaries,
+    totals: {
+      subtotal: parseFloat(order && order.subtotal) || 0,
+      shipping: parseFloat(order && order.shipping) || 0,
+      tax: parseFloat(order && order.tax) || 0,
+      total: parseFloat(order && order.total) || 0
+    }
+  };
+}
+
+async function upsertOrderNotification(query, notificationDoc) {
+  try {
+    await db.collection('notifications').updateOne(
+      query,
+      {
+        $setOnInsert: {
+          ...notificationDoc,
+          read: false,
+          createdAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+  } catch (notificationErr) {
+    console.error('Failed to persist order notification:', notificationErr.message);
+  }
+}
+
+async function syncCompletedOrderRecords(order) {
+  const now = new Date();
+  const completedAt = order && order.completedAt ? new Date(order.completedAt) : now;
+  const sellerSummaries = buildSellerOrderSummaries(order);
+  const receipt = buildReceiptSnapshot({ ...order, completedAt: completedAt }, sellerSummaries);
+  let buyerUser = null;
+
+  // Persist a reusable receipt so buyer-facing pages always have a durable, itemized record to render.
+  await db.collection('receipts').updateOne(
+    { orderId: order.id },
+    {
+      $setOnInsert: { createdAt: now },
+      $set: {
+        ...receipt,
+        updatedAt: now
+      }
+    },
+    { upsert: true }
+  );
+
+  const inventoryItems = Array.isArray(order && order.items) ? order.items : [];
+  for (const item of inventoryItems) {
+    const productId = String(item && item.id ? item.id : '').trim();
+    if (!ObjectId.isValid(productId)) continue;
+    const quantitySold = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+    const inventoryResult = await db.collection('inventoryAdjustments').updateOne(
+      { orderId: order.id, productId: productId },
+      {
+        $setOnInsert: {
+          orderId: order.id,
+          productId: productId,
+          sellerId: String(item && item.sellerId ? item.sellerId : ''),
+          quantitySold: quantitySold,
+          createdAt: now
+        },
+        $set: { updatedAt: now }
+      },
+      { upsert: true }
+    );
+    if (inventoryResult.upsertedCount > 0) {
+      const product = await db.collection('products').findOne(
+        { _id: new ObjectId(productId) },
+        { projection: { quantity: 1 } }
+      );
+      if (product) {
+        const currentQuantity = Math.max(0, parseInt(product.quantity, 10) || 0);
+        const nextQuantity = Math.max(0, currentQuantity - quantitySold);
+        await db.collection('products').updateOne(
+          { _id: new ObjectId(productId) },
+          { $set: { quantity: nextQuantity, updatedAt: now } }
+        );
+      }
+    }
+  }
+
+  if (order && order.userId && ObjectId.isValid(order.userId)) {
+    buyerUser = await db.collection('users').findOne(
+      { _id: new ObjectId(order.userId) },
+      { projection: { _id: 1, email: 1, firstName: 1, lastName: 1, firstPurchaseAt: 1 } }
+    );
+  }
+  if (!buyerUser) {
+    const buyerEmail = normalizeEmail(order && (order.buyerEmail || (order.buyer && order.buyer.email)) || '');
+    if (buyerEmail) {
+      buyerUser = await db.collection('users').findOne(
+        { email: buyerEmail },
+        { projection: { _id: 1, email: 1, firstName: 1, lastName: 1, firstPurchaseAt: 1 } }
+      );
+    }
+  }
+
+  if (buyerUser && buyerUser._id) {
+    const buyerOrderSummary = {
+      orderId: order.id,
+      receiptId: receipt.receiptId,
+      total: parseFloat(order && order.total) || 0,
+      status: String(order && order.status ? order.status : 'completed'),
+      itemCount: (Array.isArray(order && order.items) ? order.items : []).reduce(function(sum, item) {
+        return sum + (Math.max(1, parseInt(item && item.quantity, 10) || 1));
+      }, 0),
+      purchasedAt: completedAt
+    };
+    await db.collection('users').updateOne(
+      { _id: buyerUser._id, purchaseOrderIds: { $ne: order.id } },
+      {
+        $inc: {
+          totalPurchases: 1,
+          totalSpent: parseFloat(order && order.total) || 0
+        },
+        $min: { firstPurchaseAt: completedAt },
+        $set: {
+          lastPurchaseAt: completedAt,
+          updatedAt: now
+        },
+        $push: {
+          purchaseOrderIds: { $each: [order.id], $position: 0, $slice: 25 },
+          recentPurchases: { $each: [buyerOrderSummary], $position: 0, $slice: 10 }
+        }
+      }
+    );
+    await upsertOrderNotification(
+      { userId: String(buyerUser._id), type: 'order_completed', orderId: order.id },
+      {
+        userId: String(buyerUser._id),
+        type: 'order_completed',
+        orderId: order.id,
+        title: 'Order confirmed',
+        body: `Order ${order.id} was paid successfully. Your receipt is ready.`,
+        linkUrl: '/payment-success.html?orderId=' + encodeURIComponent(order.id),
+        receiptId: receipt.receiptId
+      }
+    );
+  }
+
+  for (const sellerSummary of sellerSummaries) {
+    await db.collection('sellerSales').updateOne(
+      { orderId: order.id, sellerId: sellerSummary.sellerId },
+      {
+        $setOnInsert: {
+          orderId: order.id,
+          sellerId: sellerSummary.sellerId,
+          createdAt: now
+        },
+        $set: {
+          sellerName: sellerSummary.sellerName,
+          sellerUsername: sellerSummary.sellerUsername,
+          buyerEmail: normalizeEmail(order && (order.buyerEmail || (order.buyer && order.buyer.email)) || ''),
+          buyerName: [order && order.buyer ? order.buyer.firstName : '', order && order.buyer ? order.buyer.lastName : ''].filter(Boolean).join(' ').trim(),
+          receiptId: receipt.receiptId,
+          itemCount: sellerSummary.itemCount,
+          grossTotal: sellerSummary.grossTotal,
+          platformFee: sellerSummary.platformFee,
+          netTotal: sellerSummary.netTotal,
+          items: sellerSummary.items,
+          status: String(order && order.status ? order.status : 'completed'),
+          soldAt: completedAt,
+          updatedAt: now
+        }
+      },
+      { upsert: true }
+    );
+
+    await db.collection('sellers').updateOne(
+      { userId: sellerSummary.sellerId, saleOrderIds: { $ne: order.id } },
+      {
+        $inc: {
+          totalSales: 1,
+          totalRevenue: sellerSummary.grossTotal,
+          totalItemsSold: sellerSummary.itemCount
+        },
+        $min: { firstSaleAt: completedAt },
+        $set: {
+          lastSaleAt: completedAt,
+          updatedAt: now
+        },
+        $push: {
+          saleOrderIds: { $each: [order.id], $position: 0, $slice: 50 },
+          recentSales: {
+            $each: [{
+              orderId: order.id,
+              receiptId: receipt.receiptId,
+              buyerEmail: normalizeEmail(order && (order.buyerEmail || (order.buyer && order.buyer.email)) || ''),
+              itemCount: sellerSummary.itemCount,
+              grossTotal: sellerSummary.grossTotal,
+              netTotal: sellerSummary.netTotal,
+              soldAt: completedAt
+            }],
+            $position: 0,
+            $slice: 10
+          }
+        }
+      }
+    );
+
+    await upsertOrderNotification(
+      { userId: sellerSummary.sellerId, type: 'sale_completed', orderId: order.id },
+      {
+        userId: sellerSummary.sellerId,
+        type: 'sale_completed',
+        orderId: order.id,
+        title: 'New sale recorded',
+        body: `Order ${order.id} includes ${sellerSummary.itemCount} item(s) from your shop.`,
+        linkUrl: '/seller-dashboard.html#orders',
+        sellerRevenue: sellerSummary.grossTotal
+      }
+    );
+  }
+
+  const orderUpdates = {
+    sellerSummaries: sellerSummaries,
+    receipt: receipt,
+    receiptId: receipt.receiptId,
+    postPurchaseSyncAt: now,
+    updatedAt: now
+  };
+  if (buyerUser && buyerUser._id) {
+    orderUpdates.userId = String(buyerUser._id);
+  }
+
+  await db.collection('orders').updateOne(
+    { id: order.id },
+    { $set: orderUpdates }
+  );
+
+  return { ...order, ...orderUpdates };
+}
+
 async function sendPayPalSellerPayout(order, options) {
   const payoutMeta = options || {};
   const orderId = String(order && order.id ? order.id : '').trim();
@@ -1250,7 +1585,7 @@ async function sendPayPalSellerPayout(order, options) {
         $set: {
           status: 'failed',
           error: reason,
-          paypalError: tokenData,
+          paypalError: { message: reason },
           updatedAt: new Date()
         }
       }
@@ -1509,6 +1844,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     }
 
     const { items, buyer, shippingMethod } = req.body;
+    const checkoutUser = getOptionalCheckoutUser(req);
     
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'No items in order' });
@@ -1643,6 +1979,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       total,
       currency: 'USD',
       status: 'pending',
+      ...(checkoutUser && checkoutUser.userId ? { userId: String(checkoutUser.userId) } : {}),
       createdAt: new Date()
     });
     
@@ -1701,33 +2038,61 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       }
     );
 
+    // Synchronize every persistent post-purchase record once the payment is captured.
+    // This keeps buyer history, receipts, seller analytics, notifications, and inventory in sync.
+    const completedOrder = await db.collection('orders').findOne({ id: orderId });
+    const syncedOrder = await syncCompletedOrderRecords(completedOrder || {
+      ...order,
+      status: 'completed',
+      paypalCaptureId: captureData.id,
+      completedAt: new Date()
+    });
+
     // Auto-create and send seller payout for this order
+    let payoutResult = null;
     try {
-      const payoutResult = await sendPayPalSellerPayout(order, { triggerSource: 'capture' });
+      payoutResult = await sendPayPalSellerPayout(syncedOrder, { triggerSource: 'capture' });
       if (!payoutResult.ok) {
-        console.error('Automatic payout failed for order', order.id, '-', payoutResult.error);
+        console.error('Automatic payout failed for order', syncedOrder.id, '-', payoutResult.error);
       } else if (payoutResult.alreadyPaid) {
-        console.log('Automatic payout skipped (already paid) for order', order.id);
+        console.log('Automatic payout skipped (already paid) for order', syncedOrder.id);
       } else {
-        console.log('Automatic payout sent for order', order.id);
+        console.log('Automatic payout sent for order', syncedOrder.id);
       }
     } catch (payoutErr) {
       console.error('Failed to process automatic payout:', payoutErr.message);
     }
 
+    const payoutSeller = getOrderSellerInfo(syncedOrder);
+    if (payoutSeller.sellerId) {
+      await upsertOrderNotification(
+        { userId: payoutSeller.sellerId, type: 'payout_update', orderId: syncedOrder.id },
+        {
+          userId: payoutSeller.sellerId,
+          type: 'payout_update',
+          orderId: syncedOrder.id,
+          title: payoutResult && payoutResult.ok ? 'Payout recorded' : 'Payout needs attention',
+          body: payoutResult && payoutResult.ok
+            ? `The payout record for order ${syncedOrder.id} has been updated.`
+            : `Order ${syncedOrder.id} was paid, but the payout record needs review.`,
+          linkUrl: '/seller-payouts.html'
+        }
+      );
+    }
+
     // Send transactional purchase emails (buyer thank-you + seller sold notification).
-    const buyerEmail = normalizeEmail(order.buyerEmail || (order.buyer && order.buyer.email) || '');
+    const buyerEmail = normalizeEmail(syncedOrder.buyerEmail || (syncedOrder.buyer && syncedOrder.buyer.email) || '');
     if (buyerEmail) {
       await sendEventEmailSafe(
         buyerEmail,
         'Thank you for your purchase on Zorexium',
-        `<p>Thanks for your order${order.buyer && order.buyer.firstName ? ', ' + order.buyer.firstName : ''}!</p><p>Your order <strong>${order.id}</strong> has been confirmed.</p>`,
-        '/payment-success.html?orderId=' + encodeURIComponent(order.id)
+        `<p>Thanks for your order${syncedOrder.buyer && syncedOrder.buyer.firstName ? ', ' + syncedOrder.buyer.firstName : ''}!</p><p>Your order <strong>${syncedOrder.id}</strong> has been confirmed.</p><p>Your receipt ID is <strong>${syncedOrder.receiptId || 'pending'}</strong>.</p>`,
+        '/payment-success.html?orderId=' + encodeURIComponent(syncedOrder.id)
       );
     }
 
     const sellerItemsMap = new Map();
-    (Array.isArray(order.items) ? order.items : []).forEach(function(item) {
+    (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).forEach(function(item) {
       const sellerId = item && item.sellerId ? String(item.sellerId) : '';
       if (!sellerId) return;
       if (!sellerItemsMap.has(sellerId)) sellerItemsMap.set(sellerId, []);
@@ -1746,7 +2111,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
         await sendEventEmailSafe(
           sellerEmail,
           'Your product sold on Zorexium',
-          `<p>Great news${sellerUser && sellerUser.firstName ? ', ' + sellerUser.firstName : ''}! Your listing just sold.</p><p>Order <strong>${order.id}</strong> includes <strong>${sellerItems.length}</strong> item(s) from your shop.</p>`,
+          `<p>Great news${sellerUser && sellerUser.firstName ? ', ' + sellerUser.firstName : ''}! Your listing just sold.</p><p>Order <strong>${syncedOrder.id}</strong> includes <strong>${sellerItems.length}</strong> item(s) from your shop.</p>`,
           soldItemLink
         );
       } catch (sellerMailErr) {
@@ -1754,7 +2119,12 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       }
     }
 
-    res.json({ orderId, paypalCaptureId: captureData.id, status: 'completed' });
+    res.json({
+      orderId,
+      paypalCaptureId: captureData.id,
+      status: 'completed',
+      receiptId: syncedOrder.receiptId || null
+    });
   } catch (error) {
     console.error('Capture error:', error);
     res.status(500).json({ error: error.message });
@@ -1795,6 +2165,49 @@ app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, r
     res.json(orders);
   } catch (error) {
     console.error('Error fetching user orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/orders/sold – get completed orders that include the current seller's products.
+app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const orders = await db.collection('orders')
+      .find({ 'items.sellerId': req.userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    const sellerOrders = orders.map(function(order) {
+      const sellerSummaries = Array.isArray(order.sellerSummaries) && order.sellerSummaries.length > 0
+        ? order.sellerSummaries
+        : buildSellerOrderSummaries(order);
+      const sellerSummary = sellerSummaries.find(function(summary) {
+        return String(summary && summary.sellerId ? summary.sellerId : '') === String(req.userId);
+      }) || null;
+      const sellerItems = (Array.isArray(order.items) ? order.items : []).filter(function(item) {
+        return String(item && item.sellerId ? item.sellerId : '') === String(req.userId);
+      });
+      return {
+        ...order,
+        sellerItems: sellerItems,
+        sellerItemCount: sellerSummary ? sellerSummary.itemCount : sellerItems.reduce(function(sum, item) {
+          return sum + (Math.max(1, parseInt(item && item.quantity, 10) || 1));
+        }, 0),
+        sellerGrossTotal: sellerSummary ? sellerSummary.grossTotal : sellerItems.reduce(function(sum, item) {
+          const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+          const unitPrice = parseFloat(item && item.price) || 0;
+          return sum + parseFloat((unitPrice * quantity).toFixed(2));
+        }, 0),
+        sellerNetTotal: sellerSummary ? sellerSummary.netTotal : 0,
+        buyerDisplayName: [order && order.buyer ? order.buyer.firstName : '', order && order.buyer ? order.buyer.lastName : ''].filter(Boolean).join(' ').trim()
+          || normalizeEmail(order && order.buyerEmail ? order.buyerEmail : '')
+          || '—'
+      };
+    });
+    res.json(sellerOrders);
+  } catch (error) {
+    console.error('Error fetching seller orders:', error);
     res.status(500).json({ error: error.message });
   }
 });
