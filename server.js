@@ -1322,6 +1322,8 @@ async function syncCompletedOrderRecords(order) {
         const nextQuantity = Math.max(0, currentQuantity - quantitySold);
         const productUpdateFields = { quantity: nextQuantity, updatedAt: now };
         if (nextQuantity === 0) {
+          // Business rule: automatically deactivate a listing once all inventory is sold.
+          // This prevents new purchases and hides the item from marketplace search results.
           productUpdateFields.status = 'inactive';
         }
         await db.collection('products').updateOne(
@@ -2074,6 +2076,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       paypalCaptureId: captureData.id,
       completedAt: new Date()
     };
+    // Remove the MongoDB _id so the orders collection generates a fresh one for this document.
     delete completedOrderDoc._id;
 
     if (fromPendingOrders) {

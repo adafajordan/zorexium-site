@@ -1183,15 +1183,16 @@
       '<tbody>' + orders.map(function(o) {
         var buyer = o.buyerDisplayName || (o.buyer && (o.buyer.email || o.buyer.name)) || (o.shippingAddress && o.shippingAddress.name) || '—';
         var items = o.sellerItemCount || (o.sellerItems || []).length || (o.items || []).length;
-        var safeId = escHtml((o.id || o._id || '').replace(/'/g, ''));
+        var rawId = o.id || o._id || '';
         var actionCell = '';
         if (o.shippingStatus === 'shipped') {
           actionCell = '<span class="text-xs font-semibold text-green-600"><i class="fas fa-truck mr-1"></i>Shipped</span>';
         } else if ((o.status || '').toLowerCase() === 'completed') {
-          actionCell = '<button onclick="markShipped(\'' + safeId + '\')" class="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-200 font-semibold transition-colors"><i class="fas fa-shipping-fast mr-1"></i>Mark Shipped</button>';
+          // Use a data-orderid attribute and delegated click handler to avoid inline onclick XSS risk.
+          actionCell = '<button data-orderid="' + escHtml(rawId) + '" class="ship-btn text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-200 font-semibold transition-colors"><i class="fas fa-shipping-fast mr-1"></i>Mark Shipped</button>';
         }
         return '<tr class="order-row border-b border-gray-100">' +
-          '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + escHtml((o.id || o._id || '').slice(0, 14) + '…') + '</td>' +
+          '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + escHtml(rawId.slice(0, 14) + '…') + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + fmtDate(o.createdAt) + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + escHtml(buyer) + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + items + ' item' + (items !== 1 ? 's' : '') + '</td>' +
@@ -1201,6 +1202,14 @@
           '</tr>';
       }).join('') +
       '</tbody></table></div>';
+
+    // Delegated click handler for "Mark Shipped" buttons to avoid inline onclick with unsanitised IDs
+    el.querySelectorAll('button.ship-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var orderId = btn.getAttribute('data-orderid');
+        if (orderId) markShipped(orderId);
+      });
+    });
   }
 
   async function markShipped(orderId) {
@@ -1215,10 +1224,11 @@
         throw new Error(err.error || 'Failed to mark as shipped');
       }
       ZrxNotify.showNotification('Order marked as shipped. The buyer has been notified by email.', 'success');
-      // Refresh orders list
-      _allOrders = [];
-      await loadOrdersPreview();
-      await loadOrders();
+      // Update the in-memory orders array so we don't need a full reload
+      var idx = _allOrders.findIndex(function(o) { return (o.id || o._id || '') === orderId; });
+      if (idx !== -1) { _allOrders[idx] = Object.assign({}, _allOrders[idx], { shippingStatus: 'shipped' }); }
+      renderOrdersTable(_allOrders);
+      renderRecentOrders(_allOrders.slice(0, 5));
     } catch (err) {
       ZrxNotify.showNotification(err.message || 'Failed to mark order as shipped. Please try again.', 'error');
     }

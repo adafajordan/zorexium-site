@@ -1412,11 +1412,10 @@
       ZrxNotify.showNotification('This product is no longer available.', 'error'); return;
     }
     var quantity = parseInt(document.getElementById('quantity').value);
-    if (currentProduct.quantity !== null && !isNaN(currentProduct.quantity) && currentProduct.quantity <= 0) {
-      ZrxNotify.showNotification('This product is out of stock.', 'error'); return;
-    }
-    if (currentProduct.quantity !== null && !isNaN(currentProduct.quantity) && quantity > currentProduct.quantity) {
-      ZrxNotify.showNotification('Only ' + currentProduct.quantity + ' unit(s) are available.', 'error'); return;
+    var availableQty = (currentProduct.quantity !== null && !isNaN(currentProduct.quantity)) ? currentProduct.quantity : null;
+    if (availableQty !== null) {
+      if (availableQty <= 0) { ZrxNotify.showNotification('This product is out of stock.', 'error'); return; }
+      if (quantity > availableQty) { ZrxNotify.showNotification('Only ' + availableQty + ' unit(s) are available.', 'error'); return; }
     }
 
     if (ZrxSession.isLoggedIn()) {
