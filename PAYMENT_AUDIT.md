@@ -1,111 +1,80 @@
-# Payment Acceptance Audit (Code-Level)
+# Checkout Funds Flow Audit (where money goes)
 
 Date: 2026-05-09  
 Repository: `adafajordan/zorexium-site`
 
-## 1) Payment provider integrations found
+## Scope
 
-### Active provider
-- **PayPal only** (no active Stripe payment processing code found).
+This audit traces funds for purchases started from `checkout.html` only.
 
-### Frontend PayPal usage
-- `checkout.html` loads PayPal SDK from `/api/config` and runs order create/capture flow (`checkout.html:523-539`, `checkout.html:772-889`).
-- `seller-signup.html` loads PayPal subscription SDK and captures `subscriptionID` for Pro signup (`seller-signup.html:625-730`, `seller-signup.html:829-857`).
-- `seller-dashboard.html` and `listing-wizard.html` load PayPal subscription SDK for Pro upgrades (`seller-dashboard.html:1453-1537`, `listing-wizard.html:1757-1837`).
+## 1) Which payment processor/account receives checkout money
 
-### Backend PayPal usage
-- PayPal mode/API/env setup (`server.js:1077-1084`).
-- Checkout order creation (`POST /api/orders`) and capture (`POST /api/orders/:orderId/capture`) (`server.js:1490-1717`).
-- Pro subscription plan lookup/creation and verification (`server.js:1316-1391`, `server.js:1393-1487`, `server.js:2521-2573`).
-- Seller payouts via PayPal Payouts API (`server.js:1124-1314`, `server.js:2870-2912`).
+- Checkout uses **PayPal** only:
+  - Frontend loads PayPal SDK using `paypalClientId` from backend config (`checkout.html:521-540`, `server.js:425-428`).
+  - Backend authenticates to PayPal with `PAYPAL_CLIENT_ID` + `PAYPAL_SECRET` (`server.js:1082-1083`, `server.js:1104-1123`).
+- `POST /api/orders` creates a PayPal order at `/v2/checkout/orders` (`server.js:1502-1653`, especially `server.js:1585-1617`).
+- In the `purchase_units` payload, there is **no explicit `payee` override** (`server.js:1593-1615`), so capture funds go to the merchant account behind the configured PayPal API credentials.
 
-## 2) Why payments are currently failing (root causes)
+**Conclusion:** buyer payment is captured into the PayPal business account associated with `PAYPAL_CLIENT_ID`/`PAYPAL_SECRET` for the active `PAYPAL_MODE` (`sandbox` or `live`) (`server.js:1077-1083`).
 
-## Confirmed code-level blockers
-1. **Temporary forced-$1 override is active in production code**, not normal pricing:
-   - Checkout is hardcoded to `$1.00` (`FORCED_TEST_CHECKOUT_TOTAL_USD`) in `/api/orders` (`server.js:1085-1091`, `server.js:1515-1549`).
-   - Pro subscription plan creation is hardcoded to `$1.00` (`FORCED_TEST_PRO_SUBSCRIPTION_USD`) (`server.js:1089-1091`, `server.js:1344-1360`).
-2. **Frontend-displayed totals do not match backend charge logic**:
-   - Frontend calculates subtotal/shipping/tax from cart (`checkout.html:595-644`).
-   - Backend charge ignores those totals and submits forced `$1.00` (`server.js:1515-1569`).
-3. **Payment flow hard-depends on backend DB availability**:
-   - `/api/orders` and `/api/orders/:orderId/capture` return `503` when MongoDB is unavailable (`server.js:1492-1494`, `server.js:1618-1620`).
-4. **Payment flow hard-depends on PayPal credentials being present**:
-   - Missing `PAYPAL_CLIENT_ID`/`PAYPAL_SECRET` causes `503` in create/capture/subscription endpoints (`server.js:1495-1497`, `server.js:1621-1623`, `server.js:1413-1415`, `server.js:2534-2536`).
-5. **No PayPal webhook endpoint is implemented**:
-   - `PAYPAL_WEBHOOK_ID` is documented, but webhook handler/verification route is absent (`README.md:26`, `README.md:55`; no webhook route in `server.js`).
+## 2) Intermediary/routing logic after capture
 
-## High-probability runtime rejection case
-6. **Invalid country code can be sent to PayPal when user selects “Other”**:
-   - Checkout uses `<option value="OTHER">Other</option>` (`checkout.html:425`),
-   - Then forwards that value to PayPal `shipping.address.country_code` (`checkout.html:802`, `server.js:1578`),
-   - PayPal expects a valid 2-letter ISO country code for `country_code`.
+After buyer approval:
+- Frontend calls `POST /api/orders/:orderId/capture` (`checkout.html:854-888`).
+- Backend captures via PayPal `/v2/checkout/orders/{paypalOrderId}/capture` (`server.js:1661-1691`).
+- Order is marked completed (`server.js:1693-1702`).
+- Then backend immediately attempts seller payout via `sendPayPalSellerPayout(order, { triggerSource: 'capture' })` (`server.js:1704-1716`).
 
-## 3) Required changes so payments can be accepted successfully
+`sendPayPalSellerPayout` routing logic:
+- Computes payout as `order.total * (1 - PLATFORM_FEE_RATE)`; default fee 10% (`server.js:1090-1093`, `server.js:1155-1157`).
+- Looks up seller payout target from `sellers.payoutAccountId` and requires `payoutVerified === true` (`server.js:1228-1234`).
+- Sends PayPal Payout to `receiver: payoutAccountId` (`server.js:1268-1274`, `server.js:1277-1285`).
 
-### Required code changes
-1. Remove troubleshooting forced-$1 logic and restore dynamic pricing for checkout:
-   - Replace forced constants usage in `/api/orders` with validated subtotal/shipping/tax calculation from trusted product data (`server.js:1515-1549`).
-2. Remove forced-$1 Pro subscription plan creation logic:
-   - Stop using `FORCED_TEST_PRO_SUBSCRIPTION_USD` and fallback `PAYPAL_PRO_SELLER_TEST_PLAN_ID` (`server.js:1089-1091`, `server.js:1318-1322`, `server.js:1358`).
-3. Validate/normalize shipping country code before sending to PayPal:
-   - Enforce ISO-3166-1 alpha-2 values only; block or map unsupported “OTHER” prior to PayPal create-order call (`checkout.html:417-425`, `server.js:1578`).
-4. Keep buyer-visible totals and charged totals aligned:
-   - Return server-computed totals in `/api/orders` response and render those on frontend if needed.
-5. (Recommended) Add webhook endpoint for asynchronous PayPal events:
-   - Handle subscription lifecycle/payment events and signature verification.
+**Conclusion:** flow is platform-collection first, then separate PayPal Payout to seller email account.
 
-### Required deployment/configuration steps
-1. In Render, set and verify:
-   - `PAYPAL_MODE` (`sandbox` for testing, `live` for real charges),
-   - matching `PAYPAL_CLIENT_ID` + `PAYPAL_SECRET`,
-   - `PAYPAL_PRO_SELLER_PLAN_ID` for the **same mode**.
-2. Ensure `MONGO_URI` is configured and healthy (order creation/capture requires DB).
-3. Ensure PayPal merchant account is fully enabled for:
-   - Checkout payments,
-   - Subscriptions,
-   - Payouts (used after capture).
+## 3) Where recipient account/destination is set
 
-## 4) What is triggered after successful payment
+### Buyer payment destination (merchant account)
+- Determined by backend env secrets:
+  - `PAYPAL_CLIENT_ID`
+  - `PAYPAL_SECRET`
+  - `PAYPAL_MODE`
+  (`server.js:1077-1083`, `README.md:21-24`).
 
-## A) Successful checkout purchase (PayPal order capture)
+### Seller payout destination
+- Determined per seller in DB field `sellers.payoutAccountId` (email).
+- Used as `receiver` in PayPal Payout call (`server.js:1232`, `server.js:1271`).
+- `payoutVerified` gate controls whether payout is attempted (`server.js:1233-1240`).
 
-### Frontend side effects
-- `onApprove` calls backend capture endpoint (`checkout.html:843-853`).
-- On success:
-  - clears cart (`checkout.html:863-871`),
-  - redirects to success page (`checkout.html:872`).
+### Where payout account is written from UI
+- Seller dashboard saves payout account using:
+  - `PUT /api/sellers/me` body `{ payoutAccountId: email, payoutVerified: true }`
+  (`seller-dashboard.html:1265-1269`).
+- Backend accepts and writes those fields (`server.js:2500-2524`).
 
-### Backend side effects
-When `POST /api/orders/:orderId/capture` succeeds (`server.js:1616-1717`):
-1. Updates `orders` record to `status: completed` with `paypalCaptureId` (`server.js:1648-1657`).
-2. Attempts automatic seller payout via PayPal Payouts API (`server.js:1659-1671`, `server.js:1124-1314`), writing/updated records in `payouts`.
-3. Sends buyer purchase-confirmation email (`server.js:1673-1682`).
-4. Sends seller “your product sold” email(s), grouped by seller (`server.js:1684-1710`).
-5. Returns JSON success payload (`server.js:1712`).
+## 4) End-to-end funds flow
 
-## B) Successful Pro Seller subscription
+1. Buyer clicks PayPal in `checkout.html` and frontend calls backend `/api/orders` (`checkout.html:792-847`).
+2. Backend recalculates totals from product data, creates PayPal order, stores internal order with `paypalOrderId` (`server.js:1531-1653`).
+3. Buyer approves in PayPal popup.
+4. Frontend calls `/api/orders/:orderId/capture` (`checkout.html:854-888`).
+5. Backend captures payment at PayPal and marks order completed (`server.js:1677-1702`).
+6. Backend attempts PayPal Payout from platform PayPal account to seller payout email (`server.js:1704-1716`, `server.js:1148-1330`).
+7. Buyer/seller emails are sent; frontend clears cart and redirects success (`server.js:1718-1757`, `checkout.html:873-884`).
 
-### Seller signup page flow
-- PayPal button success stores `proSubscriptionId` client-side (`seller-signup.html:672-677`).
-- Actual backend activation happens only on form submit to `/api/sellers/subscription/confirm` (`seller-signup.html:849-857`).
-- Backend verifies subscription with PayPal, inserts `sellers` document, updates `users.isSeller`, and sends seller onboarding/pro emails (`server.js:1393-1483`).
+## 5) Warnings / recommended follow-ups
 
-### Seller dashboard/listing wizard upgrade flow
-- PayPal button success triggers `/api/sellers/upgrade-to-pro` (`seller-dashboard.html:1509-1516`, `listing-wizard.html:1809-1837`).
-- Backend verifies subscription, updates seller `tier` and subscription fields, sends upgrade email (`server.js:2521-2569`).
+1. **Cannot identify exact merchant email/account from repo alone.**  
+   Code only references credentials via env vars; check deployment secrets and PayPal dashboard to confirm destination account (`README.md:11-24`, `server.js:1082-1083`).
 
-## 5) Error handling and user/admin visibility
+2. **Seller payout “verification” is self-asserted today.**  
+   Frontend sets `payoutVerified: true`, and backend accepts it without PayPal ownership proof (`seller-dashboard.html:1268`, `server.js:2522-2524`).  
+   Recommendation: verify payout ownership server-side (OAuth onboarding or verification challenge) before allowing `payoutVerified=true`.
 
-- Frontend surfaces PayPal SDK/init/create/capture errors via notifications/messages (`checkout.html:530-539`, `checkout.html:837-883`; similar in seller subscription pages).
-- Backend logs PayPal API errors and returns error messages (`server.js:1587-1590`, `server.js:1643-1646`, `server.js:1713-1715`).
-- Payout failures are persisted in `payouts` collection with status/error fields (`server.js:1177-1313`), but checkout still completes even if payout fails.
+3. **Payout failure does not block checkout success.**  
+   Capture can succeed while payout fails; system logs failure and still returns completed order (`server.js:1704-1716`).  
+   Recommendation: add operational alerting/retry workflow and admin monitoring for failed `payouts` records.
 
-## 6) Bottom-line outcome
-
-Payments can be accepted once:
-1. forced troubleshooting charge overrides are removed,
-2. PayPal live/sandbox credentials + plan IDs are correctly matched and configured,
-3. DB availability is stable,
-4. invalid shipping country values are prevented,
-5. (recommended) webhook handling is added for robust asynchronous reconciliation.
+4. **No webhook reconciliation endpoint currently active.**  
+   `PAYPAL_WEBHOOK_ID` is documented but webhook handling is not implemented (`README.md:25`).  
+   Recommendation: add verified webhook processing for asynchronous payment/payout state reconciliation.
