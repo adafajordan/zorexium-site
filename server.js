@@ -1092,6 +1092,7 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '';
 const PAYPAL_PRO_SELLER_PLAN_ID = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
 // Pro Seller monthly subscription price (USD) — $1/month
 const PRO_SELLER_MONTHLY_PRICE_USD = '1.00';
@@ -1133,6 +1134,45 @@ async function fetchPayPalAccessToken() {
     throw new Error((tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) || 'Failed to authenticate with PayPal');
   }
   return accessToken;
+}
+
+function getPayPalWebhookHeaders(req) {
+  return {
+    transmissionId: String(req && req.headers ? (req.headers['paypal-transmission-id'] || '') : '').trim(),
+    transmissionTime: String(req && req.headers ? (req.headers['paypal-transmission-time'] || '') : '').trim(),
+    transmissionSig: String(req && req.headers ? (req.headers['paypal-transmission-sig'] || '') : '').trim(),
+    authAlgo: String(req && req.headers ? (req.headers['paypal-auth-algo'] || '') : '').trim(),
+    certUrl: String(req && req.headers ? (req.headers['paypal-cert-url'] || '') : '').trim()
+  };
+}
+
+async function verifyPayPalWebhookSignature(webhookEvent, webhookHeaders) {
+  if (!PAYPAL_WEBHOOK_ID) {
+    throw new Error('PAYPAL_WEBHOOK_ID is required to verify PayPal webhooks');
+  }
+  const accessToken = await fetchPayPalAccessToken();
+  const verifyRes = await fetch(`${PAYPAL_API}/v1/notifications/verify-webhook-signature`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      auth_algo: webhookHeaders.authAlgo,
+      cert_url: webhookHeaders.certUrl,
+      transmission_id: webhookHeaders.transmissionId,
+      transmission_sig: webhookHeaders.transmissionSig,
+      transmission_time: webhookHeaders.transmissionTime,
+      webhook_id: PAYPAL_WEBHOOK_ID,
+      webhook_event: webhookEvent
+    })
+  });
+  const verifyData = await verifyRes.json().catch(function() { return {}; });
+  if (!verifyRes.ok) {
+    const reason = verifyData && (verifyData.message || verifyData.error_description || verifyData.name);
+    throw new Error(reason || 'Failed to verify PayPal webhook signature');
+  }
+  return String(verifyData && verifyData.verification_status ? verifyData.verification_status : '').toUpperCase() === 'SUCCESS';
 }
 
 function getOrderSellerInfo(order) {
@@ -1796,24 +1836,38 @@ async function sendPayPalSellerPayout(order, options) {
       return { ok: false, error: reason };
     }
 
+    const batchHeader = payoutData && payoutData.batch_header ? payoutData.batch_header : {};
+    const batchStatus = String(batchHeader && batchHeader.batch_status ? batchHeader.batch_status : '').toUpperCase();
+    const payoutUpdates = {
+      payoutAccountId: snapshot.receiverEmail,
+      paypalPayoutBatchId: batchHeader && batchHeader.payout_batch_id ? batchHeader.payout_batch_id : null,
+      paypalBatchStatus: batchStatus || null,
+      paypalPayoutResponse: payoutData,
+      updatedAt: new Date(),
+      onboardingRequired: false,
+      error: null
+    };
+    let resultingStatus = 'processing';
+    if (batchStatus === 'SUCCESS') {
+      resultingStatus = 'paid';
+      payoutUpdates.paidAt = new Date();
+    } else if (batchStatus === 'DENIED' || batchStatus === 'CANCELED') {
+      resultingStatus = 'failed';
+      payoutUpdates.error = `PayPal payout batch status: ${batchStatus}`;
+    }
+    payoutUpdates.status = resultingStatus;
+
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
-        $set: {
-          status: 'paid',
-          payoutAccountId: snapshot.receiverEmail,
-          paypalPayoutBatchId: payoutData && payoutData.batch_header ? payoutData.batch_header.payout_batch_id : null,
-          paypalBatchStatus: payoutData && payoutData.batch_header ? payoutData.batch_header.batch_status : null,
-          paypalPayoutResponse: payoutData,
-          paidAt: new Date(),
-          updatedAt: new Date(),
-          onboardingRequired: false,
-          error: null
-        }
+        $set: payoutUpdates
       }
     );
 
-    return { ok: true, payout: payoutData };
+    if (resultingStatus === 'failed') {
+      return { ok: false, error: payoutUpdates.error || 'PayPal payout failed', payout: payoutData };
+    }
+    return { ok: true, payout: payoutData, processing: resultingStatus === 'processing' };
   } catch (error) {
     await db.collection('payouts').updateOne(
       { orderId: orderId },
@@ -1821,6 +1875,33 @@ async function sendPayPalSellerPayout(order, options) {
     );
     return { ok: false, error: error.message };
   }
+}
+
+async function retryEligibleBlockedPayoutsForSeller(sellerId, triggerSource) {
+  const payouts = await db.collection('payouts')
+    .find({ sellerId: String(sellerId), status: 'blocked_onboarding' })
+    .sort({ createdAt: 1 })
+    .limit(100)
+    .toArray();
+  const summary = { scanned: payouts.length, attempted: 0, sent: 0, processing: 0, failed: 0, deferred: 0 };
+  for (const payout of payouts) {
+    const orderId = String(payout && payout.orderId ? payout.orderId : '').trim();
+    if (!orderId) continue;
+    const order = await db.collection('orders').findOne({ id: orderId });
+    if (!order || String(order.status || '').toLowerCase() !== 'completed') continue;
+    if (String(order.shippingStatus || '').toLowerCase() !== 'shipped') continue;
+    summary.attempted++;
+    try {
+      const result = await sendPayPalSellerPayout(order, { triggerSource: triggerSource || 'onboarding_verified' });
+      if (!result.ok) summary.failed++;
+      else if (result.deferred) summary.deferred++;
+      else if (result.processing) summary.processing++;
+      else summary.sent++;
+    } catch (_) {
+      summary.failed++;
+    }
+  }
+  return summary;
 }
 
 // ── PRO SELLER SUBSCRIPTION PLAN ─────────────────────────────────────────────
@@ -3442,11 +3523,13 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
     );
 
     const updatedSeller = await db.collection('sellers').findOne({ userId: req.userId });
+    const retrySummary = await retryEligibleBlockedPayoutsForSeller(req.userId, 'onboarding_verified');
     res.json({
       success: true,
       payoutAccountId: updatedSeller && updatedSeller.payoutAccountId ? updatedSeller.payoutAccountId : null,
       payoutVerified: true,
-      onboardingStatus: 'connected'
+      onboardingStatus: 'connected',
+      retrySummary: retrySummary
     });
   } catch (error) {
     console.error('Error verifying payout account:', error);
@@ -3916,7 +3999,7 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
   }
 
   const { status } = req.body;
-  const validStatuses = ['pending_delivery', 'blocked_onboarding', 'ready_to_pay', 'processing', 'paid', 'failed'];
+  const validStatuses = ['pending_delivery', 'blocked_onboarding', 'ready_to_pay'];
   if (!status || !validStatuses.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
   }
@@ -3930,9 +4013,18 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
       return res.status(403).json({ error: 'Forbidden: you do not own this payout' });
     }
 
+    if (status === 'ready_to_pay') {
+      const order = await db.collection('orders').findOne({ id: String(payout.orderId || '') });
+      if (!order || String(order.status || '').toLowerCase() !== 'completed') {
+        return res.status(409).json({ error: 'Payout order is not in a completed state' });
+      }
+      if (String(order.shippingStatus || '').toLowerCase() !== 'shipped') {
+        return res.status(409).json({ error: 'Seller must mark the order as shipped before payout can be marked ready' });
+      }
+    }
+
     const updates = { status, updatedAt: new Date() };
     if (status === 'ready_to_pay') updates.deliveredAt = new Date();
-    if (status === 'paid') updates.paidAt = new Date();
 
     await db.collection('payouts').updateOne({ _id: objectId }, { $set: updates });
     const updated = await db.collection('payouts').findOne({ _id: objectId });
@@ -3956,6 +4048,148 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
   } catch (error) {
     console.error('Error updating payout:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/payouts/:id/send – send/retry payout for an existing payout row (auth required)
+app.post('/api/payouts/:id/send', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  let objectId;
+  try {
+    objectId = new ObjectId(req.params.id);
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid payout ID' });
+  }
+
+  try {
+    const payout = await db.collection('payouts').findOne({ _id: objectId });
+    if (!payout) return res.status(404).json({ error: 'Payout not found' });
+    if (!req.isAdmin && String(payout.sellerId || '') !== String(req.userId || '')) {
+      return res.status(403).json({ error: 'Forbidden: you do not own this payout' });
+    }
+    if (String(payout.status || '').toLowerCase() === 'paid') {
+      return res.status(409).json({ error: 'Payout has already been sent' });
+    }
+
+    const orderId = String(payout.orderId || '').trim();
+    if (!orderId) return res.status(400).json({ error: 'Payout order ID is missing' });
+    const order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found for payout' });
+    if (String(order.status || '').toLowerCase() !== 'completed') {
+      return res.status(409).json({ error: 'Payouts can only be sent for completed orders' });
+    }
+    if (String(order.shippingStatus || '').toLowerCase() !== 'shipped') {
+      return res.status(409).json({ error: 'Payouts become eligible after the seller marks the order as shipped' });
+    }
+
+    const payoutResult = await sendPayPalSellerPayout(order, { triggerSource: req.isAdmin ? 'admin_manual' : 'api' });
+    if (!payoutResult.ok) {
+      return res.status(502).json({ error: payoutResult.error || 'Failed to send payout' });
+    }
+    if (payoutResult.deferred) {
+      return res.status(409).json({ error: payoutResult.reason || 'Payout is currently not eligible' });
+    }
+
+    const updated = await db.collection('payouts').findOne({ _id: objectId });
+    res.json({ success: true, payout: updated || null, processing: !!payoutResult.processing });
+  } catch (error) {
+    console.error('Error sending payout from payout row:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/paypal/webhook – verify and process PayPal asynchronous events
+app.post('/api/paypal/webhook', async function(req, res) {
+  const event = req.body;
+  if (!event || typeof event !== 'object') {
+    return res.status(400).json({ error: 'Invalid webhook payload' });
+  }
+
+  try {
+    const webhookHeaders = getPayPalWebhookHeaders(req);
+    if (!webhookHeaders.transmissionId || !webhookHeaders.transmissionSig || !webhookHeaders.transmissionTime || !webhookHeaders.authAlgo || !webhookHeaders.certUrl) {
+      return res.status(400).json({ error: 'Missing PayPal webhook signature headers' });
+    }
+    const verified = await verifyPayPalWebhookSignature(event, webhookHeaders);
+    if (!verified) return res.status(400).json({ error: 'Invalid PayPal webhook signature' });
+
+    const eventType = String(event && event.event_type ? event.event_type : '');
+    const resource = event && event.resource ? event.resource : {};
+    const now = new Date();
+
+    if (eventType.startsWith('PAYMENT.PAYOUTS-ITEM.')) {
+      const senderItemId = String(
+        resource && resource.payout_item && resource.payout_item.sender_item_id
+          ? resource.payout_item.sender_item_id
+          : (resource && resource.sender_item_id ? resource.sender_item_id : '')
+      ).trim();
+      const batchId = String(
+        resource && resource.payout_batch_id
+          ? resource.payout_batch_id
+          : (resource && resource.payout_item && resource.payout_item.payout_batch_id ? resource.payout_item.payout_batch_id : '')
+      ).trim();
+
+      const itemUpdate = {
+        paypalLastWebhookEvent: {
+          eventType: eventType,
+          eventId: String(event && event.id ? event.id : ''),
+          receivedAt: now,
+          resource: resource
+        },
+        paypalBatchStatus: String(resource && resource.transaction_status ? resource.transaction_status : '').toUpperCase() || null,
+        updatedAt: now
+      };
+      const itemStatus = eventType.slice('PAYMENT.PAYOUTS-ITEM.'.length).toUpperCase();
+      if (itemStatus === 'SUCCEEDED') {
+        itemUpdate.status = 'paid';
+        itemUpdate.paidAt = now;
+        itemUpdate.error = null;
+      } else if (itemStatus === 'PENDING') {
+        itemUpdate.status = 'processing';
+      } else {
+        itemUpdate.status = 'failed';
+        itemUpdate.error = String(resource && resource.errors && resource.errors.name ? resource.errors.name : itemStatus);
+      }
+
+      const itemQuery = senderItemId
+        ? { orderId: senderItemId }
+        : (batchId ? { paypalPayoutBatchId: batchId } : null);
+      if (itemQuery) {
+        await db.collection('payouts').updateMany(itemQuery, { $set: itemUpdate });
+      }
+    } else if (eventType.startsWith('PAYMENT.PAYOUTSBATCH.')) {
+      const batchId = String(resource && resource.payout_batch_id ? resource.payout_batch_id : '').trim();
+      if (batchId) {
+        const batchStatus = eventType.slice('PAYMENT.PAYOUTSBATCH.'.length).toUpperCase();
+        const batchUpdate = {
+          paypalLastWebhookEvent: {
+            eventType: eventType,
+            eventId: String(event && event.id ? event.id : ''),
+            receivedAt: now,
+            resource: resource
+          },
+          paypalBatchStatus: batchStatus,
+          updatedAt: now
+        };
+        if (batchStatus === 'SUCCESS') {
+          batchUpdate.status = 'paid';
+          batchUpdate.paidAt = now;
+          batchUpdate.error = null;
+        } else if (batchStatus === 'PENDING' || batchStatus === 'PROCESSING') {
+          batchUpdate.status = 'processing';
+        } else {
+          batchUpdate.status = 'failed';
+          batchUpdate.error = `PayPal payout batch status: ${batchStatus}`;
+        }
+        await db.collection('payouts').updateMany({ paypalPayoutBatchId: batchId }, { $set: batchUpdate });
+      }
+    }
+
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error('PayPal webhook processing error:', error.message);
+    res.status(400).json({ error: error.message });
   }
 });
 

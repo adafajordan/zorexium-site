@@ -22,7 +22,7 @@ Set the following in your Render service's **Environment** tab:
 | `PAYPAL_SECRET` | Optional | PayPal secret |
 | `PAYPAL_MODE`   | Optional | `sandbox` or `live` |
 | `PAYPAL_PRO_SELLER_PLAN_ID` | Optional | Existing PayPal billing plan ID for Pro Seller subscriptions (must match `PAYPAL_MODE`) |
-| `PAYPAL_WEBHOOK_ID` | Optional | Reserved for a future PayPal webhook implementation; no webhook endpoint is registered yet |
+| `PAYPAL_WEBHOOK_ID` | Optional | PayPal webhook ID used by `/api/paypal/webhook` to verify webhook signatures |
 | `SMTP_HOST`     | Optional | SMTP host for email delivery (password reset, OTC login) |
 | `SMTP_PORT`     | Optional | SMTP port (default: 587) |
 | `SMTP_SECURE`   | Optional | `true` for port 465, `false` otherwise |
@@ -53,9 +53,9 @@ See `.env.example` for the full template.
   1. `server.js` still contains temporary troubleshooting overrides that force checkout purchases and Pro Seller subscriptions to `$1.00`, so production pricing is not using real cart totals or the intended recurring amount.
   2. The checkout UI still calculates the cart total in the browser, but the backend currently sends PayPal a fixed `$1.00` amount. This means the buyer-facing total and the provider charge can diverge.
   3. Pro Seller subscriptions depend on a PayPal billing plan ID. The deployment environment must provide a plan ID that matches the current `PAYPAL_MODE`; otherwise `/api/sellers/pro-plan` can fail or create a fresh test plan instead of using the intended live subscription.
-  4. `PAYPAL_WEBHOOK_ID` is documented, but no webhook route is implemented in `server.js`, so subscription lifecycle events and asynchronous PayPal events are not being verified by webhook today.
+  4. Configure `PAYPAL_WEBHOOK_ID` and your PayPal webhook so asynchronous payout events can be signature-verified and reconciled by `/api/paypal/webhook`.
 - **What to verify in Render before going live:** set `PAYPAL_MODE=live`, use the matching live `PAYPAL_CLIENT_ID`/`PAYPAL_SECRET`, configure the correct live `PAYPAL_PRO_SELLER_PLAN_ID`, and confirm the PayPal merchant account is fully enabled for live checkout, subscriptions, and payouts. The actual secret values/account readiness cannot be confirmed from this repository alone.
-- **Recommended fixes before accepting real payments:** remove the `$1.00` troubleshooting overrides, restore dynamic order/subscription pricing, keep frontend totals aligned with backend charge amounts, add a real PayPal webhook endpoint if you need asynchronous payment state handling, and monitor server logs plus failed `orders`/`payouts` records for operational visibility.
+- **Recommended fixes before accepting real payments:** keep frontend totals aligned with backend charge amounts, configure PayPal webhooks for asynchronous state handling, and monitor server logs plus failed `orders`/`payouts` records for operational visibility.
 
 ---
 
