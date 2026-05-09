@@ -1457,13 +1457,13 @@
 
       var lifetime = 0;
       var monthly = 0;
-      var pending = 0;
+      var unpaidTotal = 0;
       var available = 0;
       var blocked = 0;
       var now = new Date();
       rows.forEach(function(row) {
         lifetime += row.amount;
-        if (row.status !== 'paid') pending += row.amount;
+        if (row.status !== 'paid') unpaidTotal += row.amount;
         if (row.status === 'ready_to_pay' || row.status === 'processing') available += row.amount;
         if (row.status === 'blocked_onboarding') blocked += row.amount;
         var d = new Date(row.createdAt);
@@ -1473,7 +1473,7 @@
       });
       document.getElementById('lifetimeEarnings').textContent = fmtCurrency(lifetime);
       document.getElementById('monthlyEarnings').textContent = fmtCurrency(monthly);
-      document.getElementById('pendingPayout').textContent = fmtCurrency(pending);
+      document.getElementById('pendingPayout').textContent = fmtCurrency(unpaidTotal);
       var hint = document.getElementById('payoutReadinessHint');
       if (hint) {
         hint.textContent = 'Available: ' + fmtCurrency(available) + ' · Blocked (setup required): ' + fmtCurrency(blocked);

@@ -823,8 +823,10 @@
     var pending = 0, pendingCount = 0;
     var available = 0, availableCount = 0;
     var blocked = 0, blockedCount = 0;
+    var lifetime = 0;
 
     sellerPayouts.forEach(function(p) {
+      lifetime += Number(p.amount);
       if (p.status === 'pending_delivery') { pending += Number(p.amount); pendingCount++; }
       else if (p.status === 'ready_to_pay' || p.status === 'processing') { available += Number(p.amount); availableCount++; }
       else if (p.status === 'blocked_onboarding') { blocked += Number(p.amount); blockedCount++; }
@@ -836,7 +838,7 @@
     document.getElementById('availableCount').textContent    = availableCount + ' order' + (availableCount !== 1 ? 's' : '');
     document.getElementById('blockedAmount').textContent    = '$' + blocked.toFixed(2);
     document.getElementById('blockedCount').textContent     = blockedCount + ' order' + (blockedCount !== 1 ? 's' : '');
-    document.getElementById('totalAmount').textContent   = '$' + (pending + available + blocked).toFixed(2);
+    document.getElementById('totalAmount').textContent   = '$' + lifetime.toFixed(2);
   }
 
   async function updateCartBadge() {

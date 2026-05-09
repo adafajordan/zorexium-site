@@ -145,6 +145,17 @@ function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
+function isLikelyEmail(value) {
+  if (typeof value !== 'string') return false;
+  const email = value.trim();
+  if (!email || email.length > 254 || email.includes(' ')) return false;
+  const at = email.indexOf('@');
+  if (at <= 0 || at !== email.lastIndexOf('@') || at === email.length - 1) return false;
+  const domain = email.slice(at + 1);
+  const dot = domain.indexOf('.');
+  return dot > 0 && dot < (domain.length - 1);
+}
+
 function normalizePhoneE164(value) {
   if (typeof value !== 'string') return '';
   const trimmed = value.trim();
@@ -1096,7 +1107,7 @@ const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
 const PAYOUT_BATCH_UUID_SLICE = 16;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
-const PAYOUT_VERIFICATION_TTL_MS = 15 * 60 * 1000;
+const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 
 function normalizeCountryCode(value) {
   const countryCode = String(value || '').trim().toUpperCase();
@@ -2529,7 +2540,7 @@ app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async fun
       shippingStatus: 'shipped',
       shippedAt: now,
       payoutStatus: payoutResult && payoutResult.ok
-        ? (payoutResult.deferred ? 'blocked_onboarding' : (payoutResult.alreadyPaid ? 'paid' : 'paid'))
+        ? (payoutResult.deferred ? 'blocked_onboarding' : 'paid')
         : 'failed'
     });
   } catch (error) {
@@ -3328,7 +3339,7 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const payoutAccountId = normalizeEmail(req.body && req.body.payoutAccountId);
-  if (!payoutAccountId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payoutAccountId)) {
+  if (!payoutAccountId || !isLikelyEmail(payoutAccountId)) {
     return res.status(400).json({ error: 'A valid PayPal email is required' });
   }
 
@@ -3341,7 +3352,7 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
 
     const code = generatePayoutVerificationCode();
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + PAYOUT_VERIFICATION_TTL_MS);
+    const expiresAt = new Date(now.getTime() + PAYOUT_VERIFICATION_CODE_EXPIRATION_MS);
     await db.collection('sellers').updateOne(
       { userId: req.userId },
       {
