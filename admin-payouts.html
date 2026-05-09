@@ -350,8 +350,11 @@
       <select id="statusFilter" class="bg-[#181b21] border border-gray-600 text-white px-3 py-3 rounded-lg text-base" onchange="renderPayouts()">
         <option value="">All Statuses</option>
         <option value="pending_delivery">Pending Delivery</option>
+        <option value="blocked_onboarding">Blocked: Setup Required</option>
         <option value="ready_to_pay">Ready to Pay</option>
+        <option value="processing">Processing</option>
         <option value="paid">Paid Out</option>
+        <option value="failed">Failed</option>
       </select>
     </div>
     <div>
@@ -465,24 +468,34 @@
 
   function actionButton(payout, payoutId) {
     if (payout.status === 'pending_delivery') {
-      return '<button onclick="markDelivered(\'' + payoutId + '\')" ' +
-        'class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition">' +
-        '<i class="fas fa-truck mr-1"></i>Mark Delivered</button>';
+      return '<span class="text-gray-500 text-sm">Waiting for seller shipment</span>';
     }
     if (payout.status === 'ready_to_pay') {
-      return '<button onclick="markPaidOut(\'' + payoutId + '\')" ' +
+      return '<button onclick="sendPayout(\'' + payoutId + '\')" ' +
         'class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition">' +
-        '<i class="fas fa-check mr-1"></i>Confirm Payout</button>';
+        '<i class="fas fa-paper-plane mr-1"></i>Send Payout</button>';
     }
+    if (payout.status === 'processing') return '<span class="text-indigo-300 text-sm">Provider processing</span>';
+    if (payout.status === 'failed') return '<span class="text-red-300 text-sm">Failed · review payout error</span>';
     return '<span class="text-gray-500 text-sm">Paid ' + (payout.paidAt ? new Date(payout.paidAt).toLocaleDateString() : '') + '</span>';
   }
 
   function statusBadge(status) {
-    var labels = { pending_delivery: 'Pending Delivery', ready_to_pay: 'Ready to Pay', paid: 'Paid Out' };
+    var labels = {
+      pending_delivery: 'Pending Delivery',
+      blocked_onboarding: 'Blocked: Setup Required',
+      ready_to_pay: 'Ready to Pay',
+      processing: 'Processing',
+      paid: 'Paid Out',
+      failed: 'Failed'
+    };
     var classes = {
       pending_delivery: 'bg-yellow-900 text-yellow-200',
+      blocked_onboarding: 'bg-amber-900 text-amber-200',
       ready_to_pay:     'bg-green-900 text-green-200',
+      processing:       'bg-indigo-900 text-indigo-200',
       paid:             'bg-blue-900 text-blue-200',
+      failed:           'bg-red-900 text-red-200',
     };
     return '<span class="px-3 py-1 rounded-full text-sm font-semibold ' + (classes[status] || 'bg-gray-700 text-gray-300') + '">' +
       (labels[status] || status) + '</span>';
@@ -508,25 +521,23 @@
     }
   }
 
-  async function markPaidOut(payoutId) {
+  async function sendPayout(payoutId) {
     var payout = allPayouts.find(function(p) { return (p._id ? String(p._id) : p.id) === payoutId; });
     if (!payout) return;
     ZrxNotify.showConfirm(
-      'Confirm payout of $' + Number(payout.amount).toFixed(2) + ' to ' + (payout.sellerName || payout.sellerUsername) + '?',
+      'Send payout of $' + Number(payout.amount).toFixed(2) + ' to ' + (payout.sellerName || payout.sellerUsername) + ' now?',
       async function() {
         try {
-          const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-            body: JSON.stringify({ status: 'paid' })
+          const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId) + '/send', {
+            method: 'POST',
+            credentials: 'include'
           });
           if (!res.ok) {
             const data = await res.json();
-            ZrxNotify.showNotification(data.error || 'Failed to confirm payout', 'error');
+            ZrxNotify.showNotification(data.error || 'Failed to send payout', 'error');
             return;
           }
-          ZrxNotify.showNotification('Payout confirmed and marked as paid.', 'success');
+          ZrxNotify.showNotification('Payout request sent to PayPal. Status will update after provider confirmation.', 'success');
           await loadPayouts();
         } catch (_) {
           ZrxNotify.showNotification('Network error. Please try again.', 'error');
