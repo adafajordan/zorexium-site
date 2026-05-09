@@ -47,6 +47,8 @@ See `.env.example` for the full template.
 
 ## Payment Audit Summary
 
+- Full detailed report: see [`PAYMENT_AUDIT.md`](./PAYMENT_AUDIT.md).
+
 - **Configured provider:** PayPal only. `checkout.html`, seller signup, seller dashboard, and listing wizard all load the PayPal JavaScript SDK from `/api/config`, while `server.js` creates/captures PayPal orders and verifies PayPal subscriptions. There is no active Stripe payment code in this repository.
 - **Current blockers for real payments:**
   1. `server.js` still contains temporary troubleshooting overrides that force checkout purchases and Pro Seller subscriptions to `$1.00`, so production pricing is not using real cart totals or the intended recurring amount.
