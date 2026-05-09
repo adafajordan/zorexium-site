@@ -1231,7 +1231,8 @@ function getSellerFinancials(order, sellerId) {
     return String(summary && summary.sellerId ? summary.sellerId : '') === targetSellerId;
   });
   if (sellerSummary) {
-    const grossAmount = parseFloat(sellerSummary.grossTotal) || 0;
+    const summaryGross = parseFloat(sellerSummary.grossTotal);
+    const grossAmount = Number.isFinite(summaryGross) ? Number(summaryGross.toFixed(2)) : 0;
     const summaryNet = parseFloat(sellerSummary.netTotal);
     const payoutAmount = Number.isFinite(summaryNet)
       ? parseFloat(summaryNet.toFixed(2))
@@ -1246,11 +1247,13 @@ function getSellerFinancials(order, sellerId) {
   const sellerItems = (Array.isArray(order && order.items) ? order.items : []).filter(function(item) {
     return String(item && item.sellerId ? item.sellerId : '') === targetSellerId;
   });
-  const grossAmount = parseFloat(sellerItems.reduce(function(sum, item) {
-    const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+  const grossAmountRaw = sellerItems.reduce(function(sum, item) {
+    const quantity = parseInt(item && item.quantity, 10);
+    if (!Number.isFinite(quantity) || quantity <= 0) return sum;
     const unitPrice = parseFloat(item && item.price) || 0;
-    return sum + parseFloat((unitPrice * quantity).toFixed(2));
-  }, 0).toFixed(2));
+    return sum + (unitPrice * quantity);
+  }, 0);
+  const grossAmount = parseFloat(grossAmountRaw.toFixed(2));
   const payoutAmount = parseFloat((grossAmount * (1 - PLATFORM_FEE_RATE)).toFixed(2));
   const platformFee = parseFloat((grossAmount - payoutAmount).toFixed(2));
   return { grossAmount, payoutAmount, platformFee };
@@ -1258,16 +1261,17 @@ function getSellerFinancials(order, sellerId) {
 
 function getLinkedSellerPayoutDestination(order, sellerId) {
   const targetSellerId = String(sellerId || '').trim();
-  const destinations = new Set();
+  const payoutAccountIds = new Set();
   let hasVerifiedDestination = false;
   (Array.isArray(order && order.items) ? order.items : []).forEach(function(item) {
     if (String(item && item.sellerId ? item.sellerId : '') !== targetSellerId) return;
     const payoutAccountId = normalizeEmail(item && item.sellerPayoutAccountId ? item.sellerPayoutAccountId : '');
-    if (payoutAccountId) destinations.add(payoutAccountId);
+    if (payoutAccountId) payoutAccountIds.add(payoutAccountId);
     if (item && item.sellerPayoutVerified === true) hasVerifiedDestination = true;
   });
-  if (destinations.size !== 1) return { accountId: '', verified: hasVerifiedDestination };
-  return { accountId: Array.from(destinations)[0], verified: hasVerifiedDestination };
+  // A shipment payout needs one unambiguous receiver per seller for the order.
+  if (payoutAccountIds.size !== 1) return { accountId: '', verified: false };
+  return { accountId: Array.from(payoutAccountIds)[0], verified: hasVerifiedDestination };
 }
 
 function generatePayoutVerificationCode() {
@@ -1295,7 +1299,7 @@ async function buildPayoutSnapshot(order, options) {
   const payoutMeta = options || {};
   const orderId = String(order && order.id ? order.id : '').trim();
   const sellerInfo = getOrderSellerInfo(order);
-  // Seller payouts are calculated from seller item totals only (not order-level shipping/tax).
+  // Seller payouts are calculated from seller-eligible item totals only (not order-level shipping/tax).
   const sellerFinancials = getSellerFinancials(order, sellerInfo.sellerId);
   const grossAmount = sellerFinancials.grossAmount;
   const payoutAmount = sellerFinancials.payoutAmount;
@@ -1305,9 +1309,10 @@ async function buildPayoutSnapshot(order, options) {
     : 'USD';
   const now = new Date();
   let seller = null;
-  const linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
+  let linkedPayoutDestination = { accountId: '', verified: false };
   let receiverEmail = '';
   if (sellerInfo.sellerId) {
+    linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
     seller = await db.collection('sellers').findOne(
       { userId: sellerInfo.sellerId },
       { projection: { payoutAccountId: 1, payoutVerified: 1, userId: 1, shopName: 1 } }
@@ -1322,13 +1327,12 @@ async function buildPayoutSnapshot(order, options) {
   let status = 'pending_delivery';
   let blockedReason = '';
   if (String(order && order.shippingStatus ? order.shippingStatus : '').toLowerCase() === 'shipped') {
-    const hasVerifiedDestination = !!(
-      receiverEmail &&
-      (
-        (seller && seller.payoutVerified) ||
-        linkedPayoutDestination.verified
-      )
-    );
+    // Payout can proceed when we have a destination email and either:
+    // 1) the seller's current payout account is verified, or
+    // 2) the linked payout snapshot from the sold item was already verified.
+    const hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified);
+    const hasLinkedVerifiedAccount = !!linkedPayoutDestination.verified;
+    const hasVerifiedDestination = !!(receiverEmail && (hasCurrentVerifiedAccount || hasLinkedVerifiedAccount));
     if (!hasVerifiedDestination) {
       status = 'blocked_onboarding';
       blockedReason = 'Complete payout account setup to receive this payout.';
@@ -2246,7 +2250,9 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       }
       const lineSubtotal = parseFloat((unitPrice * quantity).toFixed(2));
       subtotal += lineSubtotal;
-      const sellerId = String(product && product.sellerId ? product.sellerId : (item && item.sellerId ? item.sellerId : ''));
+      const productSellerId = String(product && product.sellerId ? product.sellerId : '');
+      const itemSellerId = String(item && item.sellerId ? item.sellerId : '');
+      const sellerId = productSellerId || itemSellerId;
       const sellerPayoutProfile = sellerPayoutByUserId.get(sellerId) || null;
       normalizedOrderItems.push({
         id: itemId,
