@@ -1311,16 +1311,33 @@ async function buildPayoutSnapshot(order, options) {
   let seller = null;
   let linkedPayoutDestination = { accountId: '', verified: false };
   let receiverEmail = '';
+  let receiverSource = '';
+  let sellerPayoutAccountId = '';
+  let hasCurrentVerifiedAccount = false;
+  let hasLinkedVerifiedAccount = false;
   if (sellerInfo.sellerId) {
     linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
     seller = await db.collection('sellers').findOne(
       { userId: sellerInfo.sellerId },
       { projection: { payoutAccountId: 1, payoutVerified: 1, userId: 1, shopName: 1 } }
     );
-    receiverEmail = normalizeEmail(seller && seller.payoutAccountId ? seller.payoutAccountId : '');
-    if (!receiverEmail && linkedPayoutDestination.accountId) {
-      // Fallback to the payout destination snapshot captured on the sold order item linkage.
+    sellerPayoutAccountId = normalizeEmail(seller && seller.payoutAccountId ? seller.payoutAccountId : '');
+    hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified);
+    hasLinkedVerifiedAccount = !!linkedPayoutDestination.verified;
+    if (linkedPayoutDestination.accountId && hasLinkedVerifiedAccount) {
+      // Prefer the payout destination captured on sold order items when it was verified.
       receiverEmail = linkedPayoutDestination.accountId;
+      receiverSource = 'order_linked';
+    } else if (sellerPayoutAccountId && hasCurrentVerifiedAccount) {
+      // Fall back to the seller's currently verified payout destination.
+      receiverEmail = sellerPayoutAccountId;
+      receiverSource = 'seller_profile';
+    } else if (sellerPayoutAccountId) {
+      receiverEmail = sellerPayoutAccountId;
+      receiverSource = 'seller_profile_unverified';
+    } else if (linkedPayoutDestination.accountId) {
+      receiverEmail = linkedPayoutDestination.accountId;
+      receiverSource = 'order_linked_unverified';
     }
   }
 
@@ -1330,9 +1347,15 @@ async function buildPayoutSnapshot(order, options) {
     // Payout can proceed when we have a destination email and either:
     // 1) the seller's current payout account is verified, or
     // 2) the linked payout snapshot from the sold item was already verified.
-    const hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified);
-    const hasLinkedVerifiedAccount = !!linkedPayoutDestination.verified;
-    const hasVerifiedDestination = !!(receiverEmail && (hasCurrentVerifiedAccount || hasLinkedVerifiedAccount));
+    const receiverMatchesLinked = receiverEmail && receiverEmail === linkedPayoutDestination.accountId;
+    const receiverMatchesCurrent = receiverEmail && receiverEmail === sellerPayoutAccountId;
+    const hasVerifiedDestination = !!(
+      receiverEmail &&
+      (
+        (receiverMatchesLinked && hasLinkedVerifiedAccount) ||
+        (receiverMatchesCurrent && hasCurrentVerifiedAccount)
+      )
+    );
     if (!hasVerifiedDestination) {
       status = 'blocked_onboarding';
       blockedReason = 'Complete payout account setup to receive this payout.';
@@ -1357,6 +1380,7 @@ async function buildPayoutSnapshot(order, options) {
     shippingStatus: String(order && order.shippingStatus ? order.shippingStatus : ''),
     triggerSource: payoutMeta.triggerSource || 'order_completed',
     payoutAccountId: receiverEmail || null,
+    payoutAccountSource: receiverSource || null,
     linkedPayoutAccountId: linkedPayoutDestination.accountId || null,
     updatedAt: now
   };
@@ -2213,7 +2237,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       ? await db.collection('sellers')
           .find(
             { userId: { $in: sellerIds } },
-            { projection: { userId: 1, payoutAccountId: 1, payoutVerified: 1 } }
+            { projection: { userId: 1, payoutAccountId: 1, payoutVerified: 1, payoutOnboardingStatus: 1 } }
           )
           .toArray()
       : [];
@@ -2265,6 +2289,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         sellerUsername: String(product && product.sellerUsername ? product.sellerUsername : ''),
         sellerPayoutAccountId: normalizeEmail(sellerPayoutProfile && sellerPayoutProfile.payoutAccountId ? sellerPayoutProfile.payoutAccountId : ''),
         sellerPayoutVerified: !!(sellerPayoutProfile && sellerPayoutProfile.payoutVerified),
+        sellerPayoutOnboardingStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutOnboardingStatus ? sellerPayoutProfile.payoutOnboardingStatus : ''),
         productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html')
       });
       orderItems.push({
