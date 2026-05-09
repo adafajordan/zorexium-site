@@ -362,6 +362,10 @@
             <i class="fas fa-shopping-bag w-4 text-center text-cyan-500"></i> Orders
             <span id="ordersBadge" class="ml-auto bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full hidden">0</span>
           </button>
+          <button onclick="switchTab('shipments')" id="nav-shipments" class="dash-nav-item w-full text-left">
+            <i class="fas fa-shipping-fast w-4 text-center text-cyan-500"></i> Shipment Verification
+            <span id="shipmentsBadge" class="ml-auto bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full hidden">0</span>
+          </button>
           <button onclick="switchTab('payouts')" id="nav-payouts" class="dash-nav-item w-full text-left">
             <i class="fas fa-wallet w-4 text-center text-cyan-500"></i> Payouts
           </button>
@@ -521,6 +525,24 @@
               <div class="text-center py-12">
                 <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4 block"></i>
                 <p class="text-gray-500">Loading orders…</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Shipment Verification Tab ── -->
+        <div id="tab-shipments" class="dash-tab">
+          <div class="bg-white border border-gray-200 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900">Shipment Verification</h2>
+                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to notify buyers by email</p>
+              </div>
+            </div>
+            <div id="shipmentsList">
+              <div class="text-center py-12">
+                <i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4 block"></i>
+                <p class="text-gray-500">Loading shipment queue…</p>
               </div>
             </div>
           </div>
@@ -802,7 +824,7 @@
     if (tab) tab.classList.add('active');
     if (nav) nav.classList.add('active');
     if (name === 'products') loadProducts();
-    if (name === 'orders' && _allOrders.length === 0) loadOrders();
+    if (name === 'orders' || name === 'shipments') loadOrders();
     if (name === 'payouts') loadPayouts();
   }
 
@@ -867,10 +889,50 @@
     return '$' + n.toFixed(2);
   }
 
+  function getSellerOrderGross(order) {
+    return parseFloat(order && (order.sellerGrossTotal || order.total || order.amount)) || 0;
+  }
+
+  function getSellerOrderNet(order) {
+    var explicitNet = parseFloat(order && order.sellerNetTotal);
+    if (Number.isFinite(explicitNet) && explicitNet >= 0) return explicitNet;
+    return parseFloat((getSellerOrderGross(order) * 0.9).toFixed(2));
+  }
+
+  function updateOrderBadges() {
+    var ordersCount = _allOrders.length;
+    var unshippedCount = _allOrders.filter(function(o) { return o.shippingStatus !== 'shipped'; }).length;
+    var ordersBadge = document.getElementById('ordersBadge');
+    var shipmentsBadge = document.getElementById('shipmentsBadge');
+    if (ordersBadge) {
+      ordersBadge.textContent = ordersCount;
+      ordersBadge.classList.toggle('hidden', ordersCount === 0);
+    }
+    if (shipmentsBadge) {
+      shipmentsBadge.textContent = unshippedCount;
+      shipmentsBadge.classList.toggle('hidden', unshippedCount === 0);
+    }
+    document.getElementById('totalSales').textContent = ordersCount;
+  }
+
+  function updateOverviewEarningsFromOrders() {
+    var lifetime = 0;
+    _allOrders.forEach(function(order) { lifetime += getSellerOrderNet(order); });
+    document.getElementById('totalRevenue').textContent = fmtCurrency(lifetime);
+    document.getElementById('lifetimeEarnings').textContent = fmtCurrency(lifetime);
+  }
+
   function statusBadge(status) {
     var map = { pending: 'badge-pending', paid: 'badge-new', shipped: 'badge-shipped', delivered: 'badge-delivered', cancelled: 'badge-cancelled' };
     var cls = map[(status || '').toLowerCase()] || 'badge-pending';
     return '<span class="badge-status ' + cls + '">' + escHtml((status || 'pending').charAt(0).toUpperCase() + (status || 'pending').slice(1)) + '</span>';
+  }
+
+  function payoutStatusBadge(status) {
+    var labels = { pending_delivery: 'Pending Delivery', ready_to_pay: 'Ready for Payout', paid: 'Paid' };
+    var classes = { pending_delivery: 'badge-pending', ready_to_pay: 'badge-shipped', paid: 'badge-new' };
+    var key = String(status || '').toLowerCase();
+    return '<span class="badge-status ' + (classes[key] || 'badge-pending') + '">' + (labels[key] || 'Pending Delivery') + '</span>';
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────────
@@ -965,7 +1027,7 @@
     }
 
     document.getElementById('totalProducts').textContent = sellerData.products.length;
-    document.getElementById('totalSales').textContent = sellerData.totalSales || 0;
+    document.getElementById('totalSales').textContent = 0;
     const hasRating = !!sellerData.rating;
     document.getElementById('sellerRating').textContent = hasRating ? sellerData.rating.toFixed(1) : 'NR';
     const ratingSubtitle = document.getElementById('sellerRatingSubtitle');
@@ -988,9 +1050,8 @@
     }
 
     // Revenue estimate from products * sales (approximate)
-    const revenue = (parseFloat(sellerData.totalRevenue) || 0);
-    document.getElementById('totalRevenue').textContent = fmtCurrency(revenue);
-    document.getElementById('lifetimeEarnings').textContent = fmtCurrency(revenue);
+    document.getElementById('totalRevenue').textContent = fmtCurrency(0);
+    document.getElementById('lifetimeEarnings').textContent = fmtCurrency(0);
 
     // Settings form pre-fill
     document.getElementById('settingsShopName').value = sellerData.shopName || '';
@@ -1115,15 +1176,25 @@
         return s && s !== 'pending';
       });
       _allOrders = nonPendingOrders;
+      updateOrderBadges();
+      updateOverviewEarningsFromOrders();
       renderRecentOrders(_allOrders.slice(0, 5));
+      if (document.getElementById('tab-shipments').classList.contains('active')) {
+        renderShipmentVerificationTable(_allOrders);
+      }
     } catch(_) {
       document.getElementById('recentOrdersList').innerHTML = '<p class="text-sm text-gray-400 text-center py-4">Could not load orders.</p>';
     }
   }
 
   async function loadOrders() {
-    if (_allOrders.length > 0) { renderOrdersTable(_allOrders); return; }
+    if (_allOrders.length > 0) {
+      renderOrdersTable(_allOrders);
+      renderShipmentVerificationTable(_allOrders);
+      return;
+    }
     document.getElementById('ordersList').innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4 block"></i><p class="text-gray-500">Loading…</p></div>';
+    document.getElementById('shipmentsList').innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-3xl text-gray-400 mb-4 block"></i><p class="text-gray-500">Loading…</p></div>';
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/sold', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed');
@@ -1133,9 +1204,13 @@
         var s = (o.status || '').toLowerCase();
         return s && s !== 'pending';
       });
+      updateOrderBadges();
+      updateOverviewEarningsFromOrders();
       renderOrdersTable(_allOrders);
+      renderShipmentVerificationTable(_allOrders);
     } catch(_) {
       document.getElementById('ordersList').innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-exclamation-circle text-2xl mb-2 block"></i><p class="text-sm">Failed to load orders.</p></div>';
+      document.getElementById('shipmentsList').innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-exclamation-circle text-2xl mb-2 block"></i><p class="text-sm">Failed to load shipment queue.</p></div>';
     }
   }
 
@@ -1212,6 +1287,46 @@
     });
   }
 
+  function renderShipmentVerificationTable(orders) {
+    var el = document.getElementById('shipmentsList');
+    if (!el) return;
+    if (!orders || orders.length === 0) {
+      el.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-inbox text-4xl mb-3 block"></i><p class="text-base font-medium">No sold orders yet</p><p class="text-sm mt-1">Sold orders will appear here for shipment verification.</p></div>';
+      return;
+    }
+    el.innerHTML = '<div class="overflow-x-auto"><table class="w-full text-sm">' +
+      '<thead><tr class="text-left border-b border-gray-200 bg-gray-50">' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Order ID</th>' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Buyer</th>' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Items</th>' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Order Date</th>' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Shipment</th>' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Action</th>' +
+      '</tr></thead>' +
+      '<tbody>' + orders.map(function(o) {
+        var rawId = o.id || o._id || '';
+        var buyer = o.buyerDisplayName || (o.buyer && (o.buyer.email || o.buyer.name)) || (o.shippingAddress && o.shippingAddress.name) || '—';
+        var items = o.sellerItemCount || (o.sellerItems || []).length || (o.items || []).length;
+        var isShipped = o.shippingStatus === 'shipped';
+        return '<tr class="border-b border-gray-100">' +
+          '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + escHtml(rawId.slice(0, 14) + '…') + '</td>' +
+          '<td class="px-4 py-3 text-gray-700">' + escHtml(buyer) + '</td>' +
+          '<td class="px-4 py-3 text-gray-700">' + items + ' item' + (items !== 1 ? 's' : '') + '</td>' +
+          '<td class="px-4 py-3 text-gray-700">' + fmtDate(o.createdAt) + '</td>' +
+          '<td class="px-4 py-3">' + (isShipped ? '<span class="text-xs font-semibold text-green-600"><i class="fas fa-check-circle mr-1"></i>In Transit</span>' : '<span class="text-xs font-semibold text-amber-600"><i class="fas fa-clock mr-1"></i>Awaiting shipment</span>') + '</td>' +
+          '<td class="px-4 py-3">' + (isShipped ? '<span class="text-xs text-gray-500">Verified</span>' : '<button data-orderid="' + escHtml(rawId) + '" class="ship-btn text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-200 font-semibold transition-colors"><i class="fas fa-shipping-fast mr-1"></i>Verify &amp; Notify</button>') + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table></div>';
+
+    el.querySelectorAll('button.ship-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var orderId = btn.getAttribute('data-orderid');
+        if (orderId) markShipped(orderId);
+      });
+    });
+  }
+
   async function markShipped(orderId) {
     if (!confirm('Mark this order as shipped? The buyer will be notified by email that their package is in transit.')) return;
     try {
@@ -1227,7 +1342,9 @@
       // Update the in-memory orders array so we don't need a full reload
       var idx = _allOrders.findIndex(function(o) { return (o.id || o._id || '') === orderId; });
       if (idx !== -1) { _allOrders[idx] = Object.assign({}, _allOrders[idx], { shippingStatus: 'shipped' }); }
+      updateOrderBadges();
       renderOrdersTable(_allOrders);
+      renderShipmentVerificationTable(_allOrders);
       renderRecentOrders(_allOrders.slice(0, 5));
     } catch (err) {
       ZrxNotify.showNotification(err.message || 'Failed to mark order as shipped. Please try again.', 'error');
@@ -1238,41 +1355,67 @@
   async function loadPayouts() {
     document.getElementById('payoutsList').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-2xl text-gray-400 mb-2 block"></i><p class="text-sm text-gray-500">Loading…</p></div>';
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts', { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed');
-      const payouts = await res.json();
-      const list = Array.isArray(payouts) ? payouts : (payouts.payouts || []);
+      const [ordersRes, payoutsRes] = await Promise.all([
+        ZrxSession.fetch(BACKEND_URL + '/api/orders/sold', { credentials: 'include' }),
+        ZrxSession.fetch(BACKEND_URL + '/api/payouts', { credentials: 'include' })
+      ]);
+      if (!ordersRes.ok || !payoutsRes.ok) throw new Error('Failed');
+      const soldOrders = await ordersRes.json();
+      const payouts = await payoutsRes.json();
+      const payoutByOrderId = new Map((Array.isArray(payouts) ? payouts : []).map(function(p) { return [String(p.orderId || ''), p]; }));
+      var rows = (Array.isArray(soldOrders) ? soldOrders : []).map(function(order) {
+        var orderId = String(order.id || order._id || '');
+        var payout = payoutByOrderId.get(orderId);
+        var amount = getSellerOrderNet(order);
+        // Keep shipment-driven state as the source of truth for pending vs ready,
+        // but let a paid payout record override both when a payout has completed.
+        var status = payout && String(payout.status).toLowerCase() === 'paid'
+          ? 'paid'
+          : (order.shippingStatus === 'shipped' ? 'ready_to_pay' : 'pending_delivery');
+        return {
+          orderId: orderId,
+          createdAt: order.createdAt,
+          grossAmount: getSellerOrderGross(order),
+          amount: amount,
+          status: status
+        };
+      });
 
+      var lifetime = 0;
       var monthly = 0;
       var pending = 0;
       var now = new Date();
-      list.forEach(function(p) {
-        if ((p.status || '').toLowerCase() === 'pending') pending += parseFloat(p.amount) || 0;
-        var d = new Date(p.createdAt || p.date);
+      rows.forEach(function(row) {
+        lifetime += row.amount;
+        if (row.status === 'pending_delivery') pending += row.amount;
+        var d = new Date(row.createdAt);
         if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
-          monthly += parseFloat(p.amount) || 0;
+          monthly += row.amount;
         }
       });
+      document.getElementById('lifetimeEarnings').textContent = fmtCurrency(lifetime);
       document.getElementById('monthlyEarnings').textContent = fmtCurrency(monthly);
       document.getElementById('pendingPayout').textContent = fmtCurrency(pending);
 
-      if (!list.length) {
+      if (!rows.length) {
         document.getElementById('payoutsList').innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-receipt text-3xl mb-2 block"></i><p class="text-sm">No payout history yet.</p></div>';
         return;
       }
       document.getElementById('payoutsList').innerHTML = '<div class="overflow-x-auto"><table class="w-full text-sm">' +
         '<thead><tr class="text-left border-b border-gray-200 bg-gray-50">' +
+        '<th class="px-4 py-3 font-semibold text-gray-600">Order</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Date</th>' +
-        '<th class="px-4 py-3 font-semibold text-gray-600">Amount</th>' +
-        '<th class="px-4 py-3 font-semibold text-gray-600">Method</th>' +
+        '<th class="px-4 py-3 font-semibold text-gray-600">Gross Sale</th>' +
+        '<th class="px-4 py-3 font-semibold text-gray-600">Your Earnings (90%)</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Status</th>' +
         '</tr></thead>' +
-        '<tbody>' + list.map(function(p) {
+        '<tbody>' + rows.map(function(row) {
           return '<tr class="border-b border-gray-100">' +
-            '<td class="px-4 py-3 text-gray-700">' + fmtDate(p.createdAt || p.date) + '</td>' +
-            '<td class="px-4 py-3 font-semibold text-gray-900">' + fmtCurrency(p.amount) + '</td>' +
-            '<td class="px-4 py-3 text-gray-600">' + escHtml(p.method || 'Bank Transfer') + '</td>' +
-            '<td class="px-4 py-3">' + statusBadge(p.status || 'pending') + '</td>' +
+            '<td class="px-4 py-3 font-mono text-xs text-cyan-600 font-semibold">' + escHtml(row.orderId.slice(0, 14)) + '…</td>' +
+            '<td class="px-4 py-3 text-gray-700">' + fmtDate(row.createdAt) + '</td>' +
+            '<td class="px-4 py-3 text-gray-700">' + fmtCurrency(row.grossAmount) + '</td>' +
+            '<td class="px-4 py-3 font-semibold text-gray-900">' + fmtCurrency(row.amount) + '</td>' +
+            '<td class="px-4 py-3">' + payoutStatusBadge(row.status) + '</td>' +
             '</tr>';
         }).join('') +
         '</tbody></table></div>';
