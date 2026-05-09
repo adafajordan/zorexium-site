@@ -1897,7 +1897,8 @@ async function retryEligibleBlockedPayoutsForSeller(sellerId, triggerSource) {
       else if (result.deferred) summary.deferred++;
       else if (result.processing) summary.processing++;
       else summary.sent++;
-    } catch (_) {
+    } catch (err) {
+      console.error('Failed to retry payout for order', orderId, ':', err);
       summary.failed++;
     }
   }
@@ -4100,7 +4101,7 @@ app.post('/api/payouts/:id/send', publicApiRateLimit, verifyToken, async functio
 });
 
 // POST /api/paypal/webhook – verify and process PayPal asynchronous events
-app.post('/api/paypal/webhook', async function(req, res) {
+app.post('/api/paypal/webhook', publicApiRateLimit, async function(req, res) {
   const event = req.body;
   if (!event || typeof event !== 'object') {
     return res.status(400).json({ error: 'Invalid webhook payload' });
@@ -4149,7 +4150,11 @@ app.post('/api/paypal/webhook', async function(req, res) {
         itemUpdate.status = 'processing';
       } else {
         itemUpdate.status = 'failed';
-        itemUpdate.error = String(resource && resource.errors && resource.errors.name ? resource.errors.name : itemStatus);
+        itemUpdate.error = String(
+          resource && resource.errors && resource.errors.name
+            ? resource.errors.name
+            : ('Payout item failed with status: ' + itemStatus)
+        );
       }
 
       const itemQuery = senderItemId
@@ -4188,7 +4193,7 @@ app.post('/api/paypal/webhook', async function(req, res) {
 
     res.status(200).json({ ok: true });
   } catch (error) {
-    console.error('PayPal webhook processing error:', error.message);
+    console.error('PayPal webhook processing error:', error);
     res.status(400).json({ error: error.message });
   }
 });
