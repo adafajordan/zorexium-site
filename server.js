@@ -1081,6 +1081,13 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+// TEMPORARY TROUBLESHOOTING OVERRIDE:
+// Force all checkout and Pro Seller subscription charges to $1.00.
+// Revert by removing these constants and restoring dynamic amount logic in
+// /api/orders and ensurePayPalProSellerPlan().
+const FORCED_TEST_CHECKOUT_TOTAL_USD = '1.00';
+const FORCED_TEST_PRO_SUBSCRIPTION_USD = '1.00';
+const FORCED_TEST_PRO_PLAN_ID = process.env.PAYPAL_PRO_SELLER_TEST_PLAN_ID || null;
 const envPlatformFeeRate = Number(process.env.PLATFORM_FEE_RATE);
 const PLATFORM_FEE_RATE = Number.isFinite(envPlatformFeeRate) && envPlatformFeeRate >= 0 && envPlatformFeeRate < 1
   ? envPlatformFeeRate
@@ -1306,8 +1313,11 @@ async function sendPayPalSellerPayout(order, options) {
 }
 
 // ── PRO SELLER SUBSCRIPTION PLAN ─────────────────────────────────────────────
-// Cache the PayPal plan ID in memory; prefer the env var if pre-configured.
-let cachedProSellerPlanId = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
+// TEMPORARY TROUBLESHOOTING OVERRIDE:
+// Do not reuse PAYPAL_PRO_SELLER_PLAN_ID because existing plans may charge
+// non-$1 amounts. Use PAYPAL_PRO_SELLER_TEST_PLAN_ID to reuse a known $1 test plan.
+// Revert to PAYPAL_PRO_SELLER_PLAN_ID after troubleshooting.
+let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID;
 
 async function ensurePayPalProSellerPlan() {
   if (cachedProSellerPlanId) return cachedProSellerPlanId;
@@ -1322,7 +1332,7 @@ async function ensurePayPalProSellerPlan() {
       headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Zorexium Pro Seller Subscription',
-        description: 'Monthly Pro Seller subscription on Zorexium ($19/month)',
+        description: 'Monthly Pro Seller subscription on Zorexium ($1/month)',
         type: 'SERVICE',
         category: 'SOFTWARE'
       })
@@ -1344,7 +1354,7 @@ async function ensurePayPalProSellerPlan() {
           sequence: 1,
           total_cycles: 0,
           pricing_scheme: {
-            fixed_price: { value: '19.00', currency_code: 'USD' }
+            fixed_price: { value: FORCED_TEST_PRO_SUBSCRIPTION_USD, currency_code: 'USD' }
           }
         }],
         payment_preferences: {
@@ -1460,7 +1470,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
         await sendEventEmailSafe(
           to,
           'Thanks for purchasing Pro Seller status',
-          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$19/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$1/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
@@ -1498,19 +1508,19 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       : [];
     const productById = new Map(products.map(function(product) { return [String(product._id), product]; }));
 
-    let subtotal = 0;
-    const orderItems = items.map(item => {
-      const itemTotal = item.price * item.quantity;
-      subtotal += itemTotal;
-      return {
-        name: item.name || `Product ${item.id}`,
-        quantity: String(item.quantity),
-        unit_amount: {
-          currency_code: 'USD',
-          value: parseFloat(item.price).toFixed(2)
-        }
-      };
-    });
+    // TEMPORARY TROUBLESHOOTING OVERRIDE:
+    // Force PayPal checkout charge to $1.00 regardless of cart prices.
+    // Revert by restoring subtotal/shipping/tax calculations from cart items.
+    const orderItems = [{
+      name: 'Temporary checkout troubleshooting charge',
+      quantity: '1',
+      unit_amount: {
+        currency_code: 'USD',
+        value: FORCED_TEST_CHECKOUT_TOTAL_USD
+      }
+    }];
+    // Keep original item metadata in the order record for seller notifications and
+    // fulfillment even while the temporary checkout charge is forced to $1.00.
     const normalizedOrderItems = items.map(function(item) {
       const itemId = item && item.id ? String(item.id) : '';
       const product = productById.get(itemId) || null;
@@ -1526,9 +1536,12 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       };
     });
     
-    const shipping = items.length * 10.99;
-    const tax = subtotal * 0.10;
-    const total = (subtotal + shipping + tax).toFixed(2);
+    const subtotal = parseFloat(FORCED_TEST_CHECKOUT_TOTAL_USD);
+    // Shipping/tax are set to 0 so the final charged amount remains exactly $1.00.
+    const shipping = 0;
+    const tax = 0;
+    // Keep explicit totals for PayPal breakdown + persisted order totals.
+    const total = FORCED_TEST_CHECKOUT_TOTAL_USD;
     
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
     const paypalResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
@@ -2538,7 +2551,7 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
         await sendEventEmailSafe(
           to,
           'Thanks for upgrading to Pro Seller',
-          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$19/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$1/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
