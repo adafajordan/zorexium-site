@@ -652,7 +652,7 @@
       : allProducts.reduce((s, p) => s + (parseInt(p.salesCount) || 0), 0);
     document.getElementById('statOrders').textContent = totalOrders >= 1000000
       ? (totalOrders / 1000000).toFixed(1) + 'M+'
-      : totalOrders > 0 ? totalOrders.toLocaleString() : '–';
+      : totalOrders.toLocaleString();
   }
 
   // ── Filters ──────────────────────────────────────────────────────────────────

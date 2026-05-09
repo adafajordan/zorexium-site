@@ -566,6 +566,16 @@
   // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
   var sellerPayouts = [];
 
+  function getSellerOrderGross(order) {
+    return parseFloat(order && (order.sellerGrossTotal || order.total || order.amount)) || 0;
+  }
+
+  function getSellerOrderNet(order) {
+    var explicitNet = parseFloat(order && order.sellerNetTotal);
+    if (Number.isFinite(explicitNet) && explicitNet >= 0) return explicitNet;
+    return parseFloat((getSellerOrderGross(order) * 0.9).toFixed(2));
+  }
+
   async function init() {
     if (!ZrxSession.isLoggedIn()) {
       document.getElementById('notLoggedIn').classList.remove('hidden');
@@ -606,14 +616,31 @@
 
   async function loadEarnings() {
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts', {
-        credentials: 'include'
+      const [ordersRes, payoutsRes] = await Promise.all([
+        ZrxSession.fetch(BACKEND_URL + '/api/orders/sold', { credentials: 'include' }),
+        ZrxSession.fetch(BACKEND_URL + '/api/payouts', { credentials: 'include' })
+      ]);
+      if (!ordersRes.ok || !payoutsRes.ok) throw new Error('Failed to load earnings');
+      const soldOrders = await ordersRes.json();
+      const payouts = await payoutsRes.json();
+      const payoutByOrderId = new Map((Array.isArray(payouts) ? payouts : []).map(function(p) {
+        return [String(p.orderId || ''), p];
+      }));
+      sellerPayouts = (Array.isArray(soldOrders) ? soldOrders : []).map(function(order) {
+        var orderId = String(order.id || order._id || '');
+        var payout = payoutByOrderId.get(orderId);
+        // Earnings state follows shipping progress first, then a paid payout overrides it.
+        var status = payout && String(payout.status).toLowerCase() === 'paid'
+          ? 'paid'
+          : (order.shippingStatus === 'shipped' ? 'ready_to_pay' : 'pending_delivery');
+        return {
+          orderId: orderId,
+          createdAt: order.createdAt,
+          amount: getSellerOrderNet(order),
+          status: status,
+          itemCount: order.sellerItemCount || (order.sellerItems || []).length || (order.items || []).length
+        };
       });
-      if (res.ok) {
-        const payouts = await res.json();
-        // Server now returns only the current seller's payouts
-        sellerPayouts = Array.isArray(payouts) ? payouts : [];
-      }
     } catch (_) {
       sellerPayouts = [];
     }
@@ -680,10 +707,7 @@
     }
 
     tbody.innerHTML = filtered.map(function(p) {
-      var itemCount = 0;
-      if (p.items) {
-        itemCount = p.items.reduce(function(s, i) { return s + (i.quantity || 1); }, 0);
-      }
+      var itemCount = parseInt(p.itemCount, 10) || 0;
       var itemLabel = itemCount > 0 ? itemCount + ' item' + (itemCount !== 1 ? 's' : '') : '—';
 
       return '<tr class="hover:bg-gray-50 transition-colors">' +

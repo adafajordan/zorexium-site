@@ -3314,7 +3314,7 @@ app.post('/api/sellers/recover-missing', verifyToken, async function(req, res) {
 });
 
 // GET /api/sellers/user/:userId – get seller profile by userId (public)
-app.get('/api/sellers/user/:userId', async function(req, res) {
+app.get('/api/sellers/user/:userId', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { userId } = req.params;
@@ -3325,6 +3325,10 @@ app.get('/api/sellers/user/:userId', async function(req, res) {
   try {
     const seller = await db.collection('sellers').findOne({ userId });
     if (!seller) return res.status(404).json({ error: 'Seller not found' });
+    const completedSalesCount = await db.collection('orders').countDocuments({
+      status: 'completed',
+      'items.sellerId': userId
+    });
 
     // Include the user's profile picture from the users collection (sellers collection doesn't store it)
     let profileImage = seller.profileImage || null;
@@ -3340,7 +3344,7 @@ app.get('/api/sellers/user/:userId', async function(req, res) {
       }
     }
 
-    res.json({ ...seller, profileImage });
+    res.json({ ...seller, totalSales: completedSalesCount, profileImage });
   } catch (error) {
     console.error('Error fetching seller by userId:', error);
     res.status(500).json({ error: error.message });
