@@ -1075,24 +1075,25 @@
           // Enforce inventory on the product detail page
           var isUnavailable = currentProduct.status && currentProduct.status !== 'active';
           var isOutOfStock = !isUnavailable && currentProduct.quantity !== null && !isNaN(currentProduct.quantity) && currentProduct.quantity <= 0;
+          var qtyInputEl = document.getElementById('quantity');
           if (isUnavailable || isOutOfStock) {
             var addToCartBtn = document.querySelector('button[onclick="addToCart()"]');
             var buyNowBtn = document.querySelector('button[onclick="goToCheckout()"]');
-            var qtyInput = document.getElementById('quantity');
             var qtyIncBtn = document.querySelector('button[onclick="increaseQty()"]');
             var qtyDecBtn = document.querySelector('button[onclick="decreaseQty()"]');
             var outOfStockLabel = isUnavailable ? 'Unavailable' : 'Out of Stock';
             if (addToCartBtn) { addToCartBtn.disabled = true; addToCartBtn.classList.add('opacity-50', 'cursor-not-allowed'); addToCartBtn.innerText = outOfStockLabel; }
             if (buyNowBtn) { buyNowBtn.disabled = true; buyNowBtn.classList.add('opacity-50', 'cursor-not-allowed'); buyNowBtn.innerText = outOfStockLabel; }
-            if (qtyInput) { qtyInput.disabled = true; }
+            if (qtyInputEl) { qtyInputEl.disabled = true; }
             if (qtyIncBtn) { qtyIncBtn.disabled = true; qtyIncBtn.classList.add('opacity-50', 'cursor-not-allowed'); }
             if (qtyDecBtn) { qtyDecBtn.disabled = true; qtyDecBtn.classList.add('opacity-50', 'cursor-not-allowed'); }
-          } else if (currentProduct.maxQty) {
-            var qtyInput2 = document.getElementById('quantity');
-            if (qtyInput2) { qtyInput2.max = currentProduct.maxQty; }
-          } else if (currentProduct.quantity !== null && !isNaN(currentProduct.quantity)) {
-            var qtyInput3 = document.getElementById('quantity');
-            if (qtyInput3) { qtyInput3.max = currentProduct.quantity; }
+          } else if (qtyInputEl) {
+            // Set the max purchasable quantity from seller settings or available stock
+            if (currentProduct.maxQty) {
+              qtyInputEl.max = currentProduct.maxQty;
+            } else if (currentProduct.quantity !== null && !isNaN(currentProduct.quantity)) {
+              qtyInputEl.max = currentProduct.quantity;
+            }
           }
 
           // Title + meta
@@ -1373,9 +1374,16 @@
   }
 
   // ── Quantity controls ─────────────────────────────────────────────────────
+  function getMaxQty() {
+    var qty = document.getElementById('quantity');
+    if (qty && qty.max) return parseInt(qty.max);
+    if (currentProduct && currentProduct.quantity !== null && !isNaN(currentProduct.quantity)) return currentProduct.quantity;
+    return null;
+  }
+
   function increaseQty() {
     var qty = document.getElementById('quantity');
-    var max = qty.max ? parseInt(qty.max) : (currentProduct && currentProduct.quantity !== null && !isNaN(currentProduct.quantity) ? currentProduct.quantity : null);
+    var max = getMaxQty();
     var newVal = parseInt(qty.value) + 1;
     if (max !== null && !isNaN(max) && newVal > max) {
       ZrxNotify.showNotification('Only ' + max + ' unit(s) available.', 'info');
@@ -1392,7 +1400,7 @@
   function validateQty() {
     var qty = document.getElementById('quantity');
     if (parseInt(qty.value) < 1) qty.value = 1;
-    var max = qty.max ? parseInt(qty.max) : (currentProduct && currentProduct.quantity !== null && !isNaN(currentProduct.quantity) ? currentProduct.quantity : null);
+    var max = getMaxQty();
     if (max !== null && !isNaN(max) && parseInt(qty.value) > max) qty.value = max;
   }
 
