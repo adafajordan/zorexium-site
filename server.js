@@ -1085,7 +1085,7 @@ const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 // Force all checkout and Pro Seller subscription charges to $1.00.
 // Revert by removing these constants and restoring dynamic amount logic in
 // /api/orders and ensurePayPalProSellerPlan().
-const FORCED_TEST_CHECKOUT_TOTAL_USD = 1.00;
+const FORCED_TEST_CHECKOUT_TOTAL_USD = '1.00';
 const FORCED_TEST_PRO_SUBSCRIPTION_USD = '1.00';
 const envPlatformFeeRate = Number(process.env.PLATFORM_FEE_RATE);
 const PLATFORM_FEE_RATE = Number.isFinite(envPlatformFeeRate) && envPlatformFeeRate >= 0 && envPlatformFeeRate < 1
@@ -1515,9 +1515,11 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       quantity: '1',
       unit_amount: {
         currency_code: 'USD',
-        value: FORCED_TEST_CHECKOUT_TOTAL_USD.toFixed(2)
+        value: FORCED_TEST_CHECKOUT_TOTAL_USD
       }
     }];
+    // Keep original item metadata in the order record for seller notifications and
+    // fulfillment even while the temporary checkout charge is forced to $1.00.
     const normalizedOrderItems = items.map(function(item) {
       const itemId = item && item.id ? String(item.id) : '';
       const product = productById.get(itemId) || null;
@@ -1533,10 +1535,10 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       };
     });
     
-    subtotal = FORCED_TEST_CHECKOUT_TOTAL_USD;
+    subtotal = parseFloat(FORCED_TEST_CHECKOUT_TOTAL_USD);
     const shipping = 0;
     const tax = 0;
-    const total = FORCED_TEST_CHECKOUT_TOTAL_USD.toFixed(2);
+    const total = FORCED_TEST_CHECKOUT_TOTAL_USD;
     
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
     const paypalResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
