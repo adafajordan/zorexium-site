@@ -1107,6 +1107,7 @@ const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
 const PAYOUT_BATCH_UUID_SLICE = 16;
+// Limit how many blocked payouts are retried per verification request to avoid long-running retries.
 const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
@@ -1173,7 +1174,8 @@ async function verifyPayPalWebhookSignature(webhookEvent, webhookHeaders) {
     const reason = verifyData && (verifyData.message || verifyData.error_description || verifyData.name);
     throw new Error(reason || 'Failed to verify PayPal webhook signature');
   }
-  return String(verifyData && verifyData.verification_status ? verifyData.verification_status : '').toUpperCase() === 'SUCCESS';
+  const verifyStatus = String(verifyData && verifyData.verification_status ? verifyData.verification_status : '').toUpperCase();
+  return verifyStatus === 'SUCCESS';
 }
 
 function hasRequiredPayPalWebhookHeaders(webhookHeaders) {
@@ -4151,7 +4153,7 @@ app.post('/api/paypal/webhook', publicApiRateLimit, async function(req, res) {
           receivedAt: now,
           resource: resource
         },
-        paypalBatchStatus: String(resource && resource.transaction_status ? resource.transaction_status : '').toUpperCase() || null,
+        paypalTransactionStatus: String(resource && resource.transaction_status ? resource.transaction_status : '').toUpperCase() || null,
         updatedAt: now
       };
       const itemStatus = eventType.slice('PAYMENT.PAYOUTS-ITEM.'.length).toUpperCase();
