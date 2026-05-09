@@ -937,6 +937,59 @@
       window._msReviewsLoaded = true;
       msLoadReviews();
     }
+    if (panelId === 'order-history' && !window._msOrdersLoaded) {
+      window._msOrdersLoaded = true;
+      msLoadOrderHistory();
+    }
+  }
+
+  function msLoadOrderHistory() {
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    var tbody = document.getElementById('msOrderHistoryBody');
+    var emptyRow = document.getElementById('msOrderHistoryEmpty');
+    if (!tbody) return;
+
+    ZrxSession.fetch(MS_BACKEND + '/api/orders/my', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .catch(function() { return []; })
+      .then(function(orders) {
+        // The orders collection only stores completed orders; filter defensively to exclude
+        // any pending status in case older records exist.
+        var completed = Array.isArray(orders) ? orders.filter(function(o) {
+          var s = (o.status || '').toLowerCase();
+          return s !== 'pending' && s !== '';
+        }) : [];
+
+        if (!completed.length) {
+          if (emptyRow) emptyRow.style.display = '';
+          return;
+        }
+        if (emptyRow) emptyRow.style.display = 'none';
+
+        var rows = completed.map(function(o) {
+          var publicId = o.id || o.orderId || o._id || '';
+          var date = o.completedAt || o.createdAt ? new Date(o.completedAt || o.createdAt).toLocaleDateString() : '—';
+          var itemName = (o.items && o.items[0] && o.items[0].name) ? msEsc(o.items[0].name) + (o.items.length > 1 ? ' +' + (o.items.length - 1) + ' more' : '') : '—';
+          var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '—';
+          var statusLabel = o.shippingStatus === 'shipped' ? 'Shipped' : (o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Completed');
+          var safeId = msEsc(publicId);
+          return '<tr>' +
+            '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + safeId.slice(0, 14) + '…</td>' +
+            '<td class="px-4 py-3 text-gray-700">' + date + '</td>' +
+            '<td class="px-4 py-3 text-gray-700 max-w-xs truncate">' + itemName + '</td>' +
+            '<td class="px-4 py-3 font-semibold text-gray-900">' + total + '</td>' +
+            '<td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-100">' + statusLabel + '</span></td>' +
+            '<td class="px-4 py-3 flex gap-2">' +
+              '<a href="track-your-order.html?order=' + encodeURIComponent(publicId) + '" class="text-xs text-cyan-600 hover:underline font-medium">Track</a>' +
+              '<a href="payment-success.html?orderId=' + encodeURIComponent(publicId) + '" class="text-xs text-gray-500 hover:underline">Receipt</a>' +
+            '</td>' +
+            '</tr>';
+        }).join('');
+
+        tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
+        var newEmpty = document.getElementById('msOrderHistoryEmpty');
+        if (newEmpty) newEmpty.style.display = 'none';
+      });
   }
 
   // Load reviews for Manage Reviews panel
@@ -1026,6 +1079,12 @@
       }
     }
   });
+
+  // Auto-load the order history panel since it is the default active panel
+  if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
+    window._msOrdersLoaded = true;
+    msLoadOrderHistory();
+  }
 
 </script>
 

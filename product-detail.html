@@ -1065,10 +1065,36 @@
             variations: Array.isArray(product.variations) ? product.variations : [],
             minQty: product.minQty || null,
             maxQty: product.maxQty || null,
+            quantity: product.quantity !== undefined ? parseInt(product.quantity, 10) : null,
+            status: product.status || 'active',
             videoUrl: product.videoUrl || '',
             shipping: product.shipping || {},
             compliance: product.compliance || {},
           };
+
+          // Enforce inventory on the product detail page
+          var isUnavailable = currentProduct.status && currentProduct.status !== 'active';
+          var isOutOfStock = !isUnavailable && currentProduct.quantity !== null && !isNaN(currentProduct.quantity) && currentProduct.quantity <= 0;
+          var qtyInputEl = document.getElementById('quantity');
+          if (isUnavailable || isOutOfStock) {
+            var addToCartBtn = document.querySelector('button[onclick="addToCart()"]');
+            var buyNowBtn = document.querySelector('button[onclick="goToCheckout()"]');
+            var qtyIncBtn = document.querySelector('button[onclick="increaseQty()"]');
+            var qtyDecBtn = document.querySelector('button[onclick="decreaseQty()"]');
+            var outOfStockLabel = isUnavailable ? 'Unavailable' : 'Out of Stock';
+            if (addToCartBtn) { addToCartBtn.disabled = true; addToCartBtn.classList.add('opacity-50', 'cursor-not-allowed'); addToCartBtn.innerText = outOfStockLabel; }
+            if (buyNowBtn) { buyNowBtn.disabled = true; buyNowBtn.classList.add('opacity-50', 'cursor-not-allowed'); buyNowBtn.innerText = outOfStockLabel; }
+            if (qtyInputEl) { qtyInputEl.disabled = true; }
+            if (qtyIncBtn) { qtyIncBtn.disabled = true; qtyIncBtn.classList.add('opacity-50', 'cursor-not-allowed'); }
+            if (qtyDecBtn) { qtyDecBtn.disabled = true; qtyDecBtn.classList.add('opacity-50', 'cursor-not-allowed'); }
+          } else if (qtyInputEl) {
+            // Set the max purchasable quantity from seller settings or available stock
+            if (currentProduct.maxQty) {
+              qtyInputEl.max = currentProduct.maxQty;
+            } else if (currentProduct.quantity !== null && !isNaN(currentProduct.quantity)) {
+              qtyInputEl.max = currentProduct.quantity;
+            }
+          }
 
           // Title + meta
           document.title = currentProduct.name + ' | Zorexium';
@@ -1348,9 +1374,22 @@
   }
 
   // ── Quantity controls ─────────────────────────────────────────────────────
+  function getMaxQty() {
+    var qty = document.getElementById('quantity');
+    if (qty && qty.max) return parseInt(qty.max);
+    if (currentProduct && currentProduct.quantity !== null && !isNaN(currentProduct.quantity)) return currentProduct.quantity;
+    return null;
+  }
+
   function increaseQty() {
     var qty = document.getElementById('quantity');
-    qty.value = parseInt(qty.value) + 1;
+    var max = getMaxQty();
+    var newVal = parseInt(qty.value) + 1;
+    if (max !== null && !isNaN(max) && newVal > max) {
+      ZrxNotify.showNotification('Only ' + max + ' unit(s) available.', 'info');
+      return;
+    }
+    qty.value = newVal;
   }
 
   function decreaseQty() {
@@ -1361,12 +1400,23 @@
   function validateQty() {
     var qty = document.getElementById('quantity');
     if (parseInt(qty.value) < 1) qty.value = 1;
+    var max = getMaxQty();
+    if (max !== null && !isNaN(max) && parseInt(qty.value) > max) qty.value = max;
   }
 
   // ── Cart ──────────────────────────────────────────────────────────────────
   async function addToCart() {
     if (!currentProduct) { ZrxNotify.showNotification('Product not loaded yet.', 'error'); return; }
+    // Client-side stock guard
+    if (currentProduct.status && currentProduct.status !== 'active') {
+      ZrxNotify.showNotification('This product is no longer available.', 'error'); return;
+    }
     var quantity = parseInt(document.getElementById('quantity').value);
+    var availableQty = (currentProduct.quantity !== null && !isNaN(currentProduct.quantity)) ? currentProduct.quantity : null;
+    if (availableQty !== null) {
+      if (availableQty <= 0) { ZrxNotify.showNotification('This product is out of stock.', 'error'); return; }
+      if (quantity > availableQty) { ZrxNotify.showNotification('Only ' + availableQty + ' unit(s) are available.', 'error'); return; }
+    }
 
     if (ZrxSession.isLoggedIn()) {
       try {

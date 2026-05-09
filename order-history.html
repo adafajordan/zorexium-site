@@ -421,7 +421,12 @@
     fetchFn(BACKEND + '/api/orders/my', { credentials: 'include' })
       .then(function(r) { return r.ok ? r.json() : []; })
       .then(function(orders) {
-        if (!orders || orders.length === 0) {
+        // Only display completed orders; pending orders are never persisted to the orders collection
+        var completedOrders = Array.isArray(orders) ? orders.filter(function(o) {
+          var s = (o.status || '').toLowerCase();
+          return s !== 'pending' && s !== '';
+        }) : [];
+        if (!completedOrders || completedOrders.length === 0) {
           listEl.innerHTML = '<div class="text-center py-14 bg-white border border-gray-200 rounded-lg">' +
             '<i class="fas fa-box-open text-5xl text-gray-200 mb-3 block"></i>' +
             '<p class="font-semibold text-gray-600 mb-1">No orders yet</p>' +
@@ -430,12 +435,13 @@
             '</div>';
           return;
         }
-        listEl.innerHTML = orders.map(function(o) {
+        listEl.innerHTML = completedOrders.map(function(o) {
           var publicOrderId = o.id || o.orderId || o._id || '';
-          var status = o.status || 'Processing';
-          var sc = statusClass(status);
-          var si = statusIcon(status);
-          var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '';
+          var rawStatus = o.shippingStatus === 'shipped' ? 'Shipped' : (o.status || 'Completed');
+          var status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+          var sc = statusClass(rawStatus);
+          var si = statusIcon(rawStatus);
+          var date = (o.completedAt || o.createdAt) ? new Date(o.completedAt || o.createdAt).toLocaleDateString() : '';
           var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '';
           var items = (o.items || []).slice(0, 2).map(function(i) {
             return '<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5 mr-1">' + (i.name || 'Item') + '</span>';
