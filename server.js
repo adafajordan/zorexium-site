@@ -1320,9 +1320,13 @@ async function syncCompletedOrderRecords(order) {
       if (product) {
         const currentQuantity = Math.max(0, parseInt(product.quantity, 10) || 0);
         const nextQuantity = Math.max(0, currentQuantity - quantitySold);
+        const productUpdateFields = { quantity: nextQuantity, updatedAt: now };
+        if (nextQuantity === 0) {
+          productUpdateFields.status = 'inactive';
+        }
         await db.collection('products').updateOne(
           { _id: new ObjectId(productId) },
-          { $set: { quantity: nextQuantity, updatedAt: now } }
+          { $set: productUpdateFields }
         );
       }
     }
@@ -1886,7 +1890,21 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       if (!product) {
         throw new Error('One or more products in your cart are unavailable. Please refresh and try again.');
       }
+      // Enforce product active status
+      if (product.status && product.status !== 'active') {
+        throw new Error(`"${String(product.name || 'A product').slice(0, 100)}" is no longer available.`);
+      }
       const quantity = Math.max(1, Math.min(99, parseInt(item && item.quantity, 10) || 1));
+      // Enforce inventory quantity
+      const availableQty = parseInt(product.quantity, 10);
+      if (!isNaN(availableQty)) {
+        if (availableQty <= 0) {
+          throw new Error(`"${String(product.name || 'A product').slice(0, 100)}" is out of stock.`);
+        }
+        if (quantity > availableQty) {
+          throw new Error(`Only ${availableQty} unit(s) of "${String(product.name || 'A product').slice(0, 100)}" are available.`);
+        }
+      }
       const unitPrice = Number(product && product.price);
       if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
         throw new Error('One or more products have invalid pricing. Please refresh and try again.');
@@ -1988,7 +2006,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     if (checkoutUser && checkoutUser.userId) {
       orderDocument.userId = String(checkoutUser.userId);
     }
-    await db.collection('orders').insertOne(orderDocument);
+    await db.collection('pendingOrders').insertOne(orderDocument);
     
     res.json({
       orderId,
@@ -2012,10 +2030,26 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
     }
 
     const { orderId } = req.params;
-    const order = await db.collection('orders').findOne({ id: orderId });
+    // Look up the order in pendingOrders first (pre-capture), then fall back to orders
+    // (in case capture is being retried after the order was already persisted as completed).
+    let order = await db.collection('pendingOrders').findOne({ id: orderId });
+    const fromPendingOrders = !!order;
+    if (!order) {
+      order = await db.collection('orders').findOne({ id: orderId });
+    }
     
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Idempotency: if already captured and stored as completed, return success immediately
+    if (!fromPendingOrders && order.status === 'completed') {
+      return res.json({
+        orderId,
+        paypalCaptureId: order.paypalCaptureId || null,
+        status: 'completed',
+        receiptId: order.receiptId || null
+      });
     }
     
     const accessToken = await fetchPayPalAccessToken();
@@ -2033,17 +2067,32 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       console.error('Capture error:', captureData);
       throw new Error(captureData.message || 'Payment capture failed');
     }
-    
-    await db.collection('orders').updateOne(
-      { id: orderId },
-      {
-        $set: {
-          status: 'completed',
-          paypalCaptureId: captureData.id,
-          completedAt: new Date()
+
+    const completedOrderDoc = {
+      ...order,
+      status: 'completed',
+      paypalCaptureId: captureData.id,
+      completedAt: new Date()
+    };
+    delete completedOrderDoc._id;
+
+    if (fromPendingOrders) {
+      // First-time capture: insert as a completed order and remove the pending record
+      await db.collection('orders').insertOne(completedOrderDoc);
+      await db.collection('pendingOrders').deleteOne({ id: orderId });
+    } else {
+      // Retry capture path: update the existing orders document
+      await db.collection('orders').updateOne(
+        { id: orderId },
+        {
+          $set: {
+            status: 'completed',
+            paypalCaptureId: captureData.id,
+            completedAt: new Date()
+          }
         }
-      }
-    );
+      );
+    }
 
     // Synchronize every persistent post-purchase record once the payment is captured.
     // This keeps buyer history, receipts, seller analytics, notifications, and inventory in sync.
@@ -2246,6 +2295,63 @@ app.get('/api/orders/guest', publicApiRateLimit, async function(req, res) {
     res.json(order);
   } catch (error) {
     console.error('Error fetching guest order:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── MARK ORDER AS SHIPPED (seller only) ────────────────────────────────────────
+// Sellers call this once they have dispatched the package. It updates the order
+// shipping status and sends an in-transit email to the buyer.
+app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const { orderId } = req.params;
+  if (!orderId || orderId.length > 64) {
+    return res.status(400).json({ error: 'Invalid orderId' });
+  }
+
+  try {
+    const order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'completed') {
+      return res.status(400).json({ error: 'Only completed orders can be marked as shipped' });
+    }
+    if (order.shippingStatus === 'shipped') {
+      return res.status(409).json({ error: 'Order has already been marked as shipped' });
+    }
+
+    // Verify the caller is a seller for at least one item in this order
+    const sellerItems = (Array.isArray(order.items) ? order.items : []).filter(function(item) {
+      return String(item && item.sellerId ? item.sellerId : '') === String(req.userId);
+    });
+    if (sellerItems.length === 0) {
+      return res.status(403).json({ error: 'You are not the seller for this order' });
+    }
+
+    const now = new Date();
+    await db.collection('orders').updateOne(
+      { id: orderId },
+      { $set: { shippingStatus: 'shipped', shippedAt: now, updatedAt: now } }
+    );
+
+    // Notify the buyer by email that their order is in transit
+    const buyerEmail = normalizeEmail(order.buyerEmail || (order.buyer && order.buyer.email) || '');
+    if (buyerEmail) {
+      const buyerFirstName = escapeHtml(order.buyer && order.buyer.firstName ? order.buyer.firstName : '');
+      const safeOrderId = escapeHtml(orderId);
+      await sendEventEmailSafe(
+        buyerEmail,
+        'Your Zorexium order is on its way!',
+        `<p>Good news${buyerFirstName ? ', ' + buyerFirstName : ''}!</p>` +
+        `<p>Your order <strong>${safeOrderId}</strong> has been shipped and is on its way to you.</p>` +
+        `<p>The seller has confirmed that your package is in transit. Please allow a few business days for delivery.</p>`,
+        '/track-your-order.html?order=' + encodeURIComponent(orderId)
+      );
+    }
+
+    res.json({ success: true, orderId, shippingStatus: 'shipped', shippedAt: now });
+  } catch (error) {
+    console.error('Error marking order as shipped:', error);
     res.status(500).json({ error: error.message });
   }
 });

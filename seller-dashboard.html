@@ -1178,20 +1178,50 @@
       '<th class="px-4 py-3 font-semibold text-gray-600">Items</th>' +
       '<th class="px-4 py-3 font-semibold text-gray-600">Total</th>' +
       '<th class="px-4 py-3 font-semibold text-gray-600">Status</th>' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Action</th>' +
       '</tr></thead>' +
       '<tbody>' + orders.map(function(o) {
         var buyer = o.buyerDisplayName || (o.buyer && (o.buyer.email || o.buyer.name)) || (o.shippingAddress && o.shippingAddress.name) || '—';
         var items = o.sellerItemCount || (o.sellerItems || []).length || (o.items || []).length;
+        var safeId = escHtml((o.id || o._id || '').replace(/'/g, ''));
+        var actionCell = '';
+        if (o.shippingStatus === 'shipped') {
+          actionCell = '<span class="text-xs font-semibold text-green-600"><i class="fas fa-truck mr-1"></i>Shipped</span>';
+        } else if ((o.status || '').toLowerCase() === 'completed') {
+          actionCell = '<button onclick="markShipped(\'' + safeId + '\')" class="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-200 font-semibold transition-colors"><i class="fas fa-shipping-fast mr-1"></i>Mark Shipped</button>';
+        }
         return '<tr class="order-row border-b border-gray-100">' +
           '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + escHtml((o.id || o._id || '').slice(0, 14) + '…') + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + fmtDate(o.createdAt) + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + escHtml(buyer) + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + items + ' item' + (items !== 1 ? 's' : '') + '</td>' +
           '<td class="px-4 py-3 font-semibold text-gray-900">' + fmtCurrency(o.sellerGrossTotal || o.total || o.amount) + '</td>' +
-          '<td class="px-4 py-3">' + statusBadge(o.status) + '</td>' +
+          '<td class="px-4 py-3">' + statusBadge(o.status) + (o.shippingStatus === 'shipped' ? ' <span class="ml-1 text-xs text-green-600">· In Transit</span>' : '') + '</td>' +
+          '<td class="px-4 py-3">' + actionCell + '</td>' +
           '</tr>';
       }).join('') +
       '</tbody></table></div>';
+  }
+
+  async function markShipped(orderId) {
+    if (!confirm('Mark this order as shipped? The buyer will be notified by email that their package is in transit.')) return;
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/' + encodeURIComponent(orderId) + '/ship', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(function() { return {}; });
+        throw new Error(err.error || 'Failed to mark as shipped');
+      }
+      ZrxNotify.showNotification('Order marked as shipped. The buyer has been notified by email.', 'success');
+      // Refresh orders list
+      _allOrders = [];
+      await loadOrdersPreview();
+      await loadOrders();
+    } catch (err) {
+      ZrxNotify.showNotification(err.message || 'Failed to mark order as shipped. Please try again.', 'error');
+    }
   }
 
   // ── Payouts ────────────────────────────────────────────────────────────────────
