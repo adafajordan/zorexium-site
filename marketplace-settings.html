@@ -454,9 +454,34 @@
               </tbody>
             </table>
           </div>
-          <div class="bg-cyan-50 border border-cyan-100 rounded-lg p-4 mb-4">
-            <p class="text-sm text-cyan-800 font-medium mb-1"><i class="fas fa-info-circle mr-1"></i>Start a New Return</p>
-            <p class="text-xs text-cyan-700">To initiate a new return, find your order in Order History and click "Return," or contact the seller directly through Messages. For items not received or defective, you can escalate to Zorexium immediately.</p>
+          <!-- Start New Return Form -->
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-5 mb-4">
+            <p class="text-sm font-semibold text-gray-800 mb-3"><i class="fas fa-undo-alt text-cyan-500 mr-1"></i>Start a New Return</p>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Select Order</label>
+                <select id="msReturnOrderSelect" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+                  <option value="">— Select an order —</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Reason for Return</label>
+                <select id="msReturnReason" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+                  <option value="">— Select a reason —</option>
+                  <option value="defective">Defective / Damaged</option>
+                  <option value="not_as_described">Not as Described</option>
+                  <option value="wrong_item">Wrong Item Received</option>
+                  <option value="not_received">Item Not Received</option>
+                  <option value="changed_mind">Changed Mind</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Additional Details (optional)</label>
+                <textarea id="msReturnDetails" rows="3" placeholder="Describe the issue..." class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm resize-none"></textarea>
+              </div>
+              <button onclick="msSubmitReturn()" class="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Submit Return Request</button>
+            </div>
           </div>
           <p class="text-xs text-gray-500">Refunds are processed within 3–5 business days after approval. <a href="return-refund-policy.html" class="text-cyan-600 hover:underline">Learn more about our return policy.</a></p>
         </div>
@@ -941,6 +966,11 @@
       window._msOrdersLoaded = true;
       msLoadOrderHistory();
     }
+    if (panelId === 'return-status' && !window._msReturnsLoaded) {
+      window._msReturnsLoaded = true;
+      msLoadReturnHistory();
+      msLoadReturnOrders();
+    }
   }
 
   function msLoadOrderHistory() {
@@ -991,6 +1021,94 @@
         if (newEmpty) newEmpty.style.display = 'none';
       });
   }
+
+  // Load return history for Return Status panel
+  function msLoadReturnHistory() {
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    var tbody = document.getElementById('msReturnHistoryBody');
+    var emptyRow = document.getElementById('msReturnHistoryEmpty');
+    if (!tbody) return;
+    ZrxSession.fetch(MS_BACKEND + '/api/returns/my', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .catch(function() { return []; })
+      .then(function(returns) {
+        if (!returns.length) {
+          if (emptyRow) emptyRow.style.display = '';
+          return;
+        }
+        if (emptyRow) emptyRow.style.display = 'none';
+        var reasonLabels = { defective: 'Defective / Damaged', not_as_described: 'Not as Described', wrong_item: 'Wrong Item', not_received: 'Not Received', changed_mind: 'Changed Mind', other: 'Other' };
+        var rows = returns.map(function(r) {
+          var ordId = msEsc(r.orderId || '—');
+          var itemName = r.items && r.items[0] ? msEsc(r.items[0].name) + (r.items.length > 1 ? ' +' + (r.items.length - 1) : '') : '—';
+          var reason = reasonLabels[r.reason] || msEsc(r.reason || '—');
+          var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—';
+          var statusColors = { open: 'bg-blue-50 text-blue-700', pending: 'bg-yellow-50 text-yellow-700', approved: 'bg-green-50 text-green-700', rejected: 'bg-red-50 text-red-700', closed: 'bg-gray-100 text-gray-600' };
+          var sc = statusColors[r.status] || 'bg-gray-100 text-gray-600';
+          var status = r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : 'Open';
+          return '<tr>' +
+            '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + msEsc((r.returnId || '').slice(0, 16)) + '</td>' +
+            '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + ordId.slice(0, 14) + '…</td>' +
+            '<td class="px-4 py-3 text-gray-700 max-w-xs truncate">' + itemName + '</td>' +
+            '<td class="px-4 py-3 text-gray-700">' + reason + '</td>' +
+            '<td class="px-4 py-3 text-gray-500">' + date + '</td>' +
+            '<td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full border ' + sc + '">' + status + '</span></td>' +
+            '</tr>';
+        }).join('');
+        tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
+        var newEmpty = document.getElementById('msReturnHistoryEmpty');
+        if (newEmpty) newEmpty.style.display = 'none';
+      });
+  }
+
+  // Load eligible orders into the return order selector
+  function msLoadReturnOrders() {
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    var sel = document.getElementById('msReturnOrderSelect');
+    if (!sel) return;
+    ZrxSession.fetch(MS_BACKEND + '/api/orders/my', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .catch(function() { return []; })
+      .then(function(orders) {
+        var completed = Array.isArray(orders) ? orders.filter(function(o) { return (o.status || '').toLowerCase() === 'completed'; }) : [];
+        if (!completed.length) return;
+        var options = completed.map(function(o) {
+          var id = o.id || o.orderId || o._id || '';
+          var label = 'Order #' + id.slice(-8).toUpperCase();
+          if (o.items && o.items[0]) label += ' – ' + (o.items[0].name || 'Item');
+          return '<option value="' + msEsc(id) + '">' + msEsc(label) + '</option>';
+        }).join('');
+        sel.innerHTML = '<option value="">— Select an order —</option>' + options;
+      });
+  }
+
+  // Submit a new return request
+  window.msSubmitReturn = function() {
+    var orderId = (document.getElementById('msReturnOrderSelect') || {}).value;
+    var reason = (document.getElementById('msReturnReason') || {}).value;
+    var details = (document.getElementById('msReturnDetails') || {}).value;
+    if (!orderId) { ZrxNotify.showNotification('Please select an order.', 'error'); return; }
+    if (!reason) { ZrxNotify.showNotification('Please select a reason for the return.', 'error'); return; }
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) { ZrxNotify.showNotification('Please sign in to submit a return.', 'error'); return; }
+    ZrxSession.fetch(MS_BACKEND + '/api/returns', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: orderId, reason: reason, details: details })
+    }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+    .then(function(result) {
+      if (!result.ok) { ZrxNotify.showNotification(result.data.error || 'Failed to submit return.', 'error'); return; }
+      ZrxNotify.showNotification('Return request submitted successfully! We will review it within 1–2 business days.', 'success');
+      document.getElementById('msReturnOrderSelect').value = '';
+      document.getElementById('msReturnReason').value = '';
+      document.getElementById('msReturnDetails').value = '';
+      // Reload returns table
+      window._msReturnsLoaded = false;
+      msLoadReturnHistory();
+      window._msReturnsLoaded = true;
+    })
+    .catch(function() { ZrxNotify.showNotification('Failed to submit return. Please try again.', 'error'); });
+  };
 
   // Load reviews for Manage Reviews panel
   function msLoadReviews() {
@@ -1079,12 +1197,6 @@
       }
     }
   });
-
-  // Auto-load the order history panel since it is the default active panel
-  if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
-    window._msOrdersLoaded = true;
-    msLoadOrderHistory();
-  }
 
 </script>
 
@@ -1291,6 +1403,11 @@
                 });
             }
         })();
+        // Auto-load order history since it is the default active panel and session.js is now loaded
+        if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn() && !window._msOrdersLoaded) {
+            window._msOrdersLoaded = true;
+            msLoadOrderHistory();
+        }
     </script>
     <script src="profile-picture.js"></script>
 </body>

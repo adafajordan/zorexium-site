@@ -353,11 +353,59 @@
 
       <!-- Returns list -->
       <div id="rhList">
-        <div class="text-center py-14 bg-white border border-gray-200 rounded-lg" id="rhEmpty">
-          <i class="fas fa-check-circle text-5xl text-green-200 mb-3 block"></i>
-          <p class="font-semibold text-gray-600 mb-1">No returns on record</p>
-          <p class="text-sm text-gray-400 mb-5">All your purchases have been delivered and accepted. Need to return something?</p>
-          <a href="order-history.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">View Orders</a>
+        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden mb-5">
+          <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-500 uppercase text-xs border-b border-gray-200">
+              <tr>
+                <th class="px-4 py-3">Return ID</th>
+                <th class="px-4 py-3">Order</th>
+                <th class="px-4 py-3">Item</th>
+                <th class="px-4 py-3">Reason</th>
+                <th class="px-4 py-3">Submitted</th>
+                <th class="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="rhReturnBody" class="divide-y divide-gray-100">
+              <tr id="rhEmpty">
+                <td colspan="6" class="px-4 py-14 text-center text-gray-400">
+                  <i class="fas fa-check-circle text-4xl text-green-200 mb-3 block"></i>
+                  <p class="font-semibold text-gray-600 mb-1">No returns on record</p>
+                  <p class="text-sm mb-0">All your purchases have been delivered and accepted.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Start New Return -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6 mb-5">
+          <h2 class="text-base font-bold text-gray-900 mb-1"><i class="fas fa-undo-alt text-cyan-500 mr-1"></i>Start a New Return</h2>
+          <p class="text-sm text-gray-500 mb-4">Select a completed order and provide the return reason to open a request.</p>
+          <div class="space-y-3 max-w-xl">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Select Order</label>
+              <select id="rhOrderSelect" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+                <option value="">— Loading your orders… —</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Reason for Return</label>
+              <select id="rhReturnReason" class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+                <option value="">— Select a reason —</option>
+                <option value="defective">Defective / Damaged</option>
+                <option value="not_as_described">Not as Described</option>
+                <option value="wrong_item">Wrong Item Received</option>
+                <option value="not_received">Item Not Received</option>
+                <option value="changed_mind">Changed Mind</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Additional Details (optional)</label>
+              <textarea id="rhReturnDetails" rows="3" placeholder="Describe the issue in more detail..." class="w-full bg-white border border-gray-300 text-gray-900 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm resize-none"></textarea>
+            </div>
+            <button id="rhSubmitBtn" onclick="rhSubmitReturn()" class="px-5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Submit Return Request</button>
+          </div>
         </div>
       </div>
 
@@ -485,6 +533,104 @@
         if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
         var pwdInput = document.getElementById('headerLoginPassword');
         if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
+    })();
+
+    // ── Returns page logic ─────────────────────────────────────────────────────
+    (function() {
+      var RH_BACKEND = 'https://zorexium-backend.onrender.com';
+      var isLoggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
+      if (!isLoggedIn) return;
+
+      function rhEsc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+      // Populate order selector
+      ZrxSession.fetch(RH_BACKEND + '/api/orders/my', { credentials: 'include' })
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .catch(function() { return []; })
+        .then(function(orders) {
+          var sel = document.getElementById('rhOrderSelect');
+          if (!sel) return;
+          var completed = Array.isArray(orders) ? orders.filter(function(o) { return (o.status || '').toLowerCase() === 'completed'; }) : [];
+          // Check for pre-selected order from URL ?order=
+          var preOrder = new URLSearchParams(window.location.search).get('order') || '';
+          if (!completed.length) {
+            sel.innerHTML = '<option value="">— No completed orders found —</option>';
+            return;
+          }
+          var opts = completed.map(function(o) {
+            var id = o.id || o.orderId || o._id || '';
+            var label = 'Order #' + id.slice(-8).toUpperCase();
+            if (o.items && o.items[0]) label += ' – ' + (o.items[0].name || 'Item');
+            return '<option value="' + rhEsc(id) + '"' + (preOrder && preOrder === id ? ' selected' : '') + '>' + rhEsc(label) + '</option>';
+          }).join('');
+          sel.innerHTML = '<option value="">— Select an order —</option>' + opts;
+        });
+
+      // Load existing returns
+      function rhLoadReturns() {
+        ZrxSession.fetch(RH_BACKEND + '/api/returns/my', { credentials: 'include' })
+          .then(function(r) { return r.ok ? r.json() : []; })
+          .catch(function() { return []; })
+          .then(function(returns) {
+            var tbody = document.getElementById('rhReturnBody');
+            var emptyRow = document.getElementById('rhEmpty');
+            if (!tbody) return;
+            if (!returns.length) {
+              if (emptyRow) emptyRow.style.display = '';
+              return;
+            }
+            if (emptyRow) emptyRow.style.display = 'none';
+            var reasonLabels = { defective: 'Defective / Damaged', not_as_described: 'Not as Described', wrong_item: 'Wrong Item', not_received: 'Not Received', changed_mind: 'Changed Mind', other: 'Other' };
+            var statusColors = { open: 'bg-blue-50 text-blue-700 border-blue-200', pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', approved: 'bg-green-50 text-green-700 border-green-200', rejected: 'bg-red-50 text-red-700 border-red-200', closed: 'bg-gray-100 text-gray-600 border-gray-200' };
+            var rows = returns.map(function(r) {
+              var ordId = rhEsc(r.orderId || '—');
+              var itemName = r.items && r.items[0] ? rhEsc(r.items[0].name) + (r.items.length > 1 ? ' +' + (r.items.length - 1) : '') : '—';
+              var reason = reasonLabels[r.reason] || rhEsc(r.reason || '—');
+              var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '—';
+              var sc = statusColors[r.status] || 'bg-gray-100 text-gray-600 border-gray-200';
+              var status = r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : 'Open';
+              return '<tr class="border-t border-gray-100">' +
+                '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + rhEsc((r.returnId || '').slice(0, 16)) + '</td>' +
+                '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + ordId.slice(0, 14) + '…</td>' +
+                '<td class="px-4 py-3 text-gray-700 max-w-xs truncate">' + itemName + '</td>' +
+                '<td class="px-4 py-3 text-gray-700">' + reason + '</td>' +
+                '<td class="px-4 py-3 text-gray-500">' + date + '</td>' +
+                '<td class="px-4 py-3"><span class="text-xs px-2 py-0.5 rounded-full border ' + sc + '">' + status + '</span></td>' +
+                '</tr>';
+            }).join('');
+            tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
+            var ne = document.getElementById('rhEmpty');
+            if (ne) ne.style.display = 'none';
+          });
+      }
+      rhLoadReturns();
+
+      // Submit new return
+      window.rhSubmitReturn = function() {
+        var orderId = (document.getElementById('rhOrderSelect') || {}).value;
+        var reason = (document.getElementById('rhReturnReason') || {}).value;
+        var details = (document.getElementById('rhReturnDetails') || {}).value;
+        if (!orderId) { ZrxNotify.showNotification('Please select an order.', 'error'); return; }
+        if (!reason) { ZrxNotify.showNotification('Please select a reason for the return.', 'error'); return; }
+        var btn = document.getElementById('rhSubmitBtn');
+        if (btn) btn.disabled = true;
+        ZrxSession.fetch(RH_BACKEND + '/api/returns', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: orderId, reason: reason, details: details })
+        }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(result) {
+          if (!result.ok) { ZrxNotify.showNotification(result.data.error || 'Failed to submit return.', 'error'); return; }
+          ZrxNotify.showNotification('Return request submitted! We will review it within 1–2 business days.', 'success');
+          document.getElementById('rhOrderSelect').value = '';
+          document.getElementById('rhReturnReason').value = '';
+          document.getElementById('rhReturnDetails').value = '';
+          rhLoadReturns();
+        })
+        .catch(function() { ZrxNotify.showNotification('Failed to submit return. Please try again.', 'error'); })
+        .finally(function() { if (btn) btn.disabled = false; });
+      };
     })();
 </script>
 </body>

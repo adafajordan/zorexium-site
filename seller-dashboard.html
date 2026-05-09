@@ -1305,6 +1305,7 @@
       '<thead><tr class="text-left border-b border-gray-200 bg-gray-50">' +
       '<th class="px-4 py-3 font-semibold text-gray-600">Order ID</th>' +
       '<th class="px-4 py-3 font-semibold text-gray-600">Buyer</th>' +
+      '<th class="px-4 py-3 font-semibold text-gray-600">Ship To</th>' +
       '<th class="px-4 py-3 font-semibold text-gray-600">Items</th>' +
       '<th class="px-4 py-3 font-semibold text-gray-600">Order Date</th>' +
       '<th class="px-4 py-3 font-semibold text-gray-600">Shipment</th>' +
@@ -1313,11 +1314,18 @@
       '<tbody>' + orders.map(function(o) {
         var rawId = o.id || o._id || '';
         var buyer = o.buyerDisplayName || (o.buyer && (o.buyer.email || o.buyer.name)) || (o.shippingAddress && o.shippingAddress.name) || '—';
+        var addr = o.buyer && o.buyer.address;
+        var buyerName = (o.buyer && [o.buyer.firstName, o.buyer.lastName].filter(Boolean).join(' ').trim()) || buyer;
+        var addrLine = addr
+          ? escHtml([addr.line1, addr.city && addr.state ? addr.city + ', ' + addr.state : (addr.city || addr.state), addr.zip].filter(Boolean).join(' · '))
+          : '<span class="text-gray-400">—</span>';
+        var shipToCell = '<div class="text-xs leading-snug"><div class="font-medium text-gray-800">' + escHtml(buyerName) + '</div><div class="text-gray-500">' + addrLine + '</div></div>';
         var items = o.sellerItemCount || (o.sellerItems || []).length || (o.items || []).length;
         var isShipped = o.shippingStatus === 'shipped';
         return '<tr class="border-b border-gray-100">' +
           '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + escHtml(rawId.slice(0, 14) + '…') + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + escHtml(buyer) + '</td>' +
+          '<td class="px-4 py-3">' + shipToCell + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + items + ' item' + (items !== 1 ? 's' : '') + '</td>' +
           '<td class="px-4 py-3 text-gray-700">' + fmtDate(o.createdAt) + '</td>' +
           '<td class="px-4 py-3">' + (isShipped ? '<span class="text-xs font-semibold text-green-600"><i class="fas fa-check-circle mr-1"></i>In Transit</span>' : '<span class="text-xs font-semibold text-amber-600"><i class="fas fa-clock mr-1"></i>Awaiting shipment</span>') + '</td>' +
