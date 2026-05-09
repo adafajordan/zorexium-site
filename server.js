@@ -1585,7 +1585,7 @@ async function sendPayPalSellerPayout(order, options) {
         $set: {
           status: 'failed',
           error: reason,
-          paypalError: { message: reason },
+          paypalError: { message: tokenError.message || reason },
           updatedAt: new Date()
         }
       }
@@ -1960,7 +1960,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     }
     
     const orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    await db.collection('orders').insertOne({
+    const orderDocument = {
       id: orderId,
       paypalOrderId: paypalOrder.id,
       items: normalizedOrderItems,
@@ -1979,9 +1979,12 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       total,
       currency: 'USD',
       status: 'pending',
-      ...(checkoutUser && checkoutUser.userId ? { userId: String(checkoutUser.userId) } : {}),
       createdAt: new Date()
-    });
+    };
+    if (checkoutUser && checkoutUser.userId) {
+      orderDocument.userId = String(checkoutUser.userId);
+    }
+    await db.collection('orders').insertOne(orderDocument);
     
     res.json({
       orderId,
