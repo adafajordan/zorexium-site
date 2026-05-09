@@ -820,27 +820,32 @@
 
     listEl.innerHTML = filtered.map(function (o) {
       var publicOrderId = o.id || o.orderId || o._id || '';
-      var status = o.status || 'Processing';
-      var sc = statusClass(status);
-      var si = statusIcon(status);
+      var rawStatus = o.shippingStatus === 'shipped' ? 'Shipped' : (o.status || 'Processing');
+      var status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+      var sc = statusClass(rawStatus);
+      var si = statusIcon(rawStatus);
       var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '';
       var total = o.total ? '$' + parseFloat(o.total).toFixed(2) : '';
       var items = (o.items || []).slice(0, 3).map(function (i) {
         return '<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5 mr-1">' + (i.name || 'Item') + '</span>';
       }).join('');
+      var shipStatusHtml = o.shippingStatus === 'shipped'
+        ? '<span class="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5"><i class="fas fa-truck"></i> In Transit</span>'
+        : '<span class="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"><i class="fas fa-clock"></i> Awaiting Shipment</span>';
       return '<div class="order-card flex flex-wrap gap-4 items-center">' +
         '<div class="flex-1 min-w-0">' +
         '<div class="flex items-center gap-2 mb-1">' +
         '<span class="font-semibold text-sm text-gray-800">Order #' + publicOrderId.toString().slice(-8).toUpperCase() + '</span>' +
         '<span class="order-status ' + sc + '"><i class="' + si + '"></i> ' + status + '</span>' +
         '</div>' +
-        '<div class="text-xs text-gray-400 mb-2">' + date + (total ? ' &middot; ' + total : '') + '</div>' +
+        '<div class="text-xs text-gray-400 mb-1">' + date + (total ? ' &middot; ' + total : '') + '</div>' +
+        '<div class="mb-2">' + shipStatusHtml + '</div>' +
         '<div>' + (items || '<span class="text-xs text-gray-400">No items listed</span>') + '</div>' +
         '</div>' +
         '<div class="flex gap-2 flex-shrink-0">' +
         '<a href="track-your-order.html?order=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-semibold border border-cyan-400 text-cyan-600 rounded-md hover:bg-cyan-50 transition-colors">Track</a>' +
         '<a href="payment-success.html?orderId=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Receipt</a>' +
-        '<a href="returns-history.html" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Return</a>' +
+        '<a href="returns-history.html?order=' + encodeURIComponent(publicOrderId) + '" class="px-3 py-1.5 text-xs font-medium border border-gray-300 text-gray-600 rounded-md hover:bg-gray-50 transition-colors">Return</a>' +
         '</div>' +
         '</div>';
     }).join('');

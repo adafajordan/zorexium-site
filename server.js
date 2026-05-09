@@ -2473,6 +2473,73 @@ app.get('/api/orders/:orderId', async function(req, res) {
   }
 });
 
+// ── RETURNS ────────────────────────────────────────────────────────────────────
+
+// POST /api/returns – submit a new return request (auth required)
+app.post('/api/returns', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  const { orderId, reason, details } = req.body;
+  if (!orderId || typeof orderId !== 'string' || orderId.length > 64) {
+    return res.status(400).json({ error: 'Valid orderId is required' });
+  }
+  const validReasons = ['defective', 'not_as_described', 'wrong_item', 'not_received', 'changed_mind', 'other'];
+  if (!reason || !validReasons.includes(reason)) {
+    return res.status(400).json({ error: 'A valid return reason is required' });
+  }
+  if (details && (typeof details !== 'string' || details.length > 2000)) {
+    return res.status(400).json({ error: 'Details must be a string under 2000 characters' });
+  }
+  try {
+    const order = await db.collection('orders').findOne({
+      id: orderId,
+      $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }]
+    });
+    if (!order) return res.status(404).json({ error: 'Order not found or does not belong to you' });
+    if (order.status !== 'completed') {
+      return res.status(400).json({ error: 'Only completed orders can have returns initiated' });
+    }
+    // Prevent duplicate open returns for the same order
+    const existing = await db.collection('returns').findOne({ orderId, userId: req.userId, status: { $in: ['open', 'pending', 'approved'] } });
+    if (existing) {
+      return res.status(409).json({ error: 'A return request for this order is already open' });
+    }
+    const returnId = 'RET-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+    const returnDoc = {
+      returnId,
+      orderId,
+      userId: req.userId,
+      buyerEmail: normalizeEmail(order.buyerEmail || req.userEmail || ''),
+      reason,
+      details: String(details || '').slice(0, 2000),
+      status: 'open',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      orderTotal: order.total || null,
+      items: Array.isArray(order.items) ? order.items.map(function(i) { return { name: i.name || 'Item', quantity: i.quantity || 1 }; }) : []
+    };
+    await db.collection('returns').insertOne(returnDoc);
+    res.status(201).json({ success: true, returnId, status: 'open' });
+  } catch (error) {
+    console.error('Error creating return:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/returns/my – get current user's return requests (auth required)
+app.get('/api/returns/my', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const returns = await db.collection('returns')
+      .find({ $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
+      .sort({ createdAt: -1 })
+      .toArray();
+    res.json(returns);
+  } catch (error) {
+    console.error('Error fetching returns:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── COMMUNITY POSTS ────────────────────────────────────────────────────────────
 
 // POST /api/posts – create a post (auth required)
