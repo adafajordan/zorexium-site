@@ -392,7 +392,7 @@
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="stat-card">
             <div class="flex items-center justify-between mb-3">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Delivery</p>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pending Earnings</p>
               <span class="w-8 h-8 bg-amber-50 rounded-lg flex items-center justify-center"><i class="fas fa-clock text-amber-500 text-sm"></i></span>
             </div>
             <p class="text-2xl font-bold text-gray-900" id="pendingAmount">$0.00</p>
@@ -400,19 +400,19 @@
           </div>
           <div class="stat-card">
             <div class="flex items-center justify-between mb-3">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ready for Payout</p>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Available Payouts</p>
               <span class="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center"><i class="fas fa-check-circle text-green-500 text-sm"></i></span>
             </div>
-            <p class="text-2xl font-bold text-gray-900" id="readyAmount">$0.00</p>
-            <p class="text-xs text-gray-400 mt-1" id="readyCount">0 orders</p>
+            <p class="text-2xl font-bold text-gray-900" id="availableAmount">$0.00</p>
+            <p class="text-xs text-gray-400 mt-1" id="availableCount">0 orders</p>
           </div>
           <div class="stat-card">
             <div class="flex items-center justify-between mb-3">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Already Paid</p>
-              <span class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center"><i class="fas fa-university text-blue-500 text-sm"></i></span>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Blocked (Setup Required)</p>
+              <span class="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center"><i class="fas fa-lock text-red-500 text-sm"></i></span>
             </div>
-            <p class="text-2xl font-bold text-gray-900" id="paidAmount">$0.00</p>
-            <p class="text-xs text-gray-400 mt-1" id="paidCount">0 orders</p>
+            <p class="text-2xl font-bold text-gray-900" id="blockedAmount">$0.00</p>
+            <p class="text-xs text-gray-400 mt-1" id="blockedCount">0 orders</p>
           </div>
           <div class="stat-card">
             <div class="flex items-center justify-between mb-3">
@@ -434,7 +434,9 @@
             <select id="statusFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" onchange="renderEarnings()">
               <option value="">All Statuses</option>
               <option value="pending_delivery">Pending Delivery</option>
+              <option value="blocked_onboarding">Blocked: Setup Required</option>
               <option value="ready_to_pay">Ready for Payout</option>
+              <option value="processing">Processing</option>
               <option value="paid">Paid Out</option>
             </select>
           </div>
@@ -503,6 +505,13 @@
                 <p class="text-xs text-green-700 mt-0.5" id="payoutsConnectedEmail">Receiving payouts via PayPal.</p>
               </div>
             </div>
+            <div id="payoutsAccountPending" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3">
+              <i class="fas fa-exclamation-circle text-amber-500"></i>
+              <div>
+                <p class="text-sm font-semibold text-amber-800">Verification required</p>
+                <p class="text-xs text-amber-700 mt-0.5" id="payoutsPendingEmail">Enter your verification code to activate payouts.</p>
+              </div>
+            </div>
             <p class="text-sm text-gray-600 mb-4">Connect your PayPal account to receive payouts. You can add or update your PayPal email here.</p>
             <div class="flex flex-col sm:flex-row gap-3">
               <button onclick="openPayoutsPaypalModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm transition-colors">
@@ -543,9 +552,16 @@
       <label class="block text-sm font-medium text-gray-700 mb-1">PayPal Email Address</label>
       <input type="email" id="payoutsPaypalEmailInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="your@paypal.com" autocomplete="email">
     </div>
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
+      <input type="text" id="payoutsVerificationCodeInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
+    </div>
     <div class="flex gap-3">
       <button onclick="savePayoutsPaypalAccount()" id="savePayoutsPaypalBtn" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm">
         <i class="fas fa-save"></i> Save Account
+      </button>
+      <button onclick="verifyPayoutsPaypalAccount()" id="verifyPayoutsPaypalBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">
+        Verify
       </button>
       <button onclick="closePayoutsPaypalModal()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">Cancel</button>
     </div>
@@ -565,6 +581,7 @@
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   // Auth token is in HTTP-only cookie; use credentials:'include' in all fetch calls
   var sellerPayouts = [];
+  var sellerProfile = null;
 
   function getSellerOrderGross(order) {
     return parseFloat(order && (order.sellerGrossTotal || order.total || order.amount)) || 0;
@@ -574,6 +591,36 @@
     var explicitNet = parseFloat(order && order.sellerNetTotal);
     if (Number.isFinite(explicitNet) && explicitNet >= 0) return explicitNet;
     return parseFloat((getSellerOrderGross(order) * 0.9).toFixed(2));
+  }
+
+  function getEffectivePayoutStatus(order, payout) {
+    var payoutStatus = String(payout && payout.status ? payout.status : '').toLowerCase();
+    if (payoutStatus) return payoutStatus;
+    if (order && order.shippingStatus === 'shipped') {
+      return sellerProfile && sellerProfile.payoutVerified ? 'ready_to_pay' : 'blocked_onboarding';
+    }
+    return 'pending_delivery';
+  }
+
+  function renderPayoutAccountState() {
+    var connectedEl = document.getElementById('payoutsAccountConnected');
+    var pendingEl = document.getElementById('payoutsAccountPending');
+    var emailEl = document.getElementById('payoutsConnectedEmail');
+    var pendingEmailEl = document.getElementById('payoutsPendingEmail');
+    if (connectedEl) connectedEl.classList.add('hidden');
+    if (pendingEl) pendingEl.classList.add('hidden');
+
+    if (!sellerProfile) return;
+    var onboardingStatus = String(sellerProfile.payoutOnboardingStatus || '').toLowerCase();
+    if (sellerProfile.payoutAccountId && sellerProfile.payoutVerified) {
+      if (connectedEl) connectedEl.classList.remove('hidden');
+      if (emailEl) emailEl.textContent = 'PayPal: ' + sellerProfile.payoutAccountId;
+      return;
+    }
+    if (sellerProfile.payoutAccountId && onboardingStatus === 'pending_verification') {
+      if (pendingEl) pendingEl.classList.remove('hidden');
+      if (pendingEmailEl) pendingEmailEl.textContent = 'PayPal: ' + sellerProfile.payoutAccountId + ' · verify to unlock payouts';
+    }
   }
 
   async function init() {
@@ -596,19 +643,13 @@
         return;
       }
       const seller = await sellerRes.json();
+      sellerProfile = seller;
       document.getElementById('sellerSubtitle').textContent =
         'Earnings for ' + escHtml(seller.shopName || 'your shop') + ' · 90% of each sale goes to you.';
 
-      // Show connected payout account if available
-      if (seller.payoutAccountId && seller.payoutVerified) {
-        var connectedEl = document.getElementById('payoutsAccountConnected');
-        var emailEl = document.getElementById('payoutsConnectedEmail');
-        if (connectedEl) connectedEl.classList.remove('hidden');
-        if (emailEl) emailEl.textContent = 'PayPal: ' + seller.payoutAccountId;
-        // Pre-fill modal input
-        var input = document.getElementById('payoutsPaypalEmailInput');
-        if (input) input.value = seller.payoutAccountId;
-      }
+      renderPayoutAccountState();
+      var input = document.getElementById('payoutsPaypalEmailInput');
+      if (input && seller.payoutAccountId) input.value = seller.payoutAccountId;
     } catch (_) {}
 
     loadEarnings();
@@ -629,10 +670,7 @@
       sellerPayouts = (Array.isArray(soldOrders) ? soldOrders : []).map(function(order) {
         var orderId = String(order.id || order._id || '');
         var payout = payoutByOrderId.get(orderId);
-        // Earnings state follows shipping progress first, then a paid payout overrides it.
-        var status = payout && String(payout.status).toLowerCase() === 'paid'
-          ? 'paid'
-          : (order.shippingStatus === 'shipped' ? 'ready_to_pay' : 'pending_delivery');
+        var status = getEffectivePayoutStatus(order, payout);
         return {
           orderId: orderId,
           createdAt: order.createdAt,
@@ -651,6 +689,8 @@
   function openPayoutsPaypalModal() {
     document.getElementById('payoutsPaypalModal').classList.remove('hidden');
     var input = document.getElementById('payoutsPaypalEmailInput');
+    var codeInput = document.getElementById('payoutsVerificationCodeInput');
+    if (codeInput) codeInput.value = '';
     if (input) input.focus();
   }
 
@@ -667,22 +707,59 @@
     var btn = document.getElementById('savePayoutsPaypalBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', {
-        method: 'PUT', credentials: 'include',
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/start', {
+        method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payoutAccountId: email, payoutVerified: true })
+        body: JSON.stringify({ payoutAccountId: email })
       });
-      if (!res.ok) throw new Error('Save failed');
-      closePayoutsPaypalModal();
-      var connectedEl = document.getElementById('payoutsAccountConnected');
-      var emailEl = document.getElementById('payoutsConnectedEmail');
-      if (connectedEl) connectedEl.classList.remove('hidden');
-      if (emailEl) emailEl.textContent = 'PayPal: ' + email;
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('PayPal account saved successfully!', 'success');
-    } catch (_) {
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Failed to save payout account. Please try again.', 'error');
+      if (!res.ok) {
+        var setupErr = await res.json().catch(function() { return {}; });
+        throw new Error(setupErr.error || 'Save failed');
+      }
+      if (!sellerProfile) sellerProfile = {};
+      sellerProfile.payoutAccountId = email;
+      sellerProfile.payoutVerified = false;
+      sellerProfile.payoutOnboardingStatus = 'pending_verification';
+      renderPayoutAccountState();
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Verification code sent. Enter it to activate payouts.', 'success');
+    } catch (err) {
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification(err.message || 'Failed to save payout account. Please try again.', 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Account'; }
+    }
+  }
+
+  async function verifyPayoutsPaypalAccount() {
+    var code = (document.getElementById('payoutsVerificationCodeInput').value || '').trim();
+    if (!/^\d{6}$/.test(code)) {
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Enter the 6-digit verification code.', 'error');
+      return;
+    }
+    var btn = document.getElementById('verifyPayoutsPaypalBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = 'Verifying…'; }
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/verify', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code })
+      });
+      if (!res.ok) {
+        var verifyErr = await res.json().catch(function() { return {}; });
+        throw new Error(verifyErr.error || 'Verification failed');
+      }
+      const data = await res.json();
+      if (!sellerProfile) sellerProfile = {};
+      sellerProfile.payoutVerified = true;
+      sellerProfile.payoutOnboardingStatus = 'connected';
+      sellerProfile.payoutAccountId = data.payoutAccountId || sellerProfile.payoutAccountId;
+      renderPayoutAccountState();
+      closePayoutsPaypalModal();
+      await loadEarnings();
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Payout account verified. Eligible shipped orders can now be paid.', 'success');
+    } catch (err) {
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification(err.message || 'Failed to verify payout account.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Verify'; }
     }
   }
 
@@ -721,11 +798,21 @@
   }
 
   function statusBadge(status) {
-    var labels = { pending_delivery: 'Pending Delivery', ready_to_pay: 'Ready for Payout', paid: 'Paid' };
+    var labels = {
+      pending_delivery: 'Pending Delivery',
+      blocked_onboarding: 'Blocked: Setup Required',
+      ready_to_pay: 'Ready for Payout',
+      processing: 'Processing',
+      paid: 'Paid',
+      failed: 'Failed'
+    };
     var classes = {
       pending_delivery: 'badge-pending',
+      blocked_onboarding: 'bg-red-100 text-red-700',
       ready_to_pay:     'badge-ready',
+      processing:       'bg-indigo-100 text-indigo-700',
       paid:             'badge-paid',
+      failed:           'bg-red-100 text-red-700'
     };
     return '<span class="badge-status ' +
       (classes[status] || 'bg-gray-100 text-gray-600') + '">' +
@@ -734,22 +821,22 @@
 
   function updateStats() {
     var pending = 0, pendingCount = 0;
-    var ready   = 0, readyCount   = 0;
-    var paid    = 0, paidCount    = 0;
+    var available = 0, availableCount = 0;
+    var blocked = 0, blockedCount = 0;
 
     sellerPayouts.forEach(function(p) {
       if (p.status === 'pending_delivery') { pending += Number(p.amount); pendingCount++; }
-      else if (p.status === 'ready_to_pay') { ready += Number(p.amount); readyCount++; }
-      else if (p.status === 'paid')         { paid   += Number(p.amount); paidCount++;   }
+      else if (p.status === 'ready_to_pay' || p.status === 'processing') { available += Number(p.amount); availableCount++; }
+      else if (p.status === 'blocked_onboarding') { blocked += Number(p.amount); blockedCount++; }
     });
 
     document.getElementById('pendingAmount').textContent = '$' + pending.toFixed(2);
     document.getElementById('pendingCount').textContent  = pendingCount + ' order' + (pendingCount !== 1 ? 's' : '');
-    document.getElementById('readyAmount').textContent   = '$' + ready.toFixed(2);
-    document.getElementById('readyCount').textContent    = readyCount + ' order' + (readyCount !== 1 ? 's' : '');
-    document.getElementById('paidAmount').textContent    = '$' + paid.toFixed(2);
-    document.getElementById('paidCount').textContent     = paidCount + ' order' + (paidCount !== 1 ? 's' : '');
-    document.getElementById('totalAmount').textContent   = '$' + (pending + ready + paid).toFixed(2);
+    document.getElementById('availableAmount').textContent   = '$' + available.toFixed(2);
+    document.getElementById('availableCount').textContent    = availableCount + ' order' + (availableCount !== 1 ? 's' : '');
+    document.getElementById('blockedAmount').textContent    = '$' + blocked.toFixed(2);
+    document.getElementById('blockedCount').textContent     = blockedCount + ' order' + (blockedCount !== 1 ? 's' : '');
+    document.getElementById('totalAmount').textContent   = '$' + (pending + available + blocked).toFixed(2);
   }
 
   async function updateCartBadge() {
