@@ -1506,7 +1506,6 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       : [];
     const productById = new Map(products.map(function(product) { return [String(product._id), product]; }));
 
-    let subtotal = 0;
     // TEMPORARY TROUBLESHOOTING OVERRIDE:
     // Force PayPal checkout charge to $1.00 regardless of cart prices.
     // Revert by restoring subtotal/shipping/tax calculations from cart items.
@@ -1535,7 +1534,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       };
     });
     
-    subtotal = parseFloat(FORCED_TEST_CHECKOUT_TOTAL_USD);
+    const subtotal = parseFloat(FORCED_TEST_CHECKOUT_TOTAL_USD);
     const shipping = 0;
     const tax = 0;
     const total = FORCED_TEST_CHECKOUT_TOTAL_USD;
