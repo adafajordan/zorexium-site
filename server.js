@@ -1318,7 +1318,7 @@ async function sendPayPalSellerPayout(order, options) {
 // Do not reuse PAYPAL_PRO_SELLER_PLAN_ID because existing plans may charge
 // non-$1 amounts. Use PAYPAL_PRO_SELLER_TEST_PLAN_ID to reuse a known $1 test plan.
 // Revert to PAYPAL_PRO_SELLER_PLAN_ID after troubleshooting.
-let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID !== null
+let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID != null
   ? FORCED_TEST_PRO_PLAN_ID
   : PAYPAL_PRO_SELLER_PLAN_ID;
 
