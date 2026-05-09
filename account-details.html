@@ -925,7 +925,8 @@
       historyEl.innerHTML = safeOrders.map(function(order) {
         var publicOrderId = order.id || order.orderId || order._id || '';
         var receiptId = order.receiptId || (order.receipt && order.receipt.receiptId) || 'Pending';
-        var purchasedAt = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '—';
+        // Show completion timestamp so account purchase history aligns with finalized order records.
+        var purchasedAt = (order.completedAt || order.createdAt) ? new Date(order.completedAt || order.createdAt).toLocaleDateString() : '—';
         var total = '$' + (parseFloat(order.total) || 0).toFixed(2);
         var itemSummary = (order.items || []).slice(0, 3).map(function(item) {
           return '<span class="inline-block bg-gray-100 text-gray-600 text-xs rounded px-2 py-0.5 mr-1 mb-1">' + escHtml(item.name || 'Item') + '</span>';

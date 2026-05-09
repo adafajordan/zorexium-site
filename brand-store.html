@@ -498,6 +498,7 @@
   let currentPage = 1;
   let brandName = '';
   let brandSlug = '';
+  let brandSellerTotalSales = null;
 
   // ── Init ────────────────────────────────────────────────────────────────────
   function updateBrandPageTitle(name) {
@@ -535,6 +536,7 @@
       const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(sellerId));
       if (!res.ok) return;
       const seller = await res.json();
+      brandSellerTotalSales = Number.isFinite(parseFloat(seller.totalSales)) ? (parseInt(seller.totalSales, 10) || 0) : null;
 
       // Update shop name
       if (seller.shopName) updateBrandPageTitle(seller.shopName);
@@ -643,7 +645,10 @@
       document.getElementById('statRating').textContent = avg.toFixed(1);
     }
 
-    const totalOrders = allProducts.reduce((s, p) => s + (parseInt(p.salesCount) || 0), 0);
+    // Prefer seller-level totalSales so the brand store reflects the same completed-sale totals as seller dashboards.
+    const totalOrders = brandSellerTotalSales != null
+      ? brandSellerTotalSales
+      : allProducts.reduce((s, p) => s + (parseInt(p.salesCount) || 0), 0);
     document.getElementById('statOrders').textContent = totalOrders >= 1000000
       ? (totalOrders / 1000000).toFixed(1) + 'M+'
       : totalOrders > 0 ? totalOrders.toLocaleString() : '–';
