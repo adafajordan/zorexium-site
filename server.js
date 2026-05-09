@@ -432,13 +432,16 @@ app.get('/health', function(req, res) {
   res.status(200).json({ status: 'ok', mongoConnected, mongoUri: MONGO_URI ? 'set' : 'NOT SET' });
 });
 
+function getPayPalBankOnboardingUrlFromEnv() {
+  return (process.env.PAYPAL_MODE || 'sandbox') === 'sandbox'
+    ? 'https://www.sandbox.paypal.com/myaccount/money/banks/new'
+    : 'https://www.paypal.com/myaccount/money/banks/new';
+}
+
 // ── Config endpoint ────────────────────────────────────────────────────────────
 app.get('/api/config', function(req, res) {
   const clientId = process.env.PAYPAL_CLIENT_ID || null;
-  const paypalBankOnboardingUrl = PAYPAL_MODE === 'sandbox'
-    ? 'https://www.sandbox.paypal.com/myaccount/money/banks/new'
-    : 'https://www.paypal.com/myaccount/money/banks/new';
-  res.json({ paypalClientId: clientId, paypalBankOnboardingUrl: paypalBankOnboardingUrl });
+  res.json({ paypalClientId: clientId, paypalBankOnboardingUrl: getPayPalBankOnboardingUrlFromEnv() });
 });
 
 // ── USER AUTHENTICATION ────────────────────────────────────────────────────────
@@ -1114,13 +1117,7 @@ const PAYOUT_BATCH_UUID_SLICE = 16;
 const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
-const PAYPAL_BANK_ONBOARDING_URL = PAYPAL_MODE === 'sandbox'
-  ? 'https://www.sandbox.paypal.com/myaccount/money/banks/new'
-  : 'https://www.paypal.com/myaccount/money/banks/new';
-
-function buildPayPalBankOnboardingUrl() {
-  return PAYPAL_BANK_ONBOARDING_URL;
-}
+const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 
 function normalizeCountryCode(value) {
   const countryCode = String(value || '').trim().toUpperCase();
@@ -3591,7 +3588,7 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
 
     const now = new Date();
-    const onboardingUrl = buildPayPalBankOnboardingUrl();
+    const onboardingUrl = PAYPAL_BANK_ONBOARDING_URL;
     await db.collection('sellers').updateOne(
       { userId: req.userId },
       {
@@ -3710,7 +3707,7 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
     );
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
     if (String(seller.payoutOnboardingStatus || '').toLowerCase() === 'pending_provider') {
-      return res.status(409).json({ error: 'Complete PayPal bank onboarding first, then request a verification code.' });
+      return res.status(409).json({ error: 'Complete PayPal bank onboarding and confirm bank linking first so a verification code can be sent.' });
     }
     if (!seller.payoutVerificationCodeHash || !seller.payoutVerificationCodeExpiresAt) {
       return res.status(409).json({ error: 'Start payout setup first to request a verification code' });

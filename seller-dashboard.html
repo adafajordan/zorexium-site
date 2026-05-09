@@ -1560,9 +1560,9 @@
         '<th class="px-4 py-3 font-semibold text-gray-600">Action</th>' +
         '</tr></thead>' +
         '<tbody>' + rows.map(function(row) {
-          var canPush = row.status === 'ready_to_pay' || row.status === 'failed';
+          var canTriggerPayout = row.status === 'ready_to_pay' || row.status === 'failed';
           var safeOrderId = String(row.orderId || '');
-          var actionHtml = canPush
+          var actionHtml = canTriggerPayout
             ? '<button id="pushPayoutBtn-' + encodeURIComponent(safeOrderId) + '" type="button" data-order-id="' + escHtml(safeOrderId) + '" class="push-payout-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md bg-cyan-600 text-white hover:bg-cyan-700"><i class="fas fa-paper-plane"></i> Push Payout</button>'
             : '<span class="text-xs text-gray-400">—</span>';
           return '<tr class="border-b border-gray-100">' +
@@ -1702,7 +1702,7 @@
   document.addEventListener('click', function(e) {
     var modal = document.getElementById('payoutModal');
     if (modal && e.target === modal) closePayoutModal();
-    var pushBtn = e.target && e.target.closest ? e.target.closest('.push-payout-btn') : null;
+    var pushBtn = e.target.closest ? e.target.closest('.push-payout-btn') : null;
     if (pushBtn) {
       var orderId = pushBtn.getAttribute('data-order-id') || '';
       pushPayoutForOrder(orderId);
