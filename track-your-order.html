@@ -821,7 +821,7 @@
     listEl.innerHTML = filtered.map(function (o) {
       var publicOrderId = o.id || o.orderId || o._id || '';
       var rawStatus = o.shippingStatus === 'shipped' ? 'Shipped' : (o.status || 'Processing');
-      var status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1);
+      var status = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
       var sc = statusClass(rawStatus);
       var si = statusIcon(rawStatus);
       var date = o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '';

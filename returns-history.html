@@ -551,8 +551,9 @@
           var sel = document.getElementById('rhOrderSelect');
           if (!sel) return;
           var completed = Array.isArray(orders) ? orders.filter(function(o) { return (o.status || '').toLowerCase() === 'completed'; }) : [];
-          // Check for pre-selected order from URL ?order=
-          var preOrder = new URLSearchParams(window.location.search).get('order') || '';
+          // Check for pre-selected order from URL ?order= (validate format: only alphanumeric/dash, max 64 chars)
+          var rawPreOrder = new URLSearchParams(window.location.search).get('order') || '';
+          var preOrder = /^[A-Za-z0-9\-_]{1,64}$/.test(rawPreOrder) ? rawPreOrder : '';
           if (!completed.length) {
             sel.innerHTML = '<option value="">— No completed orders found —</option>';
             return;

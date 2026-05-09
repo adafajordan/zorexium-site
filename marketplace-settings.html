@@ -1102,10 +1102,8 @@
       document.getElementById('msReturnOrderSelect').value = '';
       document.getElementById('msReturnReason').value = '';
       document.getElementById('msReturnDetails').value = '';
-      // Reload returns table
-      window._msReturnsLoaded = false;
+      // Reload returns table directly (bypasses the lazy-load flag)
       msLoadReturnHistory();
-      window._msReturnsLoaded = true;
     })
     .catch(function() { ZrxNotify.showNotification('Failed to submit return. Please try again.', 'error'); });
   };

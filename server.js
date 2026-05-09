@@ -2503,7 +2503,7 @@ app.post('/api/returns', publicApiRateLimit, verifyToken, async function(req, re
     if (existing) {
       return res.status(409).json({ error: 'A return request for this order is already open' });
     }
-    const returnId = 'RET-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const returnId = 'RET-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex').toUpperCase();
     const returnDoc = {
       returnId,
       orderId,
