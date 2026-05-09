@@ -1107,6 +1107,7 @@ const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
 const PAYOUT_BATCH_UUID_SLICE = 16;
+const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 
@@ -1148,7 +1149,7 @@ function getPayPalWebhookHeaders(req) {
 
 async function verifyPayPalWebhookSignature(webhookEvent, webhookHeaders) {
   if (!PAYPAL_WEBHOOK_ID) {
-    throw new Error('PAYPAL_WEBHOOK_ID is required to verify PayPal webhooks');
+    throw new Error('PAYPAL_WEBHOOK_ID environment variable is required to verify PayPal webhooks');
   }
   const accessToken = await fetchPayPalAccessToken();
   const verifyRes = await fetch(`${PAYPAL_API}/v1/notifications/verify-webhook-signature`, {
@@ -1173,6 +1174,25 @@ async function verifyPayPalWebhookSignature(webhookEvent, webhookHeaders) {
     throw new Error(reason || 'Failed to verify PayPal webhook signature');
   }
   return String(verifyData && verifyData.verification_status ? verifyData.verification_status : '').toUpperCase() === 'SUCCESS';
+}
+
+function hasRequiredPayPalWebhookHeaders(webhookHeaders) {
+  return !!(
+    webhookHeaders &&
+    webhookHeaders.transmissionId &&
+    webhookHeaders.transmissionSig &&
+    webhookHeaders.transmissionTime &&
+    webhookHeaders.authAlgo &&
+    webhookHeaders.certUrl
+  );
+}
+
+function getPayPalPayoutWebhookIds(resource) {
+  const payoutResource = resource || {};
+  const payoutItem = payoutResource && payoutResource.payout_item ? payoutResource.payout_item : {};
+  const senderItemId = String(payoutItem.sender_item_id || payoutResource.sender_item_id || '').trim();
+  const batchId = String(payoutResource.payout_batch_id || payoutItem.payout_batch_id || '').trim();
+  return { senderItemId, batchId };
 }
 
 function getOrderSellerInfo(order) {
@@ -1881,7 +1901,7 @@ async function retryEligibleBlockedPayoutsForSeller(sellerId, triggerSource) {
   const payouts = await db.collection('payouts')
     .find({ sellerId: String(sellerId), status: 'blocked_onboarding' })
     .sort({ createdAt: 1 })
-    .limit(100)
+    .limit(MAX_BLOCKED_PAYOUT_RETRY_BATCH)
     .toArray();
   const summary = { scanned: payouts.length, attempted: 0, sent: 0, processing: 0, failed: 0, deferred: 0 };
   for (const payout of payouts) {
@@ -4109,7 +4129,7 @@ app.post('/api/paypal/webhook', publicApiRateLimit, async function(req, res) {
 
   try {
     const webhookHeaders = getPayPalWebhookHeaders(req);
-    if (!webhookHeaders.transmissionId || !webhookHeaders.transmissionSig || !webhookHeaders.transmissionTime || !webhookHeaders.authAlgo || !webhookHeaders.certUrl) {
+    if (!hasRequiredPayPalWebhookHeaders(webhookHeaders)) {
       return res.status(400).json({ error: 'Missing PayPal webhook signature headers' });
     }
     const verified = await verifyPayPalWebhookSignature(event, webhookHeaders);
@@ -4120,16 +4140,9 @@ app.post('/api/paypal/webhook', publicApiRateLimit, async function(req, res) {
     const now = new Date();
 
     if (eventType.startsWith('PAYMENT.PAYOUTS-ITEM.')) {
-      const senderItemId = String(
-        resource && resource.payout_item && resource.payout_item.sender_item_id
-          ? resource.payout_item.sender_item_id
-          : (resource && resource.sender_item_id ? resource.sender_item_id : '')
-      ).trim();
-      const batchId = String(
-        resource && resource.payout_batch_id
-          ? resource.payout_batch_id
-          : (resource && resource.payout_item && resource.payout_item.payout_batch_id ? resource.payout_item.payout_batch_id : '')
-      ).trim();
+      const payoutIds = getPayPalPayoutWebhookIds(resource);
+      const senderItemId = payoutIds.senderItemId;
+      const batchId = payoutIds.batchId;
 
       const itemUpdate = {
         paypalLastWebhookEvent: {
