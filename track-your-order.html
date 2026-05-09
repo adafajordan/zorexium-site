@@ -858,7 +858,10 @@
   fetchFn2(BACKEND + '/api/orders/my', { credentials: 'include' })
     .then(function (r) { return r.ok ? r.json() : []; })
     .then(function (orders) {
-      _allOrders = orders || [];
+      // Defensive client guard: only render finalized completed orders in the "Your Orders" timeline.
+      _allOrders = Array.isArray(orders) ? orders.filter(function(order) {
+        return String(order && order.status ? order.status : '').toLowerCase() === 'completed';
+      }) : [];
       if (_allOrders.length === 0) {
         listEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14">' +
           '<i class="fas fa-box-open text-5xl text-gray-200 mb-3 block"></i>' +

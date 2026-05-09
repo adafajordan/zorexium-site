@@ -1273,11 +1273,66 @@ async function upsertOrderNotification(query, notificationDoc) {
   }
 }
 
+async function reserveInventoryForOrder(order) {
+  const reservations = [];
+  const items = Array.isArray(order && order.items) ? order.items : [];
+  const now = new Date();
+
+  for (const item of items) {
+    const productId = String(item && item.id ? item.id : '').trim();
+    if (!ObjectId.isValid(productId)) continue;
+    const quantityRequested = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+
+    // Reserve stock atomically at capture time so concurrent checkouts cannot oversell this listing.
+    const reserveResult = await db.collection('products').updateOne(
+      { _id: new ObjectId(productId), status: 'active', quantity: { $gte: quantityRequested } },
+      { $inc: { quantity: -quantityRequested }, $set: { updatedAt: now } }
+    );
+    if (reserveResult.modifiedCount === 0) {
+      const productSnapshot = await db.collection('products').findOne(
+        { _id: new ObjectId(productId) },
+        { projection: { quantity: 1, status: 1 } }
+      );
+      const availableQuantity = Math.max(0, parseInt(productSnapshot && productSnapshot.quantity, 10) || 0);
+      const rawProductName = String(item && item.name ? item.name : 'A product');
+      const safeProductName = rawProductName.length > 100 ? (rawProductName.slice(0, 100) + '…') : rawProductName;
+      if (!productSnapshot) {
+        throw new Error(`"${safeProductName}" is no longer available.`);
+      }
+      throw new Error(`"${safeProductName}" is no longer available in the requested quantity (requested: ${quantityRequested}, available: ${availableQuantity}).`);
+    }
+
+    reservations.push({ productId: productId, quantity: quantityRequested });
+  }
+
+  return reservations;
+}
+
+async function releaseInventoryReservations(reservations) {
+  const rollbackItems = Array.isArray(reservations) ? reservations : [];
+  if (rollbackItems.length === 0) return;
+
+  const now = new Date();
+  for (const reservation of rollbackItems) {
+    const productId = String(reservation && reservation.productId ? reservation.productId : '').trim();
+    if (!ObjectId.isValid(productId)) continue;
+    const quantityToRestore = Math.max(1, parseInt(reservation && reservation.quantity, 10) || 1);
+    const restoreResult = await db.collection('products').updateOne(
+      { _id: new ObjectId(productId) },
+      { $inc: { quantity: quantityToRestore }, $set: { updatedAt: now } }
+    );
+    if (restoreResult.modifiedCount === 0) {
+      console.warn(`Inventory rollback skipped because product ${productId} was not found`);
+    }
+  }
+}
+
 async function syncCompletedOrderRecords(order) {
   const now = new Date();
   const completedAt = order && order.completedAt ? new Date(order.completedAt) : now;
   const sellerSummaries = buildSellerOrderSummaries(order);
   const receipt = buildReceiptSnapshot({ ...order, completedAt: completedAt }, sellerSummaries);
+  const inventoryAlreadyReserved = Boolean(order && order.inventoryReserved);
   let buyerUser = null;
 
   // Persist a reusable receipt so buyer-facing pages always have a durable, itemized record to render.
@@ -1313,23 +1368,42 @@ async function syncCompletedOrderRecords(order) {
       { upsert: true }
     );
     if (inventoryResult.upsertedCount > 0) {
-      const product = await db.collection('products').findOne(
-        { _id: new ObjectId(productId) },
-        { projection: { quantity: 1 } }
-      );
-      if (product) {
-        const currentQuantity = Math.max(0, parseInt(product.quantity, 10) || 0);
-        const nextQuantity = Math.max(0, currentQuantity - quantitySold);
-        const productUpdateFields = { quantity: nextQuantity, updatedAt: now };
-        if (nextQuantity === 0) {
-          // Business rule: automatically deactivate a listing once all inventory is sold.
-          // This prevents new purchases and hides the item from marketplace search results.
-          productUpdateFields.status = 'inactive';
-        }
-        await db.collection('products').updateOne(
+      if (inventoryAlreadyReserved) {
+        // Capture already reserved inventory earlier; only enforce inactive state when sold out.
+        const reservedProduct = await db.collection('products').findOne(
           { _id: new ObjectId(productId) },
-          { $set: productUpdateFields }
+          { projection: { quantity: 1, status: 1 } }
         );
+        const reservedQuantity = Math.max(0, parseInt(reservedProduct && reservedProduct.quantity, 10) || 0);
+        const reservedStatus = reservedProduct && reservedProduct.status != null
+          ? String(reservedProduct.status).toLowerCase()
+          : null;
+        if (reservedProduct && reservedQuantity === 0 && reservedStatus === 'active') {
+          // Business rule: once inventory reaches zero after a completed purchase, hide the listing.
+          await db.collection('products').updateOne(
+            { _id: new ObjectId(productId) },
+            { $set: { status: 'inactive', updatedAt: now } }
+          );
+        }
+      } else {
+        const product = await db.collection('products').findOne(
+          { _id: new ObjectId(productId) },
+          { projection: { quantity: 1 } }
+        );
+        if (product) {
+          const currentQuantity = Math.max(0, parseInt(product.quantity, 10) || 0);
+          const nextQuantity = Math.max(0, currentQuantity - quantitySold);
+          const productUpdateFields = { quantity: nextQuantity, updatedAt: now };
+          if (nextQuantity === 0) {
+            // Business rule: automatically deactivate a listing once all inventory is sold.
+            // This prevents new purchases and hides the item from marketplace search results.
+            productUpdateFields.status = 'inactive';
+          }
+          await db.collection('products').updateOne(
+            { _id: new ObjectId(productId) },
+            { $set: productUpdateFields }
+          );
+        }
       }
     }
   }
@@ -2023,6 +2097,9 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
 
 // ── CAPTURE ORDER (No auth required - guest checkout) ────────────────────────────────────────
 app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req, res) {
+  let reservedInventory = [];
+  let captureCommitted = false;
+  let paymentCaptured = false;
   try {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
@@ -2053,6 +2130,9 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
         receiptId: order.receiptId || null
       });
     }
+
+    // Reserve stock before capture so only inventory-backed purchases can complete.
+    reservedInventory = await reserveInventoryForOrder(order);
     
     const accessToken = await fetchPayPalAccessToken();
     const captureResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders/${order.paypalOrderId}/capture`, {
@@ -2069,12 +2149,14 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       console.error('Capture error:', captureData);
       throw new Error(captureData.message || 'Payment capture failed');
     }
+    paymentCaptured = true;
 
     const completedOrderDoc = {
       ...order,
       status: 'completed',
       paypalCaptureId: captureData.id,
-      completedAt: new Date()
+      completedAt: new Date(),
+      inventoryReserved: true
     };
     // Remove the MongoDB _id so the orders collection generates a fresh one for this document.
     delete completedOrderDoc._id;
@@ -2091,11 +2173,13 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
           $set: {
             status: 'completed',
             paypalCaptureId: captureData.id,
-            completedAt: new Date()
+            completedAt: new Date(),
+            inventoryReserved: true
           }
         }
       );
     }
+    captureCommitted = true;
 
     // Synchronize every persistent post-purchase record once the payment is captured.
     // This keeps buyer history, receipts, seller analytics, notifications, and inventory in sync.
@@ -2188,6 +2272,14 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       receiptId: syncedOrder.receiptId || null
     });
   } catch (error) {
+    if (!paymentCaptured && !captureCommitted && reservedInventory.length > 0) {
+      try {
+        // Roll back reserved stock when capture does not complete so inventory remains accurate.
+        await releaseInventoryReservations(reservedInventory);
+      } catch (rollbackError) {
+        console.error('Failed to roll back reserved inventory:', rollbackError.message);
+      }
+    }
     console.error('Capture error:', error);
     res.status(500).json({ error: error.message });
   }
@@ -2205,8 +2297,8 @@ app.get('/api/orders', publicApiRateLimit, verifyToken, async function(req, res)
       // Admin-only: return all orders when explicitly requested
       query = {};
     } else {
-      // Scope to the authenticated user only
-      query = { $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] };
+      // Scope to the authenticated user's finalized purchases only.
+      query = { status: 'completed', $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] };
     }
     const orders = await db.collection('orders').find(query).sort({ createdAt: -1 }).toArray();
     res.json(orders);
@@ -2221,7 +2313,8 @@ app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, r
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const orders = await db.collection('orders')
-      .find({ $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
+      // Only return finalized completed orders for buyer purchase history/account views.
+      .find({ status: 'completed', $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
       .sort({ createdAt: -1 })
       .toArray();
     res.json(orders);
@@ -2236,7 +2329,8 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const orders = await db.collection('orders')
-      .find({ 'items.sellerId': req.userId })
+      // Seller dashboards and payout summaries should only include finalized completed sales.
+      .find({ status: 'completed', 'items.sellerId': req.userId })
       .sort({ createdAt: -1 })
       .toArray();
 
