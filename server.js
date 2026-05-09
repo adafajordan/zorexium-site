@@ -1577,15 +1577,15 @@ async function sendPayPalSellerPayout(order, options) {
   let accessToken = '';
   try {
     accessToken = await fetchPayPalAccessToken();
-  } catch (authError) {
-    const reason = authError.message || 'Failed to authenticate with PayPal';
+  } catch (paypalAuthError) {
+    const reason = paypalAuthError.message || 'Failed to authenticate with PayPal';
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
         $set: {
           status: 'failed',
           error: reason,
-          paypalError: { message: authError.message || reason },
+          paypalError: { message: paypalAuthError.message || reason },
           updatedAt: new Date()
         }
       }
@@ -2086,10 +2086,13 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
     // Send transactional purchase emails (buyer thank-you + seller sold notification).
     const buyerEmail = normalizeEmail(syncedOrder.buyerEmail || (syncedOrder.buyer && syncedOrder.buyer.email) || '');
     if (buyerEmail) {
+      const buyerFirstName = escapeHtml(syncedOrder.buyer && syncedOrder.buyer.firstName ? syncedOrder.buyer.firstName : '');
+      const safeOrderId = escapeHtml(syncedOrder.id);
+      const safeReceiptId = escapeHtml(syncedOrder.receiptId || 'pending');
       await sendEventEmailSafe(
         buyerEmail,
         'Thank you for your purchase on Zorexium',
-        `<p>Thanks for your order${syncedOrder.buyer && syncedOrder.buyer.firstName ? ', ' + syncedOrder.buyer.firstName : ''}!</p><p>Your order <strong>${syncedOrder.id}</strong> has been confirmed.</p><p>Your receipt ID is <strong>${syncedOrder.receiptId || 'pending'}</strong>.</p>`,
+        `<p>Thanks for your order${buyerFirstName ? ', ' + buyerFirstName : ''}!</p><p>Your order <strong>${safeOrderId}</strong> has been confirmed.</p><p>Your receipt ID is <strong>${safeReceiptId}</strong>.</p>`,
         '/payment-success.html?orderId=' + encodeURIComponent(syncedOrder.id)
       );
     }
@@ -2114,7 +2117,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
         await sendEventEmailSafe(
           sellerEmail,
           'Your product sold on Zorexium',
-          `<p>Great news${sellerUser && sellerUser.firstName ? ', ' + sellerUser.firstName : ''}! Your listing just sold.</p><p>Order <strong>${syncedOrder.id}</strong> includes <strong>${sellerItems.length}</strong> item(s) from your shop.</p>`,
+          `<p>Great news${sellerUser && sellerUser.firstName ? ', ' + escapeHtml(sellerUser.firstName) : ''}! Your listing just sold.</p><p>Order <strong>${escapeHtml(syncedOrder.id)}</strong> includes <strong>${sellerItems.length}</strong> item(s) from your shop.</p>`,
           soldItemLink
         );
       } catch (sellerMailErr) {

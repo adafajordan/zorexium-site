@@ -191,7 +191,11 @@
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = (currentOrder && currentOrder.receiptId ? currentOrder.receiptId : 'zorexium-receipt') + '.txt';
+        const safeReceiptFileName = String(currentOrder && currentOrder.receiptId ? currentOrder.receiptId : 'zorexium-receipt')
+          .replace(/[^a-z0-9_-]/gi, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '') || 'zorexium-receipt';
+        link.download = safeReceiptFileName + '.txt';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
