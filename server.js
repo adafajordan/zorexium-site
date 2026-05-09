@@ -1163,7 +1163,7 @@ function buildSellerOrderSummaries(order) {
     const sellerId = String(item && item.sellerId ? item.sellerId : '').trim();
     if (!sellerId) return;
 
-    const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+    const quantity = parseInt(item && item.quantity, 10) || 1;
     const unitPrice = parseFloat(item && item.price) || 0;
     const grossTotal = parseFloat((unitPrice * quantity).toFixed(2));
     if (!sellerMap.has(sellerId)) {
@@ -1203,7 +1203,7 @@ function buildReceiptSnapshot(order, sellerSummaries) {
   const receiptId = String(
     order && order.receipt && order.receipt.receiptId
       ? order.receipt.receiptId
-      : 'RCT-' + Date.now() + '-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
+      : 'RCT-' + Date.now() + '-' + crypto.randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()
   ).slice(0, 64);
   const issuedAt = order && order.receipt && order.receipt.issuedAt
     ? new Date(order.receipt.issuedAt)
@@ -1297,7 +1297,7 @@ async function syncCompletedOrderRecords(order) {
   for (const item of inventoryItems) {
     const productId = String(item && item.id ? item.id : '').trim();
     if (!ObjectId.isValid(productId)) continue;
-    const quantitySold = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+    const quantitySold = parseInt(item && item.quantity, 10) || 1;
     const inventoryResult = await db.collection('inventoryAdjustments').updateOne(
       { orderId: order.id, productId: productId },
       {
@@ -1577,15 +1577,15 @@ async function sendPayPalSellerPayout(order, options) {
   let accessToken = '';
   try {
     accessToken = await fetchPayPalAccessToken();
-  } catch (tokenError) {
-    const reason = tokenError.message || 'Failed to authenticate with PayPal';
+  } catch (authError) {
+    const reason = authError.message || 'Failed to authenticate with PayPal';
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
         $set: {
           status: 'failed',
           error: reason,
-          paypalError: { message: tokenError.message || reason },
+          paypalError: { message: authError.message || reason },
           updatedAt: new Date()
         }
       }
