@@ -408,8 +408,8 @@
             </div>
             <div>
               <label class="form-label" for="zip">ZIP / Postal Code *</label>
-              <input id="zip" type="text" class="form-input" placeholder="10001">
-              <p class="error-msg" id="zipErr">ZIP code is required.</p>
+              <input id="zip" type="text" class="form-input" placeholder="12345 or 12345-6789" maxlength="10">
+              <p class="error-msg" id="zipErr">Enter a valid ZIP code (e.g. 12345 or 12345-6789).</p>
             </div>
           </div>
           <div>
@@ -472,7 +472,7 @@
           </div>
           <div class="flex justify-between text-gray-400 text-base">
             <span>Shipping</span>
-            <span id="summaryShipping">$10.99</span>
+            <span id="summaryShipping">$1.00</span>
           </div>
           <div class="flex justify-between text-gray-400 text-base">
             <span>Tax (10%)</span>
@@ -594,8 +594,9 @@ fetch(BACKEND_URL + '/api/config')
   }
 
   // ── Totals ────────────────────────────────────────────────────────────────
+  // Standard shipping rate is $1.00 per item; enforced on the backend as well
   function getShippingCost() {
-    return cart.length * 10.99;
+    return cart.length * 1.00;
   }
 
   function getSubtotal() {
@@ -675,14 +676,18 @@ fetch(BACKEND_URL + '/api/config')
     { id: 'address',   errId: 'addressErr' },
     { id: 'city',      errId: 'cityErr' },
     { id: 'state',     errId: 'stateErr' },
-    { id: 'zip',       errId: 'zipErr' },
+    { id: 'zip',       errId: 'zipErr',     type: 'zip' },
     { id: 'country',   errId: 'countryErr', type: 'country' },
   ];
+
+  // ZIP regex: accepts 5-digit (12345) or ZIP+4 (12345-6789) format
+  const ZIP_REGEX = /^\d{5}(-\d{4})?$/;
 
   function isFieldValid({ id, type }) {
     const val = document.getElementById(id).value.trim();
     if (!val) return false;
     if (type === 'email') return EMAIL_REGEX.test(val);
+    if (type === 'zip') return ZIP_REGEX.test(val);
     if (type === 'country') return /^[A-Z]{2}$/.test(val.toUpperCase());
     return true;
   }

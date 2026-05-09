@@ -384,7 +384,7 @@
                 <input type="radio" name="sellerTier" value="pro" class="sr-only" id="tierProRadio">
                 <div class="flex items-center justify-between mb-2">
                   <span class="font-bold text-gray-900 text-sm">Pro Seller</span>
-                  <span class="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">$19/mo</span>
+                  <span class="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">$1/mo</span>
                 </div>
                 <p class="text-xs text-gray-500 mb-3">+ 5% transaction fee per sale</p>
                 <ul class="space-y-1 text-xs text-gray-600 flex-1">
@@ -420,7 +420,7 @@
             <h2 class="text-base font-bold text-gray-900 mb-1 flex items-center">
               <span class="step-badge">3</span>Pro Seller Subscription Payment
             </h2>
-            <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $19/month subscription is required for the Pro Seller tier. Complete payment via PayPal to continue your registration.</p>
+            <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $1/month subscription is required for the Pro Seller tier. Complete payment via PayPal to continue your registration.</p>
             <div class="ml-9">
               <div id="paypal-subscription-container" class="min-h-[45px]"></div>
               <div id="paypalSubError" class="hidden text-red-600 text-sm mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -698,7 +698,7 @@
     // a valid PayPal billing plan ID via the PAYPAL_PRO_SELLER_PLAN_ID environment variable on
     // the backend (server.js). Without it, the Pro tier cannot accept subscriptions.
     // Steps:
-    //   1. Log in to your PayPal Developer Dashboard and create a monthly billing plan for $19/month.
+    //   1. Log in to your PayPal Developer Dashboard and create a monthly billing plan for $1/month.
     //   2. Set PAYPAL_PRO_SELLER_PLAN_ID=<your-plan-id> in your backend environment variables.
     //   3. Redeploy the backend so /api/sellers/pro-plan returns the correct plan ID.
     fetch(BACKEND_URL + '/api/config')
@@ -828,7 +828,7 @@
     // Pro tier requires a confirmed PayPal subscription
     if (selectedTier === 'pro') {
       if (!proSubscriptionId) {
-        errorAlert.textContent = 'Please complete the $19/month PayPal subscription payment before submitting as a Pro Seller.';
+        errorAlert.textContent = 'Please complete the $1/month PayPal subscription payment before submitting as a Pro Seller.';
         errorAlert.classList.remove('hidden');
         document.getElementById('proPaymentSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;

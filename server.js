@@ -1082,8 +1082,10 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 const PAYPAL_PRO_SELLER_PLAN_ID = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
-const PRO_SELLER_MONTHLY_PRICE_USD = '19.00';
-const DEFAULT_SHIPPING_PER_ITEM_USD = 10.99;
+// Pro Seller monthly subscription price (USD) — $1/month
+const PRO_SELLER_MONTHLY_PRICE_USD = '1.00';
+// Standard shipping rate per item (USD) — $1.00 per item
+const DEFAULT_SHIPPING_PER_ITEM_USD = 1.00;
 const DEFAULT_SALES_TAX_RATE = 0.10;
 const envPlatformFeeRate = Number(process.env.PLATFORM_FEE_RATE);
 const PLATFORM_FEE_RATE = Number.isFinite(envPlatformFeeRate) && envPlatformFeeRate >= 0 && envPlatformFeeRate < 1
@@ -1343,7 +1345,7 @@ async function ensurePayPalProSellerPlan() {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Zorexium Pro Seller Subscription',
-        description: 'Monthly Pro Seller subscription on Zorexium ($19/month)',
+        description: 'Monthly Pro Seller subscription on Zorexium ($1/month)',
         type: 'SERVICE',
         category: 'SOFTWARE'
       })
@@ -1481,7 +1483,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
         await sendEventEmailSafe(
           to,
           'Thanks for purchasing Pro Seller status',
-          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$19/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$1/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
@@ -1516,6 +1518,10 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     }
     if (!buyer.address.line1 || !buyer.address.city || !buyer.address.state || !buyer.address.zip) {
       return res.status(400).json({ error: 'Complete shipping address is required' });
+    }
+    // Validate ZIP: accept 5-digit (e.g. 12345) or ZIP+4 (e.g. 12345-6789)
+    if (!/^\d{5}(-\d{4})?$/.test(String(buyer.address.zip).trim())) {
+      return res.status(400).json({ error: 'Invalid ZIP code format. Use 5-digit (12345) or ZIP+4 (12345-6789).' });
     }
     const countryCode = normalizeCountryCode(buyer.address.country);
     if (!countryCode) {
@@ -2597,7 +2603,7 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
         await sendEventEmailSafe(
           to,
           'Thanks for upgrading to Pro Seller',
-          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$19/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$1/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
