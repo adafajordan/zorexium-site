@@ -536,7 +536,8 @@
       const res = await fetch(BACKEND_URL + '/api/sellers/user/' + encodeURIComponent(sellerId));
       if (!res.ok) return;
       const seller = await res.json();
-      brandSellerTotalSales = Number.isFinite(parseFloat(seller.totalSales)) ? (parseInt(seller.totalSales, 10) || 0) : null;
+      var parsedTotalSales = parseInt(seller.totalSales, 10);
+      brandSellerTotalSales = Number.isFinite(parsedTotalSales) ? Math.max(0, parsedTotalSales) : null;
 
       // Update shop name
       if (seller.shopName) updateBrandPageTitle(seller.shopName);

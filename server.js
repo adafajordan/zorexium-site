@@ -1289,7 +1289,17 @@ async function reserveInventoryForOrder(order) {
       { $inc: { quantity: -quantityRequested }, $set: { updatedAt: now } }
     );
     if (reserveResult.modifiedCount === 0) {
-      throw new Error(`"${String(item && item.name ? item.name : 'A product').slice(0, 100)}" is no longer available in the requested quantity.`);
+      const productSnapshot = await db.collection('products').findOne(
+        { _id: new ObjectId(productId) },
+        { projection: { quantity: 1, status: 1 } }
+      );
+      const availableQuantity = Math.max(0, parseInt(productSnapshot && productSnapshot.quantity, 10) || 0);
+      const rawProductName = String(item && item.name ? item.name : 'A product');
+      const safeProductName = rawProductName.length > 100 ? (rawProductName.slice(0, 100) + '…') : rawProductName;
+      if (!productSnapshot) {
+        throw new Error(`"${safeProductName}" is no longer available.`);
+      }
+      throw new Error(`"${safeProductName}" is no longer available in the requested quantity (requested: ${quantityRequested}, available: ${availableQuantity}).`);
     }
 
     reservations.push({ productId: productId, quantity: quantityRequested });
@@ -1307,10 +1317,13 @@ async function releaseInventoryReservations(reservations) {
     const productId = String(reservation && reservation.productId ? reservation.productId : '').trim();
     if (!ObjectId.isValid(productId)) continue;
     const quantityToRestore = Math.max(1, parseInt(reservation && reservation.quantity, 10) || 1);
-    await db.collection('products').updateOne(
+    const restoreResult = await db.collection('products').updateOne(
       { _id: new ObjectId(productId) },
       { $inc: { quantity: quantityToRestore }, $set: { updatedAt: now } }
     );
+    if (restoreResult.modifiedCount === 0) {
+      console.warn(`Inventory rollback skipped because product ${productId} was not found`);
+    }
   }
 }
 
@@ -1356,13 +1369,16 @@ async function syncCompletedOrderRecords(order) {
     );
     if (inventoryResult.upsertedCount > 0) {
       if (inventoryAlreadyReserved) {
-        // Capture already reserved inventory atomically; only enforce inactive state when sold out.
+        // Capture already reserved inventory earlier; only enforce inactive state when sold out.
         const reservedProduct = await db.collection('products').findOne(
           { _id: new ObjectId(productId) },
           { projection: { quantity: 1, status: 1 } }
         );
         const reservedQuantity = Math.max(0, parseInt(reservedProduct && reservedProduct.quantity, 10) || 0);
-        if (reservedProduct && reservedQuantity === 0 && reservedProduct.status !== 'inactive') {
+        const reservedStatus = reservedProduct && reservedProduct.status != null
+          ? String(reservedProduct.status).toLowerCase()
+          : null;
+        if (reservedProduct && reservedQuantity === 0 && reservedStatus === 'active') {
           // Business rule: once inventory reaches zero after a completed purchase, hide the listing.
           await db.collection('products').updateOne(
             { _id: new ObjectId(productId) },
@@ -2083,6 +2099,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
 app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req, res) {
   let reservedInventory = [];
   let captureCommitted = false;
+  let paymentCaptured = false;
   try {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
@@ -2132,6 +2149,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       console.error('Capture error:', captureData);
       throw new Error(captureData.message || 'Payment capture failed');
     }
+    paymentCaptured = true;
 
     const completedOrderDoc = {
       ...order,
@@ -2254,7 +2272,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       receiptId: syncedOrder.receiptId || null
     });
   } catch (error) {
-    if (!captureCommitted && reservedInventory.length > 0) {
+    if (!paymentCaptured && !captureCommitted && reservedInventory.length > 0) {
       try {
         // Roll back reserved stock when capture does not complete so inventory remains accurate.
         await releaseInventoryReservations(reservedInventory);
