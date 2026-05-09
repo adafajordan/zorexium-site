@@ -1081,6 +1081,7 @@ const PAYPAL_API = PAYPAL_MODE === 'sandbox'
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+const PAYPAL_PRO_SELLER_PLAN_ID = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
 // TEMPORARY TROUBLESHOOTING OVERRIDE:
 // Force all checkout and Pro Seller subscription charges to $1.00.
 // Revert by removing these constants and restoring dynamic amount logic in
@@ -1317,7 +1318,7 @@ async function sendPayPalSellerPayout(order, options) {
 // Do not reuse PAYPAL_PRO_SELLER_PLAN_ID because existing plans may charge
 // non-$1 amounts. Use PAYPAL_PRO_SELLER_TEST_PLAN_ID to reuse a known $1 test plan.
 // Revert to PAYPAL_PRO_SELLER_PLAN_ID after troubleshooting.
-let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID;
+let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID || PAYPAL_PRO_SELLER_PLAN_ID;
 
 async function ensurePayPalProSellerPlan() {
   if (cachedProSellerPlanId) return cachedProSellerPlanId;
@@ -1491,6 +1492,9 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
     }
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+      return res.status(503).json({ error: 'PayPal is not configured on the server' });
+    }
 
     const { items, buyer, shippingMethod } = req.body;
     
@@ -1613,6 +1617,9 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
   try {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
+    }
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+      return res.status(503).json({ error: 'PayPal is not configured on the server' });
     }
 
     const { orderId } = req.params;
