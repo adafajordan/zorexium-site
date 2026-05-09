@@ -824,7 +824,14 @@
     if (tab) tab.classList.add('active');
     if (nav) nav.classList.add('active');
     if (name === 'products') loadProducts();
-    if (name === 'orders' || name === 'shipments') loadOrders();
+    if (name === 'orders' || name === 'shipments') {
+      if (_allOrders.length > 0) {
+        renderOrdersTable(_allOrders);
+        renderShipmentVerificationTable(_allOrders);
+      } else {
+        loadOrders();
+      }
+    }
     if (name === 'payouts') loadPayouts();
   }
 
@@ -1027,7 +1034,7 @@
     }
 
     document.getElementById('totalProducts').textContent = sellerData.products.length;
-    document.getElementById('totalSales').textContent = 0;
+    document.getElementById('totalSales').textContent = '—';
     const hasRating = !!sellerData.rating;
     document.getElementById('sellerRating').textContent = hasRating ? sellerData.rating.toFixed(1) : 'NR';
     const ratingSubtitle = document.getElementById('sellerRatingSubtitle');
@@ -1050,8 +1057,8 @@
     }
 
     // Revenue estimate from products * sales (approximate)
-    document.getElementById('totalRevenue').textContent = fmtCurrency(0);
-    document.getElementById('lifetimeEarnings').textContent = fmtCurrency(0);
+    document.getElementById('totalRevenue').textContent = '—';
+    document.getElementById('lifetimeEarnings').textContent = '—';
 
     // Settings form pre-fill
     document.getElementById('settingsShopName').value = sellerData.shopName || '';

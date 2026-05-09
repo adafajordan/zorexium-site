@@ -3314,7 +3314,7 @@ app.post('/api/sellers/recover-missing', verifyToken, async function(req, res) {
 });
 
 // GET /api/sellers/user/:userId – get seller profile by userId (public)
-app.get('/api/sellers/user/:userId', async function(req, res) {
+app.get('/api/sellers/user/:userId', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { userId } = req.params;
