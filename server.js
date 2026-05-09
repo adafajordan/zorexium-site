@@ -1318,7 +1318,9 @@ async function sendPayPalSellerPayout(order, options) {
 // Do not reuse PAYPAL_PRO_SELLER_PLAN_ID because existing plans may charge
 // non-$1 amounts. Use PAYPAL_PRO_SELLER_TEST_PLAN_ID to reuse a known $1 test plan.
 // Revert to PAYPAL_PRO_SELLER_PLAN_ID after troubleshooting.
-let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID || PAYPAL_PRO_SELLER_PLAN_ID;
+let cachedProSellerPlanId = FORCED_TEST_PRO_PLAN_ID !== null
+  ? FORCED_TEST_PRO_PLAN_ID
+  : PAYPAL_PRO_SELLER_PLAN_ID;
 
 async function ensurePayPalProSellerPlan() {
   if (cachedProSellerPlanId) return cachedProSellerPlanId;
@@ -1411,7 +1413,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
 
     // Verify the subscription with PayPal
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal is not configured on the server' });
+      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
     const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
@@ -1493,7 +1495,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
     }
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal is not configured on the server' });
+      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
 
     const { items, buyer, shippingMethod } = req.body;
