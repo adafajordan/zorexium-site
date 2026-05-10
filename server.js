@@ -1092,7 +1092,8 @@ app.delete('/api/cart', verifyToken, async function(req, res) {
 
 // ── PAYPAL CONFIGURATION ───────────────────────────────────────────────────────
 const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox';
-const PAYPAL_API = PAYPAL_MODE === 'sandbox' 
+// Use let so fetchPayPalAccessToken can auto-correct when sandbox/live credentials mismatch.
+let PAYPAL_API = PAYPAL_MODE === 'sandbox'
   ? 'https://api-m.sandbox.paypal.com'
   : 'https://api-m.paypal.com';
 
@@ -1128,20 +1129,49 @@ async function fetchPayPalAccessToken() {
   if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
     throw new Error('PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server');
   }
+  const SANDBOX_API = 'https://api-m.sandbox.paypal.com';
+  const LIVE_API = 'https://api-m.paypal.com';
   const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
-  const tokenRes = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: 'grant_type=client_credentials'
-  });
-  const tokenData = await tokenRes.json();
-  const accessToken = tokenData && tokenData.access_token;
-  if (!tokenRes.ok || !accessToken) {
-    throw new Error((tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) || 'Failed to authenticate with PayPal');
+
+  async function tryFetchToken(apiBase) {
+    const res = await fetch(`${apiBase}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: 'grant_type=client_credentials'
+    });
+    const data = await res.json();
+    return { res, data, token: data && data.access_token };
   }
+
+  // Try the configured API first.
+  let { res: tokenRes, data: tokenData, token: accessToken } = await tryFetchToken(PAYPAL_API);
+
+  if (!tokenRes.ok || !accessToken) {
+    // If authentication failed, check whether the other PayPal environment works.
+    // This auto-corrects the common mistake of leaving PAYPAL_MODE=sandbox while using live credentials (or vice-versa).
+    const altAPI = PAYPAL_API === SANDBOX_API ? LIVE_API : SANDBOX_API;
+    const { res: altRes, data: altData, token: altToken } = await tryFetchToken(altAPI);
+
+    if (altRes.ok && altToken) {
+      const detectedEnv = altAPI === SANDBOX_API ? 'sandbox' : 'live';
+      console.warn(
+        `[PayPal] PAYPAL_MODE="${PAYPAL_MODE}" but credentials authenticated against the ${detectedEnv} API. ` +
+        `Auto-correcting to ${altAPI} for this request. ` +
+        `Set PAYPAL_MODE=${detectedEnv} in your environment to fix this permanently.`
+      );
+      PAYPAL_API = altAPI;
+      return altToken;
+    }
+
+    throw new Error(
+      (tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) ||
+      'Failed to authenticate with PayPal'
+    );
+  }
+
   return accessToken;
 }
 
@@ -1960,7 +1990,11 @@ async function sendPayPalSellerPayout(order, options) {
 
     if (!payoutRes.ok) {
       const apiErr = payoutData && (payoutData.message || payoutData.name || payoutData.error_description);
-      const reason = apiErr || 'PayPal payout request failed';
+      let reason = apiErr || 'PayPal payout request failed';
+      // Provide a specific, actionable message when Payouts is not enabled for this PayPal app.
+      if (payoutData && payoutData.name === 'AUTHORIZATION_ERROR') {
+        reason = 'PayPal Payouts is not enabled for this account. Please enable the Payouts feature in your PayPal developer app settings, or contact PayPal support. Until then, admins can manually send payment and mark the payout as paid.';
+      }
       await db.collection('payouts').updateOne(
         { orderId: orderId },
         {
@@ -4248,10 +4282,13 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
     return res.status(400).json({ error: 'Invalid payout ID' });
   }
 
-  const { status } = req.body;
+  const { status, note } = req.body;
+  // Admins can also mark payouts as manually paid when the PayPal Payouts API is unavailable.
   const validStatuses = ['pending_delivery', 'blocked_onboarding', 'ready_to_pay'];
-  if (!status || !validStatuses.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
+  const adminOnlyStatuses = ['paid'];
+  const allValidStatuses = req.isAdmin ? validStatuses.concat(adminOnlyStatuses) : validStatuses;
+  if (!status || !allValidStatuses.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${allValidStatuses.join(', ')}` });
   }
 
   try {
@@ -4275,6 +4312,12 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
 
     const updates = { status, updatedAt: new Date() };
     if (status === 'ready_to_pay') updates.deliveredAt = new Date();
+    if (status === 'paid') {
+      updates.paidAt = new Date();
+      updates.manuallyPaid = true;
+      updates.error = null;
+      if (note && typeof note === 'string') updates.manualPayNote = String(note).slice(0, 500);
+    }
 
     await db.collection('payouts').updateOne({ _id: objectId }, { $set: updates });
     const updated = await db.collection('payouts').findOne({ _id: objectId });

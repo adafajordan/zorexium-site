@@ -452,14 +452,23 @@
 
     tbody.innerHTML = filtered.map(function(payout) {
       const payoutId = payout._id ? String(payout._id) : (payout.id || '');
+      const isFailed = payout.status === 'failed';
+      const paypalEmailHtml = isFailed && payout.payoutAccountId
+        ? '<p class="text-xs text-amber-400 mt-0.5 break-all">PayPal: ' + escHtml(payout.payoutAccountId) + '</p>'
+        : '';
+      const errorHtml = isFailed && payout.error
+        ? '<p class="text-xs text-red-400 mt-1 max-w-xs">' + escHtml(payout.error.slice(0, 120)) + '</p>'
+        : '';
       return '<tr class="border-t border-gray-700 hover:bg-[#2a2e38] transition">' +
         '<td class="px-8 py-3 font-mono text-sm text-cyan-400">' + (payout.orderId ? payout.orderId.substring(0, 14) + '…' : '—') + '</td>' +
         '<td class="px-8 py-3">' +
           '<p class="font-semibold text-white">' + escHtml(payout.sellerName || payout.sellerUsername) + '</p>' +
           '<p class="text-sm text-gray-400">@' + escHtml(payout.sellerUsername) + '</p>' +
+          paypalEmailHtml +
+          errorHtml +
         '</td>' +
         '<td class="px-8 py-3 font-bold text-green-400">$' + Number(payout.amount).toFixed(2) + '</td>' +
-        '<td class="px-8 py-3">' + statusBadge(payout.status) + '</td>' +
+        '<td class="px-8 py-3">' + statusBadge(payout.status, payout) + '</td>' +
         '<td class="px-8 py-3 text-gray-400 text-sm">' + (payout.placedAt ? new Date(payout.placedAt).toLocaleDateString() : '—') + '</td>' +
         '<td class="px-8 py-3">' + actionButton(payout, payoutId) + '</td>' +
       '</tr>';
@@ -476,29 +485,48 @@
         '<i class="fas fa-paper-plane mr-1"></i>Send Payout</button>';
     }
     if (payout.status === 'processing') return '<span class="text-indigo-300 text-sm">Provider processing</span>';
-    if (payout.status === 'failed') return '<span class="text-red-300 text-sm">Failed · review payout error</span>';
+    if (payout.status === 'failed') {
+      return '<div class="flex flex-col gap-1">' +
+        '<button onclick="sendPayout(\'' + payoutId + '\')" ' +
+          'class="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm font-semibold transition">' +
+          '<i class="fas fa-redo mr-1"></i>Retry Payout</button>' +
+        '<button onclick="markManuallyPaid(\'' + payoutId + '\', \'' + escHtml(payout.payoutAccountId || '') + '\', ' + Number(payout.amount).toFixed(2) + ')" ' +
+          'class="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-sm font-semibold transition">' +
+          '<i class="fas fa-check mr-1"></i>Mark as Manually Paid</button>' +
+        '</div>';
+    }
+    if (payout.status === 'paid' && payout.manuallyPaid) {
+      return '<span class="text-blue-300 text-sm"><i class="fas fa-check mr-1"></i>Manually paid</span>';
+    }
     return '<span class="text-gray-500 text-sm">Paid ' + (payout.paidAt ? new Date(payout.paidAt).toLocaleDateString() : '') + '</span>';
   }
 
-  function statusBadge(status) {
-    var labels = {
-      pending_delivery: 'Pending Delivery',
-      blocked_onboarding: 'Blocked: Setup Required',
-      ready_to_pay: 'Ready to Pay',
-      processing: 'Processing',
-      paid: 'Paid Out',
-      failed: 'Failed'
-    };
-    var classes = {
-      pending_delivery: 'bg-yellow-900 text-yellow-200',
-      blocked_onboarding: 'bg-amber-900 text-amber-200',
-      ready_to_pay:     'bg-green-900 text-green-200',
-      processing:       'bg-indigo-900 text-indigo-200',
-      paid:             'bg-blue-900 text-blue-200',
-      failed:           'bg-red-900 text-red-200',
-    };
-    return '<span class="px-3 py-1 rounded-full text-sm font-semibold ' + (classes[status] || 'bg-gray-700 text-gray-300') + '">' +
-      (labels[status] || status) + '</span>';
+  function statusBadge(status, payout) {
+    var label, cls;
+    if (status === 'paid' && payout && payout.manuallyPaid) {
+      label = 'Paid (Manual)';
+      cls = 'bg-blue-800 text-blue-200';
+    } else {
+      var labels = {
+        pending_delivery: 'Pending Delivery',
+        blocked_onboarding: 'Blocked: Setup Required',
+        ready_to_pay: 'Ready to Pay',
+        processing: 'Processing',
+        paid: 'Paid Out',
+        failed: 'Failed'
+      };
+      var classes = {
+        pending_delivery: 'bg-yellow-900 text-yellow-200',
+        blocked_onboarding: 'bg-amber-900 text-amber-200',
+        ready_to_pay:     'bg-green-900 text-green-200',
+        processing:       'bg-indigo-900 text-indigo-200',
+        paid:             'bg-blue-900 text-blue-200',
+        failed:           'bg-red-900 text-red-200',
+      };
+      label = labels[status] || status;
+      cls = classes[status] || 'bg-gray-700 text-gray-300';
+    }
+    return '<span class="px-3 py-1 rounded-full text-sm font-semibold ' + cls + '">' + label + '</span>';
   }
 
   async function markDelivered(payoutId) {
@@ -544,6 +572,31 @@
         }
       }
     );
+  }
+
+  async function markManuallyPaid(payoutId, sellerPaypalEmail, amount) {
+    var msg = 'Confirm you have manually sent $' + Number(amount).toFixed(2) + ' to the seller';
+    if (sellerPaypalEmail) msg += ' at PayPal email: ' + sellerPaypalEmail;
+    msg += '.\n\nThis will mark the payout as paid in the system.';
+    ZrxNotify.showConfirm(msg, async function() {
+      try {
+        const res = await ZrxSession.fetch(BACKEND_URL + '/api/payouts/' + encodeURIComponent(payoutId), {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'paid', note: 'Manually paid by admin via PayPal web transfer' })
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          ZrxNotify.showNotification(data.error || 'Failed to mark payout as paid', 'error');
+          return;
+        }
+        ZrxNotify.showNotification('Payout marked as manually paid.', 'success');
+        await loadPayouts();
+      } catch (_) {
+        ZrxNotify.showNotification('Network error. Please try again.', 'error');
+      }
+    });
   }
 
   function updateStats() {
