@@ -1830,16 +1830,18 @@ async function sendPayPalSellerPayout(order, options) {
   if (!snapshot.orderId) {
     return { ok: false, error: 'Order ID is required for payout processing' };
   }
+  const { orderId: _payoutBaseOrderId, ...payoutBaseWithoutOrderId } = snapshot.payoutBase;
   await db.collection('payouts').updateOne(
     { orderId: orderId },
     {
       $setOnInsert: {
-        ...snapshot.payoutBase,
+        orderId: orderId,
+        ...payoutBaseWithoutOrderId,
         status: snapshot.status,
         createdAt: new Date()
       },
       $set: {
-        ...snapshot.payoutBase,
+        ...payoutBaseWithoutOrderId,
         status: snapshot.status,
         onboardingRequired: snapshot.status === 'blocked_onboarding',
         error: snapshot.status === 'blocked_onboarding' ? snapshot.blockedReason : null
