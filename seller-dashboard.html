@@ -1667,7 +1667,6 @@
     var popup = popupWindow || null;
     if (popup && !popup.closed) {
       try {
-        try { popup.opener = null; } catch (err) { console.warn('Failed to clear reused popup opener:', err); }
         popup.location = url;
         popup.focus();
         return true;
@@ -1676,12 +1675,11 @@
       }
     }
     try {
-      popup = window.open(url, '_blank');
+      popup = window.open(url, '_blank', 'noopener');
     } catch (err) {
       console.warn('Failed to open PayPal onboarding popup:', err);
     }
     if (!popup) return false;
-    try { popup.opener = null; } catch (err) { console.warn('Failed to clear popup opener:', err); }
     try { popup.focus(); } catch (err) { console.warn('Failed to focus PayPal popup:', err); }
     return true;
   }
@@ -1695,7 +1693,8 @@
   }
 
   async function confirmBankLinked() {
-    var email = (document.getElementById('payoutEmailInput').value || '').trim();
+    var emailInput = document.getElementById('payoutEmailInput');
+    var email = (emailInput && emailInput.value ? emailInput.value : '').trim();
     if (!isValidEmailFormat(email)) {
       ZrxNotify.showNotification('Enter a valid PayPal email before confirming bank setup.', 'error');
       return;
@@ -1727,7 +1726,8 @@
   }
 
   async function savePayoutAccount(openAfterSave, silentSuccess) {
-    var email = (document.getElementById('payoutEmailInput').value || '').trim();
+    var emailInput = document.getElementById('payoutEmailInput');
+    var email = (emailInput && emailInput.value ? emailInput.value : '').trim();
     if (!isValidEmailFormat(email)) {
       ZrxNotify.showNotification('Please enter a valid PayPal email address.', 'error');
       return false;
