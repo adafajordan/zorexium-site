@@ -1830,18 +1830,32 @@ async function sendPayPalSellerPayout(order, options) {
   if (!snapshot.orderId) {
     return { ok: false, error: 'Order ID is required for payout processing' };
   }
-  const { orderId: _orderId, ...payoutBaseWithoutOrderId } = snapshot.payoutBase;
+  const pb = snapshot.payoutBase;
   await db.collection('payouts').updateOne(
     { orderId: orderId },
     {
       $setOnInsert: {
         orderId: orderId,
-        ...payoutBaseWithoutOrderId,
-        status: snapshot.status,
+        sellerId: pb.sellerId,
+        sellerUsername: pb.sellerUsername,
+        sellerName: pb.sellerName,
+        method: pb.method,
+        placedAt: pb.placedAt,
         createdAt: new Date()
       },
       $set: {
-        ...payoutBaseWithoutOrderId,
+        grossAmount: pb.grossAmount,
+        amount: pb.amount,
+        platformFee: pb.platformFee,
+        currency: pb.currency,
+        items: pb.items,
+        shippingStatus: pb.shippingStatus,
+        shippedAt: pb.shippedAt,
+        triggerSource: pb.triggerSource,
+        payoutAccountId: pb.payoutAccountId,
+        payoutAccountSource: pb.payoutAccountSource,
+        linkedPayoutAccountId: pb.linkedPayoutAccountId,
+        updatedAt: pb.updatedAt,
         status: snapshot.status,
         onboardingRequired: snapshot.status === 'blocked_onboarding',
         error: snapshot.status === 'blocked_onboarding' ? snapshot.blockedReason : null
