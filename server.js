@@ -1092,7 +1092,7 @@ app.delete('/api/cart', verifyToken, async function(req, res) {
 
 // ── PAYPAL CONFIGURATION ───────────────────────────────────────────────────────
 const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox';
-const PAYPAL_API = PAYPAL_MODE === 'sandbox' 
+const PAYPAL_API = PAYPAL_MODE === 'sandbox'
   ? 'https://api-m.sandbox.paypal.com'
   : 'https://api-m.paypal.com';
 
@@ -1117,6 +1117,7 @@ const PAYOUT_BATCH_UUID_SLICE = 16;
 const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
+const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 
 function normalizeCountryCode(value) {
@@ -1124,25 +1125,59 @@ function normalizeCountryCode(value) {
   return /^[A-Z]{2}$/.test(countryCode) ? countryCode : '';
 }
 
+// fetchPayPalAccessToken() returns { token, apiUrl } where apiUrl is the PayPal API
+// base URL that was actually used to authenticate. When PAYPAL_MODE does not match
+// the credentials (e.g. sandbox mode with live credentials), the function automatically
+// tries the other environment and returns the URL that worked so callers can route
+// subsequent API calls correctly.
 async function fetchPayPalAccessToken() {
   if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
     throw new Error('PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server');
   }
+  const SANDBOX_API = 'https://api-m.sandbox.paypal.com';
+  const LIVE_API = 'https://api-m.paypal.com';
   const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
-  const tokenRes = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: 'grant_type=client_credentials'
-  });
-  const tokenData = await tokenRes.json();
-  const accessToken = tokenData && tokenData.access_token;
-  if (!tokenRes.ok || !accessToken) {
-    throw new Error((tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) || 'Failed to authenticate with PayPal');
+
+  async function tryFetchToken(apiBase) {
+    const res = await fetch(`${apiBase}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: 'grant_type=client_credentials'
+    });
+    const data = await res.json();
+    return { res, data, token: data && data.access_token };
   }
-  return accessToken;
+
+  // Try the configured API first.
+  let { res: tokenRes, data: tokenData, token: accessToken } = await tryFetchToken(PAYPAL_API);
+
+  if (tokenRes.ok && accessToken) {
+    return { token: accessToken, apiUrl: PAYPAL_API };
+  }
+
+  // If authentication failed, check whether the other PayPal environment works.
+  // This auto-corrects the common mistake of leaving PAYPAL_MODE=sandbox while using
+  // live credentials (or vice-versa), which causes "An authorization error occurred"
+  // in the PayPal checkout popup.
+  const altAPI = PAYPAL_API === SANDBOX_API ? LIVE_API : SANDBOX_API;
+  const { res: altRes, data: altData, token: altToken } = await tryFetchToken(altAPI);
+
+  if (altRes.ok && altToken) {
+    const detectedEnv = altAPI === SANDBOX_API ? 'sandbox' : 'live';
+    console.warn(
+      `[PayPal] PAYPAL_MODE="${PAYPAL_MODE}" but credentials authenticated against the ${detectedEnv} API. ` +
+      `Set PAYPAL_MODE=${detectedEnv} in your environment to fix this permanently.`
+    );
+    return { token: altToken, apiUrl: altAPI };
+  }
+
+  throw new Error(
+    (tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) ||
+    'Failed to authenticate with PayPal'
+  );
 }
 
 function getPayPalWebhookHeaders(req) {
@@ -1159,8 +1194,8 @@ async function verifyPayPalWebhookSignature(webhookEvent, webhookHeaders) {
   if (!PAYPAL_WEBHOOK_ID) {
     throw new Error('PAYPAL_WEBHOOK_ID environment variable is required to verify PayPal webhooks');
   }
-  const accessToken = await fetchPayPalAccessToken();
-  const verifyRes = await fetch(`${PAYPAL_API}/v1/notifications/verify-webhook-signature`, {
+  const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
+  const verifyRes = await fetch(`${paypalApiUrl}/v1/notifications/verify-webhook-signature`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -1908,8 +1943,9 @@ async function sendPayPalSellerPayout(order, options) {
   );
 
   let accessToken = '';
+  let paypalApiUrl = PAYPAL_API;
   try {
-    accessToken = await fetchPayPalAccessToken();
+    ({ token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken());
   } catch (tokenFetchError) {
     const reason = tokenFetchError.message || 'Failed to authenticate with PayPal';
     await db.collection('payouts').updateOne(
@@ -1948,7 +1984,7 @@ async function sendPayPalSellerPayout(order, options) {
   };
 
   try {
-    const payoutRes = await fetch(`${PAYPAL_API}/v1/payments/payouts`, {
+    const payoutRes = await fetch(`${paypalApiUrl}/v1/payments/payouts`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -1960,7 +1996,11 @@ async function sendPayPalSellerPayout(order, options) {
 
     if (!payoutRes.ok) {
       const apiErr = payoutData && (payoutData.message || payoutData.name || payoutData.error_description);
-      const reason = apiErr || 'PayPal payout request failed';
+      let reason = apiErr || 'PayPal payout request failed';
+      // Provide a specific, actionable message when Payouts is not enabled for this PayPal app.
+      if (payoutData && payoutData.name === 'AUTHORIZATION_ERROR') {
+        reason = 'PayPal Payouts is not enabled for this app. Enable it in your PayPal developer console, then retry. Admins can also mark the payout as paid manually.';
+      }
       await db.collection('payouts').updateOne(
         { orderId: orderId },
         {
@@ -2054,10 +2094,10 @@ async function ensurePayPalProSellerPlan() {
   if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) return null;
 
   try {
-    const accessToken = await fetchPayPalAccessToken();
+    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
 
     // 1. Create a product (service)
-    const productRes = await fetch(`${PAYPAL_API}/v1/catalogs/products`, {
+    const productRes = await fetch(`${paypalApiUrl}/v1/catalogs/products`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2071,7 +2111,7 @@ async function ensurePayPalProSellerPlan() {
     if (!productRes.ok) throw new Error(`PayPal product creation failed: ${product.message || JSON.stringify(product)}`);
 
     // 2. Create a monthly billing plan
-    const planRes = await fetch(`${PAYPAL_API}/v1/billing/plans`, {
+    const planRes = await fetch(`${paypalApiUrl}/v1/billing/plans`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2142,8 +2182,8 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
       return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
-    const accessToken = await fetchPayPalAccessToken();
-    const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
+    const subRes = await fetch(`${paypalApiUrl}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
     });
     const subData = await subRes.json();
@@ -2335,8 +2375,8 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       return res.status(400).json({ error: 'Order total must be greater than $0.00' });
     }
 
-    const accessToken = await fetchPayPalAccessToken();
-    const paypalResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders`, {
+    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
+    const paypalResponse = await fetch(`${paypalApiUrl}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -2454,8 +2494,8 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
     // Reserve stock before capture so only inventory-backed purchases can complete.
     reservedInventory = await reserveInventoryForOrder(order);
     
-    const accessToken = await fetchPayPalAccessToken();
-    const captureResponse = await fetch(`${PAYPAL_API}/v2/checkout/orders/${order.paypalOrderId}/capture`, {
+    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
+    const captureResponse = await fetch(`${paypalApiUrl}/v2/checkout/orders/${order.paypalOrderId}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -3810,8 +3850,8 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
       return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
     }
-    const accessToken = await fetchPayPalAccessToken();
-    const subRes = await fetch(`${PAYPAL_API}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
+    const subRes = await fetch(`${paypalApiUrl}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
     });
     const subData = await subRes.json();
@@ -4248,10 +4288,13 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
     return res.status(400).json({ error: 'Invalid payout ID' });
   }
 
-  const { status } = req.body;
+  const { status, note } = req.body;
+  // Admins can also mark payouts as manually paid when the PayPal Payouts API is unavailable.
   const validStatuses = ['pending_delivery', 'blocked_onboarding', 'ready_to_pay'];
-  if (!status || !validStatuses.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
+  const adminOnlyStatuses = ['paid'];
+  const allValidStatuses = req.isAdmin ? validStatuses.concat(adminOnlyStatuses) : validStatuses;
+  if (!status || !allValidStatuses.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${allValidStatuses.join(', ')}` });
   }
 
   try {
@@ -4275,6 +4318,12 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
 
     const updates = { status, updatedAt: new Date() };
     if (status === 'ready_to_pay') updates.deliveredAt = new Date();
+    if (status === 'paid') {
+      updates.paidAt = new Date();
+      updates.manuallyPaid = true;
+      updates.error = null;
+      if (note && typeof note === 'string') updates.manualPayNote = note.slice(0, MAX_MANUAL_PAY_NOTE_LENGTH);
+    }
 
     await db.collection('payouts').updateOne({ _id: objectId }, { $set: updates });
     const updated = await db.collection('payouts').findOne({ _id: objectId });
