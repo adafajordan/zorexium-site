@@ -433,9 +433,7 @@ app.get('/health', function(req, res) {
 });
 
 function getPayPalBankOnboardingUrlFromEnv() {
-  return (process.env.PAYPAL_MODE || 'sandbox') === 'sandbox'
-    ? 'https://www.sandbox.paypal.com/myaccount/money/banks/new'
-    : 'https://www.paypal.com/myaccount/money/banks/new';
+  return 'https://www.paypal.com/myaccount/money/banks/new';
 }
 
 // ── Config endpoint ────────────────────────────────────────────────────────────
@@ -1091,10 +1089,8 @@ app.delete('/api/cart', verifyToken, async function(req, res) {
 });
 
 // ── PAYPAL CONFIGURATION ───────────────────────────────────────────────────────
-const PAYPAL_MODE = process.env.PAYPAL_MODE || 'sandbox';
-const PAYPAL_API = PAYPAL_MODE === 'sandbox'
-  ? 'https://api-m.sandbox.paypal.com'
-  : 'https://api-m.paypal.com';
+const PAYPAL_MODE = 'live';
+const PAYPAL_API = 'https://api-m.paypal.com';
 
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
@@ -1119,65 +1115,58 @@ const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
+const PAYPAL_PAYOUT_SCOPE = 'https://uri.paypal.com/services/payments/payouts';
+
+if (String(process.env.PAYPAL_MODE || '').trim() && String(process.env.PAYPAL_MODE).trim().toLowerCase() !== PAYPAL_MODE) {
+  console.warn(`[PayPal] Ignoring PAYPAL_MODE=${process.env.PAYPAL_MODE}; runtime is locked to PAYPAL_MODE=${PAYPAL_MODE}.`);
+}
 
 function normalizeCountryCode(value) {
   const countryCode = String(value || '').trim().toUpperCase();
   return /^[A-Z]{2}$/.test(countryCode) ? countryCode : '';
 }
 
-// fetchPayPalAccessToken() returns { token, apiUrl } where apiUrl is the PayPal API
-// base URL that was actually used to authenticate. When PAYPAL_MODE does not match
-// the credentials (e.g. sandbox mode with live credentials), the function automatically
-// tries the other environment and returns the URL that worked so callers can route
-// subsequent API calls correctly.
+function parsePayPalScopes(rawScope) {
+  return String(rawScope || '')
+    .split(/\s+/)
+    .map(function(scope) { return scope.trim(); })
+    .filter(Boolean);
+}
+
+function hasPayPalPayoutScope(scopes) {
+  return parsePayPalScopes(scopes).includes(PAYPAL_PAYOUT_SCOPE);
+}
+
+// fetchPayPalAccessToken() returns { token, apiUrl, scopes } where apiUrl is the
+// PayPal API base URL that was used to authenticate.
 async function fetchPayPalAccessToken() {
   if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
     throw new Error('PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server');
   }
-  const SANDBOX_API = 'https://api-m.sandbox.paypal.com';
-  const LIVE_API = 'https://api-m.paypal.com';
   const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
+  const tokenRes = await fetch(`${PAYPAL_API}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: 'grant_type=client_credentials'
+  });
+  const tokenData = await tokenRes.json();
+  const accessToken = tokenData && tokenData.access_token;
 
-  async function tryFetchToken(apiBase) {
-    const res = await fetch(`${apiBase}/v1/oauth2/token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: 'grant_type=client_credentials'
-    });
-    const data = await res.json();
-    return { res, data, token: data && data.access_token };
-  }
-
-  // Try the configured API first.
-  let { res: tokenRes, data: tokenData, token: accessToken } = await tryFetchToken(PAYPAL_API);
-
-  if (tokenRes.ok && accessToken) {
-    return { token: accessToken, apiUrl: PAYPAL_API };
-  }
-
-  // If authentication failed, check whether the other PayPal environment works.
-  // This auto-corrects the common mistake of leaving PAYPAL_MODE=sandbox while using
-  // live credentials (or vice-versa), which causes "An authorization error occurred"
-  // in the PayPal checkout popup.
-  const altAPI = PAYPAL_API === SANDBOX_API ? LIVE_API : SANDBOX_API;
-  const { res: altRes, data: altData, token: altToken } = await tryFetchToken(altAPI);
-
-  if (altRes.ok && altToken) {
-    const detectedEnv = altAPI === SANDBOX_API ? 'sandbox' : 'live';
-    console.warn(
-      `[PayPal] PAYPAL_MODE="${PAYPAL_MODE}" but credentials authenticated against the ${detectedEnv} API. ` +
-      `Set PAYPAL_MODE=${detectedEnv} in your environment to fix this permanently.`
+  if (!tokenRes.ok || !accessToken) {
+    throw new Error(
+      (tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) ||
+      'Failed to authenticate with PayPal'
     );
-    return { token: altToken, apiUrl: altAPI };
   }
 
-  throw new Error(
-    (tokenData && (tokenData.error_description || tokenData.error || tokenData.message)) ||
-    'Failed to authenticate with PayPal'
-  );
+  return {
+    token: accessToken,
+    apiUrl: PAYPAL_API,
+    scopes: parsePayPalScopes(tokenData && tokenData.scope)
+  };
 }
 
 function getPayPalWebhookHeaders(req) {
@@ -1944,8 +1933,9 @@ async function sendPayPalSellerPayout(order, options) {
 
   let accessToken = '';
   let paypalApiUrl = PAYPAL_API;
+  let tokenScopes = [];
   try {
-    ({ token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken());
+    ({ token: accessToken, apiUrl: paypalApiUrl, scopes: tokenScopes } = await fetchPayPalAccessToken());
   } catch (tokenFetchError) {
     const reason = tokenFetchError.message || 'Failed to authenticate with PayPal';
     await db.collection('payouts').updateOne(
@@ -1959,6 +1949,27 @@ async function sendPayPalSellerPayout(order, options) {
               name: tokenFetchError.name || 'Error',
               message: tokenFetchError.message || reason,
             stack: tokenFetchError.stack || null
+          },
+          updatedAt: new Date()
+        }
+      }
+    );
+    return { ok: false, error: reason };
+  }
+  if (!hasPayPalPayoutScope(tokenScopes)) {
+    const reason = 'PayPal token is missing the payouts scope. Enable PayPal Payouts for this live app and retry.';
+    await db.collection('payouts').updateOne(
+      { orderId: orderId },
+      {
+        $set: {
+          status: 'failed',
+          error: reason,
+          onboardingRequired: false,
+          paypalError: {
+            name: 'MISSING_PAYOUT_SCOPE',
+            message: reason,
+            mode: PAYPAL_MODE,
+            scopes: tokenScopes
           },
           updatedAt: new Date()
         }
@@ -1999,7 +2010,8 @@ async function sendPayPalSellerPayout(order, options) {
       let reason = apiErr || 'PayPal payout request failed';
       // Provide a specific, actionable message when Payouts is not enabled for this PayPal app.
       if (payoutData && payoutData.name === 'AUTHORIZATION_ERROR') {
-        reason = 'PayPal Payouts is not enabled for this app. Enable it in your PayPal developer console, then retry. Admins can also mark the payout as paid manually.';
+        const debugId = payoutData && payoutData.debug_id ? ` Debug ID: ${payoutData.debug_id}.` : '';
+        reason = `PayPal live app is not authorized for Payouts.${debugId} Enable Payouts for this app in PayPal, then retry. Admins can also mark the payout as paid manually.`;
       }
       await db.collection('payouts').updateOne(
         { orderId: orderId },
