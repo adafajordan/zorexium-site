@@ -619,7 +619,7 @@
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: orderId, reason: reason, details: details })
+          body: JSON.stringify({ orderId: orderId, reason: reason, details: details, source: 'returns-history' })
         }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
         .then(function(result) {
           if (!result.ok) { ZrxNotify.showNotification(result.data.error || 'Failed to submit return.', 'error'); return; }
