@@ -1116,8 +1116,9 @@ const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 const PAYPAL_PAYOUT_SCOPE = 'https://uri.paypal.com/services/payments/payouts';
+const configuredPayPalMode = String(process.env.PAYPAL_MODE || '').trim().toLowerCase();
 
-if (String(process.env.PAYPAL_MODE || '').trim() && String(process.env.PAYPAL_MODE).trim().toLowerCase() !== PAYPAL_MODE) {
+if (configuredPayPalMode && configuredPayPalMode !== PAYPAL_MODE) {
   console.warn(`[PayPal] Ignoring PAYPAL_MODE=${process.env.PAYPAL_MODE}; runtime is locked to PAYPAL_MODE=${PAYPAL_MODE}.`);
 }
 
@@ -1134,7 +1135,8 @@ function parsePayPalScopes(rawScope) {
 }
 
 function hasPayPalPayoutScope(scopes) {
-  return parsePayPalScopes(scopes).includes(PAYPAL_PAYOUT_SCOPE);
+  const scopeSet = new Set(parsePayPalScopes(scopes));
+  return scopeSet.has(PAYPAL_PAYOUT_SCOPE);
 }
 
 // fetchPayPalAccessToken() returns { token, apiUrl, scopes } where apiUrl is the
@@ -1957,7 +1959,7 @@ async function sendPayPalSellerPayout(order, options) {
     return { ok: false, error: reason };
   }
   if (!hasPayPalPayoutScope(tokenScopes)) {
-    const reason = 'PayPal token is missing the payouts scope. Enable PayPal Payouts for this live app and retry.';
+    const reason = `PayPal token is missing the payouts scope. Enable PayPal Payouts for this ${PAYPAL_MODE} app and retry.`;
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
@@ -2011,7 +2013,7 @@ async function sendPayPalSellerPayout(order, options) {
       // Provide a specific, actionable message when Payouts is not enabled for this PayPal app.
       if (payoutData && payoutData.name === 'AUTHORIZATION_ERROR') {
         const debugId = payoutData && payoutData.debug_id ? ` Debug ID: ${payoutData.debug_id}.` : '';
-        reason = `PayPal live app is not authorized for Payouts.${debugId} Enable Payouts for this app in PayPal, then retry. Admins can also mark the payout as paid manually.`;
+        reason = `PayPal ${PAYPAL_MODE} app is not authorized for Payouts.${debugId} Enable Payouts for this app in PayPal, then retry. Admins can also mark the payout as paid manually.`;
       }
       await db.collection('payouts').updateOne(
         { orderId: orderId },
