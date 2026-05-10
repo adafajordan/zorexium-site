@@ -1830,7 +1830,7 @@ async function sendPayPalSellerPayout(order, options) {
   if (!snapshot.orderId) {
     return { ok: false, error: 'Order ID is required for payout processing' };
   }
-  const { orderId: _payoutBaseOrderId, ...payoutBaseWithoutOrderId } = snapshot.payoutBase;
+  const { orderId: _orderId, ...payoutBaseWithoutOrderId } = snapshot.payoutBase;
   await db.collection('payouts').updateOne(
     { orderId: orderId },
     {
