@@ -789,7 +789,7 @@
     </div>
     <div class="mb-4 flex gap-2">
       <button onclick="openPayPalBankOnboarding()" id="openPayPalBankOnboardingBtn" class="btn-secondary text-sm flex-1" disabled>
-        <i class="fab fa-paypal"></i> Open PayPal Again
+        <i class="fab fa-paypal"></i> Return to PayPal Setup
       </button>
       <button onclick="confirmBankLinked()" id="confirmBankLinkedBtn" class="btn-secondary text-sm flex-1">
         <i class="fas fa-link"></i> I Linked My Bank
@@ -1658,9 +1658,7 @@
       try { popup.focus(); } catch (_) {}
       return;
     }
-    if (!popup) {
-      window.location.href = url;
-    }
+    window.location.href = url;
   }
 
   function openPayPalBankOnboarding() {
@@ -1676,6 +1674,11 @@
     if (!isValidPayoutEmail(email)) {
       ZrxNotify.showNotification('Enter a valid PayPal email before confirming bank setup.', 'error');
       return;
+    }
+    var savedEmail = String(sellerData && sellerData.payoutAccountId ? sellerData.payoutAccountId : '').trim().toLowerCase();
+    if (email.toLowerCase() !== savedEmail || !_payoutOnboardingUrl) {
+      var saved = await savePayoutAccount(false, true);
+      if (!saved) return;
     }
     var btn = document.getElementById('confirmBankLinkedBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirming…'; }
@@ -1698,11 +1701,11 @@
     }
   }
 
-  async function savePayoutAccount(openAfterSave) {
+  async function savePayoutAccount(openAfterSave, silentSuccess) {
     var email = (document.getElementById('payoutEmailInput').value || '').trim();
     if (!isValidPayoutEmail(email)) {
       ZrxNotify.showNotification('Please enter a valid PayPal email address.', 'error');
-      return;
+      return false;
     }
     var btn = document.getElementById('savePayoutBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting…'; }
@@ -1728,11 +1731,13 @@
       if (openAfterSave) {
         ZrxNotify.showNotification('PayPal payout setup opened. Add your bank details in PayPal, then return here and click “I Linked My Bank”.', 'success');
         launchPayPalOnboarding(_payoutOnboardingUrl);
-      } else {
+      } else if (!silentSuccess) {
         ZrxNotify.showNotification('Saved. Continue to PayPal to add your bank details, then return here to verify.', 'success');
       }
+      return true;
     } catch(err) {
       ZrxNotify.showNotification(err.message || 'Failed to save payout account. Please try again.', 'error');
+      return false;
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fab fa-paypal"></i> Continue to PayPal'; }
       syncPayoutModalUi();
