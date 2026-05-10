@@ -1116,9 +1116,9 @@ const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 const PAYPAL_PAYOUT_SCOPE = 'https://uri.paypal.com/services/payments/payouts';
-const configuredPayPalMode = String(process.env.PAYPAL_MODE || '').trim().toLowerCase();
+const envPayPalMode = String(process.env.PAYPAL_MODE || '').trim().toLowerCase();
 
-if (configuredPayPalMode && configuredPayPalMode !== PAYPAL_MODE) {
+if (envPayPalMode && envPayPalMode !== PAYPAL_MODE) {
   console.warn(`[PayPal] Ignoring PAYPAL_MODE=${process.env.PAYPAL_MODE}; runtime is locked to PAYPAL_MODE=${PAYPAL_MODE}.`);
 }
 
@@ -1959,7 +1959,7 @@ async function sendPayPalSellerPayout(order, options) {
     return { ok: false, error: reason };
   }
   if (!hasPayPalPayoutScope(tokenScopes)) {
-    const reason = `PayPal token is missing the payouts scope. Enable PayPal Payouts for this ${PAYPAL_MODE} app and retry.`;
+    const reason = `PayPal token is missing the payouts scope. Enable PayPal Payouts in your PayPal developer console for this ${PAYPAL_MODE} mode app, then retry.`;
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
