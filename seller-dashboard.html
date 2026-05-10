@@ -784,7 +784,7 @@
       <label class="form-label">PayPal Email Address</label>
       <input type="email" id="payoutEmailInput" class="form-input" placeholder="your@paypal.com" autocomplete="email">
     </div>
-    <div id="payoutModalStatus" class="mb-4 rounded-lg border px-3 py-3 text-xs">
+    <div id="payoutModalStatus" class="mb-4 rounded-lg border px-3 py-3 text-xs" role="status" aria-live="polite">
       Enter your PayPal email to start secure payout setup.
     </div>
     <div class="mb-4 flex gap-2">
@@ -1602,7 +1602,7 @@
   }
 
   function isValidEmailFormat(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+    return /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(String(value || '').trim());
   }
 
   function syncPayoutModalUi() {
@@ -1644,23 +1644,30 @@
       : 'Enter your PayPal email to start secure payout setup.';
   }
 
-  function launchPayPalOnboarding(url) {
+  function launchPayPalOnboarding(url, popupWindow) {
     if (!url) {
       ZrxNotify.showNotification('PayPal onboarding is unavailable right now. Please try again in a moment.', 'error');
       return false;
     }
-    var popup = null;
+    var popup = popupWindow || null;
+    if (popup && !popup.closed) {
+      try {
+        popup.opener = null;
+        popup.location = url;
+        popup.focus();
+        return true;
+      } catch (err) {
+        console.warn('Failed to reuse PayPal onboarding popup:', err);
+      }
+    }
     try {
       popup = window.open(url, '_blank');
     } catch (err) {
       console.warn('Failed to open PayPal onboarding popup:', err);
     }
-    if (popup) {
-      try { popup.opener = null; } catch (err) { console.warn('Failed to clear popup opener:', err); }
-      try { popup.focus(); } catch (err) { console.warn('Failed to focus PayPal popup:', err); }
-      return true;
-    }
-    window.location.href = url;
+    if (!popup) return false;
+    try { popup.opener = null; } catch (err) { console.warn('Failed to clear popup opener:', err); }
+    try { popup.focus(); } catch (err) { console.warn('Failed to focus PayPal popup:', err); }
     return true;
   }
 
@@ -1710,6 +1717,14 @@
       ZrxNotify.showNotification('Please enter a valid PayPal email address.', 'error');
       return false;
     }
+    var reservedPopup = null;
+    if (openAfterSave) {
+      try {
+        reservedPopup = window.open('', '_blank');
+      } catch (err) {
+        console.warn('Failed to reserve PayPal popup window:', err);
+      }
+    }
     var btn = document.getElementById('savePayoutBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting…'; }
     try {
@@ -1732,13 +1747,24 @@
       renderPayoutAccountUi();
       syncPayoutModalUi();
       if (openAfterSave) {
-        ZrxNotify.showNotification('PayPal payout setup is ready. Add your bank details in PayPal, then return here and click “I Linked My Bank”.', 'success');
-        launchPayPalOnboarding(_payoutOnboardingUrl);
+        var launched = launchPayPalOnboarding(_payoutOnboardingUrl, reservedPopup);
+        if (!launched && reservedPopup && !reservedPopup.closed) {
+          try { reservedPopup.close(); } catch (_) {}
+        }
+        ZrxNotify.showNotification(
+          launched
+            ? 'PayPal payout setup is ready. Add your bank details in PayPal, then return here and click “I Linked My Bank”.'
+            : 'Saved. If PayPal did not open automatically, click “Return to PayPal Setup” to continue.',
+          launched ? 'success' : 'info'
+        );
       } else if (!silentSuccess) {
         ZrxNotify.showNotification('Saved. Continue to PayPal to add your bank details, then return here to verify.', 'success');
       }
       return true;
     } catch(err) {
+      if (reservedPopup && !reservedPopup.closed) {
+        try { reservedPopup.close(); } catch (_) {}
+      }
       ZrxNotify.showNotification(err.message || 'Failed to save payout account. Please try again.', 'error');
       return false;
     } finally {
