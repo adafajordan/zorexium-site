@@ -365,12 +365,12 @@
             </button>
           </li>
           <li>
-            <button class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
+            <button onclick="pdShowCompareModal()" class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
               <i class="fas fa-exchange-alt w-4 text-center text-gray-400"></i> Compare
             </button>
           </li>
           <li>
-            <button class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
+            <button onclick="pdCreatePriceAlert()" class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-cyan-600 transition-colors text-left">
               <i class="fas fa-bell w-4 text-center text-gray-400"></i> Price alert
             </button>
           </li>
@@ -380,7 +380,7 @@
             </button>
           </li>
           <li>
-            <button class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-red-500 transition-colors text-left">
+            <button onclick="pdShowReportListingModal()" class="flex items-center gap-2 w-full px-4 py-2.5 text-gray-600 hover:bg-gray-50 hover:text-red-500 transition-colors text-left">
               <i class="fas fa-flag w-4 text-center text-gray-400"></i> Report a listing
             </button>
           </li>
@@ -1010,6 +1010,173 @@
       });
     } else {
       ZrxNotify.showNotification('Copy this URL: ' + window.location.href, 'info');
+    }
+  }
+
+  async function pdShowCompareModal() {
+    if (!currentProduct || !currentProductId) {
+      ZrxNotify.showNotification('Product not loaded yet.', 'error');
+      return;
+    }
+    var modal = document.getElementById('pdCompareModal');
+    var listEl = document.getElementById('pdCompareList');
+    var titleEl = document.getElementById('pdCompareSubcategoryLabel');
+    if (!modal || !listEl || !titleEl) return;
+    var sub = String(currentProduct.subcategory || '').trim();
+    if (!sub) {
+      ZrxNotify.showNotification('This product has no subcategory to compare.', 'info');
+      return;
+    }
+    titleEl.textContent = sub;
+    listEl.innerHTML = '<p class="text-sm text-gray-500">Loading products…</p>';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    try {
+      var res = await fetch(BACKEND_URL + '/api/products');
+      if (!res.ok) throw new Error('Could not load products');
+      var products = await res.json();
+      var subNorm = sub.toLowerCase();
+      var sameSub = (products || []).filter(function(p) {
+        return String(p.subcategory || '').trim().toLowerCase() === subNorm;
+      }).sort(function(a, b) {
+        return (parseFloat(a.salePrice || a.price || 0) || 0) - (parseFloat(b.salePrice || b.price || 0) || 0);
+      });
+      if (sameSub.length === 0) {
+        listEl.innerHTML = '<p class="text-sm text-gray-500">No products found in this subcategory.</p>';
+        return;
+      }
+      listEl.innerHTML = sameSub.map(function(p) {
+        var pid = p._id ? String(p._id) : String(p.id || '');
+        var isCurrent = pid === String(currentProductId);
+        var price = parseFloat(p.salePrice || p.price || 0);
+        var safeName = escapeHtml(String(p.name || 'Product'));
+        var safeSeller = escapeHtml(String(p.sellerName || p.sellerUsername || 'Seller'));
+        return '<a href="product-detail.html?id=' + encodeURIComponent(pid) + '" class="block border rounded-lg p-3 ' + (isCurrent ? 'border-cyan-300 bg-cyan-50' : 'border-gray-200 hover:border-cyan-300 hover:bg-gray-50') + ' transition-colors">'
+          + '<div class="flex items-start justify-between gap-3">'
+          + '<div class="min-w-0">'
+          + '<p class="text-sm font-semibold text-gray-900 truncate">' + safeName + '</p>'
+          + '<p class="text-xs text-gray-500 mt-0.5">Sold by ' + safeSeller + (isCurrent ? ' · Current product' : '') + '</p>'
+          + '</div>'
+          + '<p class="text-sm font-bold text-gray-900 flex-shrink-0">$' + price.toFixed(2) + '</p>'
+          + '</div>'
+          + '</a>';
+      }).join('');
+    } catch (_) {
+      listEl.innerHTML = '<p class="text-sm text-red-600">Could not load compare products.</p>';
+    }
+  }
+
+  function pdCloseCompareModal() {
+    var modal = document.getElementById('pdCompareModal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  }
+
+  async function pdCreatePriceAlert() {
+    if (!ZrxSession.isLoggedIn()) {
+      ZrxNotify.showNotification('Please log in to set price alerts', 'info');
+      var loginUrl = 'login-register.html';
+      if (window.ZrxSpa && ZrxSpa.navigate(loginUrl)) return;
+      window.location.href = loginUrl;
+      return;
+    }
+    if (!currentProduct || !currentProductId) {
+      ZrxNotify.showNotification('Product not loaded yet.', 'error');
+      return;
+    }
+    var targetPrice = parseFloat(currentProduct.salePrice || currentProduct.price || 0);
+    if (!targetPrice || targetPrice <= 0) {
+      ZrxNotify.showNotification('This product has invalid pricing for alerts.', 'error');
+      return;
+    }
+    try {
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/user/price-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          productId: currentProductId,
+          productName: currentProduct.name || '',
+          targetPrice: targetPrice
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error((data && data.error) || 'Failed to create price alert');
+      ZrxNotify.showNotification('Price alert set. We will email you when this price changes.', 'success');
+    } catch (e) {
+      ZrxNotify.showNotification((e && e.message) || 'Could not create price alert', 'error');
+    }
+  }
+
+  function pdShowReportListingModal() {
+    if (!currentProduct || !currentProductId) {
+      ZrxNotify.showNotification('Product not loaded yet.', 'error');
+      return;
+    }
+    var modal = document.getElementById('pdReportListingModal');
+    if (!modal) return;
+    var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
+    var nameEl = document.getElementById('pdReportName');
+    var emailEl = document.getElementById('pdReportEmail');
+    if (nameEl && !nameEl.value && user) nameEl.value = user.username || '';
+    if (emailEl && !emailEl.value && user) emailEl.value = user.email || '';
+    var productEl = document.getElementById('pdReportProduct');
+    if (productEl) productEl.value = currentProduct.name || '';
+    document.getElementById('pdReportReason').value = '';
+    document.getElementById('pdReportDetails').value = '';
+    var errEl = document.getElementById('pdReportError');
+    if (errEl) errEl.classList.add('hidden');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function pdCloseReportListingModal() {
+    var modal = document.getElementById('pdReportListingModal');
+    if (modal) { modal.classList.add('hidden'); modal.classList.remove('flex'); }
+  }
+
+  async function pdSubmitListingReport() {
+    if (!currentProduct || !currentProductId) return;
+    var submitBtn = document.getElementById('pdReportSubmitBtn');
+    var errEl = document.getElementById('pdReportError');
+    var payload = {
+      productId: currentProductId,
+      productName: currentProduct.name || '',
+      reporterName: (document.getElementById('pdReportName').value || '').trim(),
+      reporterEmail: (document.getElementById('pdReportEmail').value || '').trim(),
+      reason: (document.getElementById('pdReportReason').value || '').trim(),
+      details: (document.getElementById('pdReportDetails').value || '').trim()
+    };
+    if (!payload.reason || !payload.details || !payload.reporterEmail) {
+      if (errEl) {
+        errEl.textContent = 'Email, reason, and details are required.';
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
+    }
+    try {
+      var res = await fetch(BACKEND_URL + '/api/listing-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error((data && data.error) || 'Failed to submit report');
+      pdCloseReportListingModal();
+      ZrxNotify.showNotification('Report submitted. Thank you.', 'success');
+    } catch (e) {
+      if (errEl) {
+        errEl.textContent = (e && e.message) || 'Failed to submit report.';
+        errEl.classList.remove('hidden');
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Report';
+      }
     }
   }
 
@@ -1798,14 +1965,86 @@
   </div>
 </div>
 
+<!-- Compare Subcategory Modal -->
+<div id="pdCompareModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="pdCompareTitle">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="pdCompareTitle" class="text-lg font-bold text-gray-900">
+        <i class="fas fa-exchange-alt text-cyan-500 mr-2"></i>
+        Compare in <span id="pdCompareSubcategoryLabel">Subcategory</span>
+      </h2>
+      <button onclick="pdCloseCompareModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+    </div>
+    <div id="pdCompareList" class="space-y-2"></div>
+  </div>
+</div>
+
+<!-- Report Listing Modal -->
+<div id="pdReportListingModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50" role="dialog" aria-modal="true" aria-labelledby="pdReportListingTitle">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="pdReportListingTitle" class="text-lg font-bold text-gray-900"><i class="fas fa-flag text-red-500 mr-2"></i>Report Listing</h2>
+      <button onclick="pdCloseReportListingModal()" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Product</label>
+        <input id="pdReportProduct" type="text" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-700" readonly>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Your Name</label>
+          <input id="pdReportName" type="text" maxlength="120" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Your Email <span class="text-red-500">*</span></label>
+          <input id="pdReportEmail" type="email" maxlength="200" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Reason <span class="text-red-500">*</span></label>
+        <select id="pdReportReason" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900">
+          <option value="">Select a reason…</option>
+          <option value="fraudulent">Fraudulent listing</option>
+          <option value="prohibited-item">Prohibited item</option>
+          <option value="misleading-details">Misleading details</option>
+          <option value="counterfeit">Counterfeit concern</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 mb-1">Details <span class="text-red-500">*</span></label>
+        <textarea id="pdReportDetails" rows="4" maxlength="3000" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 resize-none" placeholder="Please provide details about this report."></textarea>
+      </div>
+      <div id="pdReportError" class="hidden text-sm text-red-600 p-2.5 bg-red-50 border border-red-200 rounded-md"></div>
+      <div class="flex gap-2 pt-1">
+        <button id="pdReportSubmitBtn" onclick="pdSubmitListingReport()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">Submit Report</button>
+        <button onclick="pdCloseReportListingModal()" class="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') pdCloseBuildSelectModal();
+      if (e.key === 'Escape') {
+        pdCloseBuildSelectModal();
+        pdCloseCompareModal();
+        pdCloseReportListingModal();
+      }
     });
     var bsModal = document.getElementById('pdBuildSelectModal');
     if (bsModal) bsModal.addEventListener('click', function(e) {
       if (e.target === this) pdCloseBuildSelectModal();
+    });
+    var compareModal = document.getElementById('pdCompareModal');
+    if (compareModal) compareModal.addEventListener('click', function(e) {
+      if (e.target === this) pdCloseCompareModal();
+    });
+    var reportModal = document.getElementById('pdReportListingModal');
+    if (reportModal) reportModal.addEventListener('click', function(e) {
+      if (e.target === this) pdCloseReportListingModal();
     });
     var bsNameInput = document.getElementById('pdBuildNewListName');
     if (bsNameInput) bsNameInput.addEventListener('keypress', function(e) {

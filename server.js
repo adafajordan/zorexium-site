@@ -175,6 +175,67 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function getEffectiveListingPrice(product) {
+  if (!product || typeof product !== 'object') return NaN;
+  const salePrice = Number(product.salePrice);
+  if (Number.isFinite(salePrice) && salePrice > 0) return salePrice;
+  const basePrice = Number(product.price);
+  return Number.isFinite(basePrice) ? basePrice : NaN;
+}
+
+async function notifyPriceChangeSubscribers(product, previousPrice, nextPrice) {
+  if (!mongoConnected) return;
+  const productId = product && product._id ? String(product._id) : '';
+  if (!productId) return;
+  const fromPrice = Number(previousPrice);
+  const toPrice = Number(nextPrice);
+  if (!Number.isFinite(fromPrice) || !Number.isFinite(toPrice) || fromPrice === toPrice) return;
+  const docs = await db.collection('userPriceAlerts').find({ 'alerts.productId': productId }).toArray();
+  if (!docs || docs.length === 0) return;
+  const safeProductName = escapeHtml(product && product.name ? product.name : 'Product');
+  const safeFrom = fromPrice.toFixed(2);
+  const safeTo = toPrice.toFixed(2);
+  const productPath = '/product-detail.html?id=' + encodeURIComponent(productId);
+
+  for (const doc of docs) {
+    const userId = String(doc && doc.userId ? doc.userId : '');
+    if (!userId) continue;
+    const alerts = Array.isArray(doc.alerts) ? doc.alerts : [];
+    let changed = false;
+    let shouldNotify = false;
+    const nextAlerts = alerts.map(function(alert) {
+      if (String(alert && alert.productId ? alert.productId : '') !== productId) return alert;
+      const nextAlert = { ...alert };
+      nextAlert.currentPrice = toPrice;
+      nextAlert.lastPrice = fromPrice;
+      const target = Number(nextAlert.targetPrice);
+      nextAlert.triggered = Number.isFinite(target) ? toPrice <= target : false;
+      const alreadyNotifiedAtPrice = Number(nextAlert.lastNotifiedPrice) === toPrice;
+      if (!alreadyNotifiedAtPrice) {
+        nextAlert.lastNotifiedPrice = toPrice;
+        nextAlert.lastNotifiedAt = new Date();
+        shouldNotify = true;
+      }
+      changed = true;
+      return nextAlert;
+    });
+    if (changed) {
+      await db.collection('userPriceAlerts').updateOne(
+        { _id: doc._id },
+        { $set: { alerts: nextAlerts, updatedAt: new Date() } }
+      );
+    }
+    if (!shouldNotify) continue;
+    await maybeSendPreferenceNotificationEmail(
+      userId,
+      'price_drop_alerts',
+      `Price changed for ${product && product.name ? product.name : 'your tracked product'}`,
+      `<p>The price for <strong>${safeProductName}</strong> changed.</p><p>Previous price: <strong>$${safeFrom}</strong><br>New price: <strong>$${safeTo}</strong></p>`,
+      productPath
+    );
+  }
+}
+
 function getRequestClientIp(req) {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.trim()) {
@@ -974,8 +1035,15 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
     }
     updates.updatedAt = new Date();
 
+    const previousEffectivePrice = getEffectiveListingPrice(product);
     await db.collection('products').updateOne({ _id: objectId }, { $set: updates });
     const updated = await db.collection('products').findOne({ _id: objectId });
+    const nextEffectivePrice = getEffectiveListingPrice(updated);
+    try {
+      await notifyPriceChangeSubscribers(updated, previousEffectivePrice, nextEffectivePrice);
+    } catch (notifyErr) {
+      console.error('Failed to notify price alert subscribers:', notifyErr.message);
+    }
     res.json(updated);
   } catch (error) {
     console.error('Error updating product:', error);
@@ -2643,6 +2711,43 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
       } catch (sellerMailErr) {
         console.error('Failed to send seller sold email:', sellerMailErr.message);
       }
+    }
+
+    try {
+      const buyer = syncedOrder && syncedOrder.buyer ? syncedOrder.buyer : {};
+      const buyerName = [buyer.firstName || '', buyer.lastName || ''].join(' ').trim();
+      const safeBuyerName = escapeHtml(buyerName || 'Unknown buyer');
+      const safeBuyerEmail = escapeHtml(normalizeEmail(syncedOrder.buyerEmail || buyer.email || '') || 'Not provided');
+      const safeOrderId = escapeHtml(syncedOrder.id || '');
+      const sellerSummary = Array.from(sellerItemsMap.entries()).map(function(entry) {
+        const sellerId = entry[0];
+        const items = entry[1] || [];
+        const first = items[0] || {};
+        const sellerName = escapeHtml(first.sellerName || first.sellerUsername || sellerId);
+        return '<li>' + sellerName + ' (' + items.length + ' item' + (items.length === 1 ? '' : 's') + ')</li>';
+      }).join('');
+      const productsSummary = (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).map(function(item) {
+        const itemName = escapeHtml(item && item.name ? item.name : 'Item');
+        const qty = parseInt(item && item.quantity, 10) || 1;
+        const price = Number(item && item.price);
+        const itemPrice = Number.isFinite(price) ? '$' + price.toFixed(2) : 'N/A';
+        const sellerName = escapeHtml(item && (item.sellerName || item.sellerUsername || item.sellerId) ? (item.sellerName || item.sellerUsername || item.sellerId) : 'Unknown seller');
+        return '<li><strong>' + itemName + '</strong> — Qty: ' + qty + ' — Price: ' + itemPrice + ' — Seller: ' + sellerName + '</li>';
+      }).join('');
+      await sendEventEmailSafe(
+        ADMIN_NOTIFICATION_EMAIL,
+        'New purchase completed on Zorexium',
+        '<p>A purchase was completed on checkout.</p>'
+          + '<p><strong>Order ID:</strong> ' + safeOrderId + '<br>'
+          + '<strong>Buyer:</strong> ' + safeBuyerName + '<br>'
+          + '<strong>Buyer Email:</strong> ' + safeBuyerEmail + '<br>'
+          + '<strong>Total:</strong> $' + Number(syncedOrder.total || 0).toFixed(2) + '</p>'
+          + '<p><strong>Sellers in order:</strong></p><ul>' + (sellerSummary || '<li>No seller info</li>') + '</ul>'
+          + '<p><strong>Products:</strong></p><ul>' + (productsSummary || '<li>No product details</li>') + '</ul>',
+        '/order-history.html'
+      );
+    } catch (adminMailErr) {
+      console.error('Failed to send admin purchase email:', adminMailErr.message);
     }
 
     res.json({
@@ -5535,17 +5640,29 @@ app.get('/api/user/price-alerts', publicApiRateLimit, verifyToken, async functio
 // POST /api/user/price-alerts – add a price alert (auth required)
 app.post('/api/user/price-alerts', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  const { productId, productName, targetPrice } = req.body;
-  if (!productId || !productName || !targetPrice) {
-    return res.status(400).json({ error: 'productId, productName, and targetPrice are required' });
+  const { productId, productName, productUrl, targetPrice } = req.body;
+  const normalizedProductId = productId ? String(productId).trim().slice(0, 100) : '';
+  const normalizedProductName = String(productName || productUrl || '').trim().slice(0, 200);
+  if (!normalizedProductName || !targetPrice) {
+    return res.status(400).json({ error: 'productName (or productUrl) and targetPrice are required' });
   }
   const parsed = parseFloat(targetPrice);
   if (isNaN(parsed) || parsed <= 0) return res.status(400).json({ error: 'targetPrice must be a positive number' });
+  let currentPrice = null;
+  if (normalizedProductId && ObjectId.isValid(normalizedProductId)) {
+    try {
+      const product = await db.collection('products').findOne({ _id: new ObjectId(normalizedProductId) }, { projection: { price: 1, salePrice: 1 } });
+      const effective = getEffectiveListingPrice(product);
+      if (Number.isFinite(effective)) currentPrice = effective;
+    } catch (_) {}
+  }
   const alert = {
     id: require('crypto').randomUUID(),
-    productId: String(productId).slice(0, 100),
-    productName: String(productName).trim().slice(0, 200),
+    productId: normalizedProductId,
+    productName: normalizedProductName,
+    productUrl: String(productUrl || '').trim().slice(0, 500),
     targetPrice: parsed,
+    currentPrice: Number.isFinite(currentPrice) ? currentPrice : null,
     createdAt: new Date(),
     triggered: false
   };
@@ -5553,6 +5670,9 @@ app.post('/api/user/price-alerts', publicApiRateLimit, verifyToken, async functi
     const doc = await db.collection('userPriceAlerts').findOne({ userId: req.userId });
     const alerts = (doc && doc.alerts) || [];
     if (alerts.length >= 50) return res.status(400).json({ error: 'Price alert limit reached (50)' });
+    if (normalizedProductId && alerts.some(function(existing) { return String(existing.productId || '') === normalizedProductId; })) {
+      return res.status(409).json({ error: 'You already have a price alert for this product' });
+    }
     alerts.push(alert);
     await db.collection('userPriceAlerts').updateOne(
       { userId: req.userId },
@@ -5576,6 +5696,50 @@ app.delete('/api/user/price-alerts/:id', publicApiRateLimit, verifyToken, async 
     );
     res.json({ message: 'Price alert removed' });
   } catch (error) { res.status(500).json({ error: error.message }); }
+});
+
+// POST /api/listing-reports – submit a product listing report (public)
+app.post('/api/listing-reports', publicApiRateLimit, async function(req, res) {
+  const {
+    productId,
+    productName,
+    reporterName,
+    reporterEmail,
+    reason,
+    details
+  } = req.body || {};
+  const safeProductId = String(productId || '').trim().slice(0, 100);
+  const safeProductName = String(productName || '').trim().slice(0, 200);
+  const safeReporterName = String(reporterName || '').trim().slice(0, 120);
+  const safeReporterEmail = normalizeEmail(reporterEmail || '');
+  const safeReason = String(reason || '').trim().slice(0, 120);
+  const safeDetails = String(details || '').trim().slice(0, 3000);
+  if (!safeProductId || !safeProductName) {
+    return res.status(400).json({ error: 'productId and productName are required' });
+  }
+  if (!safeReporterEmail || !isLikelyEmail(safeReporterEmail)) {
+    return res.status(400).json({ error: 'A valid reporter email is required' });
+  }
+  if (!safeReason || !safeDetails) {
+    return res.status(400).json({ error: 'reason and details are required' });
+  }
+  try {
+    await sendEventEmailSafe(
+      ADMIN_NOTIFICATION_EMAIL,
+      'Product listing report submitted',
+      '<p>A user submitted a listing report.</p>'
+        + '<p><strong>Product:</strong> ' + escapeHtml(safeProductName) + '<br>'
+        + '<strong>Product ID:</strong> ' + escapeHtml(safeProductId) + '<br>'
+        + '<strong>Reason:</strong> ' + escapeHtml(safeReason) + '</p>'
+        + '<p><strong>Reporter:</strong> ' + escapeHtml(safeReporterName || 'Not provided') + '<br>'
+        + '<strong>Email:</strong> ' + escapeHtml(safeReporterEmail) + '</p>'
+        + '<p><strong>Details:</strong><br>' + escapeHtml(safeDetails).replace(/\n/g, '<br>') + '</p>',
+      '/product-detail.html?id=' + encodeURIComponent(safeProductId)
+    );
+    res.status(201).json({ message: 'Report submitted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message || 'Failed to submit report' });
+  }
 });
 
 // ── ERROR HANDLER ──────────────────────────────────────────────────────────────
