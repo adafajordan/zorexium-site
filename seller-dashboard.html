@@ -1589,6 +1589,10 @@
   function openPayoutModal() {
     var input = document.getElementById('payoutEmailInput');
     if (input && sellerData.payoutAccountId) input.value = sellerData.payoutAccountId;
+    if (input && !input.dataset.payoutSyncBound) {
+      input.addEventListener('input', syncPayoutModalUi);
+      input.dataset.payoutSyncBound = 'true';
+    }
     _payoutOnboardingUrl = sellerData.payoutProviderBankOnboardingUrl || _payoutOnboardingUrl || '';
     var codeInput = document.getElementById('payoutVerificationCodeInput');
     if (codeInput) codeInput.value = '';
@@ -1602,7 +1606,18 @@
   }
 
   function isValidEmailFormat(value) {
-    return /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/.test(String(value || '').trim());
+    var email = String(value || '').trim();
+    if (!email) return false;
+    var probe = document.createElement('input');
+    probe.type = 'email';
+    probe.value = email;
+    return probe.checkValidity();
+  }
+
+  function closePopupSafely(popupWindow) {
+    if (popupWindow && !popupWindow.closed) {
+      try { popupWindow.close(); } catch (_) {}
+    }
   }
 
   function syncPayoutModalUi() {
@@ -1652,7 +1667,7 @@
     var popup = popupWindow || null;
     if (popup && !popup.closed) {
       try {
-        popup.opener = null;
+        try { popup.opener = null; } catch (err) { console.warn('Failed to clear reused popup opener:', err); }
         popup.location = url;
         popup.focus();
         return true;
@@ -1748,9 +1763,7 @@
       syncPayoutModalUi();
       if (openAfterSave) {
         var launched = launchPayPalOnboarding(_payoutOnboardingUrl, reservedPopup);
-        if (!launched && reservedPopup && !reservedPopup.closed) {
-          try { reservedPopup.close(); } catch (_) {}
-        }
+        if (!launched) closePopupSafely(reservedPopup);
         ZrxNotify.showNotification(
           launched
             ? 'PayPal payout setup is ready. Add your bank details in PayPal, then return here and click “I Linked My Bank”.'
@@ -1762,9 +1775,7 @@
       }
       return true;
     } catch(err) {
-      if (reservedPopup && !reservedPopup.closed) {
-        try { reservedPopup.close(); } catch (_) {}
-      }
+      closePopupSafely(reservedPopup);
       ZrxNotify.showNotification(err.message || 'Failed to save payout account. Please try again.', 'error');
       return false;
     } finally {
@@ -1816,12 +1827,6 @@
     if (pushBtn) {
       var orderId = pushBtn.getAttribute('data-order-id') || '';
       pushPayoutForOrder(orderId);
-    }
-  });
-
-  document.addEventListener('input', function(e) {
-    if (e && e.target && e.target.id === 'payoutEmailInput') {
-      syncPayoutModalUi();
     }
   });
 
