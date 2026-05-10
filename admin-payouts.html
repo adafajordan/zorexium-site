@@ -490,7 +490,7 @@
         '<button onclick="sendPayout(' + JSON.stringify(payoutId) + ')" ' +
           'class="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm font-semibold transition">' +
           '<i class="fas fa-redo mr-1"></i>Retry Payout</button>' +
-        '<button onclick="markManuallyPaid(' + JSON.stringify(payoutId) + ', ' + JSON.stringify(payout.payoutAccountId || '') + ', ' + Number(payout.amount).toFixed(2) + ')" ' +
+        '<button onclick="markManuallyPaid(' + JSON.stringify(payoutId) + ', ' + JSON.stringify(payout.payoutAccountId || '') + ', ' + JSON.stringify(Number(payout.amount).toFixed(2)) + ')" ' +
           'class="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-sm font-semibold transition">' +
           '<i class="fas fa-check mr-1"></i>Mark as Manually Paid</button>' +
         '</div>';

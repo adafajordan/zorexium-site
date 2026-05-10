@@ -1117,6 +1117,7 @@ const PAYOUT_BATCH_UUID_SLICE = 16;
 const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
+const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 
 function normalizeCountryCode(value) {
@@ -4321,7 +4322,7 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
       updates.paidAt = new Date();
       updates.manuallyPaid = true;
       updates.error = null;
-      if (note && typeof note === 'string') updates.manualPayNote = note.slice(0, 500);
+      if (note && typeof note === 'string') updates.manualPayNote = note.slice(0, MAX_MANUAL_PAY_NOTE_LENGTH);
     }
 
     await db.collection('payouts').updateOne({ _id: objectId }, { $set: updates });
