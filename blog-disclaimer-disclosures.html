@@ -274,7 +274,7 @@
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
         <input type="text" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" id="subHeaderSearch" placeholder="Search for AI Accelerators, GPUS & Tech" onkeypress="if(event.key==='Enter'){window.location.href='index.html?search='+encodeURIComponent(this.value.trim());}">
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"><i class="fas fa-microphone text-gray-500"></i></div>
+        <div data-voice-for="subHeaderSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" onclick="startVoiceSearch('subHeaderSearch',function(t){window.location.href='index.html?search='+encodeURIComponent(t.trim());})" title="Voice search"><i class="fas fa-microphone text-gray-500"></i></div>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -401,6 +401,7 @@
 
 <script src="open-links-new-tab.js"></script>
 <script src="cookie-consent.js"></script>
+<script src="voice-search.js"></script>
 </body>
 </html>
 

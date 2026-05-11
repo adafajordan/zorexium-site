@@ -332,7 +332,7 @@
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
         <input type="text" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" id="subHeaderSearch" placeholder="Search for AI Accelerators, GPUS & Tech" onkeypress="if(event.key==='Enter'){window.location.href='index.html?search='+encodeURIComponent(this.value.trim());}">
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"><i class="fas fa-microphone text-gray-500"></i></div>
+        <div data-voice-for="subHeaderSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" onclick="startVoiceSearch('subHeaderSearch',function(t){window.location.href='index.html?search='+encodeURIComponent(t.trim());})" title="Voice search"><i class="fas fa-microphone text-gray-500"></i></div>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -441,8 +441,11 @@
       <!-- Search + Filter bar -->
       <div class="bg-white border border-gray-200 rounded-lg px-5 py-4 mb-4">
         <div class="flex flex-wrap gap-2 items-center mb-3">
-          <input id="tyoSearchInput" type="text" placeholder="Search by Product, Order # or Invoice # in all orders"
-            class="flex-1 min-w-0 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+          <div class="relative flex-1 min-w-0">
+            <input id="tyoSearchInput" type="text" placeholder="Search by Product, Order # or Invoice # in all orders"
+              class="w-full border border-gray-300 rounded-md pl-3 pr-10 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+            <div data-voice-for="tyoSearchInput" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" onclick="startVoiceSearch('tyoSearchInput',function(){tyoSearch();})" title="Voice search"><i class="fas fa-microphone text-gray-400 text-sm"></i></div>
+          </div>
           <button onclick="tyoSearch()" class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md transition-colors whitespace-nowrap">Search Orders</button>
         </div>
         <div class="flex flex-wrap gap-4 items-center text-sm text-gray-600">
@@ -1031,5 +1034,6 @@
 
 <script src="open-links-new-tab.js"></script>
 <script src="cookie-consent.js"></script>
+<script src="voice-search.js"></script>
 </body>
 </html>

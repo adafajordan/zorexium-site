@@ -321,7 +321,7 @@
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
         <input type="text" id="forumSearch" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" placeholder="Search posts and discussions..." onkeyup="filterPosts()">
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"><i class="fas fa-microphone text-gray-500"></i></div>
+        <div data-voice-for="forumSearch" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" onclick="startVoiceSearch('forumSearch',function(){filterPosts();})" title="Voice search"><i class="fas fa-microphone text-gray-500"></i></div>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -755,6 +755,7 @@
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
         })();
     </script>
+<script src="voice-search.js"></script>
 </body>
 </html>
 
