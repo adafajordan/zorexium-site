@@ -1023,20 +1023,21 @@
     if (!preview) return;
     var lines = [];
     if (selectedImageFiles.length > 0) {
-      lines.push('<div><span class="font-semibold text-gray-700">Images:</span> ' + selectedImageFiles.length + ' selected</div>');
-      lines.push('<ul class="list-disc list-inside mt-1 space-y-0.5">' + selectedImageFiles.map(function(file) {
-        return '<li>' + escapeHtml(file.name) + ' (' + formatBytes(file.size) + ')</li>';
-      }).join('') + '</ul>');
+      lines.push('Images: ' + selectedImageFiles.length + ' selected');
+      selectedImageFiles.forEach(function(file) {
+        lines.push('- ' + file.name + ' (' + formatBytes(file.size) + ')');
+      });
     }
     if (selectedVideoFile) {
-      lines.push('<div class="mt-2"><span class="font-semibold text-gray-700">Video:</span> ' + escapeHtml(selectedVideoFile.name) + ' (' + formatBytes(selectedVideoFile.size) + ')</div>');
+      lines.push('Video: ' + selectedVideoFile.name + ' (' + formatBytes(selectedVideoFile.size) + ')');
     }
     if (lines.length === 0) {
       preview.classList.add('hidden');
-      preview.innerHTML = '';
+      preview.textContent = '';
       return;
     }
-    preview.innerHTML = lines.join('');
+    preview.textContent = lines.join('\n');
+    preview.classList.add('whitespace-pre-line');
     preview.classList.remove('hidden');
   }
 
@@ -1062,7 +1063,7 @@
   }
 
   function formatBytes(bytes) {
-    if (!(bytes > 0)) return '0 B';
+    if (bytes <= 0) return '0 B';
     if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
     if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
     if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
