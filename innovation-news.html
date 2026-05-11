@@ -353,10 +353,6 @@
           <label for="postImageFiles" class="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wide">Images <span class="text-gray-300 font-normal normal-case">(optional, up to 10, 10MB each)</span></label>
           <input type="file" id="postImageFiles" class="form-input" accept="image/*" multiple>
         </div>
-        <div>
-          <label for="postVideoFile" class="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wide">Video <span class="text-gray-300 font-normal normal-case">(optional, max 10GB)</span></label>
-          <input type="file" id="postVideoFile" class="form-input" accept="video/*">
-        </div>
         <div id="postMediaPreview" class="hidden rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"></div>
         <div class="flex justify-end gap-3 pt-1">
           <button onclick="cancelPost()" class="px-4 py-1.5 rounded-full border border-gray-300 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
@@ -381,10 +377,8 @@
   const boardType = 'innovation';
   const MAX_POST_IMAGE_COUNT = 10;
   const MAX_POST_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
-  const MAX_POST_VIDEO_SIZE_BYTES = 10 * 1024 * 1024 * 1024;
   let posts = [];
   let selectedImageFiles = [];
-  let selectedVideoFile = null;
 
   function init() {
     updateUI();
@@ -434,12 +428,12 @@
       return;
     }
     try {
-      const mediaPayload = await buildPostMediaPayload();
+      const imageUrls = await Promise.all(selectedImageFiles.map(file => readFileAsDataUrl(file)));
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ title, content, boardType, ...(mediaPayload.imageUrls.length ? { imageUrls: mediaPayload.imageUrls } : {}), ...(mediaPayload.videoUrl ? { videoUrl: mediaPayload.videoUrl } : {}) })
+        body: JSON.stringify({ title, content, boardType, ...(imageUrls.length ? { imageUrls } : {}) })
       });
       if (!res.ok) {
         const err = await res.json();
@@ -723,31 +717,12 @@
       });
     }
 
-    const videoInput = document.getElementById('postVideoFile');
-    if (videoInput) {
-      videoInput.addEventListener('change', function(event) {
-        const files = Array.from(event.target.files || []);
-        const videoFile = files.length ? files[0] : null;
-        if (videoFile && videoFile.size > MAX_POST_VIDEO_SIZE_BYTES) {
-          ZrxNotify.showNotification('Video must be 10GB or smaller.', 'error');
-          videoInput.value = '';
-          selectedVideoFile = null;
-          updatePostMediaPreview();
-          return;
-        }
-        selectedVideoFile = videoFile;
-        updatePostMediaPreview();
-      });
-    }
   }
 
   function clearPostMediaSelection() {
     selectedImageFiles = [];
-    selectedVideoFile = null;
     const imageInput = document.getElementById('postImageFiles');
     if (imageInput) imageInput.value = '';
-    const videoInput = document.getElementById('postVideoFile');
-    if (videoInput) videoInput.value = '';
     updatePostMediaPreview();
   }
 
@@ -760,9 +735,6 @@
       selectedImageFiles.forEach(file => {
         lines.push('- ' + file.name + ' (' + formatBytes(file.size) + ')');
       });
-    }
-    if (selectedVideoFile) {
-      lines.push('Video: ' + selectedVideoFile.name + ' (' + formatBytes(selectedVideoFile.size) + ')');
     }
     if (lines.length === 0) {
       preview.classList.add('hidden');
@@ -781,15 +753,6 @@
       reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsDataURL(file);
     });
-  }
-
-  async function buildPostMediaPayload() {
-    const imageUrls = await Promise.all(selectedImageFiles.map(file => readFileAsDataUrl(file)));
-    let videoDataUrl = '';
-    if (selectedVideoFile) {
-      videoDataUrl = await readFileAsDataUrl(selectedVideoFile);
-    }
-    return { imageUrls, videoUrl: videoDataUrl };
   }
 
   function formatBytes(bytes) {
