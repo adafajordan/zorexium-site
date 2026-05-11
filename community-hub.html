@@ -387,7 +387,7 @@
               <input type="file" id="postImageFiles" class="form-input" accept="image/*" multiple>
             </div>
             <div>
-              <label for="postVideoFile" class="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wide">Video <span class="text-gray-300 font-normal normal-case">(optional, max 10GB)</span></label>
+              <label for="postVideoFile" class="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wide">Video <span class="text-gray-300 font-normal normal-case">(optional, max 100MB)</span></label>
               <input type="file" id="postVideoFile" class="form-input" accept="video/*">
             </div>
             <div id="postMediaPreview" class="hidden rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"></div>
@@ -444,7 +444,7 @@
   let selectedFlair = '';
   const MAX_POST_IMAGE_COUNT = 10;
   const MAX_POST_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
-  const MAX_POST_VIDEO_SIZE_BYTES = 10 * 1024 * 1024 * 1024;
+  const MAX_POST_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
   let selectedImageFiles = [];
   let selectedVideoFile = null;
 
@@ -520,9 +520,26 @@
     }
     try {
       var body = { title: title, content: content, boardType: flair };
-      var mediaPayload = await buildPostMediaPayload();
-      if (mediaPayload.imageUrls.length) body.imageUrls = mediaPayload.imageUrls;
-      if (mediaPayload.videoUrl) body.videoUrl = mediaPayload.videoUrl;
+      var imageUrls = await Promise.all(selectedImageFiles.map(readFileAsDataUrl));
+      if (imageUrls.length) body.imageUrls = imageUrls;
+
+      if (selectedVideoFile) {
+        var formData = new FormData();
+        formData.append('video', selectedVideoFile);
+        var videoRes = await ZrxSession.fetch(BACKEND_URL + '/api/posts/upload-video', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+        if (!videoRes.ok) {
+          var videoErr = await videoRes.json().catch(function() { return {}; });
+          ZrxNotify.showNotification('Error: ' + (videoErr.error || 'Failed to upload video'), 'error');
+          return;
+        }
+        var videoData = await videoRes.json();
+        body.videoUrl = videoData.videoUrl;
+      }
+
       var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -996,7 +1013,7 @@
         var files = Array.from(event.target.files || []);
         var videoFile = files.length ? files[0] : null;
         if (videoFile && videoFile.size > MAX_POST_VIDEO_SIZE_BYTES) {
-          ZrxNotify.showNotification('Video must be 10GB or smaller.', 'error');
+          ZrxNotify.showNotification('Video must be 100MB or smaller.', 'error');
           videoInput.value = '';
           selectedVideoFile = null;
           updatePostMediaPreview();
@@ -1048,17 +1065,6 @@
       reader.onerror = function() { reject(new Error('Failed to read file')); };
       reader.readAsDataURL(file);
     });
-  }
-
-  async function buildPostMediaPayload() {
-    var imageUrls = await Promise.all(selectedImageFiles.map(function(file) {
-      return readFileAsDataUrl(file);
-    }));
-    var videoDataUrl = '';
-    if (selectedVideoFile) {
-      videoDataUrl = await readFileAsDataUrl(selectedVideoFile);
-    }
-    return { imageUrls: imageUrls, videoUrl: videoDataUrl };
   }
 
   function formatBytes(bytes) {

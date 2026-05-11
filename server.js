@@ -78,8 +78,9 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient, ObjectId, GridFSBucket } = require('mongodb');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 
 if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
@@ -95,7 +96,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Shared 10 MB per-image limit used by all image upload endpoints.
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_POST_IMAGE_COUNT = 10;
-const MAX_POST_VIDEO_SIZE_BYTES = 10 * 1024 * 1024 * 1024;
+// Max video size accepted by the multipart upload endpoint (100 MB).
+const MAX_POST_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
+
+// Multer instance for in-memory video uploads.
+const videoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_POST_VIDEO_SIZE_BYTES },
+  fileFilter: function(_req, file, cb) {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed'));
+    }
+  }
+});
+
+// Backend origin used to build absolute video URLs returned to clients.
+const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'https://zorexium-backend.onrender.com';
 
 // Parse and measure base64 data URL payload size in bytes so backend checks match real per-file size.
 function getDataUrlPayloadBytes(dataUrl) {
@@ -332,6 +350,7 @@ async function maybeSendPreferenceNotificationEmail(userId, categoryKey, subject
 // (checkout confirmations, seller events, security alerts, support/feedback acknowledgements) to keep channel behavior aligned.
 let db;
 let mongoClient;
+let videoBucket;
 let mongoConnected = false;
 
 async function connectDB() {
@@ -355,6 +374,7 @@ async function connectDB() {
     await db.admin().ping();
 
     mongoConnected = true;
+    videoBucket = new GridFSBucket(db, { bucketName: 'communityVideos' });
     console.log('✅ MongoDB connected and ping successful');
     return true;
   } catch (error) {
@@ -446,6 +466,14 @@ var publicApiRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' }
+});
+
+var videoUploadRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many video uploads, please try again later.' }
 });
 
 // ── CORS Middleware ────────────────────────────────────────────────────────────
@@ -3128,6 +3156,105 @@ app.get('/api/returns/my', publicApiRateLimit, verifyToken, async function(req, 
 
 // ── COMMUNITY POSTS ────────────────────────────────────────────────────────────
 
+// POST /api/posts/upload-video – upload a video file for use in a community post (auth required).
+// Accepts multipart/form-data with a single field named "video".
+// The file is stored in MongoDB GridFS and an absolute URL is returned.
+app.post('/api/posts/upload-video', videoUploadRateLimit, verifyToken, function(req, res) {
+  if (!mongoConnected || !videoBucket) return res.status(503).json({ error: 'Database unavailable' });
+
+  videoUpload.single('video')(req, res, async function(err) {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'Video too large. Max: 100 MB.' });
+      }
+      return res.status(400).json({ error: err.message || 'Video upload failed' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file provided' });
+    }
+
+    try {
+      const uploadStream = videoBucket.openUploadStream(req.file.originalname || 'video', {
+        contentType: req.file.mimetype
+      });
+      uploadStream.end(req.file.buffer);
+
+      await new Promise(function(resolve, reject) {
+        uploadStream.on('finish', resolve);
+        uploadStream.on('error', reject);
+      });
+
+      const videoUrl = BACKEND_BASE_URL + '/api/media/video/' + uploadStream.id.toString();
+      res.status(201).json({ videoUrl: videoUrl });
+    } catch (error) {
+      console.error('Error storing video in GridFS:', error);
+      res.status(500).json({ error: 'Failed to store video' });
+    }
+  });
+});
+
+// GET /api/media/video/:id – stream a community video from GridFS with HTTP range support.
+app.get('/api/media/video/:id', async function(req, res) {
+  if (!mongoConnected || !videoBucket) return res.status(503).json({ error: 'Database unavailable' });
+
+  let fileId;
+  try {
+    fileId = new ObjectId(req.params.id);
+  } catch (_) {
+    return res.status(400).json({ error: 'Invalid video ID' });
+  }
+
+  try {
+    const files = await videoBucket.find({ _id: fileId }).toArray();
+    if (!files.length) return res.status(404).json({ error: 'Video not found' });
+
+    const file = files[0];
+    const fileSize = file.length;
+    const contentType = file.contentType || 'video/mp4';
+    const rangeHeader = req.headers.range;
+
+    if (rangeHeader) {
+      const parts = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      if (start >= fileSize || end >= fileSize || start > end) {
+        res.set('Content-Range', 'bytes */' + fileSize);
+        return res.status(416).end();
+      }
+      const chunkSize = end - start + 1;
+      res.writeHead(206, {
+        'Content-Range': 'bytes ' + start + '-' + end + '/' + fileSize,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400'
+      });
+      const downloadStream = videoBucket.openDownloadStream(fileId, { start: start, end: end + 1 });
+      downloadStream.on('error', function(streamErr) {
+        console.error('Error reading video stream (range):', streamErr);
+        if (!res.writableEnded) res.end();
+      });
+      downloadStream.pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Cache-Control': 'public, max-age=86400'
+      });
+      const downloadStream = videoBucket.openDownloadStream(fileId);
+      downloadStream.on('error', function(streamErr) {
+        console.error('Error reading video stream:', streamErr);
+        if (!res.writableEnded) res.end();
+      });
+      downloadStream.pipe(res);
+    }
+  } catch (error) {
+    console.error('Error streaming video:', error);
+    if (!res.headersSent) res.status(500).json({ error: 'Error streaming video' });
+  }
+});
+
 // POST /api/posts – create a post (auth required)
 app.post('/api/posts', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
@@ -3217,26 +3344,16 @@ app.post('/api/posts', verifyToken, async function(req, res) {
     if (!normalizedVideoUrl) {
       return res.status(400).json({ error: 'Invalid videoUrl' });
     }
-    if (normalizedVideoUrl.startsWith('data:video/')) {
-      const videoBytes = getDataUrlPayloadBytes(normalizedVideoUrl);
-      if (!videoBytes) {
-        return res.status(400).json({ error: 'Invalid video data URL' });
+    if (normalizedVideoUrl.length > 2000) {
+      return res.status(400).json({ error: 'Invalid videoUrl' });
+    }
+    try {
+      const parsed = new URL(normalizedVideoUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return res.status(400).json({ error: 'videoUrl must use http or https protocol' });
       }
-      if (videoBytes > MAX_POST_VIDEO_SIZE_BYTES) {
-        return res.status(400).json({ error: 'Video too large. Max: 10 GB per video.' });
-      }
-    } else {
-      if (normalizedVideoUrl.length > 2000) {
-        return res.status(400).json({ error: 'Invalid videoUrl' });
-      }
-      try {
-        const parsed = new URL(normalizedVideoUrl);
-        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-          return res.status(400).json({ error: 'videoUrl must use http or https protocol' });
-        }
-      } catch (_) {
-        return res.status(400).json({ error: 'videoUrl is not a valid URL' });
-      }
+    } catch (_) {
+      return res.status(400).json({ error: 'videoUrl is not a valid URL' });
     }
   }
 
