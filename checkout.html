@@ -508,13 +508,6 @@
   </div>
 </main>
 
-    <!-- Chat Bubble -->
-    <div class="fixed bottom-6 right-6 z-50">
-        <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
-            <i class="fas fa-comment-dots text-3xl"></i>
-        </a>
-    </div>
-
 <script src="notifications.js"></script>
 <script src="session.js"></script>
 <script>
@@ -577,6 +570,7 @@ fetch(BACKEND_URL + '/api/config')
 
   // ── Cart ──────────────────────────────────────────────────────────────────
   let cart = [];
+  let firstOrderFreeShippingEligible = false;
 
   async function loadCart() {
     if (ZrxSession.isLoggedIn()) {
@@ -596,7 +590,21 @@ fetch(BACKEND_URL + '/api/config')
   // ── Totals ────────────────────────────────────────────────────────────────
   // Standard shipping rate is $1.00 per item; enforced on the backend as well
   function getShippingCost() {
+    if (firstOrderFreeShippingEligible) {
+      return 0;
+    }
     return cart.length * 1.00;
+  }
+
+  async function loadFirstOrderFreeShippingEligibility() {
+    firstOrderFreeShippingEligible = false;
+    if (!ZrxSession.isLoggedIn()) return;
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      if (!res.ok) return;
+      const orders = await res.json();
+      firstOrderFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+    } catch (_) {}
   }
 
   function getSubtotal() {
@@ -618,12 +626,12 @@ fetch(BACKEND_URL + '/api/config')
   function renderSummary() {
     const { subtotal, shipping, tax, total } = calcTotals();
     document.getElementById('summarySubtotal').textContent = '$' + subtotal.toFixed(2);
-    document.getElementById('summaryShipping').textContent = '$' + shipping.toFixed(2);
+    document.getElementById('summaryShipping').textContent = firstOrderFreeShippingEligible ? 'FREE' : ('$' + shipping.toFixed(2));
     document.getElementById('summaryTax').textContent = '$' + tax.toFixed(2);
     document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
 
     const shippingCostLabel = document.getElementById('standardShippingCost');
-    if (shippingCostLabel) shippingCostLabel.textContent = '$' + shipping.toFixed(2);
+    if (shippingCostLabel) shippingCostLabel.textContent = firstOrderFreeShippingEligible ? 'FREE' : ('$' + shipping.toFixed(2));
 
     const deliveryDate = getSelectedDeliveryDate();
     document.getElementById('summaryDelivery').textContent =
@@ -902,6 +910,7 @@ fetch(BACKEND_URL + '/api/config')
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
     await loadCart();
+    await loadFirstOrderFreeShippingEligibility();
     if (cart.length === 0) {
       document.getElementById('checkoutContent').classList.add('hidden');
       document.getElementById('emptyCartMsg').classList.remove('hidden');

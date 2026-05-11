@@ -2450,7 +2450,17 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       });
     });
     subtotal = parseFloat(subtotal.toFixed(2));
-    const shipping = parseFloat((normalizedOrderItems.length * DEFAULT_SHIPPING_PER_ITEM_USD).toFixed(2));
+    let firstOrderFreeShippingApplied = false;
+    if (checkoutUser && checkoutUser.userId) {
+      const existingCompletedOrders = await db.collection('orders').countDocuments({
+        status: 'completed',
+        $or: [{ userId: String(checkoutUser.userId) }, { buyerEmail: normalizeEmail(buyer && buyer.email) }]
+      }, { limit: 1 });
+      firstOrderFreeShippingApplied = existingCompletedOrders === 0;
+    }
+    const shipping = firstOrderFreeShippingApplied
+      ? 0
+      : parseFloat((normalizedOrderItems.length * DEFAULT_SHIPPING_PER_ITEM_USD).toFixed(2));
     const tax = parseFloat((subtotal * DEFAULT_SALES_TAX_RATE).toFixed(2));
     const total = parseFloat((subtotal + shipping + tax).toFixed(2));
     if (!(total > 0)) {
@@ -2515,6 +2525,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       shippingMethod,
       subtotal,
       shipping,
+      firstOrderFreeShippingApplied,
       tax,
       total,
       currency: 'USD',
@@ -2529,7 +2540,8 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     res.json({
       orderId,
       paypalOrderId: paypalOrder.id,
-      totals: { subtotal, shipping, tax, total, currency: 'USD' }
+      totals: { subtotal, shipping, tax, total, currency: 'USD' },
+      firstOrderFreeShippingApplied
     });
   } catch (error) {
     console.error('Order creation error:', error);
@@ -2986,7 +2998,7 @@ app.get('/api/orders/:orderId', async function(req, res) {
 // POST /api/returns – submit a new return request (auth required)
 app.post('/api/returns', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  const { orderId, reason, details } = req.body;
+  const { orderId, reason, details, source } = req.body;
   if (!orderId || typeof orderId !== 'string' || orderId.length > 64) {
     return res.status(400).json({ error: 'Valid orderId is required' });
   }
@@ -3026,6 +3038,32 @@ app.post('/api/returns', publicApiRateLimit, verifyToken, async function(req, re
       items: Array.isArray(order.items) ? order.items.map(function(i) { return { name: i.name || 'Item', quantity: i.quantity || 1 }; }) : []
     };
     await db.collection('returns').insertOne(returnDoc);
+    try {
+      const sourceLabelMap = {
+        'returns-history': 'Returns History',
+        'marketplace-settings': 'Marketplace Settings'
+      };
+      const sourceLabel = sourceLabelMap[String(source || '').trim()] || 'Return request form';
+      const itemsSummary = returnDoc.items.map(function(item) {
+        return `${item.name || 'Item'} x${parseInt(item.quantity, 10) || 1}`;
+      }).join(', ') || 'No items listed';
+      await sendEmail({
+        to: ADMIN_NOTIFICATION_EMAIL,
+        subject: 'New return request submitted on Zorexium',
+        text:
+          'A new return request was submitted.\n'
+          + `Submitted from: ${sourceLabel}\n`
+          + `Return ID: ${returnId}\n`
+          + `Order ID: ${orderId}\n`
+          + `Buyer Email: ${returnDoc.buyerEmail || 'Not provided'}\n`
+          + `Reason: ${reason}\n`
+          + `Details: ${returnDoc.details || 'None provided'}\n`
+          + `Items: ${itemsSummary}\n`
+          + `Order Total: ${returnDoc.orderTotal == null ? 'N/A' : '$' + Number(returnDoc.orderTotal).toFixed(2)}`
+      });
+    } catch (mailError) {
+      console.error('Failed to send admin return email:', mailError.message);
+    }
     res.status(201).json({ success: true, returnId, status: 'open' });
   } catch (error) {
     console.error('Error creating return:', error);
