@@ -503,7 +503,7 @@
           <div class="flex items-center justify-between mb-4">
             <div>
               <h2 class="text-xl font-bold text-gray-900">Marketplace Claim History</h2>
-              <p class="text-sm text-gray-500 mt-0.5">Review disputes and Marketplace Guarantee claims you have filed</p>
+              <p class="text-sm text-gray-500 mt-0.5">Review disputes, Marketplace Guarantee claims, and completed support forms</p>
             </div>
             <a href="marketplace-guarantee.html" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"><i class="fas fa-shield-alt text-xs"></i>Guarantee Policy</a>
           </div>
@@ -518,12 +518,12 @@
                   <th class="px-4 py-3">Resolution</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-100">
-                <tr>
+              <tbody id="msClaimHistoryBody" class="divide-y divide-gray-100">
+                <tr id="msClaimHistoryEmpty">
                   <td colspan="5" class="px-4 py-8 text-center text-gray-400">
                     <i class="fas fa-shield-alt text-3xl text-gray-200 mb-2 block"></i>
-                    <p class="text-sm">No claims on record.</p>
-                    <p class="text-xs mt-1">Great news — you haven't needed to file a Marketplace Guarantee claim yet.</p>
+                    <p class="text-sm">No claims or support submissions on record.</p>
+                    <p class="text-xs mt-1">Completed contact support forms and Marketplace Guarantee claims will appear here.</p>
                   </td>
                 </tr>
               </tbody>
@@ -981,6 +981,10 @@
       msLoadReturnHistory();
       msLoadReturnOrders();
     }
+    if (panelId === 'claim-history' && !window._msClaimsLoaded) {
+      window._msClaimsLoaded = true;
+      msLoadClaimHistory();
+    }
   }
 
   function msLoadOrderHistory() {
@@ -1067,6 +1071,40 @@
         }).join('');
         tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
         var newEmpty = document.getElementById('msReturnHistoryEmpty');
+        if (newEmpty) newEmpty.style.display = 'none';
+      });
+  }
+
+  function msLoadClaimHistory() {
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    var tbody = document.getElementById('msClaimHistoryBody');
+    var emptyRow = document.getElementById('msClaimHistoryEmpty');
+    if (!tbody) return;
+    ZrxSession.fetch(MS_BACKEND + '/api/support/my', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .catch(function() { return []; })
+      .then(function(records) {
+        if (!Array.isArray(records) || !records.length) {
+          if (emptyRow) emptyRow.style.display = '';
+          return;
+        }
+        if (emptyRow) emptyRow.style.display = 'none';
+        var rows = records.map(function(record) {
+          var supportId = msEsc(record.supportId || '—');
+          var subject = msEsc(record.subject || 'Support request');
+          var category = msEsc(record.category || 'support');
+          var filedDate = record.createdAt ? new Date(record.createdAt).toLocaleDateString() : '—';
+          var status = msEsc(record.status || 'completed');
+          return '<tr>'
+            + '<td class="px-4 py-3 font-mono text-xs text-gray-500">' + supportId + '</td>'
+            + '<td class="px-4 py-3 text-gray-700 max-w-xs truncate" title="' + subject + '">' + subject + '</td>'
+            + '<td class="px-4 py-3 text-gray-700">' + category + '</td>'
+            + '<td class="px-4 py-3 text-gray-500">' + filedDate + '</td>'
+            + '<td class="px-4 py-3"><span class="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">' + status + '</span></td>'
+            + '</tr>';
+        }).join('');
+        tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
+        var newEmpty = document.getElementById('msClaimHistoryEmpty');
         if (newEmpty) newEmpty.style.display = 'none';
       });
   }
