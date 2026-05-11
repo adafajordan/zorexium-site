@@ -479,7 +479,15 @@
             if (!description || description.length < 10) { errMsg.textContent = 'Please describe your issue (at least 10 characters).'; errEl.classList.remove('hidden'); return; }
             if (!email) { errMsg.textContent = 'Please enter your email address.'; errEl.classList.remove('hidden'); return; }
 
-            fetch(SUPPORT_BACKEND + '/api/support', {
+            var fetcher = fetch;
+            if (typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) {
+                fetcher = function(url, opts) {
+                    var merged = Object.assign({ credentials: 'include' }, opts || {});
+                    return ZrxSession.fetch(url, merged);
+                };
+            }
+
+            fetcher(SUPPORT_BACKEND + '/api/support', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -487,7 +495,8 @@
                     subject: subject,
                     description: description,
                     email: email,
-                    priority: priority
+                    priority: priority,
+                    source: 'contact-support.html'
                 })
             }).then(function(res) {
                 return res.json().then(function(data) {

@@ -161,6 +161,77 @@ async function sendEventEmailSafe(to, subject, html, linkPath) {
   }
 }
 
+async function sendAdminNotificationSafe(subject, html, linkPath) {
+  const to = normalizeEmail(ADMIN_NOTIFICATION_EMAIL);
+  if (!to) return;
+  await sendEventEmailSafe(to, subject, html, linkPath || '/');
+}
+
+function isCommunityOrInnovationBoardType(value) {
+  const boardType = String(value || '').trim().toLowerCase();
+  if (!boardType) return false;
+  const targetBoardTypes = new Set([
+    'innovation',
+    'general',
+    'hardware',
+    'gaming',
+    'ai-ml',
+    'programming',
+    'cybersecurity',
+    'networking',
+    'software',
+    'pc-building',
+    'welcome',
+    'announcements',
+    'official-brand',
+    'system-help'
+  ]);
+  return targetBoardTypes.has(boardType);
+}
+
+function getPostBoardLinkPath(boardType) {
+  return String(boardType || '').trim().toLowerCase() === 'innovation'
+    ? '/innovation-news.html'
+    : '/community-hub.html';
+}
+
+function getOptionalAuthPayload(req) {
+  const token = getTokenFromRequest(req);
+  if (!token) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function notifyAdminPayoutPaidIfNeeded(payoutDoc, source) {
+  if (!mongoConnected || !payoutDoc || !payoutDoc._id) return;
+  if (String(payoutDoc.status || '').toLowerCase() !== 'paid') return;
+  if (payoutDoc.adminPaidNotificationSentAt) return;
+  const safeOrderId = escapeHtml(String(payoutDoc.orderId || 'N/A'));
+  const safeSellerName = escapeHtml(String(payoutDoc.sellerName || payoutDoc.sellerUsername || 'Unknown seller'));
+  const safeSellerId = escapeHtml(String(payoutDoc.sellerId || 'N/A'));
+  const safeAmount = Number.isFinite(Number(payoutDoc.amount)) ? Number(payoutDoc.amount).toFixed(2) : '0.00';
+  const safeCurrency = escapeHtml(String(payoutDoc.currency || 'USD').toUpperCase());
+  const safeSource = escapeHtml(String(source || payoutDoc.triggerSource || 'system'));
+  const paidAt = payoutDoc.paidAt ? new Date(payoutDoc.paidAt).toISOString() : new Date().toISOString();
+  await sendAdminNotificationSafe(
+    'Seller payout completed',
+    `<p>A seller payout has been marked as <strong>paid</strong>.</p>`
+      + `<p><strong>Order ID:</strong> ${safeOrderId}</p>`
+      + `<p><strong>Seller:</strong> ${safeSellerName} (${safeSellerId})</p>`
+      + `<p><strong>Payout amount:</strong> ${safeCurrency} ${safeAmount}</p>`
+      + `<p><strong>Paid at:</strong> ${escapeHtml(paidAt)}</p>`
+      + `<p><strong>Source:</strong> ${safeSource}</p>`,
+    '/admin-payouts.html'
+  );
+  await db.collection('payouts').updateOne(
+    { _id: payoutDoc._id, adminPaidNotificationSentAt: { $exists: false } },
+    { $set: { adminPaidNotificationSentAt: new Date() } }
+  );
+}
+
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
@@ -615,6 +686,14 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
       `<p>Welcome to Zorexium${firstName ? ', ' + firstName : ''}!</p><p>Your account is ready. Visit your account page to get started.</p>`,
       '/account-details.html'
     );
+    sendAdminNotificationSafe(
+      'New website user signup',
+      `<p>A new user account was created.</p>`
+        + `<p><strong>Email:</strong> ${escapeHtml(normalizedEmail)}</p>`
+        + `<p><strong>Name:</strong> ${escapeHtml(((firstName || '') + ' ' + (lastName || '')).trim() || 'Not provided')}</p>`
+        + `<p><strong>User ID:</strong> ${escapeHtml(String(result.insertedId))}</p>`,
+      '/marketplace-settings.html'
+    );
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: error.message });
@@ -967,6 +1046,17 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
           '/product-detail.html?id=' + encodeURIComponent(String(result.insertedId))
         );
       }
+      await sendAdminNotificationSafe(
+        'New seller product upload',
+        `<p>A seller uploaded a product listing.</p>`
+          + `<p><strong>Product:</strong> ${escapeHtml(String(product.name || 'Untitled product'))}</p>`
+          + `<p><strong>Category:</strong> ${escapeHtml(String(product.category || 'N/A'))}</p>`
+          + `<p><strong>Price:</strong> $${escapeHtml(Number(product.price).toFixed(2))}</p>`
+          + `<p><strong>Seller ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
+          + `<p><strong>Seller email:</strong> ${escapeHtml(String(sellerEmail || 'N/A'))}</p>`
+          + `<p><strong>Listing ID:</strong> ${escapeHtml(String(result.insertedId))}</p>`,
+        '/product-detail.html?id=' + encodeURIComponent(String(result.insertedId))
+      );
     } catch (mailErr) {
       console.error('Failed to send product listed email:', mailErr.message);
     }
@@ -2198,6 +2288,10 @@ async function sendPayPalSellerPayout(order, options) {
     if (resultingStatus === 'failed') {
       return { ok: false, error: payoutUpdates.error || 'PayPal payout failed', payout: payoutData };
     }
+    if (resultingStatus === 'paid') {
+      const paidPayout = await db.collection('payouts').findOne({ orderId: orderId });
+      await notifyAdminPayoutPaidIfNeeded(paidPayout, 'paypal_api');
+    }
     return { ok: true, payout: payoutData, processing: resultingStatus === 'processing' };
   } catch (error) {
     await db.collection('payouts').updateOne(
@@ -2394,6 +2488,17 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
           '/seller-dashboard.html#tier'
         );
       }
+      await sendAdminNotificationSafe(
+        'New seller signup',
+        `<p>A user signed up to become a seller.</p>`
+          + `<p><strong>Tier:</strong> pro</p>`
+          + `<p><strong>Shop name:</strong> ${escapeHtml(String(seller.shopName || 'N/A'))}</p>`
+          + `<p><strong>Account type:</strong> ${escapeHtml(String(seller.accountType || 'N/A'))}</p>`
+          + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
+          + `<p><strong>User email:</strong> ${escapeHtml(String(to || 'N/A'))}</p>`
+          + `<p><strong>Subscription ID:</strong> ${escapeHtml(String(subscriptionId))}</p>`,
+        '/seller-dashboard.html'
+      );
     } catch (mailErr) {
       console.error('Failed to send Pro seller signup emails:', mailErr.message);
     }
@@ -3390,6 +3495,18 @@ app.post('/api/posts', verifyToken, async function(req, res) {
     if (isBlogBoardType(createdPost.boardType)) {
       await notifyBlogSubscribersOfNewPost(createdPost);
     }
+    if (isCommunityOrInnovationBoardType(createdPost.boardType)) {
+      await sendAdminNotificationSafe(
+        'New community/innovation post',
+        `<p>A new post was published.</p>`
+          + `<p><strong>Board:</strong> ${escapeHtml(String(createdPost.boardType || 'general'))}</p>`
+          + `<p><strong>Title:</strong> ${escapeHtml(String(createdPost.title || 'Untitled'))}</p>`
+          + `<p><strong>Author:</strong> ${escapeHtml(String(createdPost.username || createdPost.email || 'Unknown'))}</p>`
+          + `<p><strong>Author email:</strong> ${escapeHtml(String(createdPost.email || 'N/A'))}</p>`
+          + `<p><strong>Post ID:</strong> ${escapeHtml(String(result.insertedId))}</p>`,
+        getPostBoardLinkPath(createdPost.boardType)
+      );
+    }
     res.status(201).json(createdPost);
   } catch (error) {
     console.error('Error creating post:', error);
@@ -3434,6 +3551,11 @@ app.post('/api/blog/subscribe', publicApiRateLimit, async function(req, res) {
     if (!confirmation.success) {
       return res.status(500).json({ error: 'Subscription saved, but confirmation email failed to send. Please try again.' });
     }
+    await sendAdminNotificationSafe(
+      'New blog email notification signup',
+      `<p>A user subscribed to blog email notifications.</p><p><strong>Email:</strong> ${escapeHtml(email)}</p><p><strong>Source:</strong> blog.html</p>`,
+      '/blog.html'
+    );
 
     return res.json({ success: true, message: 'Subscribed successfully. Please check your inbox for confirmation.' });
   } catch (error) {
@@ -3557,7 +3679,7 @@ app.post('/api/posts/:postId/replies', publicApiRateLimit, verifyToken, async fu
       return res.status(404).json({ error: 'Post not found' });
     }
     try {
-      const post = await db.collection('posts').findOne({ _id: objectId }, { projection: { userId: 1, title: 1 } });
+      const post = await db.collection('posts').findOne({ _id: objectId }, { projection: { userId: 1, title: 1, boardType: 1 } });
       if (post && post.userId && post.userId !== req.userId) {
         await maybeSendPreferenceNotificationEmail(
           String(post.userId),
@@ -3565,6 +3687,18 @@ app.post('/api/posts/:postId/replies', publicApiRateLimit, verifyToken, async fu
           'New reply to your community post',
           `<p>${escapeHtml(username)} replied to your post: <strong>${escapeHtml(post.title || 'Untitled post')}</strong>.</p>`,
           '/community-hub.html'
+        );
+      }
+      if (post && isCommunityOrInnovationBoardType(post.boardType)) {
+        await sendAdminNotificationSafe(
+          'New community/innovation reply',
+          `<p>A reply was posted.</p>`
+            + `<p><strong>Board:</strong> ${escapeHtml(String(post.boardType || 'general'))}</p>`
+            + `<p><strong>Post title:</strong> ${escapeHtml(String(post.title || 'Untitled'))}</p>`
+            + `<p><strong>Reply author:</strong> ${escapeHtml(String(username || req.userEmail || 'Unknown'))}</p>`
+            + `<p><strong>Reply author email:</strong> ${escapeHtml(String(req.userEmail || 'N/A'))}</p>`
+            + `<p><strong>Reply preview:</strong> ${escapeHtml(String(content).slice(0, 240))}</p>`,
+          getPostBoardLinkPath(post.boardType)
         );
       }
     } catch (mailErr) {
@@ -4001,6 +4135,16 @@ app.post('/api/sellers', publicApiRateLimit, verifyToken, async function(req, re
           '/seller-dashboard.html'
         );
       }
+      await sendAdminNotificationSafe(
+        'New seller signup',
+        `<p>A user signed up to become a seller.</p>`
+          + `<p><strong>Tier:</strong> starter</p>`
+          + `<p><strong>Shop name:</strong> ${escapeHtml(String(seller.shopName || 'N/A'))}</p>`
+          + `<p><strong>Account type:</strong> ${escapeHtml(String(seller.accountType || 'N/A'))}</p>`
+          + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
+          + `<p><strong>User email:</strong> ${escapeHtml(String(to || 'N/A'))}</p>`,
+        '/seller-dashboard.html'
+      );
     } catch (mailErr) {
       console.error('Failed to send seller welcome email:', mailErr.message);
     }
@@ -4349,6 +4493,15 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
         $unset: { proSubscriptionId: '', proSubscriptionStatus: '' } }
     );
     const updated = await db.collection('sellers').findOne({ userId: req.userId });
+    const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
+    await sendAdminNotificationSafe(
+      'Pro seller subscription cancelled',
+      `<p>A seller downgraded from Pro to Starter.</p>`
+        + `<p><strong>Shop name:</strong> ${escapeHtml(String((updated && updated.shopName) || 'N/A'))}</p>`
+        + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
+        + `<p><strong>User email:</strong> ${escapeHtml(String(normalizeEmail(user && user.email) || 'N/A'))}</p>`,
+      '/seller-dashboard.html#tier'
+    );
     res.json(updated);
   } catch (error) {
     console.error('Error downgrading seller to Starter:', error);
@@ -4774,6 +4927,9 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
 
     await db.collection('payouts').updateOne({ _id: objectId }, { $set: updates });
     const updated = await db.collection('payouts').findOne({ _id: objectId });
+    if (status === 'paid') {
+      await notifyAdminPayoutPaidIfNeeded(updated, req.isAdmin ? 'manual_admin_update' : 'manual_seller_update');
+    }
     if (status === 'ready_to_pay' && payout.sellerId) {
       try {
         const sellerUser = await db.collection('users').findOne({ _id: new ObjectId(payout.sellerId) }, { projection: { email: 1 } });
@@ -4908,6 +5064,12 @@ app.post('/api/paypal/webhook', publicApiRateLimit, async function(req, res) {
         : (batchId ? { paypalPayoutBatchId: batchId } : null);
       if (itemQuery) {
         await db.collection('payouts').updateMany(itemQuery, { $set: itemUpdate });
+        if (itemStatus === 'SUCCEEDED') {
+          const paidRows = await db.collection('payouts').find({ ...itemQuery, status: 'paid' }).toArray();
+          for (const payoutDoc of paidRows) {
+            await notifyAdminPayoutPaidIfNeeded(payoutDoc, 'paypal_webhook_item');
+          }
+        }
       }
     } else if (eventType.startsWith('PAYMENT.PAYOUTSBATCH.')) {
       const batchId = String(resource && resource.payout_batch_id ? resource.payout_batch_id : '').trim();
@@ -4934,6 +5096,12 @@ app.post('/api/paypal/webhook', publicApiRateLimit, async function(req, res) {
           batchUpdate.error = `PayPal payout batch status: ${batchStatus}`;
         }
         await db.collection('payouts').updateMany({ paypalPayoutBatchId: batchId }, { $set: batchUpdate });
+        if (batchStatus === 'SUCCESS') {
+          const paidRows = await db.collection('payouts').find({ paypalPayoutBatchId: batchId, status: 'paid' }).toArray();
+          for (const payoutDoc of paidRows) {
+            await notifyAdminPayoutPaidIfNeeded(payoutDoc, 'paypal_webhook_batch');
+          }
+        }
       }
     }
 
@@ -5600,6 +5768,14 @@ app.put('/api/user/email-notifications/:category', publicApiRateLimit, verifyTok
           '/email-notifications.html'
         );
       }
+      await sendAdminNotificationSafe(
+        'User opted into email notifications',
+        `<p>A user enabled an email notification category.</p>`
+          + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
+          + `<p><strong>User email:</strong> ${escapeHtml(String(to || 'N/A'))}</p>`
+          + `<p><strong>Category:</strong> ${escapeHtml(category)}</p>`,
+        '/email-notifications.html'
+      );
     }
     res.json({ category, enabled });
   } catch (error) {
@@ -5610,6 +5786,7 @@ app.put('/api/user/email-notifications/:category', publicApiRateLimit, verifyTok
 
 // ── SUPPORT / FEEDBACK SUBMISSIONS ────────────────────────────────────────────
 app.post('/api/support', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   const category = String((req.body && req.body.category) || '').trim();
   const subject = String((req.body && req.body.subject) || '').trim().slice(0, 200);
   const description = String((req.body && req.body.description) || '').trim().slice(0, 5000);
@@ -5619,20 +5796,70 @@ app.post('/api/support', publicApiRateLimit, async function(req, res) {
     return res.status(400).json({ error: 'category, subject, description, and email are required' });
   }
 
+  const authPayload = getOptionalAuthPayload(req);
+  const now = new Date();
+  const supportId = 'SUP-' + now.getTime().toString(36).toUpperCase() + '-' + crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase();
+  const supportRecord = {
+    supportId: supportId,
+    userId: authPayload && authPayload.userId ? String(authPayload.userId) : null,
+    email: email,
+    category: category.slice(0, 100),
+    subject: subject,
+    description: description,
+    priority: priority,
+    source: String((req.body && req.body.source) || 'contact-support').slice(0, 100),
+    status: 'completed',
+    createdAt: now,
+    updatedAt: now
+  };
+  await db.collection('supportSubmissions').insertOne(supportRecord);
+
   const supportPageLink = '/contact-support.html';
   await sendEventEmailSafe(
     ADMIN_NOTIFICATION_EMAIL,
     'New support request submitted',
-    `<p><strong>Category:</strong> ${escapeHtml(category)}</p><p><strong>Priority:</strong> ${escapeHtml(priority)}</p><p><strong>From:</strong> ${escapeHtml(email)}</p><p><strong>Subject:</strong> ${escapeHtml(subject)}</p><p><strong>Description:</strong><br>${escapeHtml(description).replace(/\n/g, '<br>')}</p>`,
+    `<p><strong>Support ID:</strong> ${escapeHtml(supportId)}</p><p><strong>Category:</strong> ${escapeHtml(category)}</p><p><strong>Priority:</strong> ${escapeHtml(priority)}</p><p><strong>From:</strong> ${escapeHtml(email)}</p><p><strong>User ID:</strong> ${escapeHtml(String((authPayload && authPayload.userId) || 'Guest'))}</p><p><strong>Subject:</strong> ${escapeHtml(subject)}</p><p><strong>Description:</strong><br>${escapeHtml(description).replace(/\n/g, '<br>')}</p>`,
     supportPageLink
   );
   await sendEventEmailSafe(
     email,
     'We received your support request',
-    `<p>Thanks for contacting Zorexium Support.</p><p>We received your request and will respond swiftly.</p><p><strong>Subject:</strong> ${escapeHtml(subject)}</p>`,
+    `<p>Thanks for contacting Zorexium Support.</p><p>We received your request and will respond swiftly.</p><p><strong>Support ID:</strong> ${escapeHtml(supportId)}</p><p><strong>Subject:</strong> ${escapeHtml(subject)}</p>`,
     '/contact-support.html'
   );
-  res.json({ message: 'Support request submitted successfully' });
+  res.json({ message: 'Support request submitted successfully', supportId: supportId });
+});
+
+app.get('/api/support/my', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const user = await db.collection('users').findOne(
+      { _id: new ObjectId(req.userId) },
+      { projection: { email: 1 } }
+    );
+    const normalizedEmail = normalizeEmail(user && user.email);
+    const query = normalizedEmail
+      ? { $or: [{ userId: req.userId }, { email: normalizedEmail }] }
+      : { userId: req.userId };
+    const tickets = await db.collection('supportSubmissions')
+      .find(query)
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+    res.json(tickets.map(function(ticket) {
+      return {
+        supportId: String(ticket.supportId || ''),
+        category: String(ticket.category || ''),
+        subject: String(ticket.subject || ''),
+        priority: String(ticket.priority || 'normal'),
+        status: String(ticket.status || 'completed'),
+        createdAt: ticket.createdAt || null
+      };
+    }));
+  } catch (error) {
+    console.error('Error fetching support submissions:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/feedback', publicApiRateLimit, async function(req, res) {
@@ -5737,6 +5964,18 @@ app.post('/api/posts/:postId/replies/:replyId/replies', verifyToken, async funct
       { _id: objectId },
       { $push: { [`replies.${replyIdx}.subreplies`]: nestedReply } }
     );
+    if (isCommunityOrInnovationBoardType(post.boardType)) {
+      await sendAdminNotificationSafe(
+        'New community/innovation reply',
+        `<p>A nested reply was posted.</p>`
+          + `<p><strong>Board:</strong> ${escapeHtml(String(post.boardType || 'general'))}</p>`
+          + `<p><strong>Post title:</strong> ${escapeHtml(String(post.title || 'Untitled'))}</p>`
+          + `<p><strong>Reply author:</strong> ${escapeHtml(String(username || req.userEmail || 'Unknown'))}</p>`
+          + `<p><strong>Reply author email:</strong> ${escapeHtml(String(req.userEmail || 'N/A'))}</p>`
+          + `<p><strong>Reply preview:</strong> ${escapeHtml(String(content).slice(0, 240))}</p>`,
+        getPostBoardLinkPath(post.boardType)
+      );
+    }
     res.status(201).json(nestedReply);
   } catch (error) {
     console.error('Error adding nested reply:', error);
