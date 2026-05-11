@@ -468,6 +468,14 @@ var publicApiRateLimit = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
+var videoUploadRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many video uploads, please try again later.' }
+});
+
 // ── CORS Middleware ────────────────────────────────────────────────────────────
 
 // ── Seller Tier Constants ──────────────────────────────────────────────────────
@@ -3151,7 +3159,7 @@ app.get('/api/returns/my', publicApiRateLimit, verifyToken, async function(req, 
 // POST /api/posts/upload-video – upload a video file for use in a community post (auth required).
 // Accepts multipart/form-data with a single field named "video".
 // The file is stored in MongoDB GridFS and an absolute URL is returned.
-app.post('/api/posts/upload-video', verifyToken, function(req, res) {
+app.post('/api/posts/upload-video', videoUploadRateLimit, verifyToken, function(req, res) {
   if (!mongoConnected || !videoBucket) return res.status(503).json({ error: 'Database unavailable' });
 
   videoUpload.single('video')(req, res, async function(err) {
@@ -3222,7 +3230,10 @@ app.get('/api/media/video/:id', async function(req, res) {
         'Cache-Control': 'public, max-age=86400'
       });
       const downloadStream = videoBucket.openDownloadStream(fileId, { start: start, end: end + 1 });
-      downloadStream.on('error', function() { if (!res.writableEnded) res.end(); });
+      downloadStream.on('error', function(streamErr) {
+        console.error('Error reading video stream (range):', streamErr);
+        if (!res.writableEnded) res.end();
+      });
       downloadStream.pipe(res);
     } else {
       res.writeHead(200, {
@@ -3232,7 +3243,10 @@ app.get('/api/media/video/:id', async function(req, res) {
         'Cache-Control': 'public, max-age=86400'
       });
       const downloadStream = videoBucket.openDownloadStream(fileId);
-      downloadStream.on('error', function() { if (!res.writableEnded) res.end(); });
+      downloadStream.on('error', function(streamErr) {
+        console.error('Error reading video stream:', streamErr);
+        if (!res.writableEnded) res.end();
+      });
       downloadStream.pipe(res);
     }
   } catch (error) {
