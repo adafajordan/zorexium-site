@@ -31,7 +31,6 @@
     .spec-label { font-weight: 500; color: #374151; }
     .price-strike { text-decoration: line-through; color: #9ca3af; }
     .save-badge { background: #fee2e2; color: #dc2626; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
-    .free-shipping-badge { color: #16a34a; font-size: 12px; font-weight: 500; }
   </style>
   <script src="open-links-new-tab.js"></script>
   <script src="cookie-consent.js"></script>
@@ -812,7 +811,6 @@
     const specHtml = specEntries.map(([k, v]) =>
       `<div class="spec-row"><span class="spec-label">${escHtml(k)}:</span><span>${escHtml(String(v))}</span></div>`
     ).join('');
-    const freeShipping = price >= 0;
     const productId = String(p._id || p.id || '');
 
     return `<div class="product-card overflow-hidden cursor-pointer js-card-view" data-id="${escHtml(productId)}">
@@ -832,7 +830,6 @@
       <span class="text-xl font-bold text-gray-900">$${price.toFixed(2)}</span>
       ${origPrice && origPrice > price ? `<span class="price-strike text-sm">$${origPrice.toFixed(2)}</span>` : ''}
     </div>
-    ${freeShipping ? '<p class="free-shipping-badge"><i class="fas fa-truck text-xs mr-1"></i>Free Shipping</p>' : ''}
     <div class="flex gap-2 mt-3">
       <a href="product-detail.html?id=${escHtml(productId)}"
         class="flex-1 border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-medium py-2 rounded text-center transition-colors"
