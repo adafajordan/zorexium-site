@@ -175,6 +175,44 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function isBlogBoardType(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return normalized === 'blog' || normalized === 'blogs' || normalized === 'blog-content' || normalized === 'blog-content-news';
+}
+
+async function notifyBlogSubscribersOfNewPost(post) {
+  if (!mongoConnected || !post || !post._id || !isBlogBoardType(post.boardType)) return;
+  const subscribers = await db.collection('blogSubscribers')
+    .find({ status: 'active' })
+    .project({ email: 1 })
+    .toArray();
+  if (!subscribers || subscribers.length === 0) return;
+
+  const safeTitle = escapeHtml(post.title || 'New blog post');
+  const excerpt = String(post.content || '').trim().slice(0, 240);
+  const safeExcerpt = escapeHtml(excerpt.length < String(post.content || '').trim().length ? (excerpt + '…') : excerpt);
+  const postPath = '/blog.html';
+
+  for (const subscriber of subscribers) {
+    const to = normalizeEmail(subscriber && subscriber.email ? subscriber.email : '');
+    if (!to) continue;
+    try {
+      await sendEventEmailSafe(
+        to,
+        `New Zorexium Blog Post: ${post.title || 'New post'}`,
+        `<p>Hello,</p><p>A new Zorexium blog post is now live:</p><p><strong>${safeTitle}</strong></p>${safeExcerpt ? `<p>${safeExcerpt}</p>` : ''}<p>Visit the blog to read the full post.</p>`,
+        postPath
+      );
+      await db.collection('blogSubscribers').updateOne(
+        { email: to },
+        { $set: { lastNotifiedAt: new Date(), lastNotifiedPostId: String(post._id) } }
+      );
+    } catch (notifyError) {
+      console.error('Failed to notify blog subscriber:', to, notifyError.message);
+    }
+  }
+}
+
 function getEffectiveListingPrice(product) {
   if (!product || typeof product !== 'object') return NaN;
   const salePrice = Number(product.salePrice);
@@ -3145,10 +3183,59 @@ app.post('/api/posts', verifyToken, async function(req, res) {
       post.imageUrl = imageUrl;
     }
     const result = await db.collection('posts').insertOne(post);
-    res.status(201).json({ ...post, _id: result.insertedId });
+    const createdPost = { ...post, _id: result.insertedId };
+    if (isBlogBoardType(createdPost.boardType)) {
+      await notifyBlogSubscribersOfNewPost(createdPost);
+    }
+    res.status(201).json(createdPost);
   } catch (error) {
     console.error('Error creating post:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/blog/subscribe – subscribe to blog digest and send confirmation email
+app.post('/api/blog/subscribe', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+
+  const rawEmail = req.body && req.body.email;
+  const email = normalizeEmail(rawEmail);
+  if (!isLikelyEmail(email)) {
+    return res.status(400).json({ error: 'A valid email address is required.' });
+  }
+
+  try {
+    const now = new Date();
+    await db.collection('blogSubscribers').updateOne(
+      { email },
+      {
+        $set: { email, status: 'active', updatedAt: now, source: 'blog.html' },
+        $setOnInsert: { subscribedAt: now }
+      },
+      { upsert: true }
+    );
+
+    const confirmation = await sendEmail({
+      to: email,
+      subject: 'You’re subscribed to the Zorexium Weekly Digest',
+      text:
+        'Thanks for subscribing to the Zorexium Weekly Digest.\n\n'
+        + `You will receive notifications whenever a new blog post is published.\n\n`
+        + `Visit: ${makeAbsoluteUrl('/blog.html')}`,
+      html:
+        '<p>Thanks for subscribing to the <strong>Zorexium Weekly Digest</strong>.</p>'
+        + '<p>You will receive notifications whenever a new blog post is published.</p>'
+        + `<p><a href="${makeAbsoluteUrl('/blog.html')}">Visit the blog</a></p>`
+    });
+
+    if (!confirmation.success) {
+      return res.status(500).json({ error: 'Subscription saved, but confirmation email failed to send. Please try again.' });
+    }
+
+    return res.json({ success: true, message: 'Subscribed successfully. Please check your inbox for confirmation.' });
+  } catch (error) {
+    console.error('Error subscribing to blog digest:', error);
+    return res.status(500).json({ error: 'Failed to subscribe.' });
   }
 });
 

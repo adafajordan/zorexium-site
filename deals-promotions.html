@@ -191,7 +191,17 @@
                     </div>
 
                     <!-- Community Hub -->
-                    <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                    <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
+                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                            <a href="community-hub.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comments text-cyan-600 w-4 text-center"></i>Tech Talk</a>
+                            <a href="blog.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
+                        </div>
+                    </div>
 
                     <!-- Sell Hardware -->
                     <a id="sellHardwareLink" href="sell-on-zorexium.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
