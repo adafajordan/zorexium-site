@@ -86,7 +86,7 @@ if (!globalThis.fetch) {
 }
 
 // Keep parser headroom above legacy 25 MB so large multi-image listing payloads are accepted.
-// 150 MB comfortably covers up to 9 images at 10 MB each when sent as base64 data URLs.
+// 150 MB comfortably covers up to 10 images at 10 MB each when sent as base64 data URLs.
 // Per-image validation below is still the enforced upload-size rule.
 app.use(express.json({ limit: '150mb' }));
 // Only serve files from /public – never expose server.js, package.json, .env.example, etc.
@@ -94,6 +94,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Shared 10 MB per-image limit used by all image upload endpoints.
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_POST_IMAGE_COUNT = 10;
+const MAX_POST_VIDEO_SIZE_BYTES = 10 * 1024 * 1024 * 1024;
 
 // Parse and measure base64 data URL payload size in bytes so backend checks match real per-file size.
 function getDataUrlPayloadBytes(dataUrl) {
@@ -3130,7 +3132,7 @@ app.get('/api/returns/my', publicApiRateLimit, verifyToken, async function(req, 
 app.post('/api/posts', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
-  const { title, content, boardType, imageUrl } = req.body;
+  const { title, content, boardType, imageUrl, imageUrls, videoUrl } = req.body;
   const resolvedBoardType = (boardType && typeof boardType === 'string' && boardType.trim()) ? boardType.trim() : 'general';
   if (!title || !content) {
     return res.status(400).json({ error: 'title and content are required' });
@@ -3144,17 +3146,97 @@ app.post('/api/posts', verifyToken, async function(req, res) {
   if (resolvedBoardType.length > 64) {
     return res.status(400).json({ error: 'Invalid boardType' });
   }
+  const normalizedImageUrls = [];
+  if (imageUrls !== undefined && imageUrls !== null) {
+    if (!Array.isArray(imageUrls)) {
+      return res.status(400).json({ error: 'Invalid imageUrls' });
+    }
+    if (imageUrls.length > MAX_POST_IMAGE_COUNT) {
+      return res.status(400).json({ error: `You can upload up to ${MAX_POST_IMAGE_COUNT} images per post` });
+    }
+    for (const rawImageValue of imageUrls) {
+      if (typeof rawImageValue !== 'string') {
+        return res.status(400).json({ error: 'Invalid imageUrls item' });
+      }
+      const imageValue = rawImageValue.trim();
+      if (!imageValue) {
+        return res.status(400).json({ error: 'Invalid imageUrls item' });
+      }
+      if (imageValue.startsWith('data:image/')) {
+        const imageBytes = getDataUrlPayloadBytes(imageValue);
+        if (!imageBytes) {
+          return res.status(400).json({ error: 'Invalid image data URL' });
+        }
+        if (imageBytes > MAX_IMAGE_SIZE_BYTES) {
+          return res.status(400).json({ error: 'Image too large. Max: 10 MB per image.' });
+        }
+        normalizedImageUrls.push(imageValue);
+        continue;
+      }
+      if (imageValue.length > 2000) {
+        return res.status(400).json({ error: 'Invalid imageUrl' });
+      }
+      try {
+        const parsed = new URL(imageValue);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return res.status(400).json({ error: 'imageUrl must use http or https protocol' });
+        }
+      } catch (_) {
+        return res.status(400).json({ error: 'imageUrl is not a valid URL' });
+      }
+      normalizedImageUrls.push(imageValue);
+    }
+  }
   if (imageUrl !== undefined && imageUrl !== null && imageUrl !== '') {
     if (typeof imageUrl !== 'string' || imageUrl.length > 2000) {
       return res.status(400).json({ error: 'Invalid imageUrl' });
     }
+    const trimmedImageUrl = imageUrl.trim();
     try {
-      const parsed = new URL(imageUrl);
+      const parsed = new URL(trimmedImageUrl);
       if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
         return res.status(400).json({ error: 'imageUrl must use http or https protocol' });
       }
     } catch (_) {
       return res.status(400).json({ error: 'imageUrl is not a valid URL' });
+    }
+    if (!normalizedImageUrls.includes(trimmedImageUrl)) {
+      normalizedImageUrls.push(trimmedImageUrl);
+    }
+  }
+  if (normalizedImageUrls.length > MAX_POST_IMAGE_COUNT) {
+    return res.status(400).json({ error: `You can upload up to ${MAX_POST_IMAGE_COUNT} images per post` });
+  }
+
+  let normalizedVideoUrl = '';
+  if (videoUrl !== undefined && videoUrl !== null && videoUrl !== '') {
+    if (typeof videoUrl !== 'string') {
+      return res.status(400).json({ error: 'Invalid videoUrl' });
+    }
+    normalizedVideoUrl = videoUrl.trim();
+    if (!normalizedVideoUrl) {
+      return res.status(400).json({ error: 'Invalid videoUrl' });
+    }
+    if (normalizedVideoUrl.startsWith('data:video/')) {
+      const videoBytes = getDataUrlPayloadBytes(normalizedVideoUrl);
+      if (!videoBytes) {
+        return res.status(400).json({ error: 'Invalid video data URL' });
+      }
+      if (videoBytes > MAX_POST_VIDEO_SIZE_BYTES) {
+        return res.status(400).json({ error: 'Video too large. Max: 10 GB per video.' });
+      }
+    } else {
+      if (normalizedVideoUrl.length > 2000) {
+        return res.status(400).json({ error: 'Invalid videoUrl' });
+      }
+      try {
+        const parsed = new URL(normalizedVideoUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return res.status(400).json({ error: 'videoUrl must use http or https protocol' });
+        }
+      } catch (_) {
+        return res.status(400).json({ error: 'videoUrl is not a valid URL' });
+      }
     }
   }
 
@@ -3179,8 +3261,12 @@ app.post('/api/posts', verifyToken, async function(req, res) {
       replies: [],
       likes: []
     };
-    if (imageUrl && typeof imageUrl === 'string' && imageUrl.length > 0) {
-      post.imageUrl = imageUrl;
+    if (normalizedImageUrls.length > 0) {
+      post.imageUrls = normalizedImageUrls;
+      post.imageUrl = normalizedImageUrls[0];
+    }
+    if (normalizedVideoUrl) {
+      post.videoUrl = normalizedVideoUrl;
     }
     const result = await db.collection('posts').insertOne(post);
     const createdPost = { ...post, _id: result.insertedId };
