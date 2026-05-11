@@ -189,7 +189,17 @@
                     </div>
 
                     <!-- Community Hub -->
-                    <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                    <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
+                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                        <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="nav-dropdown absolute left-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+                            <a href="community-hub.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comments text-cyan-600 w-4 text-center"></i>Tech Talk</a>
+                            <a href="blog.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
+                        </div>
+                    </div>
 
                     <!-- Sell Hardware -->
                     <a id="sellHardwareLink" href="sell-on-zorexium.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
@@ -343,14 +353,14 @@
         </div>
         <div class="lg:w-1/2 p-8 lg:p-10 flex flex-col justify-center">
           <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3" data-cat="hardware-news">Hardware News</span>
-          <h2 class="text-2xl lg:text-3xl font-extrabold mb-4 leading-tight">The Rise of AI-Powered GPUs: What PC Builders Need to Know in 2026</h2>
-          <p class="text-gray-300 text-sm leading-relaxed mb-6">From DLSS 4 to dedicated AI inference cores, the latest generation of graphics cards is reshaping what it means to build a high-performance rig. We break down the new architectures and what to buy.</p>
+          <h2 class="text-2xl lg:text-3xl font-extrabold mb-4 leading-tight">AI Features in Modern GPUs: A Practical Builder Guide</h2>
+          <p class="text-gray-300 text-sm leading-relaxed mb-6">From AI upscaling to frame-generation pipelines, modern GPUs now include dedicated matrix hardware that can improve visual performance when properly configured.</p>
           <div class="flex items-center gap-4 text-xs text-gray-400 mb-6">
             <span><i class="fas fa-user-circle mr-1"></i>Zorexium Team</span>
             <span><i class="fas fa-calendar mr-1"></i>April 25, 2026</span>
             <span><i class="fas fa-clock mr-1"></i>8 min read</span>
           </div>
-          <a href="community-hub.html" class="inline-flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors self-start">
+          <a href="blog-ai-gpu-practical-guide.html" class="inline-flex items-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold px-6 py-3 rounded-xl text-sm transition-colors self-start">
             Read Article <i class="fas fa-arrow-right"></i>
           </a>
         </div>
@@ -361,86 +371,92 @@
     <div id="articleGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
 
       <!-- Article 1: Hardware News -->
-      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow" data-cat="hardware-news">
+      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer" data-cat="hardware-news" onclick="window.location.href='blog-gpu-upscaling-primer.html'">
         <img src="https://placehold.co/400x220/f0f9ff/0369a1?text=RTX+5090+Roundup" alt="GPU Roundup" class="w-full h-44 object-cover">
         <div class="p-5">
           <span class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Hardware News</span>
-          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">RTX 5090 vs RX 9070 XT: Which GPU Dominates 4K in 2026?</h3>
-          <p class="text-gray-500 text-sm mb-4 leading-relaxed">We benchmarked both flagship cards across 15 titles to help you make the right choice for your build.</p>
+          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">GPU Upscaling in 2026: What Actually Matters</h3>
+          <p class="text-gray-500 text-sm mb-4 leading-relaxed">A factual primer on quality modes, latency tradeoffs, and why settings should be picked per game rather than by marketing labels.</p>
           <div class="flex items-center justify-between text-xs text-gray-400">
             <span><i class="fas fa-calendar mr-1"></i>Apr 20, 2026</span>
             <span><i class="fas fa-clock mr-1"></i>6 min read</span>
           </div>
+          <a href="blog-gpu-upscaling-primer.html" class="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700 mt-4">Read article <i class="fas fa-arrow-right text-xs"></i></a>
         </div>
       </div>
 
       <!-- Article 2: Guides -->
-      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow" data-cat="guides">
+      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer" data-cat="guides" onclick="window.location.href='blog-balanced-gaming-pc-build.html'">
         <img src="https://placehold.co/400x220/f0fdf4/16a34a?text=PC+Build+Guide" alt="Build Guide" class="w-full h-44 object-cover">
         <div class="p-5">
           <span class="text-xs font-bold text-green-600 uppercase tracking-wider">Guides &amp; Tutorials</span>
-          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">How to Build a $1,000 Gaming PC That Actually Plays Everything</h3>
-          <p class="text-gray-500 text-sm mb-4 leading-relaxed">A complete step-by-step guide to choosing parts, assembling, and first-booting your mid-range gaming rig.</p>
+          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">How to Plan a Balanced Gaming PC Build</h3>
+          <p class="text-gray-500 text-sm mb-4 leading-relaxed">A practical framework for setting budget priorities, avoiding bottlenecks, and choosing parts that fit your resolution target.</p>
           <div class="flex items-center justify-between text-xs text-gray-400">
             <span><i class="fas fa-calendar mr-1"></i>Apr 18, 2026</span>
             <span><i class="fas fa-clock mr-1"></i>12 min read</span>
           </div>
+          <a href="blog-balanced-gaming-pc-build.html" class="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700 mt-4">Read article <i class="fas fa-arrow-right text-xs"></i></a>
         </div>
       </div>
 
       <!-- Article 3: Reviews -->
-      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow" data-cat="reviews">
+      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer" data-cat="reviews" onclick="window.location.href='blog-cpu-review-checklist.html'">
         <img src="https://placehold.co/400x220/fefce8/ca8a04?text=CPU+Review" alt="CPU Review" class="w-full h-44 object-cover">
         <div class="p-5">
           <span class="text-xs font-bold text-yellow-600 uppercase tracking-wider">Reviews</span>
-          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">AMD Ryzen 9 9950X Review: The Workstation King Gets Faster</h3>
-          <p class="text-gray-500 text-sm mb-4 leading-relaxed">Six months with AMD's flagship desktop processor — everything you need to know about performance, thermals, and value.</p>
+          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">CPU Review Checklist: How to Read Benchmarks Correctly</h3>
+          <p class="text-gray-500 text-sm mb-4 leading-relaxed">Learn how to compare power limits, low-percentile frame times, and platform costs so benchmark charts reflect real buying value.</p>
           <div class="flex items-center justify-between text-xs text-gray-400">
             <span><i class="fas fa-calendar mr-1"></i>Apr 15, 2026</span>
             <span><i class="fas fa-clock mr-1"></i>10 min read</span>
           </div>
+          <a href="blog-cpu-review-checklist.html" class="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700 mt-4">Read article <i class="fas fa-arrow-right text-xs"></i></a>
         </div>
       </div>
 
       <!-- Article 4: Community Picks -->
-      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow" data-cat="community">
+      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer" data-cat="community" onclick="window.location.href='blog-keyboard-community-picks.html'">
         <img src="https://placehold.co/400x220/fdf4ff/a21caf?text=Community+Picks" alt="Community Picks" class="w-full h-44 object-cover">
         <div class="p-5">
           <span class="text-xs font-bold text-purple-600 uppercase tracking-wider">Community Picks</span>
-          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">Top 10 Keyboards Our Community is Loving This Month</h3>
-          <p class="text-gray-500 text-sm mb-4 leading-relaxed">From budget boards to custom hot-swap kits, here are the mechanical keyboards dominating Zorexium's community forum.</p>
+          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">Community Keyboard Picks: What Users Actually Prefer</h3>
+          <p class="text-gray-500 text-sm mb-4 leading-relaxed">A snapshot of practical trends from enthusiasts, including switch choices, hot-swap flexibility, and long-term typing comfort.</p>
           <div class="flex items-center justify-between text-xs text-gray-400">
             <span><i class="fas fa-calendar mr-1"></i>Apr 12, 2026</span>
             <span><i class="fas fa-clock mr-1"></i>5 min read</span>
           </div>
+          <a href="blog-keyboard-community-picks.html" class="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700 mt-4">Read article <i class="fas fa-arrow-right text-xs"></i></a>
         </div>
       </div>
 
       <!-- Article 5: Guides -->
-      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow" data-cat="guides">
+      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer" data-cat="guides" onclick="window.location.href='blog-cooling-buyers-guide.html'">
         <img src="https://placehold.co/400x220/eff6ff/1d4ed8?text=Cooling+Guide" alt="Cooling Guide" class="w-full h-44 object-cover">
         <div class="p-5">
           <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Guides &amp; Tutorials</span>
-          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">AIO vs Air Cooling in 2026: Which Should You Choose?</h3>
-          <p class="text-gray-500 text-sm mb-4 leading-relaxed">We compare noise levels, temperatures, price-to-performance, and installation difficulty to help you decide once and for all.</p>
+          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">AIO vs Air Cooling: A Buyer’s Guide</h3>
+          <p class="text-gray-500 text-sm mb-4 leading-relaxed">Compare thermal behavior, acoustics, compatibility, and long-term maintenance to choose the right cooling path for your build.</p>
           <div class="flex items-center justify-between text-xs text-gray-400">
             <span><i class="fas fa-calendar mr-1"></i>Apr 10, 2026</span>
             <span><i class="fas fa-clock mr-1"></i>7 min read</span>
           </div>
+          <a href="blog-cooling-buyers-guide.html" class="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700 mt-4">Read article <i class="fas fa-arrow-right text-xs"></i></a>
         </div>
       </div>
 
       <!-- Article 6: Hardware News -->
-      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow" data-cat="hardware-news">
+      <div class="blog-article bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer" data-cat="hardware-news" onclick="window.location.href='blog-memory-standards-explainer.html'">
         <img src="https://placehold.co/400x220/fff7ed/c2410c?text=DDR6+News" alt="DDR6 News" class="w-full h-44 object-cover">
         <div class="p-5">
           <span class="text-xs font-bold text-orange-600 uppercase tracking-wider">Hardware News</span>
-          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">DDR6 Memory is Coming: Here's What We Know So Far</h3>
-          <p class="text-gray-500 text-sm mb-4 leading-relaxed">The next generation of RAM promises doubled bandwidth and lower power draw. We dig into the specs, timelines, and which CPUs will support it.</p>
+          <h3 class="font-bold text-gray-900 text-base mt-2 mb-2 leading-snug">Memory Standards Explained: DDR5 Today and What Comes Next</h3>
+          <p class="text-gray-500 text-sm mb-4 leading-relaxed">Understand current DDR5 realities, where memory speed helps most, and how to plan upgrades without overpaying for marginal gains.</p>
           <div class="flex items-center justify-between text-xs text-gray-400">
             <span><i class="fas fa-calendar mr-1"></i>Apr 8, 2026</span>
             <span><i class="fas fa-clock mr-1"></i>5 min read</span>
           </div>
+          <a href="blog-memory-standards-explainer.html" class="inline-flex items-center gap-2 text-sm font-semibold text-cyan-600 hover:text-cyan-700 mt-4">Read article <i class="fas fa-arrow-right text-xs"></i></a>
         </div>
       </div>
 
@@ -480,8 +496,9 @@
       <a href="community-hub.html" class="hover:text-cyan-600 hover:underline flex items-center gap-1.5"><i class="fas fa-comments text-xs"></i>Community Hub</a>
       <a href="innovation-news.html" class="hover:text-cyan-600 hover:underline flex items-center gap-1.5"><i class="fas fa-newspaper text-xs"></i>Innovation &amp; News</a>
       <a href="community-guidelines.html" class="hover:text-cyan-600 hover:underline">Community Rules</a>
-      <a href="terms-of-service.html" class="hover:text-cyan-600 hover:underline">Terms of Service</a>
-      <a href="privacy-policy.html" class="hover:text-cyan-600 hover:underline">Privacy</a>
+      <a href="blog-terms-conditions.html" class="hover:text-cyan-600 hover:underline">Blog Terms &amp; Conditions</a>
+      <a href="blog-privacy-policy.html" class="hover:text-cyan-600 hover:underline">Blog Privacy Policy</a>
+      <a href="blog-disclaimer-disclosures.html" class="hover:text-cyan-600 hover:underline">Disclaimer &amp; Disclosures</a>
     </div>
 
   </div>
@@ -546,8 +563,22 @@
       if (msg) { msg.textContent = 'Please enter a valid email address.'; msg.classList.remove('hidden'); msg.className = 'text-xs text-red-400 mt-3'; }
       return;
     }
-    if (msg) { msg.textContent = "You're subscribed! Check your inbox for a confirmation."; msg.classList.remove('hidden'); msg.className = 'text-xs text-cyan-300 mt-3'; }
-    document.getElementById('newsletterEmail').value = '';
+    if (msg) { msg.textContent = 'Subscribing...'; msg.classList.remove('hidden'); msg.className = 'text-xs text-cyan-300 mt-3'; }
+    var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+    fetch(BACKEND_URL + '/api/blog/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    })
+      .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+      .then(function(result) {
+        if (!result.ok) throw new Error((result.data && result.data.error) || 'Subscription failed.');
+        if (msg) { msg.textContent = "You're subscribed! Check your inbox for a confirmation email."; msg.classList.remove('hidden'); msg.className = 'text-xs text-cyan-300 mt-3'; }
+        document.getElementById('newsletterEmail').value = '';
+      })
+      .catch(function(err) {
+        if (msg) { msg.textContent = err.message || 'Unable to subscribe right now. Please try again.'; msg.classList.remove('hidden'); msg.className = 'text-xs text-red-400 mt-3'; }
+      });
   }
 
   function toggleDropdown(id) {
