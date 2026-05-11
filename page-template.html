@@ -35,15 +35,17 @@
 <body class="min-h-screen flex flex-col">
 
 <!-- Top Navigation -->
-<header class="bg-white border-b border-gray-200">
-  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-    <div class="flex justify-between items-center h-16">
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="px-4 sm:px-6">
+    <div class="flex justify-between items-center h-24">
       <!-- Logo -->
       <div class="flex items-center">
         <a href="index.html" class="flex-shrink-0 flex items-center gap-3 no-underline">
-          <div class="text-cyan-400 text-4xl"><i class="fas fa-microchip"></i></div>
+          <div class="text-cyan-400 text-5xl">
+                            <i class="fas fa-microchip"></i>
+                        </div>
           <div class="flex flex-col">
-            <span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span>
+            <span class="text-cyan-400 font-bold text-3xl tracking-wide leading-none">ZOREXIUM</span>
             
           </div>
         </a>
@@ -51,8 +53,10 @@
       <!-- Nav Links -->
       <nav class="hidden md:flex space-x-8">
         <div class="relative nav-dropdown-trigger" id="marketplaceDropdown">
-          <a href="index.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Marketplace</a>
-          <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu"><i class="fas fa-chevron-down text-sm"></i></button>
+          <a href="index.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Marketplace</a>
+          <button onclick="toggleDropdown('marketplaceDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Marketplace menu">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
           <div class="nav-dropdown marketplace-mega-menu bg-white border-b border-gray-200 shadow-xl z-50">
             <div class="px-8 py-5">
               <div class="grid grid-cols-10 gap-x-3 gap-y-1">
@@ -180,7 +184,7 @@
           </div>
         </div>
         <div class="relative nav-dropdown-trigger" id="communityHubDropdown">
-                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
+                        <a href="community-hub.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Community Hub</a>
                         <button onclick="toggleDropdown('communityHubDropdown')" class="text-gray-700 hover:text-black px-2 py-3 rounded-md text-base inline-flex items-center" aria-label="Toggle Community Hub menu">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
@@ -191,12 +195,73 @@
                         </div>
                     </div>
         <!-- Sell Hardware -->
-        <a id="sellHardwareLink" href="sell-on-zorexium.html" class="text-gray-700 hover:text-black px-3 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
+        <a id="sellHardwareLink" href="sell-on-zorexium.html" class="text-gray-700 hover:text-black px-4 py-3 rounded-md text-base font-medium inline-flex items-center">Sell Hardware</a>
       </nav>
-      <!-- Right Side Actions -->
-      <div class="flex items-center space-x-4">
-        <a href="account-details.html" class="h-8 w-8 rounded-full overflow-hidden border border-gray-600 inline-block"><img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-full w-full object-cover"></a>
-      </div>
+                <!-- Right Side Actions -->
+                <div class="flex items-center space-x-5">
+                    <a id="headerCartLink" href="shopping-cart.html" class="text-gray-700 hover:text-black relative flex items-center gap-2 px-3 py-2 rounded-md">
+                        <i class="fas fa-shopping-cart text-2xl"></i>
+                        <span id="cartBadgeHeader" class="absolute -top-2 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                    </a>
+
+                    <!-- Inline login form â shown only when NOT logged in -->
+                    <div id="headerLoginForm" class="hidden items-center gap-2">
+                        <input id="headerLoginEmail" type="text" placeholder="Email or username"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-40">
+                        <input id="headerLoginPassword" type="password" placeholder="Password"
+                            class="border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent w-36">
+                        <button id="headerLoginBtn" type="button"
+                            class="bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors whitespace-nowrap">
+                            Log In
+                        </button>
+                        <a href="login-register.html?forgot=1" class="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap">Forgot account?</a>
+                    </div>
+
+                    <!-- Account &amp; Lists hover menu â shown only when logged in -->
+                    <div id="headerAccountSection" class="relative hidden nav-dropdown-trigger flex-1">
+                        <button class="flex flex-row items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md cursor-pointer w-full">
+                            <i class="fas fa-user text-xl"></i>
+                            <span class="text-sm font-medium whitespace-nowrap">Account &amp; Lists</span>
+                        </button>
+                        <div class="nav-dropdown absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden" style="max-height:80vh;overflow-y:auto;">
+                            <!-- User header -->
+                            <div id="headerUserDropdownHead" class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3">
+                                <img id="userProfileImage" src="https://placehold.co/100x100/333/fff?text=U" alt="User Profile" class="h-10 w-10 rounded-full object-cover border border-gray-300 flex-shrink-0">
+                                <div class="flex-1 min-w-0">
+                                    <p id="accountMenuUsername" class="text-sm font-semibold text-gray-900 truncate">Account</p>
+                                    <a href="account-details.html" class="text-xs text-cyan-600 hover:text-cyan-700">My Profile</a>
+                                </div>
+                                <a href="#" id="signOutHeader" class="text-xs text-red-600 hover:text-red-700 whitespace-nowrap ml-2">Sign Out</a>
+                            </div>
+                            <!-- Support -->
+                            <div class="px-4 py-2 bg-gray-50 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Support</p></div>
+                            <a href="help-center.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-question-circle text-cyan-600 w-4 text-center"></i>Help Center</a>
+                            <a href="track-your-order.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-truck text-cyan-600 w-4 text-center"></i>Track an Order</a>
+                            <a href="privacy-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shield-alt text-cyan-600 w-4 text-center"></i>Privacy &amp; Security</a>
+                            <a href="contact-support.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-headset text-cyan-600 w-4 text-center"></i>Contact Support</a>
+                            <a href="feedback.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-comment-alt text-cyan-600 w-4 text-center"></i>Feedback</a>
+                            <a href="marketplace-guarantee.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-certificate text-cyan-600 w-4 text-center"></i>Marketplace Guarantee</a>
+                            <a href="return-refund-policy.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-undo-alt text-cyan-600 w-4 text-center"></i>Return An Item</a>
+                            <a href="login-register.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-sign-in-alt text-cyan-600 w-4 text-center"></i>Login/Register</a>
+                            <!-- Orders &amp; Returns -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Orders &amp; Returns</p></div>
+                            <a href="order-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
+                            <a href="returns-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-exchange-alt text-cyan-600 w-4 text-center"></i>Returns History</a>
+                            <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
+                            <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
+                            <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
+                            <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
+                            <!-- Zorexium -->
+                            <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
+                            <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
+                            <a href="innovation-news.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-newspaper text-cyan-600 w-4 text-center"></i>Newsroom</a>
+                            <a href="blog.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-blog text-cyan-600 w-4 text-center"></i>Blog/Content</a>
+                            <a href="sell-on-zorexium.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-store text-cyan-600 w-4 text-center"></i>Sell on Zorexium</a>
+                            <a href="seller-dashboard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tachometer-alt text-cyan-600 w-4 text-center"></i>Seller Portal</a>
+                            <a href="listing-wizard.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-tools text-cyan-600 w-4 text-center"></i>Seller Tools</a>
+                        </div>
+                    </div>
+                </div>
     </div>
   </div>
 </header>
@@ -208,12 +273,12 @@
     <div class="flex-1 w-full max-w-3xl relative">
       <div class="relative">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400"></i></div>
-        <input type="text" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" placeholder="Search for AI Accelerators, GPUS & Tech">
+        <input type="text" class="block w-full pl-10 pr-10 py-3 border-none rounded-md leading-5 bg-gray-100 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 sm:text-base" id="subHeaderSearch" placeholder="Search for AI Accelerators, GPUS & Tech" onkeypress="if(event.key==='Enter'){window.location.href='index.html?search='+encodeURIComponent(this.value.trim());}">
         <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"><i class="fas fa-microphone text-gray-500"></i></div>
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <button class="text-gray-400 hover:text-white"><i class="fas fa-plus text-xl"></i></button>
+      <button onclick="window.location.href='listing-wizard.html'" class="text-gray-400 hover:text-gray-700 transition-colors" title="Create a Listing"><i class="fas fa-plus text-xl"></i></button>
     </div>
   </div>
 </div>
@@ -253,6 +318,75 @@
 </script>
 
 <script src="profile-picture.js"></script>
+<script src="notifications.js"></script>
+<script src="session.js"></script>
+<script>
+    // Header account/cart wiring
+    (function(){
+        var BACKEND_URL = 'https://zorexium-backend.onrender.com';
+        var loggedIn = (typeof ZrxSession !== 'undefined') ? ZrxSession.isLoggedIn() : false;
+        var loginForm    = document.getElementById('headerLoginForm');
+        var acctSection  = document.getElementById('headerAccountSection');
+        var cartLink     = document.getElementById('headerCartLink');
+        var acctListsGuest = document.getElementById('headerAccountListsGuest');
+        var userDropHead = document.getElementById('headerUserDropdownHead');
+        if(loggedIn){
+            if(cartLink)   { cartLink.classList.remove('hidden'); }
+            if(acctListsGuest){ acctListsGuest.classList.add('hidden'); }
+            if(acctSection){ acctSection.classList.remove('hidden'); acctSection.classList.add('flex'); }
+            if(loginForm)  { loginForm.classList.add('hidden'); }
+            if(userDropHead){ userDropHead.classList.remove('hidden'); }
+        } else {
+            if(cartLink)   { cartLink.classList.add('hidden'); }
+            if(acctListsGuest){ acctListsGuest.classList.remove('hidden'); acctListsGuest.classList.add('flex'); }
+            if(acctSection){ acctSection.classList.add('hidden'); acctSection.classList.remove('flex'); }
+            if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
+            if(userDropHead){ userDropHead.classList.add('hidden'); }
+        }
+        var sellHardwareLink = document.getElementById('sellHardwareLink');
+        if(sellHardwareLink && loggedIn){
+            ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller')
+                .then(function(r){ return r.ok ? r.json() : {isSeller:false}; })
+                .then(function(data){ if(data.isSeller) sellHardwareLink.href = 'seller-dashboard.html'; })
+                .catch(function(){});
+        }
+        try{
+            if(loggedIn){
+                ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
+                    .then(function(r){ return r.ok ? r.json() : null; })
+                    .then(function(data){
+                        var count = (data && data.items) ? data.items.length : 0;
+                        var badge = document.getElementById('cartBadgeHeader');
+                        if(badge){ badge.textContent = count; badge.classList.toggle('hidden', count === 0); }
+                    }).catch(function(){});
+            }
+        }catch(e){}
+        var user = (typeof ZrxSession !== 'undefined') ? ZrxSession.getUser() : null;
+        var userNameEl = document.getElementById('accountMenuUsername');
+        if(userNameEl && user) userNameEl.textContent = user.username || user.email || 'Account';
+        var signOut = document.getElementById('signOutHeader');
+        if(signOut) signOut.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ window.location.href='index.html'; }); });
+        async function doHeaderLogin(){
+            var email    = document.getElementById('headerLoginEmail').value.trim();
+            var password = document.getElementById('headerLoginPassword').value;
+            if(!email || !password){ if(typeof ZrxNotify!=='undefined') ZrxNotify.showNotification('Please enter your email/username and password.','error'); return; }
+            try{
+                var res  = await fetch(BACKEND_URL + '/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({email:email,password:password}) });
+                var data = await res.json();
+                if(!res.ok){ if(typeof ZrxNotify!=='undefined') ZrxNotify.showNotification(data.error||'Invalid email or password.','error'); return; }
+                if(data.token){ try{ localStorage.setItem('authToken',data.token); var ui=data.user?{email:data.user.email,username:data.user.firstName||data.user.email}:{email:email,username:email}; localStorage.setItem('_zrx_user',JSON.stringify(ui)); }catch(ex){} }
+                window.location.reload();
+            }catch(err){ if(typeof ZrxNotify!=='undefined') ZrxNotify.showNotification('Login failed. Please check your connection and try again.','error'); }
+        }
+        var loginBtn = document.getElementById('headerLoginBtn');
+        if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
+        var pwdInput = document.getElementById('headerLoginPassword');
+        if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key==='Enter') doHeaderLogin(); });
+    })();
+</script>
+
+<script src="open-links-new-tab.js"></script>
+<script src="cookie-consent.js"></script>
 </body>
 </html>
 
