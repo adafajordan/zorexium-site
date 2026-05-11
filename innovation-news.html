@@ -428,7 +428,7 @@
       return;
     }
     try {
-      const imageUrls = await Promise.all(selectedImageFiles.map(file => readFileAsDataUrl(file)));
+      const imageUrls = await Promise.all(selectedImageFiles.map(readFileAsDataUrl));
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
