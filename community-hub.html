@@ -382,7 +382,15 @@
             </div>
             <input type="text" id="postTitle" class="form-input" placeholder="Title" maxlength="200">
             <textarea id="postContent" class="form-input" placeholder="Text (optional)" rows="4" maxlength="5000"></textarea>
-            <input type="url" id="postImageUrl" class="form-input" placeholder="Image or link URL (optional)" maxlength="2000">
+            <div>
+              <label for="postImageFiles" class="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wide">Images <span class="text-gray-300 font-normal normal-case">(optional, up to 10, 10MB each)</span></label>
+              <input type="file" id="postImageFiles" class="form-input" accept="image/*" multiple>
+            </div>
+            <div>
+              <label for="postVideoFile" class="block text-xs font-semibold text-gray-500 uppercase mb-1 tracking-wide">Video <span class="text-gray-300 font-normal normal-case">(optional, max 10GB)</span></label>
+              <input type="file" id="postVideoFile" class="form-input" accept="video/*">
+            </div>
+            <div id="postMediaPreview" class="hidden rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600"></div>
             <div class="flex justify-end gap-3 pt-1">
               <button onclick="cancelPost()" class="px-4 py-1.5 rounded-full border border-gray-300 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
               <button onclick="publishPost()" class="px-4 py-1.5 rounded-full bg-[#65a30d] hover:bg-[#4d7c0f] text-white text-sm font-semibold transition-colors">Post</button>
@@ -434,6 +442,11 @@
   let sortMode = 'hot';
   let flairFilter = '';
   let selectedFlair = '';
+  const MAX_POST_IMAGE_COUNT = 10;
+  const MAX_POST_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+  const MAX_POST_VIDEO_SIZE_BYTES = 10 * 1024 * 1024 * 1024;
+  let selectedImageFiles = [];
+  let selectedVideoFile = null;
 
   const FLAIR_CONFIG = {
     'hardware':      { label: 'Hardware',      color: 'bg-blue-100 text-blue-700' },
@@ -454,6 +467,7 @@
     updateUI();
     loadPosts();
     setupFlairPicker();
+    setupMediaInputs();
   }
 
   function setupFlairPicker() {
@@ -495,7 +509,6 @@
     if (!ZrxSession.isLoggedIn()) { window.location.href = 'login-register.html'; return; }
     var title = document.getElementById('postTitle').value.trim();
     var content = document.getElementById('postContent').value.trim();
-    var imageUrl = document.getElementById('postImageUrl').value.trim();
     var flair = document.getElementById('postFlair').value || 'general';
     if (!title) {
       ZrxNotify.showNotification('Please enter a post title!', 'error');
@@ -507,7 +520,9 @@
     }
     try {
       var body = { title: title, content: content, boardType: flair };
-      if (imageUrl) body.imageUrl = imageUrl;
+      var mediaPayload = await buildPostMediaPayload();
+      if (mediaPayload.imageUrls.length) body.imageUrls = mediaPayload.imageUrls;
+      if (mediaPayload.videoUrl) body.videoUrl = mediaPayload.videoUrl;
       var res = await ZrxSession.fetch(BACKEND_URL + '/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -521,8 +536,8 @@
       }
       document.getElementById('postTitle').value = '';
       document.getElementById('postContent').value = '';
-      document.getElementById('postImageUrl').value = '';
       document.getElementById('postFlair').value = '';
+      clearPostMediaSelection();
       setupFlairPicker();
       document.getElementById('newPostForm').classList.add('hidden');
       ZrxNotify.showNotification('Post published!', 'success');
@@ -535,6 +550,7 @@
 
   function cancelPost() {
     document.getElementById('newPostForm').classList.add('hidden');
+    clearPostMediaSelection();
   }
 
   async function loadPosts() {
@@ -918,12 +934,139 @@
   }
 
   function renderPostMedia(post) {
-    if (!post.imageUrl || !/^https?:\/\//i.test(post.imageUrl)) return '';
-    var escaped = escapeHtml(post.imageUrl);
-    if (/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i.test(post.imageUrl)) {
-      return '<div class="mb-3"><img src="' + escaped + '" alt="Post attachment" class="max-w-full rounded-md max-h-80 object-contain border border-gray-100"></div>';
+    var mediaHtmlParts = [];
+    var imageSources = [];
+    if (Array.isArray(post.imageUrls)) {
+      imageSources = imageSources.concat(post.imageUrls.filter(function(src) {
+        return typeof src === 'string' && src.trim() && (src.startsWith('data:image/') || /^https?:\/\//i.test(src));
+      }));
     }
-    return '<div class="mb-3"><a href="' + escaped + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-cyan-600 hover:underline break-all text-sm bg-gray-50 px-3 py-2 rounded-md border border-gray-200"><i class="fas fa-external-link-alt text-xs"></i>' + escaped + '</a></div>';
+    if (post.imageUrl && typeof post.imageUrl === 'string' && post.imageUrl.trim()) {
+      var legacyImage = post.imageUrl.trim();
+      if ((legacyImage.startsWith('data:image/') || /^https?:\/\//i.test(legacyImage)) && !imageSources.includes(legacyImage)) {
+        imageSources.push(legacyImage);
+      }
+    }
+    if (imageSources.length > 0) {
+      var imagesHtml = imageSources.map(function(src) {
+        return '<img src="' + escapeHtml(src) + '" alt="Post attachment" class="max-w-full rounded-md max-h-80 object-contain border border-gray-100">';
+      }).join('');
+      mediaHtmlParts.push('<div class="mb-3 grid gap-2">' + imagesHtml + '</div>');
+    }
+
+    if (post.videoUrl && typeof post.videoUrl === 'string' && post.videoUrl.trim()) {
+      var videoSrc = post.videoUrl.trim();
+      if (videoSrc.startsWith('data:video/') || /^https?:\/\//i.test(videoSrc)) {
+        mediaHtmlParts.push('<div class="mb-3"><video controls preload="metadata" class="w-full max-h-96 rounded-md border border-gray-100 bg-black"><source src="' + escapeHtml(videoSrc) + '">Your browser does not support the video tag.</video></div>');
+      }
+    }
+
+    return mediaHtmlParts.join('');
+  }
+
+  function setupMediaInputs() {
+    var imageInput = document.getElementById('postImageFiles');
+    if (imageInput) {
+      imageInput.addEventListener('change', function(event) {
+        var files = Array.from((event.target && event.target.files) || []);
+        if (files.length > MAX_POST_IMAGE_COUNT) {
+          ZrxNotify.showNotification('You can upload up to ' + MAX_POST_IMAGE_COUNT + ' images per post.', 'error');
+          imageInput.value = '';
+          selectedImageFiles = [];
+          updatePostMediaPreview();
+          return;
+        }
+        for (var i = 0; i < files.length; i++) {
+          if (files[i].size > MAX_POST_IMAGE_SIZE_BYTES) {
+            ZrxNotify.showNotification('Each image must be 10MB or smaller.', 'error');
+            imageInput.value = '';
+            selectedImageFiles = [];
+            updatePostMediaPreview();
+            return;
+          }
+        }
+        selectedImageFiles = files;
+        updatePostMediaPreview();
+      });
+    }
+
+    var videoInput = document.getElementById('postVideoFile');
+    if (videoInput) {
+      videoInput.addEventListener('change', function(event) {
+        var files = Array.from((event.target && event.target.files) || []);
+        var videoFile = files.length ? files[0] : null;
+        if (videoFile && videoFile.size > MAX_POST_VIDEO_SIZE_BYTES) {
+          ZrxNotify.showNotification('Video must be 10GB or smaller.', 'error');
+          videoInput.value = '';
+          selectedVideoFile = null;
+          updatePostMediaPreview();
+          return;
+        }
+        selectedVideoFile = videoFile;
+        updatePostMediaPreview();
+      });
+    }
+  }
+
+  function clearPostMediaSelection() {
+    selectedImageFiles = [];
+    selectedVideoFile = null;
+    var imageInput = document.getElementById('postImageFiles');
+    if (imageInput) imageInput.value = '';
+    var videoInput = document.getElementById('postVideoFile');
+    if (videoInput) videoInput.value = '';
+    updatePostMediaPreview();
+  }
+
+  function updatePostMediaPreview() {
+    var preview = document.getElementById('postMediaPreview');
+    if (!preview) return;
+    var lines = [];
+    if (selectedImageFiles.length > 0) {
+      lines.push('<div><span class="font-semibold text-gray-700">Images:</span> ' + selectedImageFiles.length + ' selected</div>');
+      lines.push('<ul class="list-disc list-inside mt-1 space-y-0.5">' + selectedImageFiles.map(function(file) {
+        return '<li>' + escapeHtml(file.name) + ' (' + formatBytes(file.size) + ')</li>';
+      }).join('') + '</ul>');
+    }
+    if (selectedVideoFile) {
+      lines.push('<div class="mt-2"><span class="font-semibold text-gray-700">Video:</span> ' + escapeHtml(selectedVideoFile.name) + ' (' + formatBytes(selectedVideoFile.size) + ')</div>');
+    }
+    if (lines.length === 0) {
+      preview.classList.add('hidden');
+      preview.innerHTML = '';
+      return;
+    }
+    preview.innerHTML = lines.join('');
+    preview.classList.remove('hidden');
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(reader.result); };
+      reader.onerror = function() { reject(new Error('Failed to read file')); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function buildPostMediaPayload() {
+    var imageUrls = [];
+    for (var i = 0; i < selectedImageFiles.length; i++) {
+      imageUrls.push(await readFileAsDataUrl(selectedImageFiles[i]));
+    }
+    var videoDataUrl = '';
+    if (selectedVideoFile) {
+      videoDataUrl = await readFileAsDataUrl(selectedVideoFile);
+    }
+    return { imageUrls: imageUrls, videoUrl: videoDataUrl };
+  }
+
+  function formatBytes(bytes) {
+    if (!(bytes > 0)) return '0 B';
+    if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return bytes + ' B';
   }
 
   function toggleDropdown(id) {
@@ -1051,4 +1194,3 @@
     </script>
 </body>
 </html>
-
