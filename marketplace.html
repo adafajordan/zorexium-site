@@ -337,7 +337,10 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       <div>
         <label class="block text-gray-900 text-base font-semibold mb-2">Search Products</label>
-        <input type="text" id="searchInput" placeholder="Search GPU, CPU, RAM..." class="w-full bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-lg" onkeyup="filterProducts()">
+        <div class="relative">
+          <input type="text" id="searchInput" placeholder="Search GPU, CPU, RAM..." class="w-full bg-white border border-gray-300 text-gray-900 pl-6 pr-12 py-3 rounded-lg" onkeyup="filterProducts()">
+          <div data-voice-for="searchInput" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" onclick="startVoiceSearch('searchInput',function(){filterProducts();})" title="Voice search"><i class="fas fa-microphone text-gray-400"></i></div>
+        </div>
       </div>
       <div>
         <label class="block text-gray-900 text-base font-semibold mb-2">Filter by Condition</label>
@@ -757,6 +760,7 @@
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
         })();
     </script>
+<script src="voice-search.js"></script>
 </body>
 </html>
 

@@ -41,7 +41,7 @@
     .hc-search-wrap { position: relative; max-width: 600px; margin: 0 auto; }
     .hc-search-input {
       border: 2px solid #e5e7eb; border-radius: 8px;
-      padding: 13px 44px 13px 46px; font-size: 15px; width: 100%;
+      padding: 13px 80px 13px 46px; font-size: 15px; width: 100%;
       transition: border-color 0.15s; background: #fff;
     }
     .hc-search-input:focus { outline: none; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,0.12); }
@@ -384,7 +384,8 @@
                placeholder="Search the knowledge base..."
                oninput="hcHandleSearch(this.value)" autocomplete="off">
         <i id="hcSearchSpinner" class="fas fa-spinner fa-spin text-cyan-400"
-           style="position:absolute;right:14px;top:50%;transform:translateY(-50%);display:none;"></i>
+           style="position:absolute;right:44px;top:50%;transform:translateY(-50%);display:none;"></i>
+        <div data-voice-for="hcSearchInput" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;" onclick="startVoiceSearch('hcSearchInput',function(t){hcHandleSearch(t);})" title="Voice search"><i class="fas fa-microphone text-gray-400"></i></div>
       </div>
       <p id="hcSearchingText" class="hidden mt-2 text-sm text-cyan-600 font-medium">
         <i class="fas fa-circle-notch fa-spin mr-1"></i>Searching...
@@ -1027,5 +1028,6 @@
         if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
     })();
 </script>
+<script src="voice-search.js"></script>
 </body>
 </html>
