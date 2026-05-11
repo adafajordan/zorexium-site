@@ -2,16 +2,43 @@
 (function () {
   'use strict';
 
-  /* Inject a small stylesheet for the listening animation */
+  /* Inject stylesheet for mic button hover and listening states */
   var style = document.createElement('style');
   style.textContent = [
     '[data-voice-for].voice-listening i { color: #06b6d4 !important; }',
     '[data-voice-for] { transition: opacity .15s; }',
-    '[data-voice-for]:hover { opacity: .75; }'
+    '[data-voice-for]:hover { opacity: .75; }',
+    '.voice-search-err {',
+    '  position:absolute; bottom:calc(100% + 4px); right:0;',
+    '  background:#1f2937; color:#f9fafb; font-size:12px;',
+    '  padding:5px 10px; border-radius:6px; white-space:nowrap;',
+    '  z-index:999; pointer-events:none;',
+    '  animation: vsErrFade 3s forwards;',
+    '}',
+    '@keyframes vsErrFade {',
+    '  0%{opacity:1} 70%{opacity:1} 100%{opacity:0}',
+    '}'
   ].join('\n');
   document.head.appendChild(style);
 
   var activeRecognition = null;
+
+  /* Show a brief tooltip-style error near the mic button */
+  function showError(btn, message) {
+    if (!btn) return;
+    var existing = btn.querySelector('.voice-search-err');
+    if (existing) existing.remove();
+    var tip = document.createElement('span');
+    tip.className = 'voice-search-err';
+    tip.textContent = message;
+    /* Ensure the parent is positioned so the tooltip can use bottom:100% */
+    var parent = btn.parentElement;
+    if (parent && getComputedStyle(parent).position === 'static') {
+      parent.style.position = 'relative';
+    }
+    btn.appendChild(tip);
+    setTimeout(function () { if (tip.parentNode) tip.parentNode.removeChild(tip); }, 3200);
+  }
 
   /**
    * startVoiceSearch(inputId, callback)
@@ -27,11 +54,10 @@
     var SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
+    var btn = document.querySelector('[data-voice-for="' + inputId + '"]');
+
     if (!SpeechRecognition) {
-      alert(
-        'Voice search is not supported in your browser.\n' +
-        'Please try Chrome or Microsoft Edge.'
-      );
+      showError(btn, 'Voice search not supported in this browser');
       return;
     }
 
@@ -47,8 +73,6 @@
     recognition.maxAlternatives = 1;
     activeRecognition = recognition;
 
-    /* Find the mic button that belongs to this input */
-    var btn  = document.querySelector('[data-voice-for="' + inputId + '"]');
     var icon = btn ? btn.querySelector('i') : null;
 
     function setListening(on) {
@@ -87,12 +111,9 @@
       setListening(false);
       activeRecognition = null;
       if (event.error === 'not-allowed') {
-        alert(
-          'Microphone access was denied.\n' +
-          'Please allow microphone access in your browser settings to use voice search.'
-        );
+        showError(btn, 'Microphone access denied — check browser settings');
       } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
-        alert('Voice search error: ' + event.error);
+        showError(btn, 'Voice search error: ' + event.error);
       }
     };
 
