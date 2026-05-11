@@ -701,7 +701,7 @@
     const imageInput = document.getElementById('postImageFiles');
     if (imageInput) {
       imageInput.addEventListener('change', function(event) {
-        const files = Array.from((event.target && event.target.files) || []);
+        const files = Array.from(event.target.files || []);
         if (files.length > MAX_POST_IMAGE_COUNT) {
           ZrxNotify.showNotification('You can upload up to ' + MAX_POST_IMAGE_COUNT + ' images per post.', 'error');
           imageInput.value = '';
@@ -726,7 +726,7 @@
     const videoInput = document.getElementById('postVideoFile');
     if (videoInput) {
       videoInput.addEventListener('change', function(event) {
-        const files = Array.from((event.target && event.target.files) || []);
+        const files = Array.from(event.target.files || []);
         const videoFile = files.length ? files[0] : null;
         if (videoFile && videoFile.size > MAX_POST_VIDEO_SIZE_BYTES) {
           ZrxNotify.showNotification('Video must be 10GB or smaller.', 'error');
@@ -784,10 +784,7 @@
   }
 
   async function buildPostMediaPayload() {
-    const imageUrls = [];
-    for (const imageFile of selectedImageFiles) {
-      imageUrls.push(await readFileAsDataUrl(imageFile));
-    }
+    const imageUrls = await Promise.all(selectedImageFiles.map(file => readFileAsDataUrl(file)));
     let videoDataUrl = '';
     if (selectedVideoFile) {
       videoDataUrl = await readFileAsDataUrl(selectedVideoFile);

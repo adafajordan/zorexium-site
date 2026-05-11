@@ -968,7 +968,7 @@
     var imageInput = document.getElementById('postImageFiles');
     if (imageInput) {
       imageInput.addEventListener('change', function(event) {
-        var files = Array.from((event.target && event.target.files) || []);
+        var files = Array.from(event.target.files || []);
         if (files.length > MAX_POST_IMAGE_COUNT) {
           ZrxNotify.showNotification('You can upload up to ' + MAX_POST_IMAGE_COUNT + ' images per post.', 'error');
           imageInput.value = '';
@@ -993,7 +993,7 @@
     var videoInput = document.getElementById('postVideoFile');
     if (videoInput) {
       videoInput.addEventListener('change', function(event) {
-        var files = Array.from((event.target && event.target.files) || []);
+        var files = Array.from(event.target.files || []);
         var videoFile = files.length ? files[0] : null;
         if (videoFile && videoFile.size > MAX_POST_VIDEO_SIZE_BYTES) {
           ZrxNotify.showNotification('Video must be 10GB or smaller.', 'error');
@@ -1051,10 +1051,9 @@
   }
 
   async function buildPostMediaPayload() {
-    var imageUrls = [];
-    for (var i = 0; i < selectedImageFiles.length; i++) {
-      imageUrls.push(await readFileAsDataUrl(selectedImageFiles[i]));
-    }
+    var imageUrls = await Promise.all(selectedImageFiles.map(function(file) {
+      return readFileAsDataUrl(file);
+    }));
     var videoDataUrl = '';
     if (selectedVideoFile) {
       videoDataUrl = await readFileAsDataUrl(selectedVideoFile);
