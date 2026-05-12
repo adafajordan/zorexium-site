@@ -119,7 +119,6 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
 const GOOGLE_OAUTH_SCOPES = 'openid email profile';
-const GOOGLE_OAUTH_STATE_COOKIE = 'google_oauth_state';
 const GOOGLE_OAUTH_COOKIE_MAX_AGE = 10 * 60;
 const GOOGLE_OAUTH_STATE_TTL_MS = GOOGLE_OAUTH_COOKIE_MAX_AGE * 1000;
 const GOOGLE_BRIDGE_TOKEN_MAX_AGE_MS = 5 * 60 * 1000;
@@ -282,10 +281,6 @@ function buildAppLoginUrl(extraParams) {
     });
   }
   return url.toString();
-}
-
-function hashGoogleState(value) {
-  return crypto.createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
 }
 
 function createGoogleOAuthState(returnToPath) {
@@ -759,15 +754,6 @@ function ensureGoogleAuthConfigured() {
   return !!GOOGLE_CLIENT_ID && !!GOOGLE_CLIENT_SECRET && !!GOOGLE_REDIRECT_URI;
 }
 
-function setGoogleOAuthCookies(res, stateHash) {
-  res.setHeader('Set-Cookie', buildCookieHeader(GOOGLE_OAUTH_STATE_COOKIE, stateHash, {
-    httpOnly: true,
-    maxAge: GOOGLE_OAUTH_COOKIE_MAX_AGE,
-    sameSite: 'Lax',
-    secure: AUTH_COOKIE_SECURE
-  }));
-}
-
 function redirectGoogleAuthError(res, reason) {
   return res.redirect(buildAppLoginUrl({ google_error: reason || 'oauth_failed', tab: 'login' }));
 }
@@ -824,7 +810,6 @@ app.get('/api/auth/google', authRateLimit, function(req, res) {
   }
   var returnToPath = normalizePostLoginRedirectPath(req.query.returnTo);
   var state = createGoogleOAuthState(returnToPath);
-  setGoogleOAuthCookies(res, hashGoogleState(state));
   var authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
   authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
@@ -845,12 +830,8 @@ app.get('/api/auth/google/callback', authRateLimit, async function(req, res) {
     return redirectGoogleAuthError(res, reason);
   }
 
-  var cookies = parseCookies(req.headers.cookie);
-  var expectedStateHash = cookies[GOOGLE_OAUTH_STATE_COOKIE];
   var providedState = typeof req.query.state === 'string' ? req.query.state : '';
-  if (!expectedStateHash || !providedState || expectedStateHash !== hashGoogleState(providedState)) {
-    return redirectGoogleAuthError(res, 'invalid_state');
-  }
+  if (!providedState) return redirectGoogleAuthError(res, 'invalid_state');
   var oauthStateEntry = consumeGoogleOAuthState(providedState);
   if (!oauthStateEntry) return redirectGoogleAuthError(res, 'invalid_state');
 
