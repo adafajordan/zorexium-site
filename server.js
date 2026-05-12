@@ -114,9 +114,9 @@ const videoUpload = multer({
 
 // Backend origin used to build absolute video URLs returned to clients.
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'https://zorexium-backend.onrender.com';
-function normalizeAbsoluteHttpUrl(value) {
-  if (typeof value !== 'string') return '';
-  var trimmed = value.trim();
+function normalizeAbsoluteHttpUrl(urlValue) {
+  if (typeof urlValue !== 'string') return '';
+  var trimmed = urlValue.trim();
   if (!trimmed) return '';
   try {
     var parsed = new URL(trimmed);
@@ -127,8 +127,8 @@ function normalizeAbsoluteHttpUrl(value) {
   }
 }
 
-function extractOrigin(value) {
-  var normalized = normalizeAbsoluteHttpUrl(value);
+function extractOrigin(urlValue) {
+  var normalized = normalizeAbsoluteHttpUrl(urlValue);
   if (!normalized) return '';
   try {
     return new URL(normalized).origin;
@@ -153,7 +153,8 @@ function resolveAppUrl() {
   var normalizedCandidates = preferredCandidates.map(normalizeAbsoluteHttpUrl).filter(Boolean);
   for (var i = 0; i < normalizedCandidates.length; i += 1) {
     var candidateOrigin = extractOrigin(normalizedCandidates[i]);
-    if (!candidateOrigin || !backendOrigins.has(candidateOrigin)) return normalizedCandidates[i];
+    if (candidateOrigin && backendOrigins.has(candidateOrigin)) continue;
+    return normalizedCandidates[i];
   }
   return normalizedCandidates[0] || fallbackUrl;
 }
