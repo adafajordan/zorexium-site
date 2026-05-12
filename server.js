@@ -114,6 +114,16 @@ const videoUpload = multer({
 
 // Backend origin used to build absolute video URLs returned to clients.
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'https://zorexium-backend.onrender.com';
+const APP_URL = (process.env.APP_URL || APP_BASE_URL || 'https://zorexium.io').replace(/\/+$/, '');
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
+const GOOGLE_OAUTH_SCOPES = 'openid email profile';
+const GOOGLE_OAUTH_COOKIE_MAX_AGE = 10 * 60;
+const GOOGLE_OAUTH_STATE_TTL_MS = GOOGLE_OAUTH_COOKIE_MAX_AGE * 1000;
+const GOOGLE_BRIDGE_TOKEN_MAX_AGE_MS = 5 * 60 * 1000;
+const googleAuthBridgeTokens = new Map();
+const googleOAuthStateStore = new Map();
 
 // Parse and measure base64 data URL payload size in bytes so backend checks match real per-file size.
 function getDataUrlPayloadBytes(dataUrl) {
@@ -234,6 +244,102 @@ async function notifyAdminPayoutPaidIfNeeded(payoutDoc, source) {
 
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function getAppOrigin() {
+  try {
+    return new URL(APP_URL).origin;
+  } catch (_) {
+    return 'https://zorexium.io';
+  }
+}
+
+function normalizePostLoginRedirectPath(value) {
+  var fallback = '/index.html';
+  if (typeof value !== 'string') return fallback;
+  var raw = value.trim();
+  if (!raw) return fallback;
+  if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  try {
+    var parsed = new URL(raw);
+    if (parsed.origin === getAppOrigin()) {
+      return parsed.pathname + parsed.search + parsed.hash;
+    }
+  } catch (_) {}
+  return fallback;
+}
+
+function buildAppLoginUrl(extraParams) {
+  var base = APP_URL.endsWith('/') ? APP_URL : APP_URL + '/';
+  var url = new URL('login-register.html', base);
+  if (extraParams && typeof extraParams === 'object') {
+    Object.keys(extraParams).forEach(function(key) {
+      var value = extraParams[key];
+      if (value !== undefined && value !== null && value !== '') {
+        url.searchParams.set(key, String(value));
+      }
+    });
+  }
+  return url.toString();
+}
+
+function createGoogleOAuthState(returnToPath) {
+  var now = Date.now();
+  for (const [stateKey, stateEntry] of googleOAuthStateStore.entries()) {
+    if (!stateEntry || stateEntry.expiresAt <= now) googleOAuthStateStore.delete(stateKey);
+  }
+  var state = crypto.randomBytes(24).toString('hex');
+  googleOAuthStateStore.set(state, {
+    returnToPath: normalizePostLoginRedirectPath(returnToPath),
+    expiresAt: now + GOOGLE_OAUTH_STATE_TTL_MS
+  });
+  return state;
+}
+
+function consumeGoogleOAuthState(state) {
+  if (typeof state !== 'string' || !/^[a-f0-9]{48}$/.test(state)) return null;
+  var entry = googleOAuthStateStore.get(state);
+  if (!entry) return null;
+  googleOAuthStateStore.delete(state);
+  if (!entry.expiresAt || entry.expiresAt <= Date.now()) return null;
+  return entry;
+}
+
+function createGoogleBridgeToken(payload) {
+  var now = Date.now();
+  for (const [code, entry] of googleAuthBridgeTokens.entries()) {
+    if (!entry || entry.expiresAt <= now) googleAuthBridgeTokens.delete(code);
+  }
+  var code = crypto.randomBytes(24).toString('hex');
+  googleAuthBridgeTokens.set(code, {
+    token: payload.token,
+    user: payload.user,
+    redirectTo: payload.redirectTo,
+    expiresAt: now + GOOGLE_BRIDGE_TOKEN_MAX_AGE_MS
+  });
+  return code;
+}
+
+function consumeGoogleBridgeToken(code) {
+  if (typeof code !== 'string' || !/^[a-f0-9]{48}$/.test(code)) return null;
+  var entry = googleAuthBridgeTokens.get(code);
+  if (!entry) return null;
+  googleAuthBridgeTokens.delete(code);
+  if (!entry.expiresAt || entry.expiresAt <= Date.now()) return null;
+  return entry;
+}
+
+function decodeJwtPayload(token) {
+  if (typeof token !== 'string') return null;
+  var parts = token.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    var payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4 !== 0) payload += '=';
+    return JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+  } catch (_) {
+    return null;
+  }
 }
 
 function isLikelyEmail(value) {
@@ -643,6 +749,220 @@ app.get('/api/config', function(req, res) {
 });
 
 // ── USER AUTHENTICATION ────────────────────────────────────────────────────────
+
+function ensureGoogleAuthConfigured() {
+  return !!GOOGLE_CLIENT_ID && !!GOOGLE_CLIENT_SECRET && !!GOOGLE_REDIRECT_URI;
+}
+
+function redirectGoogleAuthError(res, reason) {
+  return res.redirect(buildAppLoginUrl({ google_error: reason || 'oauth_failed', tab: 'login' }));
+}
+
+function getGoogleProfileFromIdToken(idToken) {
+  var claims = decodeJwtPayload(idToken);
+  if (!claims) return { valid: false, reason: 'invalid_id_token' };
+  var issuer = String(claims.iss || '');
+  var validIssuer = issuer === 'https://accounts.google.com' || issuer === 'accounts.google.com';
+  if (!validIssuer) return { valid: false, reason: 'invalid_issuer' };
+  var audience = claims.aud;
+  var audienceOk = Array.isArray(audience)
+    ? audience.indexOf(GOOGLE_CLIENT_ID) !== -1
+    : audience === GOOGLE_CLIENT_ID;
+  if (!audienceOk) return { valid: false, reason: 'invalid_audience' };
+  var exp = Number(claims.exp || 0);
+  if (!exp || (exp * 1000) <= Date.now()) return { valid: false, reason: 'expired_id_token' };
+  if (!claims.sub) return { valid: false, reason: 'missing_subject' };
+  return {
+    valid: true,
+    profile: {
+      sub: String(claims.sub),
+      email: normalizeEmail(claims.email),
+      emailVerified: claims.email_verified === true,
+      givenName: typeof claims.given_name === 'string' ? claims.given_name.trim() : '',
+      familyName: typeof claims.family_name === 'string' ? claims.family_name.trim() : ''
+    }
+  };
+}
+
+async function getGoogleUserInfo(accessToken) {
+  if (!accessToken) return null;
+  try {
+    const infoRes = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if (!infoRes.ok) return null;
+    const info = await infoRes.json();
+    return {
+      sub: info && info.sub ? String(info.sub) : '',
+      email: normalizeEmail(info && info.email),
+      emailVerified: info && (info.email_verified === true || info.email_verified === 'true'),
+      givenName: typeof (info && info.given_name) === 'string' ? info.given_name.trim() : '',
+      familyName: typeof (info && info.family_name) === 'string' ? info.family_name.trim() : ''
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+app.get('/api/auth/google', authRateLimit, function(req, res) {
+  if (!ensureGoogleAuthConfigured()) {
+    return res.status(503).json({ error: 'Google sign-in is not configured' });
+  }
+  var returnToPath = normalizePostLoginRedirectPath(req.query.returnTo);
+  var state = createGoogleOAuthState(returnToPath);
+  var authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+  authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('scope', GOOGLE_OAUTH_SCOPES);
+  authUrl.searchParams.set('state', state);
+  authUrl.searchParams.set('prompt', 'select_account');
+  res.redirect(authUrl.toString());
+});
+
+app.get('/api/auth/google/callback', authRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  if (!ensureGoogleAuthConfigured()) return redirectGoogleAuthError(res, 'provider_not_configured');
+
+  var oauthError = typeof req.query.error === 'string' ? req.query.error : '';
+  if (oauthError) {
+    var reason = oauthError === 'access_denied' ? 'cancelled' : 'provider_rejected';
+    return redirectGoogleAuthError(res, reason);
+  }
+
+  var providedState = typeof req.query.state === 'string' ? req.query.state : '';
+  if (!providedState) return redirectGoogleAuthError(res, 'invalid_state');
+  var oauthStateEntry = consumeGoogleOAuthState(providedState);
+  if (!oauthStateEntry) return redirectGoogleAuthError(res, 'invalid_state');
+
+  var authCode = typeof req.query.code === 'string' ? req.query.code : '';
+  if (!authCode) return redirectGoogleAuthError(res, 'missing_code');
+
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: authCode,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: GOOGLE_REDIRECT_URI,
+        grant_type: 'authorization_code'
+      }).toString()
+    });
+
+    if (!tokenRes.ok) return redirectGoogleAuthError(res, 'token_exchange_failed');
+    const tokenData = await tokenRes.json();
+    if (!tokenData || !tokenData.id_token) return redirectGoogleAuthError(res, 'invalid_token_response');
+
+    var idTokenProfile = getGoogleProfileFromIdToken(tokenData.id_token);
+    if (!idTokenProfile.valid) return redirectGoogleAuthError(res, idTokenProfile.reason);
+
+    var profile = idTokenProfile.profile;
+    // Google may omit profile fields depending on account settings, so fetch userinfo as fallback.
+    if (!profile.email || !profile.givenName || !profile.familyName) {
+      var userInfo = await getGoogleUserInfo(tokenData.access_token);
+      if (userInfo) {
+        profile = {
+          sub: profile.sub || userInfo.sub,
+          email: profile.email || userInfo.email,
+          emailVerified: profile.emailVerified || userInfo.emailVerified,
+          givenName: profile.givenName || userInfo.givenName,
+          familyName: profile.familyName || userInfo.familyName
+        };
+      }
+    }
+
+    if (!profile.sub || !profile.email) return redirectGoogleAuthError(res, 'missing_profile_data');
+
+    const users = db.collection('users');
+    let user = await users.findOne({ googleId: profile.sub });
+    if (!user) {
+      const byEmail = await users.findOne({ email: profile.email });
+      if (byEmail && byEmail.googleId && byEmail.googleId !== profile.sub) {
+        return redirectGoogleAuthError(res, 'google_account_conflict');
+      }
+      if (byEmail) {
+        const setFields = {
+          googleId: profile.sub,
+          googleEmailVerified: !!profile.emailVerified,
+          updatedAt: new Date()
+        };
+        if (!byEmail.firstName && profile.givenName) setFields.firstName = profile.givenName;
+        if (!byEmail.lastName && profile.familyName) setFields.lastName = profile.familyName;
+        await users.updateOne({ _id: byEmail._id }, { $set: setFields });
+        user = Object.assign({}, byEmail, setFields);
+      }
+    }
+
+    if (!user) {
+      const generatedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+      const newUserDoc = {
+        email: profile.email,
+        password: generatedPassword,
+        firstName: profile.givenName || '',
+        lastName: profile.familyName || '',
+        isAdmin: false,
+        googleId: profile.sub,
+        googleEmailVerified: !!profile.emailVerified,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastLoginAt: new Date()
+      };
+      const created = await users.insertOne(newUserDoc);
+      user = Object.assign({ _id: created.insertedId }, newUserDoc);
+    }
+
+    const token = jwt.sign(
+      { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
+    const deviceFingerprint = buildDeviceFingerprint(req);
+    const knownDeviceFingerprints = Array.isArray(user.knownDeviceFingerprints) ? user.knownDeviceFingerprints : [];
+    const isNewDevice = !knownDeviceFingerprints.includes(deviceFingerprint);
+    const updatedFingerprints = isNewDevice
+      ? [deviceFingerprint].concat(knownDeviceFingerprints).slice(0, 20)
+      : knownDeviceFingerprints;
+    await users.updateOne(
+      { _id: user._id },
+      { $set: { knownDeviceFingerprints: updatedFingerprints, lastLoginAt: new Date(), updatedAt: new Date() } }
+    );
+    if (isNewDevice) {
+      await maybeSendPreferenceNotificationEmail(
+        user._id.toString(),
+        'login_notifications',
+        'New device sign-in detected',
+        `<p>We detected a sign-in to your Zorexium account from a new device.</p><p>If this was you, no action is needed. If not, please review your security settings immediately.</p>`,
+        '/marketplace-settings.html#panel-security'
+      );
+    }
+
+    var returnToPath = normalizePostLoginRedirectPath(oauthStateEntry.returnToPath);
+    var bridgeCode = createGoogleBridgeToken({
+      token: token,
+      user: { email: user.email, firstName: user.firstName || '', lastName: user.lastName || '' },
+      redirectTo: returnToPath
+    });
+    res.redirect(buildAppLoginUrl({ google: 'success', code: bridgeCode }));
+  } catch (error) {
+    console.error('Google callback error:', error);
+    return redirectGoogleAuthError(res, 'oauth_failed');
+  }
+});
+
+app.get('/api/auth/google/session', authRateLimit, function(req, res) {
+  var code = typeof req.query.code === 'string' ? req.query.code : '';
+  var session = consumeGoogleBridgeToken(code);
+  if (!session) return res.status(400).json({ error: 'Invalid or expired Google session code' });
+  res.json({
+    token: session.token,
+    user: session.user,
+    redirectTo: normalizePostLoginRedirectPath(session.redirectTo)
+  });
+});
 
 app.post('/api/auth/register', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
