@@ -842,6 +842,7 @@
 
   function lrStartGoogleSignIn() {
     var returnTo = lrResolveReturnToPath();
+    // Start OAuth on backend callback host, then backend returns to APP_URL/login-register.html with a one-time bridge code.
     window.location.href = LR_BACKEND + '/api/auth/google?returnTo=' + encodeURIComponent(returnTo);
   }
 

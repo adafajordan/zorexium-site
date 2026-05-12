@@ -114,7 +114,63 @@ const videoUpload = multer({
 
 // Backend origin used to build absolute video URLs returned to clients.
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'https://zorexium-backend.onrender.com';
-const APP_URL = (process.env.APP_URL || APP_BASE_URL || 'https://zorexium.io').replace(/\/+$/, '');
+function normalizeAbsoluteUrl(urlValue) {
+  if (typeof urlValue !== 'string') return '';
+  var trimmed = urlValue.trim();
+  if (!trimmed) return '';
+  try {
+    var parsed = new URL(trimmed);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return parsed.toString().replace(/\/+$/, '');
+  } catch (_) {
+    return '';
+  }
+}
+
+function extractOrigin(urlValue) {
+  var normalized = normalizeAbsoluteUrl(urlValue);
+  if (!normalized) return '';
+  try {
+    return new URL(normalized).origin;
+  } catch (_) {
+    return '';
+  }
+}
+
+function resolveAppUrl() {
+  var defaultUrl = 'https://zorexium.io';
+  var backendOrigins = new Set([
+    extractOrigin(BACKEND_BASE_URL),
+    extractOrigin(process.env.GOOGLE_REDIRECT_URI || '')
+  ]);
+  var fallbackCandidates = [
+    normalizeAbsoluteUrl(APP_BASE_URL),
+    defaultUrl
+  ].filter(Boolean);
+  var fallbackUrl = defaultUrl;
+  for (var j = 0; j < fallbackCandidates.length; j += 1) {
+    var fallbackOrigin = extractOrigin(fallbackCandidates[j]);
+    if (!fallbackOrigin || !backendOrigins.has(fallbackOrigin)) {
+      fallbackUrl = fallbackCandidates[j];
+      break;
+    }
+  }
+  var preferredCandidates = [
+    process.env.FRONTEND_URL,
+    process.env.APP_URL,
+    APP_BASE_URL,
+    defaultUrl
+  ];
+  var normalizedCandidates = preferredCandidates.map(normalizeAbsoluteUrl).filter(Boolean);
+  for (var i = 0; i < normalizedCandidates.length; i += 1) {
+    var candidateOrigin = extractOrigin(normalizedCandidates[i]);
+    if (candidateOrigin && backendOrigins.has(candidateOrigin)) continue;
+    return normalizedCandidates[i];
+  }
+  return fallbackUrl;
+}
+
+const APP_URL = resolveAppUrl();
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
@@ -755,6 +811,7 @@ function ensureGoogleAuthConfigured() {
 }
 
 function redirectGoogleAuthError(res, reason) {
+  // OAuth callbacks happen on the backend domain, but users should always land back on the website login UI.
   return res.redirect(buildAppLoginUrl({ google_error: reason || 'oauth_failed', tab: 'login' }));
 }
 
@@ -946,6 +1003,7 @@ app.get('/api/auth/google/callback', authRateLimit, async function(req, res) {
       user: { email: user.email, firstName: user.firstName || '', lastName: user.lastName || '' },
       redirectTo: returnToPath
     });
+    // Redirect back to the frontend login page so it can exchange the short bridge code for localStorage auth state.
     res.redirect(buildAppLoginUrl({ google: 'success', code: bridgeCode }));
   } catch (error) {
     console.error('Google callback error:', error);
