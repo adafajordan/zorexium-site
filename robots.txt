@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zorexium.io/sitemap.xml
