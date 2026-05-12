@@ -801,12 +801,20 @@ function getPayPalBankOnboardingUrlFromEnv() {
 // ── Config endpoint ────────────────────────────────────────────────────────────
 app.get('/api/config', function(req, res) {
   const clientId = process.env.PAYPAL_CLIENT_ID || null;
-  res.json({ paypalClientId: clientId, paypalBankOnboardingUrl: getPayPalBankOnboardingUrlFromEnv() });
+  res.json({
+    paypalClientId: clientId,
+    paypalBankOnboardingUrl: getPayPalBankOnboardingUrlFromEnv(),
+    googleClientId: GOOGLE_CLIENT_ID || null
+  });
 });
 
 // ── USER AUTHENTICATION ────────────────────────────────────────────────────────
 
-function ensureGoogleAuthConfigured() {
+function ensureGoogleClientConfigured() {
+  return !!GOOGLE_CLIENT_ID;
+}
+
+function ensureGoogleOAuthRedirectConfigured() {
   return !!GOOGLE_CLIENT_ID && !!GOOGLE_CLIENT_SECRET && !!GOOGLE_REDIRECT_URI;
 }
 
@@ -815,29 +823,166 @@ function redirectGoogleAuthError(res, reason) {
   return res.redirect(buildAppLoginUrl({ google_error: reason || 'oauth_failed', tab: 'login' }));
 }
 
-function getGoogleProfileFromIdToken(idToken) {
-  var claims = decodeJwtPayload(idToken);
-  if (!claims) return { valid: false, reason: 'invalid_id_token' };
-  var issuer = String(claims.iss || '');
-  var validIssuer = issuer === 'https://accounts.google.com' || issuer === 'accounts.google.com';
-  if (!validIssuer) return { valid: false, reason: 'invalid_issuer' };
-  var audience = claims.aud;
-  var audienceOk = Array.isArray(audience)
-    ? audience.indexOf(GOOGLE_CLIENT_ID) !== -1
-    : audience === GOOGLE_CLIENT_ID;
-  if (!audienceOk) return { valid: false, reason: 'invalid_audience' };
-  var exp = Number(claims.exp || 0);
-  if (!exp || (exp * 1000) <= Date.now()) return { valid: false, reason: 'expired_id_token' };
-  if (!claims.sub) return { valid: false, reason: 'missing_subject' };
+async function getGoogleProfileFromIdToken(idToken) {
+  if (!idToken || typeof idToken !== 'string') return { valid: false, reason: 'missing_id_token' };
+  try {
+    const tokenInfoRes = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
+    if (!tokenInfoRes.ok) return { valid: false, reason: 'invalid_id_token' };
+    const claims = await tokenInfoRes.json();
+    if (!claims || typeof claims !== 'object') return { valid: false, reason: 'invalid_id_token' };
+    var issuer = String(claims.iss || '');
+    var validIssuer = issuer === 'https://accounts.google.com' || issuer === 'accounts.google.com';
+    if (!validIssuer) return { valid: false, reason: 'invalid_issuer' };
+    var audience = claims.aud;
+    var audienceOk = Array.isArray(audience)
+      ? audience.indexOf(GOOGLE_CLIENT_ID) !== -1
+      : audience === GOOGLE_CLIENT_ID;
+    if (!audienceOk) return { valid: false, reason: 'invalid_audience' };
+    var exp = Number(claims.exp || 0);
+    if (!exp || (exp * 1000) <= Date.now()) return { valid: false, reason: 'expired_id_token' };
+    if (!claims.sub) return { valid: false, reason: 'missing_subject' };
+    return {
+      valid: true,
+      profile: {
+        sub: String(claims.sub),
+        email: normalizeEmail(claims.email),
+        emailVerified: claims.email_verified === true || claims.email_verified === 'true',
+        givenName: typeof claims.given_name === 'string' ? claims.given_name.trim() : '',
+        familyName: typeof claims.family_name === 'string' ? claims.family_name.trim() : '',
+        name: typeof claims.name === 'string' ? claims.name.trim() : '',
+        picture: typeof claims.picture === 'string' ? claims.picture.trim() : ''
+      }
+    };
+  } catch (error) {
+    console.error('Google id_token verification error:', error && error.message ? error.message : error);
+    return { valid: false, reason: 'invalid_id_token' };
+  }
+}
+
+async function verifyGoogleAccessToken(accessToken) {
+  if (!accessToken || typeof accessToken !== 'string') return { valid: false, reason: 'missing_access_token' };
+  try {
+    const tokenInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=' + encodeURIComponent(accessToken));
+    if (!tokenInfoRes.ok) return { valid: false, reason: 'invalid_access_token' };
+    const tokenInfo = await tokenInfoRes.json();
+    if (!tokenInfo || typeof tokenInfo !== 'object') return { valid: false, reason: 'invalid_access_token' };
+    var audience = tokenInfo.aud || tokenInfo.issued_to || '';
+    if (String(audience) !== GOOGLE_CLIENT_ID) return { valid: false, reason: 'invalid_audience' };
+    var expiresIn = Number(tokenInfo.expires_in || 0);
+    if (expiresIn <= 0) return { valid: false, reason: 'expired_access_token' };
+    var profile = await getGoogleUserInfo(accessToken);
+    if (!profile || !profile.sub || !profile.email) return { valid: false, reason: 'missing_profile_data' };
+    return { valid: true, profile: profile };
+  } catch (error) {
+    console.error('Google access_token verification error:', error && error.message ? error.message : error);
+    return { valid: false, reason: 'invalid_access_token' };
+  }
+}
+
+function mergeGoogleProfile(primary, fallback) {
   return {
-    valid: true,
-    profile: {
-      sub: String(claims.sub),
-      email: normalizeEmail(claims.email),
-      emailVerified: claims.email_verified === true,
-      givenName: typeof claims.given_name === 'string' ? claims.given_name.trim() : '',
-      familyName: typeof claims.family_name === 'string' ? claims.family_name.trim() : ''
+    sub: primary.sub || fallback.sub || '',
+    email: primary.email || fallback.email || '',
+    emailVerified: !!(primary.emailVerified || fallback.emailVerified),
+    givenName: primary.givenName || fallback.givenName || '',
+    familyName: primary.familyName || fallback.familyName || '',
+    name: primary.name || fallback.name || '',
+    picture: primary.picture || fallback.picture || ''
+  };
+}
+
+function splitGoogleDisplayName(profile) {
+  // Return existing split names if present; otherwise split a full display name from Google.
+  if (!profile || profile.givenName || profile.familyName || !profile.name) {
+    return {
+      givenName: profile && profile.givenName ? profile.givenName : '',
+      familyName: profile && profile.familyName ? profile.familyName : ''
+    };
+  }
+  var parts = String(profile.name).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return { givenName: '', familyName: '' };
+  return {
+    givenName: parts.shift() || '',
+    familyName: parts.join(' ')
+  };
+}
+
+async function findOrCreateGoogleUser(profile) {
+  const users = db.collection('users');
+  let user = await users.findOne({ googleId: profile.sub });
+  if (!user) {
+    const byEmail = await users.findOne({ email: profile.email });
+    if (byEmail && byEmail.googleId && byEmail.googleId !== profile.sub) {
+      return { error: 'google_account_conflict' };
     }
+    if (byEmail) {
+      const nameParts = splitGoogleDisplayName(profile);
+      const setFields = {
+        googleId: profile.sub,
+        googleEmailVerified: !!profile.emailVerified,
+        updatedAt: new Date()
+      };
+      if (!byEmail.firstName && nameParts.givenName) setFields.firstName = nameParts.givenName;
+      if (!byEmail.lastName && nameParts.familyName) setFields.lastName = nameParts.familyName;
+      if (!byEmail.googlePicture && profile.picture) setFields.googlePicture = profile.picture;
+      await users.updateOne({ _id: byEmail._id }, { $set: setFields });
+      user = Object.assign({}, byEmail, setFields);
+    }
+  }
+
+  if (!user) {
+    const nameParts = splitGoogleDisplayName(profile);
+    const generatedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+    const newUserDoc = {
+      email: profile.email,
+      password: generatedPassword,
+      firstName: nameParts.givenName || '',
+      lastName: nameParts.familyName || '',
+      isAdmin: false,
+      googleId: profile.sub,
+      googleEmailVerified: !!profile.emailVerified,
+      googlePicture: profile.picture || '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      lastLoginAt: new Date()
+    };
+    const created = await users.insertOne(newUserDoc);
+    user = Object.assign({ _id: created.insertedId }, newUserDoc);
+  }
+  return { user: user };
+}
+
+async function finalizeGoogleLogin(req, res, user) {
+  const users = db.collection('users');
+  const token = jwt.sign(
+    { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
+  const deviceFingerprint = buildDeviceFingerprint(req);
+  const knownDeviceFingerprints = Array.isArray(user.knownDeviceFingerprints) ? user.knownDeviceFingerprints : [];
+  const isNewDevice = !knownDeviceFingerprints.includes(deviceFingerprint);
+  const updatedFingerprints = isNewDevice
+    ? [deviceFingerprint].concat(knownDeviceFingerprints).slice(0, 20)
+    : knownDeviceFingerprints;
+  await users.updateOne(
+    { _id: user._id },
+    { $set: { knownDeviceFingerprints: updatedFingerprints, lastLoginAt: new Date(), updatedAt: new Date() } }
+  );
+  if (isNewDevice) {
+    await maybeSendPreferenceNotificationEmail(
+      user._id.toString(),
+      'login_notifications',
+      'New device sign-in detected',
+      `<p>We detected a sign-in to your Zorexium account from a new device.</p><p>If this was you, no action is needed. If not, please review your security settings immediately.</p>`,
+      '/marketplace-settings.html#panel-security'
+    );
+  }
+  return {
+    token: token,
+    user: user
   };
 }
 
@@ -854,15 +999,52 @@ async function getGoogleUserInfo(accessToken) {
       email: normalizeEmail(info && info.email),
       emailVerified: info && (info.email_verified === true || info.email_verified === 'true'),
       givenName: typeof (info && info.given_name) === 'string' ? info.given_name.trim() : '',
-      familyName: typeof (info && info.family_name) === 'string' ? info.family_name.trim() : ''
+      familyName: typeof (info && info.family_name) === 'string' ? info.family_name.trim() : '',
+      name: typeof (info && info.name) === 'string' ? info.name.trim() : '',
+      picture: typeof (info && info.picture) === 'string' ? info.picture.trim() : ''
     };
   } catch (_) {
     return null;
   }
 }
 
+async function getGoogleProfileFromCredentialPayload(payload) {
+  if (!payload || typeof payload !== 'object') return { valid: false, reason: 'missing_google_token' };
+  var idToken = typeof payload.credential === 'string' ? payload.credential.trim() : '';
+  if (!idToken) idToken = typeof payload.idToken === 'string' ? payload.idToken.trim() : '';
+  var accessToken = typeof payload.accessToken === 'string' ? payload.accessToken.trim() : '';
+  var verified = null;
+  if (idToken) {
+    verified = await getGoogleProfileFromIdToken(idToken);
+  } else if (accessToken) {
+    verified = await verifyGoogleAccessToken(accessToken);
+  } else {
+    return { valid: false, reason: 'missing_google_token' };
+  }
+  if (!verified.valid) return verified;
+  var profile = verified.profile;
+  if (isGoogleProfileIncomplete(profile) && accessToken) {
+    var userInfo = await getGoogleUserInfo(accessToken);
+    if (userInfo) profile = mergeGoogleProfile(profile, userInfo);
+  }
+  if (!profile.sub || !profile.email) return { valid: false, reason: 'missing_profile_data' };
+  return {
+    valid: true,
+    profile: profile
+  };
+}
+
+function isGoogleProfileIncomplete(profile) {
+  if (!profile || typeof profile !== 'object') return true;
+  if (!profile.email) return true;
+  if (!profile.givenName) return true;
+  if (!profile.familyName) return true;
+  if (!profile.picture) return true;
+  return false;
+}
+
 app.get('/api/auth/google', authRateLimit, function(req, res) {
-  if (!ensureGoogleAuthConfigured()) {
+  if (!ensureGoogleOAuthRedirectConfigured()) {
     return res.status(503).json({ error: 'Google sign-in is not configured' });
   }
   var returnToPath = normalizePostLoginRedirectPath(req.query.returnTo);
@@ -879,7 +1061,7 @@ app.get('/api/auth/google', authRateLimit, function(req, res) {
 
 app.get('/api/auth/google/callback', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  if (!ensureGoogleAuthConfigured()) return redirectGoogleAuthError(res, 'provider_not_configured');
+  if (!ensureGoogleOAuthRedirectConfigured()) return redirectGoogleAuthError(res, 'provider_not_configured');
 
   var oauthError = typeof req.query.error === 'string' ? req.query.error : '';
   if (oauthError) {
@@ -912,95 +1094,25 @@ app.get('/api/auth/google/callback', authRateLimit, async function(req, res) {
     const tokenData = await tokenRes.json();
     if (!tokenData || !tokenData.id_token) return redirectGoogleAuthError(res, 'invalid_token_response');
 
-    var idTokenProfile = getGoogleProfileFromIdToken(tokenData.id_token);
-    if (!idTokenProfile.valid) return redirectGoogleAuthError(res, idTokenProfile.reason);
-
-    var profile = idTokenProfile.profile;
-    // Google may omit profile fields depending on account settings, so fetch userinfo as fallback.
-    if (!profile.email || !profile.givenName || !profile.familyName) {
-      var userInfo = await getGoogleUserInfo(tokenData.access_token);
-      if (userInfo) {
-        profile = {
-          sub: profile.sub || userInfo.sub,
-          email: profile.email || userInfo.email,
-          emailVerified: profile.emailVerified || userInfo.emailVerified,
-          givenName: profile.givenName || userInfo.givenName,
-          familyName: profile.familyName || userInfo.familyName
-        };
-      }
-    }
-
-    if (!profile.sub || !profile.email) return redirectGoogleAuthError(res, 'missing_profile_data');
-
-    const users = db.collection('users');
-    let user = await users.findOne({ googleId: profile.sub });
-    if (!user) {
-      const byEmail = await users.findOne({ email: profile.email });
-      if (byEmail && byEmail.googleId && byEmail.googleId !== profile.sub) {
-        return redirectGoogleAuthError(res, 'google_account_conflict');
-      }
-      if (byEmail) {
-        const setFields = {
-          googleId: profile.sub,
-          googleEmailVerified: !!profile.emailVerified,
-          updatedAt: new Date()
-        };
-        if (!byEmail.firstName && profile.givenName) setFields.firstName = profile.givenName;
-        if (!byEmail.lastName && profile.familyName) setFields.lastName = profile.familyName;
-        await users.updateOne({ _id: byEmail._id }, { $set: setFields });
-        user = Object.assign({}, byEmail, setFields);
-      }
-    }
-
-    if (!user) {
-      const generatedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
-      const newUserDoc = {
-        email: profile.email,
-        password: generatedPassword,
-        firstName: profile.givenName || '',
-        lastName: profile.familyName || '',
-        isAdmin: false,
-        googleId: profile.sub,
-        googleEmailVerified: !!profile.emailVerified,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastLoginAt: new Date()
-      };
-      const created = await users.insertOne(newUserDoc);
-      user = Object.assign({ _id: created.insertedId }, newUserDoc);
-    }
-
-    const token = jwt.sign(
-      { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
-    const deviceFingerprint = buildDeviceFingerprint(req);
-    const knownDeviceFingerprints = Array.isArray(user.knownDeviceFingerprints) ? user.knownDeviceFingerprints : [];
-    const isNewDevice = !knownDeviceFingerprints.includes(deviceFingerprint);
-    const updatedFingerprints = isNewDevice
-      ? [deviceFingerprint].concat(knownDeviceFingerprints).slice(0, 20)
-      : knownDeviceFingerprints;
-    await users.updateOne(
-      { _id: user._id },
-      { $set: { knownDeviceFingerprints: updatedFingerprints, lastLoginAt: new Date(), updatedAt: new Date() } }
-    );
-    if (isNewDevice) {
-      await maybeSendPreferenceNotificationEmail(
-        user._id.toString(),
-        'login_notifications',
-        'New device sign-in detected',
-        `<p>We detected a sign-in to your Zorexium account from a new device.</p><p>If this was you, no action is needed. If not, please review your security settings immediately.</p>`,
-        '/marketplace-settings.html#panel-security'
-      );
-    }
+    var profileResult = await getGoogleProfileFromCredentialPayload({
+      idToken: tokenData.id_token,
+      accessToken: tokenData.access_token
+    });
+    if (!profileResult.valid) return redirectGoogleAuthError(res, profileResult.reason);
+    var profile = profileResult.profile;
+    var userResult = await findOrCreateGoogleUser(profile);
+    if (userResult.error) return redirectGoogleAuthError(res, userResult.error);
+    var loginResult = await finalizeGoogleLogin(req, res, userResult.user);
 
     var returnToPath = normalizePostLoginRedirectPath(oauthStateEntry.returnToPath);
     var bridgeCode = createGoogleBridgeToken({
-      token: token,
-      user: { email: user.email, firstName: user.firstName || '', lastName: user.lastName || '' },
+      token: loginResult.token,
+      user: {
+        email: userResult.user.email,
+        firstName: userResult.user.firstName || '',
+        lastName: userResult.user.lastName || '',
+        picture: userResult.user.googlePicture || profile.picture || ''
+      },
       redirectTo: returnToPath
     });
     // Redirect back to the frontend login page so it can exchange the short bridge code for localStorage auth state.
@@ -1020,6 +1132,39 @@ app.get('/api/auth/google/session', authRateLimit, function(req, res) {
     user: session.user,
     redirectTo: normalizePostLoginRedirectPath(session.redirectTo)
   });
+});
+
+app.post('/api/auth/google/token', authRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  if (!ensureGoogleClientConfigured()) return res.status(503).json({ error: 'Google sign-in is not configured' });
+  try {
+    var profileResult = await getGoogleProfileFromCredentialPayload(req.body || {});
+    if (!profileResult.valid) {
+      return res.status(401).json({ error: profileResult.reason || 'invalid_google_token' });
+    }
+    var profile = profileResult.profile;
+    var userResult = await findOrCreateGoogleUser(profile);
+    if (userResult.error) {
+      if (userResult.error === 'google_account_conflict') return res.status(409).json({ error: userResult.error });
+      return res.status(400).json({ error: userResult.error });
+    }
+    var loginResult = await finalizeGoogleLogin(req, res, userResult.user);
+    var returnToPath = normalizePostLoginRedirectPath(req.body && req.body.returnTo);
+    return res.json({
+      message: 'Google sign-in successful',
+      token: loginResult.token,
+      user: {
+        email: userResult.user.email,
+        firstName: userResult.user.firstName || '',
+        lastName: userResult.user.lastName || '',
+        picture: userResult.user.googlePicture || profile.picture || ''
+      },
+      redirectTo: returnToPath
+    });
+  } catch (error) {
+    console.error('Google token login error:', error);
+    return res.status(500).json({ error: 'google_auth_failed' });
+  }
 });
 
 app.post('/api/auth/register', authRateLimit, async function(req, res) {

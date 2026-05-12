@@ -570,8 +570,13 @@
 
 </main>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
   var LR_BACKEND = 'https://zorexium-backend.onrender.com';
+  var LR_GOOGLE_CLIENT_ID = '';
+  var lrGoogleTokenClient = null;
+  var lrGoogleReturnToPath = '/index.html';
+  var LR_GOOGLE_GIS_INIT_RETRY_DELAY_MS = 400;
 
   function lrShowTab(tab) {
     var isLogin = (tab === 'login');
@@ -840,10 +845,115 @@
     return '/index.html';
   }
 
+  function lrGoogleErrorMessage(code) {
+    var messages = {
+      cancelled: 'Google sign-in was cancelled.',
+      invalid_state: 'Google sign-in security check failed. Please try again.',
+      token_exchange_failed: 'Google sign-in failed while exchanging the auth code.',
+      missing_profile_data: 'Google did not provide a usable profile for sign-in.',
+      google_account_conflict: 'This Google account is linked to another Zorexium user.',
+      provider_not_configured: 'Google sign-in is not configured on this server.',
+      missing_google_token: 'Google sign-in did not return a token. Please try again.',
+      missing_id_token: 'Google sign-in did not return a token. Please try again.',
+      missing_access_token: 'Google sign-in did not return a token. Please try again.',
+      invalid_access_token: 'Google sign-in token validation failed. Please try again.',
+      invalid_id_token: 'Google sign-in token validation failed. Please try again.',
+      expired_access_token: 'Google sign-in expired before completion. Please try again.',
+      expired_id_token: 'Google sign-in expired before completion. Please try again.',
+      invalid_audience: 'Google sign-in was issued for a different app. Please try again.',
+      invalid_issuer: 'Google sign-in provider validation failed. Please try again.',
+      google_auth_failed: 'Google sign-in failed. Please try again.'
+    };
+    return messages[code] || 'Google sign-in failed. Please try again.';
+  }
+
+  function lrShowGoogleError(code) {
+    var errEl = document.getElementById('lrLoginError');
+    var errMsg = document.getElementById('lrLoginErrorMsg');
+    errMsg.textContent = lrGoogleErrorMessage(code);
+    errEl.classList.remove('hidden');
+    lrShowTab('login');
+  }
+
+  function lrStoreAuthSession(data) {
+    if (!data || !data.token) return false;
+    try {
+      localStorage.setItem('authToken', data.token);
+      var userInfo = data.user
+        ? { email: data.user.email, username: data.user.firstName || data.user.email }
+        : null;
+      if (userInfo) localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
+      return true;
+    } catch (ex) {
+      return false;
+    }
+  }
+
+  function lrEnsureGoogleTokenClient() {
+    if (lrGoogleTokenClient) return true;
+    if (!LR_GOOGLE_CLIENT_ID) return false;
+    if (!window.google || !google.accounts || !google.accounts.oauth2) return false;
+    lrGoogleTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: LR_GOOGLE_CLIENT_ID,
+      scope: 'openid email profile',
+      callback: lrHandleGoogleTokenResponse,
+      error_callback: function(error) {
+        // Google GIS popup error types include "popup_closed" when the user closes account chooser.
+        if (error && error.type === 'popup_closed') return lrShowGoogleError('cancelled');
+        return lrShowGoogleError('google_auth_failed');
+      }
+    });
+    return !!lrGoogleTokenClient;
+  }
+
+  async function lrInitGoogleSignIn() {
+    try {
+      var res = await fetch(LR_BACKEND + '/api/config', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      var data = await res.json();
+      LR_GOOGLE_CLIENT_ID = (data && typeof data.googleClientId === 'string') ? data.googleClientId.trim() : '';
+    } catch (e) {
+      LR_GOOGLE_CLIENT_ID = '';
+    }
+    if (!lrEnsureGoogleTokenClient()) {
+      // Single retry: handles startup race where GIS SDK initializes slightly after /api/config resolves.
+      setTimeout(function() { lrEnsureGoogleTokenClient(); }, LR_GOOGLE_GIS_INIT_RETRY_DELAY_MS);
+    }
+  }
+
+  async function lrHandleGoogleTokenResponse(tokenResponse) {
+    if (!tokenResponse || !tokenResponse.access_token) return lrShowGoogleError('missing_access_token');
+    try {
+      // Frontend receives Google token and immediately hands it to backend for verification + app session creation.
+      var res = await fetch(LR_BACKEND + '/api/auth/google/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          accessToken: tokenResponse.access_token,
+          returnTo: lrGoogleReturnToPath
+        })
+      });
+      var data = await res.json();
+      if (!res.ok || !data || !data.token) {
+        throw new Error((data && data.error) || 'google_auth_failed');
+      }
+      lrStoreAuthSession(data);
+      var destination = (data.redirectTo && data.redirectTo.charAt(0) === '/' && data.redirectTo.charAt(1) !== '/')
+        ? data.redirectTo
+        : '/index.html';
+      window.location.href = destination;
+    } catch (error) {
+      lrShowGoogleError(error && error.message ? error.message : 'google_auth_failed');
+    }
+  }
+
   function lrStartGoogleSignIn() {
-    var returnTo = lrResolveReturnToPath();
-    // Start OAuth on backend callback host, then backend returns to APP_URL/login-register.html with a one-time bridge code.
-    window.location.href = LR_BACKEND + '/api/auth/google?returnTo=' + encodeURIComponent(returnTo);
+    lrGoogleReturnToPath = lrResolveReturnToPath();
+    if (!lrEnsureGoogleTokenClient()) return lrShowGoogleError('provider_not_configured');
+    lrGoogleTokenClient.requestAccessToken({ prompt: 'select_account' });
   }
 
   async function lrHandleGoogleCallback() {
@@ -857,19 +967,10 @@
     var errMsg = document.getElementById('lrLoginErrorMsg');
     var googleError = (params.get('google_error') || '').trim();
     if (googleError) {
-      var messages = {
-        cancelled: 'Google sign-in was cancelled.',
-        invalid_state: 'Google sign-in security check failed. Please try again.',
-        token_exchange_failed: 'Google sign-in failed while exchanging the auth code.',
-        missing_profile_data: 'Google did not provide a usable profile for sign-in.',
-        google_account_conflict: 'This Google account is linked to another Zorexium user.',
-        provider_not_configured: 'Google sign-in is not configured on this server.'
-      };
-      errMsg.textContent = messages[googleError] || 'Google sign-in failed. Please try again.';
-      errEl.classList.remove('hidden');
-      lrShowTab('login');
+      lrShowGoogleError(googleError);
       return;
     }
+    // Legacy redirect callback compatibility: allow old backend flow to finish if still enabled.
     if (params.get('google') !== 'success') return;
     var code = (params.get('code') || '').trim();
     if (!code) return;
@@ -880,13 +981,7 @@
       });
       var data = await res.json();
       if (!res.ok || !data || !data.token) throw new Error((data && data.error) || 'Google sign-in failed');
-      try {
-        localStorage.setItem('authToken', data.token);
-        var userInfo = data.user
-          ? { email: data.user.email, username: data.user.firstName || data.user.email }
-          : null;
-        if (userInfo) localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
-      } catch (ex) {}
+      lrStoreAuthSession(data);
       var destination = (data.redirectTo && data.redirectTo.charAt(0) === '/' && data.redirectTo.charAt(1) !== '/')
         ? data.redirectTo
         : '/index.html';
@@ -906,6 +1001,7 @@
         lrShowTab('register');
       }
     } catch (e) {}
+    lrInitGoogleSignIn();
     lrHandleGoogleCallback();
   })();
 </script>
