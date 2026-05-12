@@ -853,7 +853,8 @@ async function getGoogleProfileFromIdToken(idToken) {
         picture: typeof claims.picture === 'string' ? claims.picture.trim() : ''
       }
     };
-  } catch (_) {
+  } catch (error) {
+    console.error('Google id_token verification error:', error && error.message ? error.message : error);
     return { valid: false, reason: 'invalid_id_token' };
   }
 }
@@ -872,7 +873,8 @@ async function verifyGoogleAccessToken(accessToken) {
     var profile = await getGoogleUserInfo(accessToken);
     if (!profile || !profile.sub || !profile.email) return { valid: false, reason: 'missing_profile_data' };
     return { valid: true, profile: profile };
-  } catch (_) {
+  } catch (error) {
+    console.error('Google access_token verification error:', error && error.message ? error.message : error);
     return { valid: false, reason: 'invalid_access_token' };
   }
 }
@@ -890,6 +892,7 @@ function mergeGoogleProfile(primary, fallback) {
 }
 
 function splitGoogleDisplayName(profile) {
+  // Return existing split names if present; otherwise split a full display name from Google.
   if (!profile || profile.givenName || profile.familyName || !profile.name) {
     return {
       givenName: profile && profile.givenName ? profile.givenName : '',
@@ -1020,7 +1023,7 @@ async function getGoogleProfileFromCredentialPayload(payload) {
   }
   if (!verified.valid) return verified;
   var profile = verified.profile;
-  if ((!profile.email || !profile.givenName || !profile.familyName || !profile.picture) && accessToken) {
+  if (isGoogleProfileIncomplete(profile) && accessToken) {
     var userInfo = await getGoogleUserInfo(accessToken);
     if (userInfo) profile = mergeGoogleProfile(profile, userInfo);
   }
@@ -1029,6 +1032,15 @@ async function getGoogleProfileFromCredentialPayload(payload) {
     valid: true,
     profile: profile
   };
+}
+
+function isGoogleProfileIncomplete(profile) {
+  if (!profile || typeof profile !== 'object') return true;
+  if (!profile.email) return true;
+  if (!profile.givenName) return true;
+  if (!profile.familyName) return true;
+  if (!profile.picture) return true;
+  return false;
 }
 
 app.get('/api/auth/google', authRateLimit, function(req, res) {
@@ -1128,7 +1140,6 @@ app.post('/api/auth/google/token', authRateLimit, async function(req, res) {
   try {
     var profileResult = await getGoogleProfileFromCredentialPayload(req.body || {});
     if (!profileResult.valid) {
-      if (profileResult.reason === 'google_account_conflict') return res.status(409).json({ error: profileResult.reason });
       return res.status(401).json({ error: profileResult.reason || 'invalid_google_token' });
     }
     var profile = profileResult.profile;

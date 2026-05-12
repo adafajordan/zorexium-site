@@ -576,6 +576,7 @@
   var LR_GOOGLE_CLIENT_ID = '';
   var lrGoogleTokenClient = null;
   var lrGoogleReturnToPath = '/index.html';
+  var LR_GOOGLE_GIS_INIT_RETRY_DELAY_MS = 400;
 
   function lrShowTab(tab) {
     var isLogin = (tab === 'login');
@@ -897,6 +898,7 @@
       scope: 'openid email profile',
       callback: lrHandleGoogleTokenResponse,
       error_callback: function(error) {
+        // Google GIS popup error types include "popup_closed" when the user closes account chooser.
         if (error && error.type === 'popup_closed') return lrShowGoogleError('cancelled');
         return lrShowGoogleError('google_auth_failed');
       }
@@ -916,7 +918,8 @@
       LR_GOOGLE_CLIENT_ID = '';
     }
     if (!lrEnsureGoogleTokenClient()) {
-      setTimeout(function() { lrEnsureGoogleTokenClient(); }, 400);
+      // Single retry: handles startup race where GIS SDK initializes slightly after /api/config resolves.
+      setTimeout(function() { lrEnsureGoogleTokenClient(); }, LR_GOOGLE_GIS_INIT_RETRY_DELAY_MS);
     }
   }
 
