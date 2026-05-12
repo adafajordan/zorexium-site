@@ -120,10 +120,11 @@ const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
 const GOOGLE_OAUTH_SCOPES = 'openid email profile';
 const GOOGLE_OAUTH_STATE_COOKIE = 'google_oauth_state';
-const GOOGLE_OAUTH_RETURN_COOKIE = 'google_oauth_return_to';
 const GOOGLE_OAUTH_COOKIE_MAX_AGE = 10 * 60;
+const GOOGLE_OAUTH_STATE_TTL_MS = GOOGLE_OAUTH_COOKIE_MAX_AGE * 1000;
 const GOOGLE_BRIDGE_TOKEN_MAX_AGE_MS = 5 * 60 * 1000;
 const googleAuthBridgeTokens = new Map();
+const googleOAuthStateStore = new Map();
 
 // Parse and measure base64 data URL payload size in bytes so backend checks match real per-file size.
 function getDataUrlPayloadBytes(dataUrl) {
@@ -281,6 +282,32 @@ function buildAppLoginUrl(extraParams) {
     });
   }
   return url.toString();
+}
+
+function hashGoogleState(value) {
+  return crypto.createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
+}
+
+function createGoogleOAuthState(returnToPath) {
+  var now = Date.now();
+  for (const [stateKey, stateEntry] of googleOAuthStateStore.entries()) {
+    if (!stateEntry || stateEntry.expiresAt <= now) googleOAuthStateStore.delete(stateKey);
+  }
+  var state = crypto.randomBytes(24).toString('hex');
+  googleOAuthStateStore.set(state, {
+    returnToPath: normalizePostLoginRedirectPath(returnToPath),
+    expiresAt: now + GOOGLE_OAUTH_STATE_TTL_MS
+  });
+  return state;
+}
+
+function consumeGoogleOAuthState(state) {
+  if (typeof state !== 'string' || !/^[a-f0-9]{48}$/.test(state)) return null;
+  var entry = googleOAuthStateStore.get(state);
+  if (!entry) return null;
+  googleOAuthStateStore.delete(state);
+  if (!entry.expiresAt || entry.expiresAt <= Date.now()) return null;
+  return entry;
 }
 
 function createGoogleBridgeToken(payload) {
@@ -732,21 +759,13 @@ function ensureGoogleAuthConfigured() {
   return !!GOOGLE_CLIENT_ID && !!GOOGLE_CLIENT_SECRET && !!GOOGLE_REDIRECT_URI;
 }
 
-function setGoogleOAuthCookies(res, state, returnToPath) {
-  res.setHeader('Set-Cookie', [
-    buildCookieHeader(GOOGLE_OAUTH_STATE_COOKIE, state, {
-      httpOnly: true,
-      maxAge: GOOGLE_OAUTH_COOKIE_MAX_AGE,
-      sameSite: 'Lax',
-      secure: AUTH_COOKIE_SECURE
-    }),
-    buildCookieHeader(GOOGLE_OAUTH_RETURN_COOKIE, returnToPath, {
-      httpOnly: true,
-      maxAge: GOOGLE_OAUTH_COOKIE_MAX_AGE,
-      sameSite: 'Lax',
-      secure: AUTH_COOKIE_SECURE
-    })
-  ]);
+function setGoogleOAuthCookies(res, stateHash) {
+  res.setHeader('Set-Cookie', buildCookieHeader(GOOGLE_OAUTH_STATE_COOKIE, stateHash, {
+    httpOnly: true,
+    maxAge: GOOGLE_OAUTH_COOKIE_MAX_AGE,
+    sameSite: 'Lax',
+    secure: AUTH_COOKIE_SECURE
+  }));
 }
 
 function redirectGoogleAuthError(res, reason) {
@@ -804,8 +823,8 @@ app.get('/api/auth/google', authRateLimit, function(req, res) {
     return res.status(503).json({ error: 'Google sign-in is not configured' });
   }
   var returnToPath = normalizePostLoginRedirectPath(req.query.returnTo);
-  var state = crypto.randomBytes(24).toString('hex');
-  setGoogleOAuthCookies(res, state, returnToPath);
+  var state = createGoogleOAuthState(returnToPath);
+  setGoogleOAuthCookies(res, hashGoogleState(state));
   var authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
   authUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
@@ -827,11 +846,13 @@ app.get('/api/auth/google/callback', authRateLimit, async function(req, res) {
   }
 
   var cookies = parseCookies(req.headers.cookie);
-  var expectedState = cookies[GOOGLE_OAUTH_STATE_COOKIE];
+  var expectedStateHash = cookies[GOOGLE_OAUTH_STATE_COOKIE];
   var providedState = typeof req.query.state === 'string' ? req.query.state : '';
-  if (!expectedState || !providedState || expectedState !== providedState) {
+  if (!expectedStateHash || !providedState || expectedStateHash !== hashGoogleState(providedState)) {
     return redirectGoogleAuthError(res, 'invalid_state');
   }
+  var oauthStateEntry = consumeGoogleOAuthState(providedState);
+  if (!oauthStateEntry) return redirectGoogleAuthError(res, 'invalid_state');
 
   var authCode = typeof req.query.code === 'string' ? req.query.code : '';
   if (!authCode) return redirectGoogleAuthError(res, 'missing_code');
@@ -938,7 +959,7 @@ app.get('/api/auth/google/callback', authRateLimit, async function(req, res) {
       );
     }
 
-    var returnToPath = normalizePostLoginRedirectPath(cookies[GOOGLE_OAUTH_RETURN_COOKIE]);
+    var returnToPath = normalizePostLoginRedirectPath(oauthStateEntry.returnToPath);
     var bridgeCode = createGoogleBridgeToken({
       token: token,
       user: { email: user.email, firstName: user.firstName || '', lastName: user.lastName || '' },
