@@ -21,9 +21,9 @@ Set the following in your Render service's **Environment** tab:
 | `FRONTEND_URL`  | Optional | Preferred frontend URL override for OAuth redirects (recommended to keep users off backend host) |
 | `BACKEND_BASE_URL` | Optional | Backend base URL for absolute media links |
 | `CORS_ORIGINS`  | Optional | Comma-separated extra origins (zorexium.io is always allowed) |
-| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID (required only for Google sign-in) |
-| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret (required only for Google sign-in) |
-| `GOOGLE_REDIRECT_URI` | Optional | Google callback URL (e.g. `https://zorexium-backend.onrender.com/api/auth/google/callback`) |
+| `GOOGLE_CLIENT_ID` | Optional | Google OAuth web client ID (required for frontend-initiated Google sign-in) |
+| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret (only needed if keeping legacy backend redirect callback flow) |
+| `GOOGLE_REDIRECT_URI` | Optional | Google callback URL for legacy backend redirect flow (e.g. `https://zorexium-backend.onrender.com/api/auth/google/callback`) |
 | `PAYPAL_CLIENT_ID` | Optional | PayPal client ID |
 | `PAYPAL_SECRET` | Optional | PayPal secret |
 | `PAYPAL_MODE`   | Optional | `sandbox` or `live` |
@@ -40,9 +40,11 @@ See `.env.example` for the full template.
 
 ---
 
-## Google OAuth Branding (showing **Zorexium** instead of backend hostname)
+## Google Sign-In Console Setup (frontend-initiated flow)
 
-Repository code can control callback routing, but the Google chooser/consent label is controlled by your Google Cloud OAuth settings.
+Google sign-in now starts on `https://zorexium.io` (frontend) and sends the Google token to backend `POST /api/auth/google/token` for verification + app session creation.
+
+Repository code controls frontend UX routing, but the Google chooser/consent label is controlled by your Google Cloud OAuth settings.
 
 In **Google Cloud Console → APIs & Services → OAuth consent screen**, set:
 
@@ -54,11 +56,15 @@ In **Google Cloud Console → APIs & Services → OAuth consent screen**, set:
 - **App domain → Authorized domains**: include `zorexium.io` (and `www.zorexium.io` if used)
 - (Recommended) **Privacy Policy URL** and **Terms of Service URL** on your main domain
 
-In **Credentials → OAuth 2.0 Client ID**, keep the callback as:
+In **Credentials → OAuth 2.0 Client ID** (Web application), configure:
 
-- **Authorized redirect URI**: `https://zorexium-backend.onrender.com/api/auth/google/callback`
+- **Authorized JavaScript origins**:
+  - `https://zorexium.io`
+  - `https://www.zorexium.io` (if used)
+- (Optional/legacy) **Authorized redirect URI** for backend callback:
+  - `https://zorexium-backend.onrender.com/api/auth/google/callback`
 
-This combination lets Google call the backend callback while user-facing branding stays Zorexium.
+For normal sign-in UX, users remain on the frontend domain and are no longer expected to land on backend callback pages.
 
 ---
 
