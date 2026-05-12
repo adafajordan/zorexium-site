@@ -114,7 +114,7 @@ const videoUpload = multer({
 
 // Backend origin used to build absolute video URLs returned to clients.
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || 'https://zorexium-backend.onrender.com';
-function normalizeAbsoluteHttpUrl(urlValue) {
+function normalizeAbsoluteUrl(urlValue) {
   if (typeof urlValue !== 'string') return '';
   var trimmed = urlValue.trim();
   if (!trimmed) return '';
@@ -128,7 +128,7 @@ function normalizeAbsoluteHttpUrl(urlValue) {
 }
 
 function extractOrigin(urlValue) {
-  var normalized = normalizeAbsoluteHttpUrl(urlValue);
+  var normalized = normalizeAbsoluteUrl(urlValue);
   if (!normalized) return '';
   try {
     return new URL(normalized).origin;
@@ -139,24 +139,35 @@ function extractOrigin(urlValue) {
 
 function resolveAppUrl() {
   var defaultUrl = 'https://zorexium.io';
-  var fallbackUrl = normalizeAbsoluteHttpUrl(APP_BASE_URL) || defaultUrl;
   var backendOrigins = new Set([
     extractOrigin(BACKEND_BASE_URL),
     extractOrigin(process.env.GOOGLE_REDIRECT_URI || '')
   ]);
+  var fallbackCandidates = [
+    normalizeAbsoluteUrl(APP_BASE_URL),
+    defaultUrl
+  ].filter(Boolean);
+  var fallbackUrl = defaultUrl;
+  for (var j = 0; j < fallbackCandidates.length; j += 1) {
+    var fallbackOrigin = extractOrigin(fallbackCandidates[j]);
+    if (!fallbackOrigin || !backendOrigins.has(fallbackOrigin)) {
+      fallbackUrl = fallbackCandidates[j];
+      break;
+    }
+  }
   var preferredCandidates = [
     process.env.FRONTEND_URL,
     process.env.APP_URL,
     APP_BASE_URL,
     defaultUrl
   ];
-  var normalizedCandidates = preferredCandidates.map(normalizeAbsoluteHttpUrl).filter(Boolean);
+  var normalizedCandidates = preferredCandidates.map(normalizeAbsoluteUrl).filter(Boolean);
   for (var i = 0; i < normalizedCandidates.length; i += 1) {
     var candidateOrigin = extractOrigin(normalizedCandidates[i]);
     if (candidateOrigin && backendOrigins.has(candidateOrigin)) continue;
     return normalizedCandidates[i];
   }
-  return normalizedCandidates[0] || fallbackUrl;
+  return fallbackUrl;
 }
 
 const APP_URL = resolveAppUrl();
