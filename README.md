@@ -17,7 +17,12 @@ Set the following in your Render service's **Environment** tab:
 | `MONGO_URI`     | ✅ Yes   | MongoDB Atlas connection string |
 | `JWT_SECRET`    | ✅ Yes   | Random secret ≥ 64 chars — generate with `openssl rand -hex 64` |
 | `NODE_ENV`      | ✅ Yes   | Must be `production` to enable secure cookies and suppress dev token leak |
+| `APP_URL`       | ✅ Yes   | Frontend URL (e.g. `https://zorexium.io`) used for OAuth return redirects |
+| `BACKEND_BASE_URL` | Optional | Backend base URL for absolute media links |
 | `CORS_ORIGINS`  | Optional | Comma-separated extra origins (zorexium.io is always allowed) |
+| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID (required only for Google sign-in) |
+| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret (required only for Google sign-in) |
+| `GOOGLE_REDIRECT_URI` | Optional | Google callback URL (e.g. `https://zorexium-backend.onrender.com/api/auth/google/callback`) |
 | `PAYPAL_CLIENT_ID` | Optional | PayPal client ID |
 | `PAYPAL_SECRET` | Optional | PayPal secret |
 | `PAYPAL_MODE`   | Optional | `sandbox` or `live` |
