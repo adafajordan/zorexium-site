@@ -18,6 +18,7 @@ Set the following in your Render service's **Environment** tab:
 | `JWT_SECRET`    | ✅ Yes   | Random secret ≥ 64 chars — generate with `openssl rand -hex 64` |
 | `NODE_ENV`      | ✅ Yes   | Must be `production` to enable secure cookies and suppress dev token leak |
 | `APP_URL`       | ✅ Yes   | Frontend URL (e.g. `https://zorexium.io`) used for OAuth return redirects |
+| `FRONTEND_URL`  | Optional | Preferred frontend URL override for OAuth redirects (recommended to keep users off backend host) |
 | `BACKEND_BASE_URL` | Optional | Backend base URL for absolute media links |
 | `CORS_ORIGINS`  | Optional | Comma-separated extra origins (zorexium.io is always allowed) |
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID (required only for Google sign-in) |
@@ -36,6 +37,28 @@ Set the following in your Render service's **Environment** tab:
 | `SMTP_FROM`     | Optional | From address, e.g. `Zorexium <noreply@zorexium.io>` |
 
 See `.env.example` for the full template.
+
+---
+
+## Google OAuth Branding (showing **Zorexium** instead of backend hostname)
+
+Repository code can control callback routing, but the Google chooser/consent label is controlled by your Google Cloud OAuth settings.
+
+In **Google Cloud Console → APIs & Services → OAuth consent screen**, set:
+
+- **App name**: `Zorexium`
+- **App logo**: upload your Zorexium logo
+- **User support email**: your support inbox
+- **Developer contact email**: your developer/admin inbox
+- **App domain → Application home page**: `https://zorexium.io`
+- **App domain → Authorized domains**: include `zorexium.io` (and `www.zorexium.io` if used)
+- (Recommended) **Privacy Policy URL** and **Terms of Service URL** on your main domain
+
+In **Credentials → OAuth 2.0 Client ID**, keep the callback as:
+
+- **Authorized redirect URI**: `https://zorexium-backend.onrender.com/api/auth/google/callback`
+
+This combination lets Google call the backend callback while user-facing branding stays Zorexium.
 
 ---
 
