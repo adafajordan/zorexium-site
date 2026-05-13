@@ -81,6 +81,7 @@ const jwt = require('jsonwebtoken');
 const { MongoClient, ObjectId, GridFSBucket } = require('mongodb');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
+const Stripe = require('stripe');
 
 if (!globalThis.fetch) {
   globalThis.fetch = require('node-fetch');
@@ -89,7 +90,14 @@ if (!globalThis.fetch) {
 // Keep parser headroom above legacy 25 MB so large multi-image listing payloads are accepted.
 // 150 MB comfortably covers up to 10 images at 10 MB each when sent as base64 data URLs.
 // Per-image validation below is still the enforced upload-size rule.
-app.use(express.json({ limit: '150mb' }));
+app.use(express.json({
+  limit: '150mb',
+  verify: function(req, _res, buf) {
+    if (req.originalUrl === '/api/stripe/webhook') {
+      req.rawBody = buf;
+    }
+  }
+}));
 // Only serve files from /public – never expose server.js, package.json, .env.example, etc.
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -800,10 +808,10 @@ function getPayPalBankOnboardingUrlFromEnv() {
 
 // ── Config endpoint ────────────────────────────────────────────────────────────
 app.get('/api/config', function(req, res) {
-  const clientId = process.env.PAYPAL_CLIENT_ID || null;
   res.json({
-    paypalClientId: clientId,
+    paypalClientId: process.env.PAYPAL_CLIENT_ID || null,
     paypalBankOnboardingUrl: getPayPalBankOnboardingUrlFromEnv(),
+    stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
     googleClientId: GOOGLE_CLIENT_ID || null
   });
 });
@@ -1845,6 +1853,14 @@ const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '';
 const PAYPAL_PRO_SELLER_PLAN_ID = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
+const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+const STRIPE_SUCCESS_URL = process.env.STRIPE_SUCCESS_URL || '';
+const STRIPE_CANCEL_URL = process.env.STRIPE_CANCEL_URL || '';
+const STRIPE_CONNECT_REFRESH_URL = process.env.STRIPE_CONNECT_REFRESH_URL || '';
+const STRIPE_CONNECT_RETURN_URL = process.env.STRIPE_CONNECT_RETURN_URL || '';
+const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
 // Pro Seller monthly subscription price (USD) — $1/month
 const PRO_SELLER_MONTHLY_PRICE_USD = '1.00';
 // Standard shipping rate per item (USD) — $1.00 per item
@@ -1869,6 +1885,42 @@ const envPayPalMode = String(process.env.PAYPAL_MODE || '').trim().toLowerCase()
 
 if (envPayPalMode && envPayPalMode !== PAYPAL_MODE) {
   console.warn(`[PayPal] Ignoring PAYPAL_MODE=${process.env.PAYPAL_MODE}; runtime is locked to PAYPAL_MODE=${PAYPAL_MODE}.`);
+}
+
+function ensureStripeConfigured() {
+  if (!stripe || !STRIPE_SECRET_KEY) {
+    throw new Error('Stripe is not configured on the server');
+  }
+}
+
+function getStripeCheckoutSuccessUrl(orderId) {
+  const fallback = makeAbsoluteUrl('/payment-success.html?orderId=' + encodeURIComponent(String(orderId || '')) + '&session_id={CHECKOUT_SESSION_ID}');
+  if (!STRIPE_SUCCESS_URL) return fallback;
+  try {
+    const url = new URL(STRIPE_SUCCESS_URL);
+    if (!url.searchParams.has('orderId')) {
+      url.searchParams.set('orderId', String(orderId || ''));
+    }
+    if (!url.searchParams.has('session_id')) {
+      url.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}');
+    }
+    return url.toString();
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function getStripeCheckoutCancelUrl() {
+  if (!STRIPE_CANCEL_URL) return makeAbsoluteUrl('/checkout.html?cancelled=1');
+  return STRIPE_CANCEL_URL;
+}
+
+function getStripeConnectRefreshUrl() {
+  return STRIPE_CONNECT_REFRESH_URL || makeAbsoluteUrl('/seller-dashboard.html#payouts');
+}
+
+function getStripeConnectReturnUrl() {
+  return STRIPE_CONNECT_RETURN_URL || makeAbsoluteUrl('/seller-dashboard.html#payouts');
 }
 
 function normalizeCountryCode(value) {
@@ -2946,9 +2998,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
     }
 
     // Verify the subscription with PayPal
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
-    }
+    ensureStripeConfigured();
     const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
     const subRes = await fetch(`${paypalApiUrl}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
@@ -3163,52 +3213,55 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       return res.status(400).json({ error: 'Order total must be greater than $0.00' });
     }
 
-    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
-    const paypalResponse = await fetch(`${paypalApiUrl}/v2/checkout/orders`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        intent: 'CAPTURE',
-        purchase_units: [{
-          amount: {
-            currency_code: 'USD',
-            value: total.toFixed(2),
-            breakdown: {
-              item_total: { currency_code: 'USD', value: subtotal.toFixed(2) },
-              shipping: { currency_code: 'USD', value: shipping.toFixed(2) },
-              tax_total: { currency_code: 'USD', value: tax.toFixed(2) }
-            }
-          },
-          items: orderItems,
-          shipping: {
-            name: { full_name: `${buyer.firstName} ${buyer.lastName}` },
-            address: {
-              address_line_1: buyer.address.line1,
-              address_line_2: buyer.address.line2 || '',
-              admin_area_2: buyer.address.city,
-              admin_area_1: buyer.address.state,
-              postal_code: buyer.address.zip,
-              country_code: countryCode
-            }
-          }
-        }]
-      })
-    });
-    
-    const paypalOrder = await paypalResponse.json();
-    
-    if (!paypalResponse.ok) {
-      console.error('PayPal error:', paypalOrder);
-      throw new Error(paypalOrder.message || 'PayPal order creation failed');
-    }
-    
     const orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const checkoutLineItems = normalizedOrderItems.map(function(item) {
+      const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+      return {
+        quantity: quantity,
+        price_data: {
+          currency: 'usd',
+          unit_amount: Math.round((Number(item && item.price) || 0) * 100),
+          product_data: {
+            name: String(item && item.name ? item.name : 'Item').slice(0, 200),
+            images: item && item.image ? [String(item.image)] : undefined
+          }
+        }
+      };
+    });
+    if (shipping > 0) {
+      checkoutLineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: Math.round(shipping * 100),
+          product_data: { name: 'Shipping' }
+        }
+      });
+    }
+    if (tax > 0) {
+      checkoutLineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: Math.round(tax * 100),
+          product_data: { name: 'Sales Tax' }
+        }
+      });
+    }
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: checkoutLineItems,
+      success_url: getStripeCheckoutSuccessUrl(orderId),
+      cancel_url: getStripeCheckoutCancelUrl(),
+      customer_email: normalizeEmail(buyer && buyer.email),
+      metadata: { orderId: orderId },
+      client_reference_id: orderId
+    });
+
     const orderDocument = {
       id: orderId,
-      paypalOrderId: paypalOrder.id,
+      stripeCheckoutSessionId: checkoutSession.id,
+      paymentProvider: 'stripe',
       items: normalizedOrderItems,
       buyer: {
         ...buyer,
@@ -3235,7 +3288,8 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     
     res.json({
       orderId,
-      paypalOrderId: paypalOrder.id,
+      checkoutUrl: checkoutSession.url,
+      stripeSessionId: checkoutSession.id,
       totals: { subtotal, shipping, tax, total, currency: 'USD' },
       firstOrderFreeShippingApplied
     });
@@ -3478,6 +3532,134 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
   }
 });
 
+async function completeStripeCheckoutOrder(orderId, checkoutSession) {
+  if (!orderId) return { ok: false, error: 'Missing orderId' };
+  let reservedInventory = [];
+  let committed = false;
+  try {
+    let order = await db.collection('pendingOrders').findOne({ id: orderId });
+    const fromPendingOrders = !!order;
+    if (!order) {
+      order = await db.collection('orders').findOne({ id: orderId });
+      if (order && String(order.status || '').toLowerCase() === 'completed') {
+        return { ok: true, alreadyCompleted: true, order: order };
+      }
+    }
+    if (!order) return { ok: false, error: 'Order not found' };
+
+    reservedInventory = await reserveInventoryForOrder(order);
+    const completedOrderDoc = {
+      ...order,
+      status: 'completed',
+      paymentProvider: 'stripe',
+      stripeCheckoutSessionId: String(checkoutSession && checkoutSession.id ? checkoutSession.id : (order.stripeCheckoutSessionId || '')),
+      stripePaymentIntentId: String(checkoutSession && checkoutSession.payment_intent ? checkoutSession.payment_intent : ''),
+      completedAt: new Date(),
+      inventoryReserved: true
+    };
+    delete completedOrderDoc._id;
+
+    if (fromPendingOrders) {
+      await db.collection('orders').insertOne(completedOrderDoc);
+      await db.collection('pendingOrders').deleteOne({ id: orderId });
+    } else {
+      await db.collection('orders').updateOne(
+        { id: orderId },
+        {
+          $set: {
+            status: 'completed',
+            paymentProvider: 'stripe',
+            stripeCheckoutSessionId: completedOrderDoc.stripeCheckoutSessionId,
+            stripePaymentIntentId: completedOrderDoc.stripePaymentIntentId,
+            completedAt: completedOrderDoc.completedAt,
+            inventoryReserved: true
+          }
+        }
+      );
+    }
+    committed = true;
+    const finalizedOrder = await db.collection('orders').findOne({ id: orderId });
+    const syncedOrder = await syncCompletedOrderRecords(finalizedOrder || completedOrderDoc);
+    return { ok: true, order: syncedOrder || finalizedOrder || completedOrderDoc };
+  } catch (error) {
+    if (!committed && reservedInventory.length > 0) {
+      try {
+        await releaseInventoryReservations(reservedInventory);
+      } catch (rollbackError) {
+        console.error('Failed to roll back Stripe inventory reservations:', rollbackError.message);
+      }
+    }
+    return { ok: false, error: error.message || 'Stripe order completion failed' };
+  }
+}
+
+// POST /api/stripe/webhook – verify Stripe webhook signatures and finalize completed checkout sessions
+app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
+  if (!stripe || !STRIPE_WEBHOOK_SECRET) {
+    return res.status(503).json({ error: 'Stripe webhook is not configured on the server' });
+  }
+  const signature = req.headers['stripe-signature'];
+  if (!signature || !req.rawBody) {
+    return res.status(400).json({ error: 'Missing Stripe webhook signature payload' });
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, signature, STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    return res.status(400).json({ error: 'Invalid Stripe webhook signature' });
+  }
+
+  try {
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+      const session = event.data && event.data.object ? event.data.object : {};
+      const orderId = String(
+        (session && session.metadata && session.metadata.orderId)
+          || (session && session.client_reference_id)
+          || ''
+      ).trim();
+      if (orderId) {
+        const completion = await completeStripeCheckoutOrder(orderId, session);
+        if (!completion.ok) {
+          console.error('Stripe checkout completion failed:', completion.error);
+        }
+      }
+    }
+
+    if (event.type === 'account.updated') {
+      const account = event.data && event.data.object ? event.data.object : null;
+      if (account && account.id) {
+        const requirementsDue = Array.isArray(account.requirements && account.requirements.currently_due)
+          ? account.requirements.currently_due
+          : [];
+        const isConnected = !!(account.payouts_enabled && account.charges_enabled);
+        await db.collection('sellers').updateMany(
+          { stripeAccountId: String(account.id) },
+          {
+            $set: {
+              payoutProvider: 'stripe',
+              payoutProviderDestinationType: 'stripe_connect_express',
+              payoutAccountId: String(account.id),
+              payoutVerified: isConnected,
+              payoutOnboardingStatus: isConnected ? 'connected' : 'pending_provider',
+              payoutProviderBankStatus: isConnected ? 'connected' : 'pending_provider',
+              stripeChargesEnabled: !!account.charges_enabled,
+              stripePayoutsEnabled: !!account.payouts_enabled,
+              stripeDetailsSubmitted: !!account.details_submitted,
+              stripeRequirementsDue: requirementsDue,
+              updatedAt: new Date()
+            }
+          }
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Stripe webhook processing error:', error);
+  }
+
+  res.json({ received: true });
+});
+
 // ── GET USER ORDERS ────────────────────────────────────────────────────────────
 // Returns only orders that belong to the authenticated user.
 // Admins may pass ?all=true to retrieve all orders for support/admin use.
@@ -3680,7 +3862,11 @@ app.get('/api/orders/:orderId', async function(req, res) {
 
   try {
     const order = await db.collection('orders').findOne({ id: orderId });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order) {
+      const pendingOrder = await db.collection('pendingOrders').findOne({ id: orderId });
+      if (!pendingOrder) return res.status(404).json({ error: 'Order not found' });
+      return res.json(pendingOrder);
+    }
     // Return order without internal MongoDB _id, keeping buyer info for confirmation display
     res.json(order);
   } catch (error) {
@@ -4737,6 +4923,170 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
     res.json(sanitizeSellerForClient(updated));
   } catch (error) {
     console.error('Error updating seller profile:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+async function getOrCreateStripeConnectAccountForSeller(userId) {
+  ensureStripeConfigured();
+  const seller = await db.collection('sellers').findOne({ userId: userId });
+  if (!seller) return { error: 'Seller profile not found' };
+
+  let accountId = String(seller && seller.stripeAccountId ? seller.stripeAccountId : '').trim();
+  if (accountId) {
+    return { seller: seller, accountId: accountId, created: false };
+  }
+
+  const user = await db.collection('users').findOne({ _id: new ObjectId(userId) }, { projection: { email: 1 } });
+  const account = await stripe.accounts.create({
+    type: 'express',
+    email: normalizeEmail((seller && seller.businessEmail) || (seller && seller.personalEmail) || (user && user.email) || '')
+  });
+  accountId = String(account && account.id ? account.id : '').trim();
+  if (!accountId) return { error: 'Failed to create Stripe Connect account' };
+
+  await db.collection('sellers').updateOne(
+    { userId: userId },
+    {
+      $set: {
+        payoutProvider: 'stripe',
+        payoutProviderDestinationType: 'stripe_connect_express',
+        payoutAccountId: accountId,
+        stripeAccountId: accountId,
+        payoutVerified: false,
+        payoutOnboardingStatus: 'pending_provider',
+        payoutProviderBankStatus: 'pending_provider',
+        stripeChargesEnabled: false,
+        stripePayoutsEnabled: false,
+        stripeDetailsSubmitted: false,
+        stripeRequirementsDue: [],
+        updatedAt: new Date()
+      }
+    }
+  );
+  return { seller: seller, accountId: accountId, created: true };
+}
+
+async function getStripeConnectStatusForSeller(userId) {
+  ensureStripeConfigured();
+  const seller = await db.collection('sellers').findOne({ userId: userId });
+  if (!seller) return { error: 'Seller profile not found' };
+  const accountId = String(seller && seller.stripeAccountId ? seller.stripeAccountId : '').trim();
+  if (!accountId) {
+    return {
+      accountId: null,
+      connected: false,
+      chargesEnabled: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
+      requirementsDue: []
+    };
+  }
+
+  const account = await stripe.accounts.retrieve(accountId);
+  const requirementsDue = Array.isArray(account.requirements && account.requirements.currently_due)
+    ? account.requirements.currently_due
+    : [];
+  const connected = !!(account.payouts_enabled && account.charges_enabled);
+  const now = new Date();
+  await db.collection('sellers').updateOne(
+    { userId: userId },
+    {
+      $set: {
+        payoutProvider: 'stripe',
+        payoutProviderDestinationType: 'stripe_connect_express',
+        payoutAccountId: accountId,
+        stripeAccountId: accountId,
+        payoutVerified: connected,
+        payoutOnboardingStatus: connected ? 'connected' : 'pending_provider',
+        payoutProviderBankStatus: connected ? 'connected' : 'pending_provider',
+        stripeChargesEnabled: !!account.charges_enabled,
+        stripePayoutsEnabled: !!account.payouts_enabled,
+        stripeDetailsSubmitted: !!account.details_submitted,
+        stripeRequirementsDue: requirementsDue,
+        stripeRequirementsDisabledReason: String(account.requirements && account.requirements.disabled_reason ? account.requirements.disabled_reason : ''),
+        updatedAt: now,
+        ...(connected ? { payoutOnboardingCompletedAt: now } : {})
+      }
+    }
+  );
+  return {
+    accountId: accountId,
+    connected: connected,
+    chargesEnabled: !!account.charges_enabled,
+    payoutsEnabled: !!account.payouts_enabled,
+    detailsSubmitted: !!account.details_submitted,
+    requirementsDue: requirementsDue
+  };
+}
+
+// POST /api/stripe/connect/account – create or reuse the seller's Stripe Connect Express account
+app.post('/api/stripe/connect/account', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const result = await getOrCreateStripeConnectAccountForSeller(req.userId);
+    if (result.error) return res.status(404).json({ error: result.error });
+    res.json({ success: true, accountId: result.accountId, created: result.created });
+  } catch (error) {
+    console.error('Error creating Stripe Connect account:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/stripe/connect/onboarding-link – create a Stripe-hosted onboarding/account update link
+app.post('/api/stripe/connect/onboarding-link', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const result = await getOrCreateStripeConnectAccountForSeller(req.userId);
+    if (result.error) return res.status(404).json({ error: result.error });
+    const accountLink = await stripe.accountLinks.create({
+      account: result.accountId,
+      refresh_url: getStripeConnectRefreshUrl(),
+      return_url: getStripeConnectReturnUrl(),
+      type: 'account_onboarding'
+    });
+    await db.collection('sellers').updateOne(
+      { userId: req.userId },
+      {
+        $set: {
+          payoutOnboardingStatus: 'pending_provider',
+          payoutProviderBankStatus: 'pending_provider',
+          payoutProviderBankOnboardingUrl: accountLink.url,
+          payoutProviderBankOnboardingStartedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+    res.json({ success: true, accountId: result.accountId, url: accountLink.url });
+  } catch (error) {
+    console.error('Error creating Stripe onboarding link:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/stripe/connect/status – fetch latest Stripe account status for seller payouts
+app.get('/api/stripe/connect/status', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const status = await getStripeConnectStatusForSeller(req.userId);
+    if (status.error) return res.status(404).json({ error: status.error });
+    res.json(status);
+  } catch (error) {
+    console.error('Error fetching Stripe Connect status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/stripe/connect/dashboard-link – create an Express dashboard login link
+app.get('/api/stripe/connect/dashboard-link', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const result = await getOrCreateStripeConnectAccountForSeller(req.userId);
+    if (result.error) return res.status(404).json({ error: result.error });
+    const link = await stripe.accounts.createLoginLink(result.accountId);
+    res.json({ url: link.url });
+  } catch (error) {
+    console.error('Error creating Stripe dashboard login link:', error);
     res.status(500).json({ error: error.message });
   }
 });

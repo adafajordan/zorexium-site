@@ -69,7 +69,7 @@
     <div class="bg-[#181b21] rounded-lg border border-gray-700 p-4 mb-8">
       <p class="text-gray-300 text-base font-semibold mb-3">What happens next?</p>
       <ul class="space-y-2 text-base text-gray-400">
-        <li class="flex items-center gap-3"><i class="fas fa-envelope text-cyan-400 w-4 text-center"></i> A confirmation email will be sent to your PayPal address.</li>
+        <li class="flex items-center gap-3"><i class="fas fa-envelope text-cyan-400 w-4 text-center"></i> A confirmation email will be sent to your checkout email address.</li>
         <li class="flex items-center gap-3"><i class="fas fa-box text-cyan-400 w-4 text-center"></i> Your order will be packed and dispatched by the seller.</li>
         <li class="flex items-center gap-3"><i class="fas fa-truck text-cyan-400 w-4 text-center"></i> Track your shipment from <a href="track-your-order.html" class="text-cyan-400 hover:underline">Track My Order</a>.</li>
       </ul>
@@ -111,12 +111,14 @@
     </p>
   </div>
 
+  <script src="session.js"></script>
   <script>
     (async function () {
       const BACKEND_URL = 'https://zorexium-backend.onrender.com';
       const params = new URLSearchParams(window.location.search);
       const orderId = params.get('orderId');
       let currentOrder = null;
+      try { localStorage.removeItem('guestCart'); } catch (_) {}
 
       function money(value) {
         return '$' + (parseFloat(value) || 0).toFixed(2);
@@ -220,6 +222,13 @@
         if (!res.ok) return;
         const order = await res.json();
         currentOrder = order;
+        if (order && String(order.status || '').toLowerCase() === 'completed') {
+          try {
+            if (window.ZrxSession && typeof window.ZrxSession.isLoggedIn === 'function' && window.ZrxSession.isLoggedIn()) {
+              await window.ZrxSession.fetch(BACKEND_URL + '/api/cart', { method: 'DELETE', credentials: 'include' });
+            }
+          } catch (_) {}
+        }
 
         // Date
         if (order.createdAt) {

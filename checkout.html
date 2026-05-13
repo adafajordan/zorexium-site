@@ -28,8 +28,7 @@
     .step-badge { display: inline-flex; align-items: center; justify-content: center;
       width: 28px; height: 28px; border-radius: 50%; background: #22d3ee; color: #0b1a27;
       font-size: 13px; font-weight: 700; margin-right: 10px; flex-shrink: 0; }
-    #paypal-button-container { min-height: 45px; }
-    #paypal-button-container.disabled-paypal { pointer-events: none; opacity: 0.5; }
+    #stripeCheckoutBtn:disabled { pointer-events: none; opacity: 0.6; }
     .error-msg { color: #f87171; font-size: 12px; margin-top: 4px; display: none; }
     .error-msg.visible { display: block; }
           .nav-dropdown {
@@ -457,14 +456,16 @@
         </div>
       </div>
 
-      <!-- PayPal Payment -->
+      <!-- Stripe Payment -->
       <div class="form-card">
         <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center">
           <span class="step-badge">4</span>Payment
         </h2>
-        <p class="text-gray-400 text-base mb-5">Complete your purchase securely via PayPal. You can pay with your PayPal balance, credit card, or debit card.</p>
-        <div id="paypal-button-container" class="disabled-paypal"></div>
-        <p id="paypalNote" class="text-yellow-400 text-sm mt-3 hidden"><i class="fas fa-exclamation-triangle mr-1"></i>Please fill out all required fields above before paying.</p>
+        <p class="text-gray-400 text-base mb-5">Complete your purchase securely with Stripe Checkout. Pay with card using Stripe’s hosted checkout.</p>
+        <button id="stripeCheckoutBtn" type="button" onclick="startStripeCheckout()" class="w-full sm:w-auto px-5 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors" disabled>
+          <i class="fas fa-credit-card mr-2"></i>Pay with Stripe
+        </button>
+        <p id="stripeNote" class="text-yellow-400 text-sm mt-3 hidden"><i class="fas fa-exclamation-triangle mr-1"></i>Please fill out all required fields above before paying.</p>
       </div>
 
     </div>
@@ -506,7 +507,7 @@
         <div class="mt-5 pt-5 border-t border-gray-700">
           <div class="flex items-center gap-3 text-gray-400 text-sm mb-2">
             <i class="fas fa-lock text-green-400"></i>
-            <span>Payments are secured by PayPal</span>
+            <span>Payments are secured by Stripe</span>
           </div>
           <div class="flex items-center gap-3 text-gray-400 text-sm">
             <i class="fas fa-shield-alt text-cyan-400"></i>
@@ -522,26 +523,7 @@
 <script src="notifications.js"></script>
 <script src="session.js"></script>
 <script>
-  // ── PayPal SDK – loaded dynamically from backend config ─────────────────────
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
-
-fetch(BACKEND_URL + '/api/config')
-    .then(function(res) { return res.json(); })
-    .then(function(config) {
-      if (!config.paypalClientId) throw new Error('Missing PayPal client ID in config');
-      var script = document.createElement('script');
-      script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(config.paypalClientId) + '&currency=USD';
-      script.onload = function() { initPayPalButtons(); };
-      script.onerror = function() {
-        console.error('Failed to load PayPal SDK script.');
-        document.getElementById('paypal-button-container').textContent = 'Failed to load PayPal. Please check your connection and try again.';
-      };
-      document.head.appendChild(script);
-    })
-    .catch(function(err) {
-      console.error('Failed to load PayPal config:', err);
-      document.getElementById('paypal-button-container').textContent = 'Failed to load PayPal. Please check your connection and try again.';
-    });
 
   // ── Delivery Date Calculation ─────────────────────────────────────────────
   const SHIPPING_DAYS = { standard: 8 };
@@ -737,7 +719,7 @@ fetch(BACKEND_URL + '/api/config')
         document.getElementById(field.id).classList.remove('error');
         document.getElementById(field.errId).classList.remove('visible');
       }
-      updatePaypalState();
+      updateCheckoutState();
     };
     fieldEl.addEventListener('input', handleFieldChange);
     fieldEl.addEventListener('change', handleFieldChange);
@@ -747,14 +729,14 @@ fetch(BACKEND_URL + '/api/config')
     return required.every(isFieldValid);
   }
 
-  function updatePaypalState() {
-    const btn = document.getElementById('paypal-button-container');
-    const note = document.getElementById('paypalNote');
+  function updateCheckoutState() {
+    const btn = document.getElementById('stripeCheckoutBtn');
+    const note = document.getElementById('stripeNote');
     if (isFormReady() && cart.length > 0) {
-      btn.classList.remove('disabled-paypal');
+      btn.disabled = false;
       note.classList.add('hidden');
     } else {
-      btn.classList.add('disabled-paypal');
+      btn.disabled = true;
       note.classList.remove('hidden');
     }
   }
@@ -794,129 +776,66 @@ fetch(BACKEND_URL + '/api/config')
     return Object.values(commissionMap);
   }
 
-  // ── PayPal ────────────────────────────────────────────────────────────────────────────
-  // Internal order ID returned by the backend after creating the PayPal order.
-  // Stored here so onApprove can reference it for the capture step.
-  var pendingOrderId = null;
+  async function startStripeCheckout() {
+    if (!validateForm()) {
+      updateCheckoutState();
+      return;
+    }
+    const btn = document.getElementById('stripeCheckoutBtn');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Redirecting…';
+    }
 
-  function initPayPalButtons() {
-  paypal.Buttons({
-    style: {
-      layout: 'vertical',
-      color: 'gold',
-      shape: 'rect',
-      label: 'pay',
-    },
-
-    // Step 1 – Create the order on the backend (prices verified server-side).
-    createOrder: function(data, actions) {
-      if (!validateForm()) {
-        updatePaypalState();
-        return Promise.reject(new Error('Form incomplete'));
-      }
-
+    try {
       var checkedShipping = document.querySelector('input[name="shipping"]:checked');
-      var shippingMethod  = checkedShipping ? checkedShipping.value : 'standard';
-
+      var shippingMethod = checkedShipping ? checkedShipping.value : 'standard';
       var buyer = {
         firstName: document.getElementById('firstName').value.trim(),
-        lastName:  document.getElementById('lastName').value.trim(),
-        email:     document.getElementById('email').value.trim(),
-        phone:     (document.getElementById('phone').value || '').trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: (document.getElementById('phone').value || '').trim(),
         address: {
-          line1:   document.getElementById('address').value.trim(),
-          line2:   (document.getElementById('address2').value || '').trim(),
-          city:    document.getElementById('city').value.trim(),
-          state:   document.getElementById('state').value.trim(),
-          zip:     document.getElementById('zip').value.trim(),
-          country: document.getElementById('country').value.trim(),
-        },
-      };
-
-      return ZrxSession.fetch(BACKEND_URL + '/api/orders', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-  // Send full item details with prices
-  items:          cart.map(function(item) { 
-    return { 
-      id: item.id, 
-      name: item.name,
-      price: parseFloat(item.price),
-      quantity: item.quantity || 1,
-      sellerId: item.sellerId || '',
-      sellerName: item.sellerName || ''
-    }; 
-  }),
-  buyer:          buyer,
-  shippingMethod: shippingMethod,
-}),
-      })
-      .then(function(response) {
-        return response.json().then(function(result) {
-          if (!response.ok) {
-            throw new Error(result.error || 'Failed to create order');
-          }
-          return result;
-        });
-      })
-      .then(function(result) {
-        pendingOrderId = result.orderId;      // save for capture step
-        return result.paypalOrderId;          // hand PayPal order ID to the SDK
-      })
-      .catch(function(err) {
-        ZrxNotify.showNotification(err.message || 'Failed to create order. Please try again.', 'error');
-        return Promise.reject(err);
-      });
-    },
-
-    // Step 2 – Buyer approved payment in PayPal popup; capture it on the backend.
-    onApprove: function(data, actions) {
-      if (!pendingOrderId) {
-        ZrxNotify.showNotification('Unable to process payment. Please refresh the page and try again.', 'error');
-        return Promise.reject(new Error('Order reference lost. Please refresh and try again.'));
-      }
-
-      return ZrxSession.fetch(BACKEND_URL + '/api/orders/' + pendingOrderId + '/capture', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      .then(function(response) {
-        return response.json().then(function(result) {
-          if (!response.ok) {
-            throw new Error(result.error || 'Payment capture failed');
-          }
-          return result;
-        });
-      })
-      .then(function(result) {
-        // Clear cart after successful purchase
-        if (ZrxSession.isLoggedIn()) {
-          ZrxSession.fetch('https://zorexium-backend.onrender.com' + '/api/cart', {
-            method: 'DELETE',
-            credentials: 'include'
-          }).catch(function() {});
-        } else {
-          try { localStorage.removeItem('guestCart'); } catch (_) {}
+          line1: document.getElementById('address').value.trim(),
+          line2: (document.getElementById('address2').value || '').trim(),
+          city: document.getElementById('city').value.trim(),
+          state: document.getElementById('state').value.trim(),
+          zip: document.getElementById('zip').value.trim(),
+          country: document.getElementById('country').value.trim()
         }
-        window.location.href = 'payment-success.html?orderId=' + encodeURIComponent(pendingOrderId);
-      })
-      .catch(function(err) {
-        console.error('Capture error:', err);
-        ZrxNotify.showNotification(err.message || 'Payment failed. Please try again.', 'error');
+      };
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cart.map(function(item) {
+            return {
+              id: item.id,
+              name: item.name,
+              price: parseFloat(item.price),
+              quantity: item.quantity || 1,
+              sellerId: item.sellerId || '',
+              sellerName: item.sellerName || ''
+            };
+          }),
+          buyer: buyer,
+          shippingMethod: shippingMethod
+        })
       });
-    },
-
-    onError: function(err) {
-      console.error('PayPal error:', err);
-      ZrxNotify.showNotification('Payment failed. Please try again.', 'error');
-    },
-
-    onCancel: function() {
-      ZrxNotify.showNotification('Payment cancelled.', 'info');
+      const payload = await res.json().catch(function() { return {}; });
+      if (!res.ok) throw new Error(payload.error || 'Failed to start Stripe checkout');
+      if (!payload.checkoutUrl) throw new Error('Stripe checkout URL was not returned');
+      window.location.href = payload.checkoutUrl;
+    } catch (err) {
+      ZrxNotify.showNotification(err.message || 'Unable to start Stripe checkout. Please try again.', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+      updateCheckoutState();
     }
-  }).render('#paypal-button-container');
-  } // end initPayPalButtons
+  }
 
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
@@ -937,7 +856,11 @@ fetch(BACKEND_URL + '/api/config')
       updateDeliveryDates();
       renderSummary();
       updateCartBadge();
-      updatePaypalState();
+      updateCheckoutState();
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('cancelled') === '1') {
+        ZrxNotify.showNotification('Stripe checkout was cancelled. Your cart is still saved.', 'info');
+      }
     }
   }
 

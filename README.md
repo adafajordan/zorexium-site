@@ -24,11 +24,18 @@ Set the following in your Render service's **Environment** tab:
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth web client ID (required for frontend-initiated Google sign-in) |
 | `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret (only needed if keeping legacy backend redirect callback flow) |
 | `GOOGLE_REDIRECT_URI` | Optional | Google callback URL for legacy backend redirect flow (e.g. `https://zorexium-backend.onrender.com/api/auth/google/callback`) |
-| `PAYPAL_CLIENT_ID` | Optional | PayPal client ID |
-| `PAYPAL_SECRET` | Optional | PayPal secret |
-| `PAYPAL_MODE`   | Optional | `sandbox` or `live` |
-| `PAYPAL_PRO_SELLER_PLAN_ID` | Optional | Existing PayPal billing plan ID for Pro Seller subscriptions (must match `PAYPAL_MODE`) |
-| `PAYPAL_WEBHOOK_ID` | Optional | PayPal webhook ID used by `/api/paypal/webhook` to verify webhook signatures |
+| `STRIPE_SECRET_KEY` | ✅ Yes | Stripe secret key (`sk_...`) used by backend checkout/connect APIs |
+| `STRIPE_PUBLISHABLE_KEY` | ✅ Yes | Stripe publishable key (`pk_...`) exposed via `/api/config` |
+| `STRIPE_WEBHOOK_SECRET` | ✅ Yes | Stripe webhook signing secret (`whsec_...`) for `/api/stripe/webhook` |
+| `STRIPE_SUCCESS_URL` | Optional | Checkout success redirect URL (orderId/session_id are appended automatically) |
+| `STRIPE_CANCEL_URL` | Optional | Checkout cancel redirect URL |
+| `STRIPE_CONNECT_REFRESH_URL` | Optional | Stripe Connect onboarding refresh URL |
+| `STRIPE_CONNECT_RETURN_URL` | Optional | Stripe Connect onboarding return URL |
+| `PAYPAL_CLIENT_ID` | Optional | Legacy PayPal client ID (kept for backward compatibility endpoints) |
+| `PAYPAL_SECRET` | Optional | Legacy PayPal secret |
+| `PAYPAL_MODE`   | Optional | Legacy PayPal mode |
+| `PAYPAL_PRO_SELLER_PLAN_ID` | Optional | Legacy Pro plan ID |
+| `PAYPAL_WEBHOOK_ID` | Optional | Legacy PayPal webhook ID |
 | `SMTP_HOST`     | Optional | SMTP host for email delivery (password reset, OTC login) |
 | `SMTP_PORT`     | Optional | SMTP port (default: 587) |
 | `SMTP_SECURE`   | Optional | `true` for port 465, `false` otherwise |
@@ -82,7 +89,7 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 
 - Full detailed report: see [`PAYMENT_AUDIT.md`](./PAYMENT_AUDIT.md).
 
-- **Configured provider:** PayPal only. `checkout.html`, seller signup, seller dashboard, and listing wizard all load the PayPal JavaScript SDK from `/api/config`, while `server.js` creates/captures PayPal orders and verifies PayPal subscriptions. There is no active Stripe payment code in this repository.
+- **Configured provider:** Stripe Checkout + Stripe Connect Express for active buyer checkout and seller payout onboarding.
 - **Current blockers for real payments:**
   1. `server.js` still contains temporary troubleshooting overrides that force checkout purchases and Pro Seller subscriptions to `$1.00`, so production pricing is not using real cart totals or the intended recurring amount.
   2. The checkout UI still calculates the cart total in the browser, but the backend currently sends PayPal a fixed `$1.00` amount. This means the buyer-facing total and the provider charge can diverge.
