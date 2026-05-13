@@ -1,3 +1,4 @@
+vercel.json
 server.js
 .env.example
 PAYMENT_AUDIT.md
