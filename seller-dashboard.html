@@ -1524,7 +1524,9 @@
       sellerData.payoutProviderBankStatus = status.connected ? 'connected' : (status.accountId ? 'pending_provider' : '');
       sellerData.stripeChargesEnabled = !!status.chargesEnabled;
       sellerData.stripePayoutsEnabled = !!status.payoutsEnabled;
-    } catch (_) {}
+    } catch (err) {
+      console.warn('Failed to sync Stripe Connect status:', err);
+    }
   }
 
   async function startStripeConnectOnboarding() {

@@ -1923,6 +1923,13 @@ function getStripeConnectReturnUrl() {
   return STRIPE_CONNECT_RETURN_URL || makeAbsoluteUrl('/seller-dashboard.html#payouts');
 }
 
+function toStripeAmountCents(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+  const normalized = Math.trunc((numeric + Number.EPSILON) * 100);
+  return Math.max(0, normalized);
+}
+
 function normalizeCountryCode(value) {
   const countryCode = String(value || '').trim().toUpperCase();
   return /^[A-Z]{2}$/.test(countryCode) ? countryCode : '';
@@ -2998,7 +3005,9 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
     }
 
     // Verify the subscription with PayPal
-    ensureStripeConfigured();
+    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
+      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
+    }
     const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
     const subRes = await fetch(`${paypalApiUrl}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
@@ -3213,17 +3222,26 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       return res.status(400).json({ error: 'Order total must be greater than $0.00' });
     }
 
-    const orderId = 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const orderId = 'ORD-' + Date.now() + '-' + crypto.randomBytes(6).toString('hex').toUpperCase();
     const checkoutLineItems = normalizedOrderItems.map(function(item) {
       const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+      let imageUrl = '';
+      if (item && item.image) {
+        try {
+          const parsedImageUrl = new URL(String(item.image));
+          if (parsedImageUrl.protocol === 'http:' || parsedImageUrl.protocol === 'https:') {
+            imageUrl = parsedImageUrl.toString();
+          }
+        } catch (_) {}
+      }
       return {
         quantity: quantity,
         price_data: {
           currency: 'usd',
-          unit_amount: Math.round((Number(item && item.price) || 0) * 100),
+          unit_amount: toStripeAmountCents(Number(item && item.price)),
           product_data: {
             name: String(item && item.name ? item.name : 'Item').slice(0, 200),
-            images: item && item.image ? [String(item.image)] : undefined
+            images: imageUrl ? [imageUrl] : undefined
           }
         }
       };
@@ -3233,7 +3251,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         quantity: 1,
         price_data: {
           currency: 'usd',
-          unit_amount: Math.round(shipping * 100),
+          unit_amount: toStripeAmountCents(shipping),
           product_data: { name: 'Shipping' }
         }
       });
@@ -3243,17 +3261,21 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         quantity: 1,
         price_data: {
           currency: 'usd',
-          unit_amount: Math.round(tax * 100),
+          unit_amount: toStripeAmountCents(tax),
           product_data: { name: 'Sales Tax' }
         }
       });
+    }
+    const normalizedBuyerEmail = normalizeEmail(buyer && buyer.email);
+    if (!normalizedBuyerEmail || !isLikelyEmail(normalizedBuyerEmail)) {
+      return res.status(400).json({ error: 'A valid buyer email is required' });
     }
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: checkoutLineItems,
       success_url: getStripeCheckoutSuccessUrl(orderId),
       cancel_url: getStripeCheckoutCancelUrl(),
-      customer_email: normalizeEmail(buyer && buyer.email),
+      customer_email: normalizedBuyerEmail,
       metadata: { orderId: orderId },
       client_reference_id: orderId
     });
@@ -3607,6 +3629,7 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
   try {
     event = stripe.webhooks.constructEvent(req.rawBody, signature, STRIPE_WEBHOOK_SECRET);
   } catch (err) {
+    console.error('Stripe webhook signature verification failed:', err && err.message ? err.message : err);
     return res.status(400).json({ error: 'Invalid Stripe webhook signature' });
   }
 
@@ -3622,6 +3645,7 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
         const completion = await completeStripeCheckoutOrder(orderId, session);
         if (!completion.ok) {
           console.error('Stripe checkout completion failed:', completion.error);
+          return res.status(500).json({ error: 'Failed to finalize Stripe checkout order' });
         }
       }
     }
@@ -3852,7 +3876,7 @@ app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async fun
 });
 
 // ── GET SINGLE ORDER BY ORDER ID (public, order ID is unguessable) ─────────────
-app.get('/api/orders/:orderId', async function(req, res) {
+app.get('/api/orders/:orderId', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { orderId } = req.params;

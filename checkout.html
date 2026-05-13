@@ -828,7 +828,7 @@
       if (!payload.checkoutUrl) throw new Error('Stripe checkout URL was not returned');
       window.location.href = payload.checkoutUrl;
     } catch (err) {
-      ZrxNotify.showNotification(err.message || 'Unable to start Stripe checkout. Please try again.', 'error');
+      ZrxNotify.showNotification(err && err.message ? err.message : 'Unable to start Stripe checkout. Please try again.', 'error');
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = originalHtml;
