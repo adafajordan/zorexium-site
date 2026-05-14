@@ -862,7 +862,7 @@
     var value = String(path || '').trim();
     if (!value) return safeFallback;
     if (value.charAt(0) !== '/' || value.charAt(1) === '/') return safeFallback;
-    if (/[\r\n\\]/.test(value)) return safeFallback;
+    if (/[\r\n]/.test(value)) return safeFallback;
     if (/^[\/A-Za-z0-9\-._~!$&'()*+,;=:@?%]*$/.test(value)) return value;
     return safeFallback;
   }

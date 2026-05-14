@@ -1075,7 +1075,13 @@
             };
 
             async function resolveFirstPurchaseFreeShippingEligibility() {
-                if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) return;
+                if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) {
+                    firstPurchaseFreeShippingEligible = true;
+                    if (homeProductsList.length > 0) {
+                        window._renderHomeProducts(homeProductsList);
+                    }
+                    return;
+                }
                 try {
                     var res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
                     if (!res.ok) {
