@@ -2236,7 +2236,10 @@ async function buildPayoutSnapshot(order, options) {
   let status = 'pending_delivery';
   let blockedReason = '';
   if (String(order && order.shippingStatus ? order.shippingStatus : '').toLowerCase() === 'shipped') {
-    if (!payoutReleaseAt || payoutReleaseAt.getTime() > now.getTime()) {
+    if (!payoutReleaseAt) {
+      status = 'pending_delivery';
+      blockedReason = 'Shipment timestamp is missing. Please refresh this order and try again.';
+    } else if (payoutReleaseAt.getTime() > now.getTime()) {
       status = 'pending_hold';
       blockedReason = `Payout is held for ${holdDays} day${holdDays === 1 ? '' : 's'} after shipment confirmation.`;
     }
@@ -2914,7 +2917,7 @@ function getStripeProSellerCheckoutLineItems() {
       currency: 'usd',
       unit_amount: toStripeAmountCents(PRO_SELLER_MONTHLY_PRICE_USD),
       recurring: { interval: 'month' },
-      product_data: { name: 'Zorexium Pro Seller Subscription' }
+      product_data: { name: PAYOUT_BRAND_NAME + ' Pro Seller Subscription' }
     },
     quantity: 1
   }];
