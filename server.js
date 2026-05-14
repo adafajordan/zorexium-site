@@ -2114,6 +2114,9 @@ function getOrderSellerInfos(order) {
         sellerUsername: String(item && item.sellerUsername ? item.sellerUsername : '').trim(),
         sellerName: String(item && (item.sellerName || item.sellerUsername) ? (item.sellerName || item.sellerUsername) : '').trim()
       });
+    } else {
+      // Keep the first seller metadata encountered for a sellerId.
+      // Items should be normalized before checkout so seller metadata remains consistent across order lines.
     }
   });
   return Array.from(sellerMap.values());
@@ -3078,6 +3081,8 @@ async function sendStripeSellerPayoutsForOrder(order, options) {
   }
   const failed = results.find(function(result) { return !result.ok; });
   if (failed) {
+    // Partial successes are preserved in `results` so callers/admin tooling can see
+    // which sellers were paid and which sellers still require retry/remediation.
     return { ok: false, error: failed.error || 'One or more seller payouts failed', results: results };
   }
   const allDeferred = results.length > 0 && results.every(function(result) { return result.deferred; });
@@ -4476,7 +4481,7 @@ app.post('/api/orders/:orderId/reconcile-stripe', publicApiRateLimit, async func
     return res.status(400).json({ error: `Invalid orderId (max ${MAX_ORDER_ID_LENGTH} characters)` });
   }
   const sessionId = String(req.body && req.body.sessionId ? req.body.sessionId : '').trim();
-  if (sessionId && !/^cs_[A-Za-z0-9]+$/.test(sessionId)) {
+  if (sessionId && !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
     return res.status(400).json({ error: 'Invalid Stripe sessionId' });
   }
   try {
@@ -4517,7 +4522,7 @@ app.post('/api/admin/orders/reconcile-stripe', publicApiRateLimit, verifyToken, 
   if (!orderId && !sessionId) {
     return res.status(400).json({ error: 'orderId or sessionId is required' });
   }
-  if (sessionId && !/^cs_[A-Za-z0-9]+$/.test(sessionId)) {
+  if (sessionId && !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
     return res.status(400).json({ error: 'Invalid Stripe sessionId' });
   }
   try {
@@ -6289,7 +6294,7 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
       return String(info && info.sellerId ? info.sellerId : '') === String(req.userId);
     });
     if (!sellerOwnedOrder) {
-      return res.status(403).json({ error: 'Forbidden: you can only trigger payouts for orders sold by your seller account' });
+      return res.status(403).json({ error: 'Forbidden: you can only trigger payouts for your own seller items in this order' });
     }
     const seller = await db.collection('sellers').findOne(
       { userId: req.userId },
@@ -7926,6 +7931,18 @@ async function activateAllProducts() {
   }
 }
 
+async function ensureOperationalIndexes() {
+  if (!mongoConnected) return;
+  try {
+    await db.collection('payouts').createIndex(
+      { orderId: 1, sellerId: 1 },
+      { name: 'orderId_sellerId_idx' }
+    );
+  } catch (err) {
+    console.error('⚠️  Failed to ensure operational indexes:', err.message);
+  }
+}
+
 // ── SendGrid test route ───────────────────────────────────────────────────────
 // POST /api/send-test-email  { "email": "recipient@example.com" }
 // Use this route to verify your SendGrid integration is working on Render.
@@ -7978,6 +7995,7 @@ async function start() {
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
       await downgradeProSellersToStarter();
+      await ensureOperationalIndexes();
       await runRetroactiveLegacyOrderRepairMigration();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
