@@ -476,7 +476,13 @@
     emptyState.classList.add('hidden');
     document.getElementById('resultCount').textContent = products.length;
 
-    grid.innerHTML = products.map(product => `
+    grid.innerHTML = products.map(product => {
+      var parsedQuantity = parseInt(product.quantity, 10);
+      var isOutOfStock = !isNaN(parsedQuantity) && parsedQuantity <= 0;
+      var addToCartClass = isOutOfStock
+        ? 'bg-gray-500 text-white px-3 py-3 rounded text-base font-semibold cursor-not-allowed opacity-70'
+        : 'bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-3 rounded text-base font-semibold';
+      return `
       <div class="product-card">
         <img src="${product.image || 'https://placehold.co/300x200/333/fff?text=Product'}" alt="${product.name}" class="product-image" onclick="viewProduct('${product._id}')">
         <div class="p-4">
@@ -501,16 +507,17 @@
                 <i class="fas fa-info-circle"></i>
               </a>
               <button onclick="addToCart('${product._id}', '${product.name}', ${product.price}, '${product.image}')"
-                ${(function(){ var qty = parseInt(product.quantity, 10); return (!isNaN(qty) && qty <= 0) ? 'disabled' : ''; })()}
-                class="${(function(){ var qty = parseInt(product.quantity, 10); return (!isNaN(qty) && qty <= 0) ? 'bg-gray-500 text-white px-3 py-3 rounded text-base font-semibold cursor-not-allowed opacity-70' : 'bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-3 rounded text-base font-semibold'; })()}">
+                ${isOutOfStock ? 'disabled' : ''}
+                class="${addToCartClass}">
                 <i class="fas fa-shopping-cart"></i>
               </button>
             </div>
           </div>
-          ${(function(){ var qty = parseInt(product.quantity, 10); return (!isNaN(qty) && qty <= 0) ? '<p class="text-xs text-red-400 mt-2 font-semibold">Out of stock</p>' : ''; })()}
+          ${isOutOfStock ? '<p class="text-xs text-red-400 mt-2 font-semibold">Out of stock</p>' : ''}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     updateSellerNames();
   }

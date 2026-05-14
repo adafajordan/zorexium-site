@@ -2531,9 +2531,9 @@ async function processCompletedOrderAutomation(order, options) {
     return [String(result && result.sellerId ? result.sellerId : ''), result];
   }));
   for (const sellerId of sellerItemsMap.keys()) {
-    const sellerPayoutResult = payoutResultBySeller.get(String(sellerId)) || null;
-    const payoutSent = !!(sellerPayoutResult && sellerPayoutResult.ok && !sellerPayoutResult.deferred && !sellerPayoutResult.processing);
-    const payoutProcessing = !!(sellerPayoutResult && sellerPayoutResult.ok && !sellerPayoutResult.deferred && sellerPayoutResult.processing);
+    const currentSellerPayoutResult = payoutResultBySeller.get(String(sellerId)) || null;
+    const payoutSent = !!(currentSellerPayoutResult && currentSellerPayoutResult.ok && !currentSellerPayoutResult.deferred && !currentSellerPayoutResult.processing);
+    const payoutProcessing = !!(currentSellerPayoutResult && currentSellerPayoutResult.ok && !currentSellerPayoutResult.deferred && currentSellerPayoutResult.processing);
     await upsertOrderNotification(
       { userId: sellerId, type: 'payout_update', orderId: syncedOrder.id },
       {
@@ -2545,7 +2545,7 @@ async function processCompletedOrderAutomation(order, options) {
           ? `Your payout for order ${syncedOrder.id} was sent.`
           : payoutProcessing
             ? `Your payout for order ${syncedOrder.id} is being processed via Stripe.`
-          : `Order ${syncedOrder.id} payout is currently ${sellerPayoutResult && sellerPayoutResult.reason ? String(sellerPayoutResult.reason).toLowerCase() : 'pending review'}.`,
+          : `Order ${syncedOrder.id} payout is currently ${currentSellerPayoutResult && currentSellerPayoutResult.reason ? String(currentSellerPayoutResult.reason).toLowerCase() : 'pending review'}.`,
         linkUrl: '/seller-payouts.html'
       }
     );
