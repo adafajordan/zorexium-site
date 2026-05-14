@@ -27,7 +27,7 @@ Set the following in your Render service's **Environment** tab:
 | `STRIPE_SECRET_KEY` | ✅ Yes | Stripe secret key (`sk_...`) used by backend checkout/connect APIs |
 | `STRIPE_PUBLISHABLE_KEY` | ✅ Yes | Stripe publishable key (`pk_...`) exposed via `/api/config` |
 | `STRIPE_WEBHOOK_SECRET` | ✅ Yes | Stripe webhook signing secret (`whsec_...`) for `/api/stripe/webhook` |
-| `STRIPE_PRO_SELLER_PRICE_ID` | ✅ Yes | Stripe recurring Price ID (`price_...`) for the $1/month Pro Seller subscription |
+| `STRIPE_PRO_SELLER_PRICE_ID` | Optional | Stripe recurring Price ID (`price_...`) for the $1/month Pro Seller subscription (server falls back to inline Stripe price data if omitted) |
 | `STRIPE_SUCCESS_URL` | Optional | Checkout success redirect URL (orderId/session_id are appended automatically) |
 | `STRIPE_CANCEL_URL` | Optional | Checkout cancel redirect URL |
 | `STRIPE_CONNECT_REFRESH_URL` | Optional | Stripe Connect onboarding refresh URL |
@@ -88,9 +88,10 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 
 ## Payment Summary
 
-- Buyer checkout uses Stripe Checkout with embedded UI in `checkout.html`.
+- Buyer checkout uses Stripe Checkout with embedded UI (`ui_mode: embedded_page`) in `checkout.html`.
 - Seller payout onboarding uses Stripe Connect Express.
-- Seller payout release is delayed until shipment confirmation (`/api/orders/:orderId/ship`), then a Stripe transfer is created.
+- Seller payout release is delayed until shipment confirmation (`/api/orders/:orderId/ship`) plus hold time (Starter: 5 days, Pro: 2 days), then a Stripe transfer is created.
+- Seller payout share is subtotal-only: Starter receives 90%, Pro receives 95% (shipping and tax stay with the platform).
 - Pro Seller tier checkout uses Stripe subscription checkout and verifies completion server-side.
 
 ---

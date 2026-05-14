@@ -1868,7 +1868,10 @@ const PRO_SELLER_MONTHLY_PRICE_USD = '1.00';
 // Standard shipping rate per item (USD) — $1.00 per item
 const DEFAULT_SHIPPING_PER_ITEM_USD = 1.00;
 const DEFAULT_SALES_TAX_RATE = 0.10;
-const PLATFORM_FEE_RATE = 0.10;
+const STARTER_SELLER_PAYOUT_RATE = 0.90;
+const PRO_SELLER_PAYOUT_RATE = 0.95;
+const STANDARD_SELLER_HOLD_DAYS = 5;
+const PRO_SELLER_HOLD_DAYS = 2;
 const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
@@ -1943,6 +1946,29 @@ function normalizePayoutAccountId(value) {
 function normalizeCountryCode(value) {
   const countryCode = String(value || '').trim().toUpperCase();
   return /^[A-Z]{2}$/.test(countryCode) ? countryCode : '';
+}
+
+function normalizeSellerTier(value) {
+  return String(value || '').trim().toLowerCase() === 'pro' ? 'pro' : 'starter';
+}
+
+function getSellerPayoutRateByTier(value) {
+  return normalizeSellerTier(value) === 'pro'
+    ? PRO_SELLER_PAYOUT_RATE
+    : STARTER_SELLER_PAYOUT_RATE;
+}
+
+function getSellerHoldDaysByTier(value) {
+  return normalizeSellerTier(value) === 'pro'
+    ? PRO_SELLER_HOLD_DAYS
+    : STANDARD_SELLER_HOLD_DAYS;
+}
+
+function addUtcDays(dateValue, dayCount) {
+  const base = dateValue ? new Date(dateValue) : new Date();
+  const next = new Date(base.getTime());
+  next.setUTCDate(next.getUTCDate() + Math.max(0, parseInt(dayCount, 10) || 0));
+  return next;
 }
 
 function parsePayPalScopes(rawScope) {
@@ -2074,7 +2100,7 @@ function getOrderSellerInfo(order) {
 function getSellerFinancials(order, sellerId) {
   const targetSellerId = String(sellerId || '').trim();
   if (!targetSellerId) {
-    return { grossAmount: 0, payoutAmount: 0, platformFee: 0 };
+    return { grossAmount: 0, payoutAmount: 0, platformFee: 0, sellerTier: 'starter', payoutRate: STARTER_SELLER_PAYOUT_RATE };
   }
 
   const sellerSummaries = Array.isArray(order && order.sellerSummaries) ? order.sellerSummaries : [];
@@ -2082,22 +2108,28 @@ function getSellerFinancials(order, sellerId) {
     return String(summary && summary.sellerId ? summary.sellerId : '') === targetSellerId;
   });
   if (sellerSummary) {
+    const sellerTier = normalizeSellerTier(sellerSummary.sellerTier || sellerSummary.tier || 'starter');
+    const payoutRate = getSellerPayoutRateByTier(sellerTier);
     const summaryGross = parseFloat(sellerSummary.grossTotal);
     const grossAmount = Number.isFinite(summaryGross) ? Number(summaryGross.toFixed(2)) : 0;
     const summaryNet = parseFloat(sellerSummary.netTotal);
     const payoutAmount = Number.isFinite(summaryNet)
       ? parseFloat(summaryNet.toFixed(2))
-      : parseFloat((grossAmount * (1 - PLATFORM_FEE_RATE)).toFixed(2));
+      : parseFloat((grossAmount * payoutRate).toFixed(2));
     const summaryFee = parseFloat(sellerSummary.platformFee);
     const platformFee = Number.isFinite(summaryFee)
       ? parseFloat(summaryFee.toFixed(2))
       : parseFloat((grossAmount - payoutAmount).toFixed(2));
-    return { grossAmount, payoutAmount, platformFee };
+    return { grossAmount, payoutAmount, platformFee, sellerTier, payoutRate };
   }
 
   const sellerItems = (Array.isArray(order && order.items) ? order.items : []).filter(function(item) {
     return String(item && item.sellerId ? item.sellerId : '') === targetSellerId;
   });
+  const sellerTier = sellerItems.some(function(item) {
+    return normalizeSellerTier(item && item.sellerTier ? item.sellerTier : 'starter') === 'pro';
+  }) ? 'pro' : 'starter';
+  const payoutRate = getSellerPayoutRateByTier(sellerTier);
   const grossAmountRaw = sellerItems.reduce(function(sum, item) {
     const quantity = parseInt(item && item.quantity, 10);
     if (!Number.isFinite(quantity) || quantity <= 0) return sum;
@@ -2105,9 +2137,9 @@ function getSellerFinancials(order, sellerId) {
     return sum + (unitPrice * quantity);
   }, 0);
   const grossAmount = parseFloat(grossAmountRaw.toFixed(2));
-  const payoutAmount = parseFloat((grossAmount * (1 - PLATFORM_FEE_RATE)).toFixed(2));
+  const payoutAmount = parseFloat((grossAmount * payoutRate).toFixed(2));
   const platformFee = parseFloat((grossAmount - payoutAmount).toFixed(2));
-  return { grossAmount, payoutAmount, platformFee };
+  return { grossAmount, payoutAmount, platformFee, sellerTier, payoutRate };
 }
 
 function getLinkedSellerPayoutDestination(order, sellerId) {
@@ -2156,10 +2188,15 @@ async function buildPayoutSnapshot(order, options) {
   const grossAmount = sellerFinancials.grossAmount;
   const payoutAmount = sellerFinancials.payoutAmount;
   const platformFee = sellerFinancials.platformFee;
+  const sellerTier = sellerFinancials.sellerTier || 'starter';
+  const payoutRate = sellerFinancials.payoutRate || getSellerPayoutRateByTier(sellerTier);
   const payoutCurrency = /^[A-Z]{3}$/.test(String(order && order.currency ? order.currency : '').toUpperCase())
     ? String(order.currency).toUpperCase()
     : 'USD';
   const now = new Date();
+  const shippedAt = order && order.shippedAt ? new Date(order.shippedAt) : null;
+  const holdDays = getSellerHoldDaysByTier(sellerTier);
+  const payoutReleaseAt = shippedAt ? addUtcDays(shippedAt, holdDays) : null;
   let seller = null;
   let linkedPayoutDestination = { accountId: '', verified: false };
   let receiverEmail = '';
@@ -2199,6 +2236,13 @@ async function buildPayoutSnapshot(order, options) {
   let status = 'pending_delivery';
   let blockedReason = '';
   if (String(order && order.shippingStatus ? order.shippingStatus : '').toLowerCase() === 'shipped') {
+    if (!payoutReleaseAt) {
+      status = 'pending_delivery';
+      blockedReason = 'Shipment timestamp is missing. Please refresh this order and try again.';
+    } else if (payoutReleaseAt.getTime() > now.getTime()) {
+      status = 'pending_hold';
+      blockedReason = `Payout is held for ${holdDays} day${holdDays === 1 ? '' : 's'} after shipment confirmation.`;
+    }
     // Payout can proceed when we have a destination email and either:
     // 1) the seller's current payout account is verified, or
     // 2) the linked payout snapshot from the sold item was already verified.
@@ -2211,10 +2255,10 @@ async function buildPayoutSnapshot(order, options) {
         (receiverMatchesCurrent && hasCurrentVerifiedAccount)
       )
     );
-    if (!hasVerifiedDestination) {
+    if (status !== 'pending_hold' && !hasVerifiedDestination) {
       status = 'blocked_onboarding';
       blockedReason = 'Complete payout account setup to receive this payout.';
-    } else {
+    } else if (status !== 'pending_hold') {
       status = 'ready_to_pay';
     }
   }
@@ -2224,6 +2268,9 @@ async function buildPayoutSnapshot(order, options) {
     sellerId: sellerInfo.sellerId || '',
     sellerUsername: sellerInfo.sellerUsername || '',
     sellerName: sellerInfo.sellerName || '',
+    sellerTier: sellerTier,
+    payoutRate: payoutRate,
+    holdDays: holdDays,
     grossAmount: grossAmount,
     amount: payoutAmount,
     platformFee: platformFee,
@@ -2231,7 +2278,8 @@ async function buildPayoutSnapshot(order, options) {
     items: Array.isArray(order && order.items) ? order.items : [],
     method: 'Stripe Connect Express',
     placedAt: order.createdAt || now,
-    shippedAt: order && order.shippedAt ? new Date(order.shippedAt) : null,
+    shippedAt: shippedAt,
+    payoutReleaseAt: payoutReleaseAt,
     shippingStatus: String(order && order.shippingStatus ? order.shippingStatus : ''),
     triggerSource: payoutMeta.triggerSource || 'order_completed',
     payoutAccountId: receiverEmail || null,
@@ -2247,6 +2295,10 @@ async function buildPayoutSnapshot(order, options) {
     receiverEmail,
     payoutAmount,
     platformFee,
+    sellerTier,
+    payoutRate,
+    holdDays,
+    payoutReleaseAt,
     payoutCurrency,
     status,
     blockedReason,
@@ -2280,6 +2332,7 @@ function buildSellerOrderSummaries(order) {
         sellerId: sellerId,
         sellerName: String(item && item.sellerName ? item.sellerName : '').trim(),
         sellerUsername: String(item && item.sellerUsername ? item.sellerUsername : '').trim(),
+        sellerTier: normalizeSellerTier(item && item.sellerTier ? item.sellerTier : 'starter'),
         itemCount: 0,
         grossTotal: 0,
         items: []
@@ -2299,11 +2352,16 @@ function buildSellerOrderSummaries(order) {
   });
 
   return Array.from(sellerMap.values()).map(function(summary) {
-    const platformFee = parseFloat((summary.grossTotal * PLATFORM_FEE_RATE).toFixed(2));
+    const sellerTier = normalizeSellerTier(summary.sellerTier || 'starter');
+    const payoutRate = getSellerPayoutRateByTier(sellerTier);
+    const netTotal = parseFloat((summary.grossTotal * payoutRate).toFixed(2));
+    const platformFee = parseFloat((summary.grossTotal - netTotal).toFixed(2));
     return {
       ...summary,
+      sellerTier: sellerTier,
+      payoutRate: payoutRate,
       platformFee: platformFee,
-      netTotal: parseFloat((summary.grossTotal - platformFee).toFixed(2))
+      netTotal: netTotal
     };
   });
 }
@@ -2717,6 +2775,9 @@ async function sendStripeSellerPayout(order, options) {
   if (snapshot.status === 'pending_delivery') {
     return { ok: true, deferred: true, reason: 'Order is not yet marked as shipped' };
   }
+  if (snapshot.status === 'pending_hold') {
+    return { ok: true, deferred: true, reason: snapshot.blockedReason || 'Payout is in the post-shipment hold window' };
+  }
   if (snapshot.status === 'blocked_onboarding') {
     return { ok: true, deferred: true, reason: snapshot.blockedReason };
   }
@@ -2846,6 +2907,22 @@ function getStripeProSellerPriceId() {
   return /^price_[A-Za-z0-9]+$/.test(value) ? value : null;
 }
 
+function getStripeProSellerCheckoutLineItems() {
+  const configuredPriceId = getStripeProSellerPriceId();
+  if (configuredPriceId) {
+    return [{ price: configuredPriceId, quantity: 1 }];
+  }
+  return [{
+    price_data: {
+      currency: 'usd',
+      unit_amount: toStripeAmountCents(PRO_SELLER_MONTHLY_PRICE_USD),
+      recurring: { interval: 'month' },
+      product_data: { name: PAYOUT_BRAND_NAME + ' Pro Seller Subscription' }
+    },
+    quantity: 1
+  }];
+}
+
 async function verifyStripeProSellerSubscription(subscriptionId) {
   ensureStripeConfigured();
   const id = String(subscriptionId || '').trim();
@@ -2864,8 +2941,12 @@ async function verifyStripeProSellerSubscription(subscriptionId) {
 app.get('/api/sellers/pro-plan', async function(req, res) {
   try {
     const priceId = getStripeProSellerPriceId();
-    if (!priceId) return res.status(503).json({ error: 'Stripe Pro Seller price is not configured. Set STRIPE_PRO_SELLER_PRICE_ID.' });
-    res.json({ planId: priceId, provider: 'stripe' });
+    res.json({
+      planId: priceId,
+      provider: 'stripe',
+      monthlyPriceUsd: PRO_SELLER_MONTHLY_PRICE_USD,
+      fallbackCheckoutPriceData: !priceId
+    });
   } catch (err) {
     console.error('Error fetching pro seller plan:', err);
     res.status(500).json({ error: err.message });
@@ -2882,8 +2963,6 @@ app.post('/api/stripe/pro-subscription/session', publicApiRateLimit, verifyToken
     if (seller && seller.tier === 'pro' && mode === 'upgrade') {
       return res.status(409).json({ error: 'Already on Pro tier' });
     }
-    const priceId = getStripeProSellerPriceId();
-    if (!priceId) return res.status(503).json({ error: 'Stripe Pro Seller price is not configured. Set STRIPE_PRO_SELLER_PRICE_ID.' });
     const successBase = mode === 'upgrade'
       ? makeAbsoluteUrl('/seller-dashboard.html?tierUpgrade=success')
       : makeAbsoluteUrl('/seller-signup.html?proCheckout=success');
@@ -2892,7 +2971,7 @@ app.post('/api/stripe/pro-subscription/session', publicApiRateLimit, verifyToken
       : makeAbsoluteUrl('/seller-signup.html?proCheckout=cancelled');
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: getStripeProSellerCheckoutLineItems(),
       success_url: successBase + '&session_id={CHECKOUT_SESSION_ID}',
       cancel_url: cancelBase,
       metadata: {
@@ -3038,9 +3117,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     if (!mongoConnected) {
       return res.status(503).json({ error: 'Database temporarily unavailable. Please try again in a moment.' });
     }
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
-    }
+    ensureStripeConfigured();
 
     const { items, buyer, shippingMethod } = req.body;
     const checkoutUser = getOptionalCheckoutUser(req);
@@ -3079,7 +3156,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       ? await db.collection('sellers')
           .find(
             { userId: { $in: sellerIds } },
-            { projection: { userId: 1, payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutOnboardingStatus: 1, payoutProviderBankStatus: 1 } }
+            { projection: { userId: 1, payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutOnboardingStatus: 1, payoutProviderBankStatus: 1, tier: 1 } }
           )
           .toArray()
       : [];
@@ -3120,6 +3197,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       const itemSellerId = String(item && item.sellerId ? item.sellerId : '');
       const sellerId = productSellerId || itemSellerId;
       const sellerPayoutProfile = sellerPayoutByUserId.get(sellerId) || null;
+      const sellerTier = normalizeSellerTier(sellerPayoutProfile && sellerPayoutProfile.tier ? sellerPayoutProfile.tier : 'starter');
       normalizedOrderItems.push({
         id: itemId,
         name: String(product && product.name ? product.name : (item && item.name ? item.name : 'Item')).slice(0, 200),
@@ -3137,6 +3215,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         sellerPayoutVerified: !!(sellerPayoutProfile && sellerPayoutProfile.payoutVerified),
         sellerPayoutOnboardingStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutOnboardingStatus ? sellerPayoutProfile.payoutOnboardingStatus : ''),
         sellerPayoutBankStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutProviderBankStatus ? sellerPayoutProfile.payoutProviderBankStatus : ''),
+        sellerTier: sellerTier,
         productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html')
       });
       orderItems.push({
@@ -3216,7 +3295,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     }
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
-      ui_mode: 'embedded',
+      ui_mode: 'embedded_page',
       line_items: checkoutLineItems,
       return_url: getStripeCheckoutSuccessUrl(orderId),
       customer_email: normalizedBuyerEmail,
@@ -3691,6 +3770,7 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
       const sellerItems = (Array.isArray(order.items) ? order.items : []).filter(function(item) {
         return String(item && item.sellerId ? item.sellerId : '') === String(req.userId);
       });
+      const sellerFinancialsFallback = sellerSummary ? null : getSellerFinancials(order, req.userId);
       return {
         ...order,
         sellerItems: sellerItems,
@@ -3702,7 +3782,10 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
           const unitPrice = parseFloat(item && item.price) || 0;
           return sum + parseFloat((unitPrice * quantity).toFixed(2));
         }, 0),
-        sellerNetTotal: sellerSummary ? sellerSummary.netTotal : 0,
+        sellerNetTotal: sellerSummary ? sellerSummary.netTotal : (sellerFinancialsFallback ? sellerFinancialsFallback.payoutAmount : 0),
+        sellerTier: sellerSummary
+          ? normalizeSellerTier(sellerSummary.sellerTier || sellerSummary.tier || 'starter')
+          : normalizeSellerTier(sellerFinancialsFallback && sellerFinancialsFallback.sellerTier ? sellerFinancialsFallback.sellerTier : (sellerItems[0] && sellerItems[0].sellerTier ? sellerItems[0].sellerTier : 'starter')),
         buyerDisplayName: [order && order.buyer ? order.buyer.firstName : '', order && order.buyer ? order.buyer.lastName : ''].filter(Boolean).join(' ').trim()
           || normalizeEmail(order && order.buyerEmail ? order.buyerEmail : '')
           || '—'
@@ -3826,7 +3909,11 @@ app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async fun
       payoutStatus: payoutResult && payoutResult.ok
         ? (
           payoutResult.deferred
-            ? (String(payoutResult.reason || '').toLowerCase().includes('not yet marked as shipped') ? 'pending_delivery' : 'blocked_onboarding')
+            ? (
+              String(payoutResult.reason || '').toLowerCase().includes('not yet marked as shipped')
+                ? 'pending_delivery'
+                : (String(payoutResult.reason || '').toLowerCase().includes('held for') ? 'pending_hold' : 'blocked_onboarding')
+            )
             : (payoutResult.processing ? 'processing' : 'paid')
         )
         : 'failed'
@@ -5645,7 +5732,7 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
 
   const { status, note } = req.body;
   // Admins can also mark payouts as manually paid when the PayPal Payouts API is unavailable.
-  const validStatuses = ['pending_delivery', 'blocked_onboarding', 'ready_to_pay'];
+  const validStatuses = ['pending_delivery', 'pending_hold', 'blocked_onboarding', 'ready_to_pay'];
   const adminOnlyStatuses = ['paid'];
   const allValidStatuses = req.isAdmin ? validStatuses.concat(adminOnlyStatuses) : validStatuses;
   if (!status || !allValidStatuses.includes(status)) {

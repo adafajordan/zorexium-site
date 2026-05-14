@@ -382,11 +382,11 @@
                   <span class="font-bold text-gray-900 text-sm">Starter</span>
                   <span class="text-xs font-bold text-cyan-600 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-full">Free</span>
                 </div>
-                <p class="text-xs text-gray-500 mb-3">+ 8% transaction fee per sale</p>
+                <p class="text-xs text-gray-500 mb-3">+ 10% fee on item subtotal per sale</p>
                 <ul class="space-y-1 text-xs text-gray-600 flex-1">
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Up to 25 active listings</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Basic analytics dashboard</li>
-                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Standard payout (3–5 days)</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Payout hold: 5 days after shipment confirmation</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Community support</li>
                 </ul>
               </label>
@@ -401,7 +401,7 @@
                 <ul class="space-y-1 text-xs text-gray-600 flex-1">
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Unlimited active listings</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Advanced analytics &amp; insights</li>
-                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority payout (1–2 days)</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority payout hold: 2 days after shipment confirmation</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority seller support</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Featured listing badges</li>
                 </ul>
@@ -643,12 +643,12 @@
   var pendingProPlanId = null;
   var activeProCheckoutSessionId = null;
 
-  function loadPayPalSubSDK(planId) {
-    pendingProPlanId = planId;
-    renderPayPalSubscriptionButtons(planId);
+  function loadPayPalSubSDK() {
+    pendingProPlanId = null;
+    renderPayPalSubscriptionButtons();
   }
 
-  function renderPayPalSubscriptionButtons(planId) {
+  function renderPayPalSubscriptionButtons() {
     var container = document.getElementById('paypal-subscription-container');
     if (!container) return;
     container.innerHTML = '<button type="button" onclick="startStripeProCheckout()" class="w-full sm:w-auto px-5 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';
@@ -716,11 +716,7 @@
     fetch(BACKEND_URL + '/api/sellers/pro-plan')
       .then(function(r) { return r.json(); })
       .then(function(planData) {
-        if (!planData.planId) {
-          markProUnavailable();
-          throw new Error('The Pro Seller subscription plan is not currently available. Please select the Starter plan or try again later.');
-        }
-        loadPayPalSubSDK(planData.planId);
+        loadPayPalSubSDK();
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
@@ -729,30 +725,6 @@
         var errEl = document.getElementById('paypalSubError');
         if (errEl) errEl.classList.remove('hidden');
       });
-  }
-
-  function markProUnavailable() {
-    // Visually mark the Pro tier option as temporarily unavailable
-    var proLabel = document.getElementById('tierProLabel');
-    var proRadio = document.getElementById('tierProRadio');
-    if (proLabel && !proLabel.dataset.unavailable) {
-      proLabel.dataset.unavailable = 'true';
-      proLabel.style.opacity = '0.6';
-      proLabel.style.pointerEvents = 'none';
-      proLabel.style.cursor = 'not-allowed';
-      // Add an "Unavailable" badge next to the price badge
-      var header = proLabel.querySelector('.flex.items-center.justify-between');
-      if (header) {
-        var badge = document.createElement('span');
-        badge.id = 'proUnavailableBadge';
-        badge.className = 'text-xs font-bold text-red-700 bg-red-100 border border-red-300 px-2 py-0.5 rounded-full ml-1';
-        badge.textContent = 'Temporarily Unavailable';
-        header.appendChild(badge);
-      }
-    }
-    if (proRadio) proRadio.disabled = true;
-    // Switch user to Starter automatically since Pro is unavailable
-    switchToStarterTier();
   }
 
   function switchToStarterTier() {
