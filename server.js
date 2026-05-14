@@ -3361,7 +3361,7 @@ async function verifyStripeProSellerSubscription(subscriptionId) {
 
 function formatStripeAmountUsd(amountCents) {
   const cents = Number(amountCents);
-  if (!Number.isFinite(cents)) return 'N/A';
+  if (!Number.isFinite(cents) || cents < 0) return 'N/A';
   return '$' + (cents / 100).toFixed(2) + ' USD';
 }
 
@@ -8331,8 +8331,8 @@ async function forceAdafaProSellerTierOnce() {
         {
           $set: {
             tier: 'pro',
-            proSubscriptionStatus: 'active',
-            proSubscriptionProvider: 'stripe',
+            proSubscriptionStatus: 'manually_granted',
+            proSubscriptionProvider: 'manual_migration',
             proTierDowngraded: false,
             updatedAt: new Date()
           },
