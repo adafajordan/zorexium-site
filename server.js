@@ -3359,6 +3359,109 @@ async function verifyStripeProSellerSubscription(subscriptionId) {
   return subscription;
 }
 
+function formatStripeAmountUsd(amountCents) {
+  const cents = Number(amountCents);
+  if (!Number.isFinite(cents) || cents < 0) return 'N/A';
+  return '$' + (cents / 100).toFixed(2) + ' USD';
+}
+
+function getProSellerBenefitsHtml() {
+  return '<ul>'
+    + '<li><strong>Unlimited active listings</strong> so you can scale your shop without starter caps.</li>'
+    + '<li><strong>Lower platform fees</strong> (5% platform fee vs 10% on Starter).</li>'
+    + '<li><strong>Pro Seller tier status</strong> on your dashboard and seller account.</li>'
+    + '</ul>';
+}
+
+async function activateProSellerTierForUser(userId, subscriptionId, options) {
+  if (!mongoConnected) throw new Error('Database unavailable');
+  const opts = options || {};
+  const normalizedUserId = String(userId || '').trim();
+  const normalizedSubscriptionId = String(subscriptionId || '').trim();
+  if (!normalizedUserId) throw new Error('userId is required');
+  if (!normalizedSubscriptionId) throw new Error('subscriptionId is required');
+
+  const subscription = await verifyStripeProSellerSubscription(normalizedSubscriptionId);
+  const resolvedSubscriptionId = String(subscription && subscription.id ? subscription.id : normalizedSubscriptionId);
+  const resolvedStatus = String(subscription && subscription.status ? subscription.status : 'active').toLowerCase();
+  const existingSeller = await db.collection('sellers').findOne({ userId: normalizedUserId });
+  if (!existingSeller) {
+    return { activated: false, reason: 'seller_profile_not_found', subscriptionId: resolvedSubscriptionId, status: resolvedStatus };
+  }
+
+  const previousTier = normalizeSellerTier(existingSeller && existingSeller.tier ? existingSeller.tier : 'starter');
+  const previousSubscriptionId = String(existingSeller && existingSeller.proSubscriptionId ? existingSeller.proSubscriptionId : '');
+  const previousSubscriptionStatus = String(existingSeller && existingSeller.proSubscriptionStatus ? existingSeller.proSubscriptionStatus : '').toLowerCase();
+  const shouldNotify = opts.sendNotifications !== false && (
+    previousTier !== 'pro'
+    || previousSubscriptionId !== resolvedSubscriptionId
+    || previousSubscriptionStatus !== resolvedStatus
+    || existingSeller.proTierDowngraded === true
+  );
+
+  await db.collection('sellers').updateOne(
+    { userId: normalizedUserId },
+    {
+      $set: {
+        tier: 'pro',
+        proSubscriptionId: resolvedSubscriptionId,
+        proSubscriptionStatus: resolvedStatus,
+        proSubscriptionProvider: 'stripe',
+        proTierDowngraded: false,
+        updatedAt: new Date()
+      },
+      $unset: { proTierDowngradedAt: '' }
+    }
+  );
+  await db.collection('users').updateOne(
+    { _id: new ObjectId(normalizedUserId) },
+    { $set: { isSeller: true, updatedAt: new Date() } }
+  );
+
+  const updatedSeller = await db.collection('sellers').findOne({ userId: normalizedUserId });
+  const user = await db.collection('users').findOne(
+    { _id: new ObjectId(normalizedUserId) },
+    { projection: { email: 1, firstName: 1 } }
+  );
+  const to = normalizeEmail(user && user.email);
+  if (shouldNotify) {
+    if (to) {
+      await sendEventEmailSafe(
+        to,
+        'Thanks for subscribing to Pro Seller',
+        `<p>Thanks${user && user.firstName ? ', ' + escapeHtml(String(user.firstName)) : ''} for subscribing to Zorexium Pro Seller.</p>`
+          + '<p>Your subscription is active. Your Pro Seller benefits include:</p>'
+          + getProSellerBenefitsHtml(),
+        '/seller-dashboard.html#tier'
+      );
+    }
+    const stripeSession = opts.stripeSession || {};
+    const sessionId = String(stripeSession && stripeSession.id ? stripeSession.id : '');
+    const purchaseAmount = formatStripeAmountUsd(stripeSession && stripeSession.amount_total);
+    await sendAdminNotificationSafe(
+      'Pro seller subscription purchase completed',
+      '<p>A Pro Seller subscription purchase completed successfully.</p>'
+        + `<p><strong>User ID:</strong> ${escapeHtml(normalizedUserId)}</p>`
+        + `<p><strong>User email:</strong> ${escapeHtml(String(to || 'N/A'))}</p>`
+        + `<p><strong>Shop name:</strong> ${escapeHtml(String((updatedSeller && updatedSeller.shopName) || 'N/A'))}</p>`
+        + `<p><strong>Flow:</strong> ${escapeHtml(String(opts.flow || 'pro_subscription'))}</p>`
+        + `<p><strong>Subscription ID:</strong> ${escapeHtml(resolvedSubscriptionId)}</p>`
+        + `<p><strong>Subscription status:</strong> ${escapeHtml(resolvedStatus)}</p>`
+        + `<p><strong>Stripe session ID:</strong> ${escapeHtml(sessionId || 'N/A')}</p>`
+        + `<p><strong>Initial charge amount:</strong> ${escapeHtml(purchaseAmount)}</p>`,
+      '/seller-dashboard.html#tier'
+    );
+  }
+
+  return {
+    activated: true,
+    notified: shouldNotify,
+    seller: updatedSeller,
+    subscriptionId: resolvedSubscriptionId,
+    status: resolvedStatus
+  };
+}
+
 // GET /api/sellers/pro-plan – return Stripe price ID for Pro Seller
 app.get('/api/sellers/pro-plan', async function(req, res) {
   try {
@@ -4253,6 +4356,33 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
   try {
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const session = event.data && event.data.object ? event.data.object : {};
+      const sessionMode = String(session && session.mode ? session.mode : '').toLowerCase();
+      const flow = String(session && session.metadata && session.metadata.flow ? session.metadata.flow : '').toLowerCase();
+      const sessionUserId = String(session && session.metadata && session.metadata.userId ? session.metadata.userId : '').trim();
+      const paymentStatus = String(session && session.payment_status ? session.payment_status : '').toLowerCase();
+      const proSellerCheckoutFlow = sessionMode === 'subscription' && (flow === 'pro_upgrade' || flow === 'pro_signup');
+      if (proSellerCheckoutFlow) {
+        const sessionSubscriptionId = session && session.subscription
+          ? (typeof session.subscription === 'string' ? session.subscription : session.subscription.id)
+          : '';
+        if (sessionUserId && paymentStatus === 'paid' && sessionSubscriptionId) {
+          const activation = await activateProSellerTierForUser(sessionUserId, sessionSubscriptionId, {
+            triggerSource: 'stripe_webhook',
+            flow: flow || 'pro_subscription_checkout',
+            stripeSession: session
+          });
+          if (!activation.activated && activation.reason && activation.reason !== 'seller_profile_not_found') {
+            console.error('Stripe Pro seller activation failed:', activation.reason);
+          }
+        } else {
+          console.warn('Skipping Pro Seller activation from Stripe webhook due to unpaid or incomplete checkout session:', {
+            sessionId: session && session.id ? session.id : null,
+            flow: flow || null,
+            userId: sessionUserId || null,
+            paymentStatus: paymentStatus || null
+          });
+        }
+      }
       const orderId = String(
         (session && session.metadata && session.metadata.orderId)
           || (session && session.client_reference_id)
@@ -6169,30 +6299,15 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
       return res.status(400).json({ error: 'subscriptionId is required' });
     }
 
-    const subscription = await verifyStripeProSellerSubscription(subscriptionId);
-
-    await db.collection('sellers').updateOne(
-      { userId: req.userId },
-      { $set: { tier: 'pro', proSubscriptionId: subscriptionId, proSubscriptionStatus: String(subscription && subscription.status ? subscription.status : 'active'),
-                proSubscriptionProvider: 'stripe',
-                proTierDowngraded: false, updatedAt: new Date() } }
-    );
-    const updated = await db.collection('sellers').findOne({ userId: req.userId });
-    try {
-      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
-      const to = normalizeEmail(user && user.email);
-      if (to) {
-        await sendEventEmailSafe(
-          to,
-          'Thanks for upgrading to Pro Seller',
-          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>5%</strong> platform fee plus <strong>$1/month</strong> subscription.</p>`,
-          '/seller-dashboard.html#tier'
-        );
-      }
-    } catch (mailErr) {
-      console.error('Failed to send Pro upgrade email:', mailErr.message);
+    const activation = await activateProSellerTierForUser(req.userId, subscriptionId, {
+      triggerSource: 'seller_upgrade_endpoint',
+      flow: 'pro_upgrade',
+      sendNotifications: true
+    });
+    if (!activation.activated && activation.reason === 'seller_profile_not_found') {
+      return res.status(404).json({ error: 'Seller profile not found' });
     }
-    res.json(updated);
+    res.json(activation.seller);
   } catch (error) {
     console.error('Error upgrading seller to Pro:', error);
     res.status(500).json({ error: error.message });
@@ -8174,6 +8289,87 @@ async function assignStarterTierToExistingSellers() {
   }
 }
 
+async function forceAdafaProSellerTierOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'force_adafa_pro_seller_tier_2026_05_14';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const adafaUsers = await db.collection('users').find(
+      {
+        $or: [
+          { firstName: { $regex: /^adafa$/i } },
+          { username: { $regex: /^adafa$/i } }
+        ]
+      },
+      { projection: { _id: 1 } }
+    ).toArray();
+    const userIdSet = new Set(adafaUsers.map(function(user) { return String(user && user._id ? user._id : ''); }).filter(Boolean));
+
+    const adafaSellers = await db.collection('sellers').find(
+      {
+        $or: [
+          { userId: { $in: Array.from(userIdSet) } },
+          { shopName: { $regex: /adafa/i } },
+          { sellerName: { $regex: /^adafa$/i } },
+          { sellerUsername: { $regex: /^adafa$/i } }
+        ]
+      },
+      { projection: { _id: 1, userId: 1 } }
+    ).toArray();
+
+    const sellerUserIds = adafaSellers.map(function(seller) {
+      return String(seller && seller.userId ? seller.userId : '').trim();
+    }).filter(Boolean);
+    sellerUserIds.forEach(function(userId) { userIdSet.add(userId); });
+
+    let sellersUpdated = 0;
+    if (sellerUserIds.length > 0) {
+      const sellerUpdateResult = await db.collection('sellers').updateMany(
+        { userId: { $in: sellerUserIds } },
+        {
+          $set: {
+            tier: 'pro',
+            proSubscriptionStatus: 'manually_granted',
+            proSubscriptionProvider: 'manual_migration',
+            proTierDowngraded: false,
+            updatedAt: new Date()
+          },
+          $unset: { proTierDowngradedAt: '' }
+        }
+      );
+      sellersUpdated = sellerUpdateResult.modifiedCount || 0;
+    }
+
+    let usersUpdated = 0;
+    const validObjectIds = Array.from(userIdSet).filter(function(userId) { return ObjectId.isValid(userId); }).map(function(userId) {
+      return new ObjectId(userId);
+    });
+    if (validObjectIds.length > 0) {
+      const userUpdateResult = await db.collection('users').updateMany(
+        { _id: { $in: validObjectIds } },
+        { $set: { isSeller: true, updatedAt: new Date() } }
+      );
+      usersUpdated = userUpdateResult.modifiedCount || 0;
+    }
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: new Date(),
+      summary: {
+        matchedUsers: userIdSet.size,
+        matchedSellers: adafaSellers.length,
+        sellersUpdated: sellersUpdated,
+        usersUpdated: usersUpdated
+      }
+    });
+    console.log(`✅ Adafa Pro Seller migration complete: ${sellersUpdated} seller(s), ${usersUpdated} user(s) updated`);
+  } catch (err) {
+    console.error('⚠️  Adafa Pro Seller migration error:', err.message);
+  }
+}
+
 async function cleanupLegacyNonStripePayoutDestinationsOnce() {
   if (!mongoConnected) return;
   const migrationKey = 'cleanup_non_stripe_payout_destinations_2026_05_14';
@@ -8438,6 +8634,7 @@ async function start() {
       console.log('✅ Database connected — starting HTTP server');
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
+      await forceAdafaProSellerTierOnce();
       await ensurePayoutIndexes();
       await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();
