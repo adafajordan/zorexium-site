@@ -1917,6 +1917,8 @@ const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
+const STRIPE_PAYOUT_BALANCE_RETRY_DELAY_MS = 60 * 60 * 1000;
+const STRIPE_PAYOUT_BALANCE_RETRY_BATCH = 100;
 const RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT = Math.max(1, Math.min(50, parseInt(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT, 10) || 20));
 const RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND = String(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND || 'true').trim().toLowerCase() !== 'false';
 const RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_START_UTC = new Date('2026-05-13T00:00:00.000Z');
@@ -1979,6 +1981,14 @@ function isStripeCheckoutSessionId(value) {
   return /^cs_[A-Za-z0-9_]+$/.test(String(value || '').trim());
 }
 
+function isStripeConnectAccountId(value) {
+  return /^acct_[A-Za-z0-9]+$/.test(String(value || '').trim());
+}
+
+function isStripeChargeId(value) {
+  return /^ch_[A-Za-z0-9]+$/.test(String(value || '').trim());
+}
+
 function normalizePayoutAccountId(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -2012,6 +2022,85 @@ function addUtcDays(dateValue, dayCount) {
   const next = new Date(base.getTime());
   next.setUTCDate(next.getUTCDate() + Math.max(0, parseInt(dayCount, 10) || 0));
   return next;
+}
+
+function getConnectedSellerStripeAccountId(seller) {
+  if (!seller || typeof seller !== 'object') return '';
+  const accountId = normalizePayoutAccountId(
+    seller ? (seller.stripeAccountId || seller.payoutAccountId || '') : ''
+  );
+  if (!isStripeConnectAccountId(accountId)) return '';
+  const providerBankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
+  const connected = !!(seller && seller.payoutVerified && (!providerBankStatus || providerBankStatus === 'connected'));
+  return connected ? accountId : '';
+}
+
+function isStripeBalanceInsufficientError(error) {
+  if (!error) return false;
+  const code = String(error.code || '').toLowerCase();
+  const type = String(error.type || '').toLowerCase();
+  const declineCode = String(error.decline_code || '').toLowerCase();
+  const message = String(error.message || '').toLowerCase();
+  return (
+    code === 'balance_insufficient' ||
+    declineCode === 'balance_insufficient' ||
+    (type === 'invalid_request_error' && message.includes('insufficient funds')) ||
+    message.includes('insufficient funds') ||
+    message.includes('insufficient available')
+  );
+}
+
+async function resolveStripeChargeIdFromPaymentIntentId(paymentIntentId) {
+  const normalizedPaymentIntentId = String(paymentIntentId || '').trim();
+  if (!stripe || !STRIPE_SECRET_KEY || !/^pi_[A-Za-z0-9]+$/.test(normalizedPaymentIntentId)) return '';
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(normalizedPaymentIntentId, { expand: ['latest_charge'] });
+    const latestCharge = paymentIntent && paymentIntent.latest_charge ? paymentIntent.latest_charge : null;
+    const latestChargeId = String(
+      latestCharge && typeof latestCharge === 'object'
+        ? (latestCharge.id || '')
+        : (latestCharge || '')
+    ).trim();
+    return isStripeChargeId(latestChargeId) ? latestChargeId : '';
+  } catch (error) {
+    console.error('Failed to resolve Stripe charge for payment intent', normalizedPaymentIntentId, '-', error && error.message ? error.message : error);
+    return '';
+  }
+}
+
+async function ensureStripeChargeIdOnOrder(order) {
+  const orderId = String(order && order.id ? order.id : '').trim();
+  const existingChargeId = String(order && order.stripeChargeId ? order.stripeChargeId : '').trim();
+  if (isStripeChargeId(existingChargeId)) return existingChargeId;
+  const paymentIntentId = String(order && order.stripePaymentIntentId ? order.stripePaymentIntentId : '').trim();
+  const resolvedChargeId = await resolveStripeChargeIdFromPaymentIntentId(paymentIntentId);
+  if (!resolvedChargeId) return '';
+  if (orderId) {
+    try {
+      await db.collection('orders').updateOne(
+        { id: orderId },
+        { $set: { stripeChargeId: resolvedChargeId, updatedAt: new Date() } }
+      );
+    } catch (error) {
+      console.error('Failed to persist Stripe charge ID for order', orderId, '-', error.message);
+    }
+  }
+  return resolvedChargeId;
+}
+
+async function getAvailableStripeBalanceAmount(currencyLower) {
+  if (!stripe || !STRIPE_SECRET_KEY) return 0;
+  try {
+    const balance = await stripe.balance.retrieve();
+    const availableEntries = Array.isArray(balance && balance.available) ? balance.available : [];
+    const entry = availableEntries.find(function(item) {
+      return String(item && item.currency ? item.currency : '').toLowerCase() === String(currencyLower || '').toLowerCase();
+    });
+    return Math.max(0, parseInt(entry && entry.amount, 10) || 0);
+  } catch (error) {
+    console.error('Failed to retrieve Stripe balance:', error.message);
+    return 0;
+  }
 }
 
 function parsePayPalScopes(rawScope) {
@@ -2269,19 +2358,20 @@ async function buildPayoutSnapshot(order, options) {
       { projection: { payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, userId: 1, shopName: 1 } }
     );
     sellerPayoutAccountId = normalizePayoutAccountId(
-      seller && (seller.stripeAccountId || seller.payoutAccountId) ? (seller.stripeAccountId || seller.payoutAccountId) : ''
+      seller ? (seller.stripeAccountId || seller.payoutAccountId || '') : ''
     );
     const providerBankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
     hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified && (!providerBankStatus || providerBankStatus === 'connected'));
     hasLinkedVerifiedAccount = !!linkedPayoutDestination.verified;
-    if (linkedPayoutDestination.accountId && hasLinkedVerifiedAccount) {
-      // Prefer the payout destination captured on sold order items when it was verified.
-      receiverEmail = linkedPayoutDestination.accountId;
-      receiverSource = 'order_linked';
-    } else if (sellerPayoutAccountId && hasCurrentVerifiedAccount) {
-      // Fall back to the seller's currently verified payout destination.
+    const linkedAccountIsStripe = isStripeConnectAccountId(linkedPayoutDestination.accountId);
+    const currentAccountIsStripe = isStripeConnectAccountId(sellerPayoutAccountId);
+    if (sellerPayoutAccountId && hasCurrentVerifiedAccount && currentAccountIsStripe) {
+      // Prefer the seller's current verified Stripe Connect account to avoid legacy order-linked payout destinations.
       receiverEmail = sellerPayoutAccountId;
       receiverSource = 'seller_profile';
+    } else if (linkedPayoutDestination.accountId && hasLinkedVerifiedAccount && linkedAccountIsStripe) {
+      receiverEmail = linkedPayoutDestination.accountId;
+      receiverSource = 'order_linked';
     } else if (sellerPayoutAccountId) {
       receiverEmail = sellerPayoutAccountId;
       receiverSource = 'seller_profile_unverified';
@@ -2975,7 +3065,11 @@ async function sendStripeSellerPayout(order, options) {
         updatedAt: pb.updatedAt,
         status: snapshot.status,
         onboardingRequired: snapshot.status === 'blocked_onboarding',
-        error: snapshot.status === 'blocked_onboarding' ? snapshot.blockedReason : null
+        error: snapshot.status === 'blocked_onboarding' ? snapshot.blockedReason : null,
+        payoutLifecycleStatus: snapshot.status === 'ready_to_pay'
+          ? 'ready_to_transfer'
+          : (snapshot.status === 'pending_hold' ? 'on_hold' : (snapshot.status === 'blocked_onboarding' ? 'onboarding_blocked' : 'awaiting_shipment')),
+        payoutBankSettlementStatus: snapshot.status === 'ready_to_pay' ? 'not_started' : 'not_applicable'
       }
     },
     { upsert: true }
@@ -3030,7 +3124,7 @@ async function sendStripeSellerPayout(order, options) {
     );
     return { ok: false, error: reason };
   }
-  if (!/^acct_[A-Za-z0-9]+$/.test(String(snapshot.receiverEmail || '').trim())) {
+  if (!isStripeConnectAccountId(snapshot.receiverEmail)) {
     const reason = 'Seller payout destination must be a Stripe Connect account ID';
     await db.collection('payouts').updateOne(
       payoutDocQuery,
@@ -3039,22 +3133,64 @@ async function sendStripeSellerPayout(order, options) {
     return { ok: false, error: reason };
   }
 
+  const payoutCurrency = String(snapshot.payoutCurrency || 'USD').toLowerCase();
+  const payoutCurrencyUpper = payoutCurrency.toUpperCase();
+  const payoutAmountCents = toStripeAmountCents(snapshot.payoutAmount);
+  const sourceTransaction = await ensureStripeChargeIdOnOrder(order);
+  const shouldRequireAvailableBalance = !isStripeChargeId(sourceTransaction);
+
+  if (shouldRequireAvailableBalance) {
+    const availableBalanceCents = await getAvailableStripeBalanceAmount(payoutCurrency);
+    if (availableBalanceCents < payoutAmountCents) {
+      const reason = `Stripe available balance is insufficient for immediate transfer (${(availableBalanceCents / 100).toFixed(2)} ${payoutCurrencyUpper} available).`;
+      await db.collection('payouts').updateOne(
+        payoutDocQuery,
+        {
+          $set: {
+            status: 'ready_to_pay',
+            error: reason,
+            onboardingRequired: false,
+            retryCategory: 'insufficient_balance',
+            nextRetryAt: new Date(Date.now() + STRIPE_PAYOUT_BALANCE_RETRY_DELAY_MS),
+            payoutLifecycleStatus: 'queued_for_retry',
+            payoutBankSettlementStatus: 'not_started',
+            updatedAt: new Date()
+          }
+        }
+      );
+      return { ok: true, deferred: true, reason: reason, sellerId: pb.sellerId };
+    }
+  }
+
   await db.collection('payouts').updateOne(
     payoutDocQuery,
-    { $set: { status: 'processing', onboardingRequired: false, lastAttemptAt: new Date(), updatedAt: new Date(), error: null } }
+    {
+      $set: {
+        status: 'processing',
+        onboardingRequired: false,
+        lastAttemptAt: new Date(),
+        updatedAt: new Date(),
+        error: null,
+        payoutLifecycleStatus: 'processing_transfer',
+        payoutBankSettlementStatus: 'not_started'
+      }
+    }
   );
 
   try {
-    const transfer = await stripe.transfers.create({
+    const transferPayload = {
       amount: toStripeAmountCents(snapshot.payoutAmount),
-      currency: String(snapshot.payoutCurrency || 'USD').toLowerCase(),
+      currency: payoutCurrency,
       destination: String(snapshot.receiverEmail),
       metadata: {
         orderId: orderId,
         sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
-        triggerSource: String(payoutMeta.triggerSource || '')
+        triggerSource: String(payoutMeta.triggerSource || ''),
+        payoutFundingSource: isStripeChargeId(sourceTransaction) ? 'source_transaction' : 'platform_available_balance'
       }
-    });
+    };
+    if (isStripeChargeId(sourceTransaction)) transferPayload.source_transaction = sourceTransaction;
+    const transfer = await stripe.transfers.create(transferPayload);
     const payoutUpdates = {
       payoutAccountId: snapshot.receiverEmail,
       stripeTransferId: String(transfer && transfer.id ? transfer.id : ''),
@@ -3063,7 +3199,13 @@ async function sendStripeSellerPayout(order, options) {
       onboardingRequired: false,
       error: null,
       status: 'paid',
-      paidAt: new Date()
+      paidAt: new Date(),
+      transferSentAt: new Date(),
+      stripeSourceTransactionId: isStripeChargeId(sourceTransaction) ? sourceTransaction : null,
+      retryCategory: null,
+      nextRetryAt: null,
+      payoutLifecycleStatus: 'transfer_sent',
+      payoutBankSettlementStatus: 'pending_external_settlement'
     };
     await db.collection('payouts').updateOne(
       payoutDocQuery,
@@ -3075,9 +3217,38 @@ async function sendStripeSellerPayout(order, options) {
     await notifyAdminPayoutPaidIfNeeded(paidPayout, 'stripe_transfer');
     return { ok: true, payout: transfer, processing: false, sellerId: pb.sellerId };
   } catch (error) {
+    if (isStripeBalanceInsufficientError(error)) {
+      const reason = error && error.message
+        ? error.message
+        : 'Stripe available balance is insufficient for immediate transfer.';
+      await db.collection('payouts').updateOne(
+        payoutDocQuery,
+        {
+          $set: {
+            status: 'ready_to_pay',
+            error: reason,
+            onboardingRequired: false,
+            retryCategory: 'insufficient_balance',
+            nextRetryAt: new Date(Date.now() + STRIPE_PAYOUT_BALANCE_RETRY_DELAY_MS),
+            payoutLifecycleStatus: 'queued_for_retry',
+            payoutBankSettlementStatus: 'not_started',
+            updatedAt: new Date()
+          }
+        }
+      );
+      return { ok: true, deferred: true, reason: reason, sellerId: pb.sellerId };
+    }
     await db.collection('payouts').updateOne(
       payoutDocQuery,
-      { $set: { status: 'failed', error: error.message, onboardingRequired: false, updatedAt: new Date() } }
+      {
+        $set: {
+          status: 'failed',
+          error: error.message,
+          onboardingRequired: false,
+          payoutLifecycleStatus: 'transfer_failed',
+          updatedAt: new Date()
+        }
+      }
     );
     return { ok: false, error: error.message, sellerId: pb.sellerId };
   }
@@ -3737,12 +3908,15 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession, options) {
     if (!order) return { ok: false, error: 'Order not found' };
 
     reservedInventory = await reserveInventoryForOrder(order);
+    const stripePaymentIntentId = String(checkoutSession && checkoutSession.payment_intent ? checkoutSession.payment_intent : (order.stripePaymentIntentId || ''));
+    const stripeChargeId = await resolveStripeChargeIdFromPaymentIntentId(stripePaymentIntentId);
     const completedOrderDoc = {
       ...order,
       status: 'completed',
       paymentProvider: 'stripe',
       stripeCheckoutSessionId: String(checkoutSession && checkoutSession.id ? checkoutSession.id : (order.stripeCheckoutSessionId || '')),
-      stripePaymentIntentId: String(checkoutSession && checkoutSession.payment_intent ? checkoutSession.payment_intent : ''),
+      stripePaymentIntentId: stripePaymentIntentId,
+      stripeChargeId: stripeChargeId || String(order && order.stripeChargeId ? order.stripeChargeId : ''),
       completedAt: new Date(),
       inventoryReserved: true
     };
@@ -3760,6 +3934,7 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession, options) {
             paymentProvider: 'stripe',
             stripeCheckoutSessionId: completedOrderDoc.stripeCheckoutSessionId,
             stripePaymentIntentId: completedOrderDoc.stripePaymentIntentId,
+            stripeChargeId: completedOrderDoc.stripeChargeId,
             completedAt: completedOrderDoc.completedAt,
             inventoryReserved: true
           }
@@ -6469,6 +6644,9 @@ app.put('/api/payouts/:id', publicApiRateLimit, verifyToken, async function(req,
       updates.paidAt = new Date();
       updates.manuallyPaid = true;
       updates.error = null;
+      updates.payoutLifecycleStatus = 'bank_paid';
+      updates.payoutBankSettlementStatus = 'bank_paid';
+      updates.bankPaidAt = new Date();
       if (note && typeof note === 'string') updates.manualPayNote = note.slice(0, MAX_MANUAL_PAY_NOTE_LENGTH);
     }
 
@@ -7996,6 +8174,145 @@ async function assignStarterTierToExistingSellers() {
   }
 }
 
+async function cleanupLegacyNonStripePayoutDestinationsOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'cleanup_non_stripe_payout_destinations_2026_05_14';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+    const sellers = await db.collection('sellers')
+      .find({}, { projection: { userId: 1, stripeAccountId: 1, payoutAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1 } })
+      .toArray();
+    const sellerAccountByUserId = new Map(sellers.map(function(seller) {
+      return [String(seller && seller.userId ? seller.userId : ''), getConnectedSellerStripeAccountId(seller)];
+    }));
+
+    const summary = {
+      payoutsScanned: 0,
+      payoutsUpdated: 0,
+      orderItemsScanned: 0,
+      orderItemsUpdated: 0
+    };
+
+    const payoutCandidates = await db.collection('payouts')
+      .find({
+        $or: [
+          { payoutAccountId: { $type: 'string' } },
+          { linkedPayoutAccountId: { $type: 'string' } }
+        ]
+      })
+      .toArray();
+    summary.payoutsScanned = payoutCandidates.length;
+    for (const payout of payoutCandidates) {
+      const payoutAccountId = normalizePayoutAccountId(payout && payout.payoutAccountId ? payout.payoutAccountId : '');
+      const linkedAccountId = normalizePayoutAccountId(payout && payout.linkedPayoutAccountId ? payout.linkedPayoutAccountId : '');
+      const payoutAccountInvalid = !!(payoutAccountId && !isStripeConnectAccountId(payoutAccountId));
+      const linkedAccountInvalid = !!(linkedAccountId && !isStripeConnectAccountId(linkedAccountId));
+      if (!payoutAccountInvalid && !linkedAccountInvalid) continue;
+      const sellerId = String(payout && payout.sellerId ? payout.sellerId : '');
+      const connectedAccountId = sellerAccountByUserId.get(sellerId) || '';
+      const updates = { updatedAt: new Date() };
+      if (payoutAccountInvalid) {
+        updates.payoutAccountId = connectedAccountId || null;
+        updates.payoutAccountSource = connectedAccountId ? 'seller_profile_cleanup' : 'invalid_destination_removed';
+      }
+      if (linkedAccountInvalid) {
+        updates.linkedPayoutAccountId = connectedAccountId || null;
+      }
+      if (String(payout && payout.error ? payout.error : '').toLowerCase().includes('must be a stripe connect account id')) {
+        updates.error = connectedAccountId ? null : payout.error;
+      }
+      await db.collection('payouts').updateOne(
+        { _id: payout._id },
+        { $set: updates }
+      );
+      summary.payoutsUpdated++;
+    }
+
+    for (const collectionName of ['orders', 'pendingOrders']) {
+      const orderCandidates = await db.collection(collectionName)
+        .find({ 'items.sellerPayoutAccountId': { $exists: true } }, { projection: { id: 1, items: 1 } })
+        .toArray();
+      for (const order of orderCandidates) {
+        if (!Array.isArray(order && order.items)) continue;
+        let changed = false;
+        const updatedItems = order.items.map(function(item) {
+          summary.orderItemsScanned++;
+          if (!item || typeof item !== 'object') return item;
+          const currentDestination = normalizePayoutAccountId(item.sellerPayoutAccountId || '');
+          if (!currentDestination || isStripeConnectAccountId(currentDestination)) return item;
+          const connectedAccountId = sellerAccountByUserId.get(String(item.sellerId || '').trim()) || '';
+          if (!connectedAccountId) {
+            changed = true;
+            summary.orderItemsUpdated++;
+            return { ...item, sellerPayoutAccountId: '' };
+          }
+          changed = true;
+          summary.orderItemsUpdated++;
+          return { ...item, sellerPayoutAccountId: connectedAccountId };
+        });
+        if (!changed) continue;
+        await db.collection(collectionName).updateOne(
+          { _id: order._id },
+          { $set: { items: updatedItems, updatedAt: new Date() } }
+        );
+      }
+    }
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: new Date(),
+      summary: summary
+    });
+    console.log(`✅ Payout destination cleanup complete: ${summary.payoutsUpdated} payout(s), ${summary.orderItemsUpdated} order item(s) updated`);
+  } catch (err) {
+    console.error('⚠️  Payout destination cleanup migration error:', err.message);
+  }
+}
+
+async function retryDeferredInsufficientBalancePayouts() {
+  if (!mongoConnected) return;
+  try {
+    const now = new Date();
+    const deferredPayouts = await db.collection('payouts')
+      .find({
+        status: 'ready_to_pay',
+        retryCategory: 'insufficient_balance',
+        $or: [
+          { nextRetryAt: { $lte: now } },
+          { nextRetryAt: { $exists: false } }
+        ]
+      })
+      .sort({ updatedAt: 1 })
+      .limit(STRIPE_PAYOUT_BALANCE_RETRY_BATCH)
+      .toArray();
+    if (deferredPayouts.length === 0) return;
+    const summary = { scanned: deferredPayouts.length, released: 0, deferred: 0, failed: 0 };
+    for (const payout of deferredPayouts) {
+      const orderId = String(payout && payout.orderId ? payout.orderId : '').trim();
+      const sellerId = String(payout && payout.sellerId ? payout.sellerId : '').trim();
+      if (!orderId || !sellerId) continue;
+      const order = await db.collection('orders').findOne({ id: orderId });
+      if (!order) continue;
+      try {
+        const result = await sendStripeSellerPayout(order, {
+          triggerSource: 'startup_insufficient_balance_retry',
+          sellerId: sellerId
+        });
+        if (!result.ok) summary.failed++;
+        else if (result.deferred) summary.deferred++;
+        else summary.released++;
+      } catch (error) {
+        summary.failed++;
+        console.error('Failed insufficient-balance retry payout for order', orderId, '-', error.message);
+      }
+    }
+    console.log(`ℹ️  Insufficient-balance payout retries: ${summary.released} released, ${summary.deferred} deferred, ${summary.failed} failed`);
+  } catch (err) {
+    console.error('⚠️  Deferred payout retry error:', err.message);
+  }
+}
+
 async function releasePendingHoldPayoutsOnce() {
   if (!mongoConnected) return;
   const migrationKey = 'release_pending_hold_payouts_2026_05_14';
@@ -8026,12 +8343,16 @@ async function releasePendingHoldPayoutsOnce() {
         console.error('Failed one-time pending-hold payout release for order', orderId, '-', err.message);
       }
     }
+    if (summary.failed > 0 || summary.deferred > 0) {
+      console.log(`ℹ️  One-time pending hold payout release migration not finalized: ${summary.released} released, ${summary.failed} failed, ${summary.deferred} deferred (will retry on next startup)`);
+      return;
+    }
     await db.collection('runtimeMigrations').insertOne({
       key: migrationKey,
       createdAt: new Date(),
       summary: summary
     });
-    console.log(`✅ One-time pending hold payout release migration complete: ${summary.released} released, ${summary.failed} failed, ${summary.deferred} deferred`);
+    console.log(`✅ One-time pending hold payout release migration complete: ${summary.released} released`);
   } catch (err) {
     console.error('⚠️  One-time pending hold payout release migration error:', err.message);
   }
@@ -8118,8 +8439,10 @@ async function start() {
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
       await ensurePayoutIndexes();
+      await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();
       await releasePendingHoldPayoutsOnce();
+      await retryDeferredInsufficientBalancePayouts();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
     }
