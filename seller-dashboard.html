@@ -547,7 +547,7 @@
             <div class="flex items-center justify-between mb-5">
               <div>
                 <h2 class="text-lg font-semibold text-gray-900">Shipment Verification</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to notify buyers by email</p>
+                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to start the payout hold window (Starter: 5 days, Pro: 2 days)</p>
               </div>
             </div>
             <div id="shipmentsList">
@@ -608,7 +608,7 @@
                 <p class="text-2xl font-bold text-orange-500" id="pendingPayout">$0.00</p>
               </div>
             </div>
-            <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts will show once shipped orders are eligible.</p>
+            <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts will show once shipped orders clear the tier hold window (Starter: 5 days, Pro: 2 days).</p>
             <div class="flex items-center justify-between">
               <p class="text-sm text-gray-600">View full earnings history and request payouts</p>
               <a href="seller-payouts.html" class="btn-primary text-sm">
@@ -659,7 +659,7 @@
                     <ul class="text-xs text-cyan-800 space-y-0.5 mb-3">
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Unlimited active listings (vs 25 on Starter)</li>
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Advanced analytics &amp; insights</li>
-                      <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority payout (1–2 days)</li>
+                      <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority payout hold (2 days after shipment confirmation)</li>
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority seller support &amp; featured badges</li>
                     </ul>
                     <button id="startUpgradeBtn" onclick="startTierUpgrade()" class="btn-primary text-sm">
@@ -927,6 +927,7 @@
   function payoutStatusBadge(status) {
     var labels = {
       pending_delivery: 'Pending Delivery',
+      pending_hold: 'Pending Hold',
       blocked_onboarding: 'Blocked: Setup Required',
       ready_to_pay: 'Ready for Payout',
       processing: 'Processing',
@@ -935,6 +936,7 @@
     };
     var classes = {
       pending_delivery: 'badge-pending',
+      pending_hold: 'badge-pending',
       blocked_onboarding: 'badge-cancelled',
       ready_to_pay: 'badge-shipped',
       processing: 'badge-new',
@@ -949,6 +951,8 @@
     var payoutStatus = String(payout && payout.status ? payout.status : '').toLowerCase();
     if (payoutStatus && !(sellerData && sellerData.payoutVerified && payoutStatus === 'blocked_onboarding')) return payoutStatus;
     if (order && order.shippingStatus === 'shipped') {
+      var releaseAt = payout && payout.payoutReleaseAt ? new Date(payout.payoutReleaseAt) : null;
+      if (releaseAt && releaseAt.getTime() > Date.now()) return 'pending_hold';
       return sellerData && sellerData.payoutVerified ? 'ready_to_pay' : 'blocked_onboarding';
     }
     return 'pending_delivery';
@@ -1490,7 +1494,7 @@
         '<th class="px-4 py-3 font-semibold text-gray-600">Order</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Date</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Gross Sale</th>' +
-        '<th class="px-4 py-3 font-semibold text-gray-600">Your Earnings (90%)</th>' +
+        '<th class="px-4 py-3 font-semibold text-gray-600">Your Earnings</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Status</th>' +
         '<th class="px-4 py-3 font-semibold text-gray-600">Action</th>' +
         '</tr></thead>' +
@@ -1722,7 +1726,6 @@
     fetch(BACKEND_URL + '/api/sellers/pro-plan')
       .then(function(r) { return r.json(); })
       .then(function(planData) {
-        if (!planData.planId) throw new Error('Pro Seller subscription plan is unavailable. Please try again later.');
         loadDashPayPalSubSDK(planData.planId);
       })
       .catch(function(err) {

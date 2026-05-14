@@ -348,7 +348,7 @@
       <p class="text-sm text-gray-500 mt-1" id="statPaidCount">0 payouts</p>
     </div>
     <div class="bg-[#20232a] border border-gray-700 rounded-lg p-5">
-      <p class="text-gray-400 text-base mb-1">Platform Earnings (10%)</p>
+      <p class="text-gray-400 text-base mb-1">Platform Earnings (Subtotal Remainder)</p>
       <p class="text-3xl font-bold text-cyan-400" id="statEarnings">$0.00</p>
       <p class="text-sm text-gray-500 mt-1">Across all orders</p>
     </div>
@@ -361,6 +361,7 @@
       <select id="statusFilter" class="bg-[#181b21] border border-gray-600 text-white px-3 py-3 rounded-lg text-base" onchange="renderPayouts()">
         <option value="">All Statuses</option>
         <option value="pending_delivery">Pending Delivery</option>
+        <option value="pending_hold">Pending Hold</option>
         <option value="blocked_onboarding">Blocked: Setup Required</option>
         <option value="ready_to_pay">Ready to Pay</option>
         <option value="processing">Processing</option>
@@ -493,6 +494,9 @@
     if (payout.status === 'pending_delivery') {
       return '<span class="text-gray-500 text-sm">Waiting for seller shipment</span>';
     }
+    if (payout.status === 'pending_hold') {
+      return '<span class="text-gray-500 text-sm">Waiting for hold window to clear</span>';
+    }
     if (payout.status === 'ready_to_pay') {
       return '<button onclick="sendPayout(' + JSON.stringify(payoutId) + ')" ' +
         'class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold transition">' +
@@ -523,6 +527,7 @@
     } else {
       var labels = {
         pending_delivery: 'Pending Delivery',
+        pending_hold: 'Pending Hold',
         blocked_onboarding: 'Blocked: Setup Required',
         ready_to_pay: 'Ready to Pay',
         processing: 'Processing',
@@ -531,6 +536,7 @@
       };
       var classes = {
         pending_delivery: 'bg-yellow-900 text-yellow-200',
+        pending_hold: 'bg-orange-900 text-orange-200',
         blocked_onboarding: 'bg-amber-900 text-amber-200',
         ready_to_pay:     'bg-green-900 text-green-200',
         processing:       'bg-indigo-900 text-indigo-200',
@@ -620,7 +626,7 @@
     var platform = 0;
 
     allPayouts.forEach(function(p) {
-      if (p.status === 'pending_delivery') { pending += Number(p.amount); pendingCount++; }
+      if (p.status === 'pending_delivery' || p.status === 'pending_hold') { pending += Number(p.amount); pendingCount++; }
       else if (p.status === 'ready_to_pay') { ready += Number(p.amount); readyCount++; }
       else if (p.status === 'paid')         { paid   += Number(p.amount); paidCount++;   }
       platform += Number(p.platformFee || 0);

@@ -431,7 +431,7 @@
               <span class="w-8 h-8 bg-cyan-50 rounded-lg flex items-center justify-center"><i class="fas fa-chart-line text-cyan-500 text-sm"></i></span>
             </div>
             <p class="text-2xl font-bold text-gray-900" id="totalAmount">$0.00</p>
-            <p class="text-xs text-gray-400 mt-1">All time &middot; 90% of sales</p>
+            <p class="text-xs text-gray-400 mt-1">All time &middot; Starter: 90% / Pro: 95% of subtotal</p>
           </div>
         </div>
 
@@ -445,6 +445,7 @@
             <select id="statusFilter" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400" onchange="renderEarnings()">
               <option value="">All Statuses</option>
               <option value="pending_delivery">Pending Delivery</option>
+              <option value="pending_hold">Pending Hold</option>
               <option value="blocked_onboarding">Blocked: Setup Required</option>
               <option value="ready_to_pay">Ready for Payout</option>
               <option value="processing">Processing</option>
@@ -457,7 +458,7 @@
                 <tr>
                   <th class="px-6 py-3 text-left font-semibold">Order ID</th>
                   <th class="px-6 py-3 text-left font-semibold">Items Sold</th>
-                  <th class="px-6 py-3 text-left font-semibold">Your Earnings (90%)</th>
+                  <th class="px-6 py-3 text-left font-semibold">Your Earnings</th>
                   <th class="px-6 py-3 text-left font-semibold">Status</th>
                   <th class="px-6 py-3 text-left font-semibold">Order Date</th>
                 </tr>
@@ -486,11 +487,11 @@
             <ul class="space-y-3">
               <li class="flex items-start gap-3">
                 <span class="w-6 h-6 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-percentage text-green-500 text-xs"></i></span>
-                <span class="text-sm text-gray-600">You earn <strong class="text-gray-900">90%</strong> of each item's sale price. Shipping costs are not included in your earnings.</span>
+                <span class="text-sm text-gray-600">Starter sellers earn <strong class="text-gray-900">90%</strong> and Pro sellers earn <strong class="text-gray-900">95%</strong> of each item's subtotal. Shipping and tax are excluded from seller earnings.</span>
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-6 h-6 bg-amber-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-lock text-amber-500 text-xs"></i></span>
-                <span class="text-sm text-gray-600">Funds are held until you mark the order as <strong class="text-gray-900">shipped</strong> and your payout account is verified.</span>
+                <span class="text-sm text-gray-600">Funds are held after shipment confirmation for <strong class="text-gray-900">5 days (Starter)</strong> or <strong class="text-gray-900">2 days (Pro)</strong>, and your payout account must be verified.</span>
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-6 h-6 bg-cyan-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-user-check text-cyan-500 text-xs"></i></span>
@@ -498,7 +499,7 @@
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-6 h-6 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-calendar-check text-purple-500 text-xs"></i></span>
-                <span class="text-sm text-gray-600">Payouts are typically processed within <strong class="text-gray-900">3–5 business days</strong> of approval.</span>
+                <span class="text-sm text-gray-600">After eligibility, Stripe transfer delivery timing follows your connected account payout schedule.</span>
               </li>
             </ul>
           </div>
@@ -606,13 +607,17 @@
   function getSellerOrderNet(order) {
     var explicitNet = parseFloat(order && order.sellerNetTotal);
     if (Number.isFinite(explicitNet) && explicitNet >= 0) return explicitNet;
-    return parseFloat((getSellerOrderGross(order) * 0.9).toFixed(2));
+    var sellerTier = String(order && order.sellerTier ? order.sellerTier : (sellerProfile && sellerProfile.tier ? sellerProfile.tier : 'starter')).toLowerCase();
+    var payoutRate = sellerTier === 'pro' ? 0.95 : 0.9;
+    return parseFloat((getSellerOrderGross(order) * payoutRate).toFixed(2));
   }
 
   function getEffectivePayoutStatus(order, payout) {
     var payoutStatus = String(payout && payout.status ? payout.status : '').toLowerCase();
     if (payoutStatus) return payoutStatus;
     if (order && order.shippingStatus === 'shipped') {
+      var releaseAt = payout && payout.payoutReleaseAt ? new Date(payout.payoutReleaseAt) : null;
+      if (releaseAt && releaseAt.getTime() > Date.now()) return 'pending_hold';
       return sellerProfile && sellerProfile.payoutVerified ? 'ready_to_pay' : 'blocked_onboarding';
     }
     return 'pending_delivery';
@@ -668,7 +673,7 @@
       sellerProfile = seller;
       payoutsOnboardingUrl = seller && seller.payoutProviderBankOnboardingUrl ? String(seller.payoutProviderBankOnboardingUrl) : '';
       document.getElementById('sellerSubtitle').textContent =
-        'Earnings for ' + escHtml(seller.shopName || 'your shop') + ' · 90% of each sale goes to you.';
+        'Earnings for ' + escHtml(seller.shopName || 'your shop') + ' · Starter keeps 90% and Pro keeps 95% of item subtotal.';
 
       renderPayoutAccountState();
       var input = document.getElementById('payoutsPaypalEmailInput');
@@ -857,6 +862,7 @@
   function statusBadge(status) {
     var labels = {
       pending_delivery: 'Pending Delivery',
+      pending_hold: 'Pending Hold',
       blocked_onboarding: 'Blocked: Setup Required',
       ready_to_pay: 'Ready for Payout',
       processing: 'Processing',
@@ -865,6 +871,7 @@
     };
     var classes = {
       pending_delivery: 'badge-pending',
+      pending_hold: 'badge-pending',
       blocked_onboarding: 'bg-red-100 text-red-700',
       ready_to_pay:     'badge-ready',
       processing:       'bg-indigo-100 text-indigo-700',
@@ -884,7 +891,7 @@
 
     sellerPayouts.forEach(function(p) {
       lifetime += Number(p.amount);
-      if (p.status === 'pending_delivery') { pending += Number(p.amount); pendingCount++; }
+      if (p.status === 'pending_delivery' || p.status === 'pending_hold') { pending += Number(p.amount); pendingCount++; }
       else if (p.status === 'ready_to_pay' || p.status === 'processing') { available += Number(p.amount); availableCount++; }
       else if (p.status === 'blocked_onboarding') { blocked += Number(p.amount); blockedCount++; }
     });
