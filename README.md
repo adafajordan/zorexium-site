@@ -37,12 +37,12 @@ Set the following in your Render service's **Environment** tab:
 | `PAYPAL_MODE`   | Optional | Legacy PayPal mode |
 | `PAYPAL_PRO_SELLER_PLAN_ID` | Optional | Legacy Pro plan ID |
 | `PAYPAL_WEBHOOK_ID` | Optional | Legacy PayPal webhook ID |
-| `SMTP_HOST`     | Optional | SMTP host for email delivery (password reset, OTC login) |
-| `SMTP_PORT`     | Optional | SMTP port (default: 587) |
-| `SMTP_SECURE`   | Optional | `true` for port 465, `false` otherwise |
-| `SMTP_USER`     | Optional | SMTP username/email |
-| `SMTP_PASS`     | Optional | SMTP password |
-| `SMTP_FROM`     | Optional | From address, e.g. `Zorexium <noreply@zorexium.io>` |
+| `SENDGRID_API_KEY` | Optional | SendGrid API key used for transactional email delivery |
+| `SENDGRID_FROM_EMAIL` | Optional | Verified sender email used for outbound messages |
+| `ADMIN_EMAIL` | Optional | Admin inbox used for operational notifications |
+| `TWILIO_ACCOUNT_SID` | Optional | Twilio Account SID for SMS alerts |
+| `TWILIO_AUTH_TOKEN` | Optional | Twilio auth token for SMS alerts |
+| `TWILIO_SMS_FROM` | Optional | Twilio sender number (E.164 format) |
 
 See `.env.example` for the full template.
 

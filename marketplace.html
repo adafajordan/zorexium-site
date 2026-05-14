@@ -500,11 +500,14 @@
               <a href="product-detail.html?id=${product._id}" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-3 rounded text-base font-semibold">
                 <i class="fas fa-info-circle"></i>
               </a>
-              <button onclick="addToCart('${product._id}', '${product.name}', ${product.price}, '${product.image}')" class="bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-3 rounded text-base font-semibold">
+              <button onclick="addToCart('${product._id}', '${product.name}', ${product.price}, '${product.image}')"
+                ${(function(){ var qty = parseInt(product.quantity, 10); return (!isNaN(qty) && qty <= 0) ? 'disabled' : ''; })()}
+                class="${(function(){ var qty = parseInt(product.quantity, 10); return (!isNaN(qty) && qty <= 0) ? 'bg-gray-500 text-white px-3 py-3 rounded text-base font-semibold cursor-not-allowed opacity-70' : 'bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-3 rounded text-base font-semibold'; })()}">
                 <i class="fas fa-shopping-cart"></i>
               </button>
             </div>
           </div>
+          ${(function(){ var qty = parseInt(product.quantity, 10); return (!isNaN(qty) && qty <= 0) ? '<p class="text-xs text-red-400 mt-2 font-semibold">Out of stock</p>' : ''; })()}
         </div>
       </div>
     `).join('');
@@ -764,4 +767,3 @@
 <script src="voice-search.js"></script>
 </body>
 </html>
-

@@ -588,10 +588,10 @@
   if (so) so.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ window.location.href='index.html'; }); });
 
   var soListEl = document.getElementById('soSubList');
-  ZrxSession.fetch(BACKEND + '/api/orders/my', { credentials: 'include' })
+  ZrxSession.fetch(BACKEND + '/api/orders/subscriptions', { credentials: 'include' })
     .then(function(r){ return r.ok ? r.json() : []; })
-    .then(function(orders){
-      var subs = (orders || []).filter(function(o){ return o.type === 'subscription' || o.subscriptionId; });
+    .then(function(subs){
+      subs = Array.isArray(subs) ? subs : [];
       if (subs.length === 0) {
         soListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14"><i class="fas fa-sync-alt text-5xl text-gray-200 mb-3 block"></i><p class="font-semibold text-gray-600 mb-1">No active subscriptions</p><p class="text-sm text-gray-400 mb-4">Subscription-based products and services will appear here.</p></div>';
         return;

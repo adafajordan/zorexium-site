@@ -595,10 +595,10 @@
   if (so) so.addEventListener('click', function(e){ e.preventDefault(); ZrxSession.logout(function(){ window.location.href='index.html'; }); });
 
   var tiListEl = document.getElementById('tiList');
-  ZrxSession.fetch(BACKEND + '/api/user/preferences', { credentials: 'include' })
-    .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(prefs){
-      var tradins = (prefs && prefs.tradeIns) ? prefs.tradeIns : [];
+  ZrxSession.fetch(BACKEND + '/api/orders/trade-ins', { credentials: 'include' })
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(tradins){
+      tradins = Array.isArray(tradins) ? tradins : [];
       if (tradins.length === 0) {
         tiListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14"><i class="fas fa-random text-5xl text-gray-200 mb-3 block"></i><p class="font-semibold text-gray-600 mb-1">No trade-in orders</p><p class="text-sm text-gray-400 mb-4">Trade-ins you submit will appear here with status updates.</p><a href="index.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Browse Eligible Products</a></div>';
         return;
