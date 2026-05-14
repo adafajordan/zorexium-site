@@ -3808,18 +3808,23 @@ async function getPaidStripeCheckoutSessionForRepair(order) {
   const orderId = String(order && order.id ? order.id : '').trim();
   const stripeCheckoutSessionId = String(order && order.stripeCheckoutSessionId ? order.stripeCheckoutSessionId : '').trim();
   if (!orderId || !stripeCheckoutSessionId || !stripe || !STRIPE_SECRET_KEY) return null;
-  const session = await stripe.checkout.sessions.retrieve(stripeCheckoutSessionId);
-  if (!session || !session.id) return null;
-  const mappedOrderId = String(
-    (session && session.metadata && session.metadata.orderId)
-      || (session && session.client_reference_id)
-      || ''
-  ).trim();
-  if (mappedOrderId && mappedOrderId !== orderId) return null;
-  const paymentStatus = String(session && session.payment_status ? session.payment_status : '').toLowerCase();
-  const checkoutStatus = String(session && session.status ? session.status : '').toLowerCase();
-  const isPaid = paymentStatus === 'paid' || paymentStatus === 'no_payment_required' || checkoutStatus === 'complete';
-  return isPaid ? session : null;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(stripeCheckoutSessionId);
+    if (!session || !session.id) return null;
+    const mappedOrderId = String(
+      (session && session.metadata && session.metadata.orderId)
+        || (session && session.client_reference_id)
+        || ''
+    ).trim();
+    if (mappedOrderId && mappedOrderId !== orderId) return null;
+    const paymentStatus = String(session && session.payment_status ? session.payment_status : '').toLowerCase();
+    const checkoutStatus = String(session && session.status ? session.status : '').toLowerCase();
+    const isPaid = paymentStatus === 'paid' || paymentStatus === 'no_payment_required' || checkoutStatus === 'complete';
+    return isPaid ? session : null;
+  } catch (error) {
+    console.error('Failed to retrieve Stripe Checkout session for legacy repair:', error && error.message ? error.message : error);
+    return null;
+  }
 }
 
 async function repairCompletedLegacyOrders(options) {
