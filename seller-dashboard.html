@@ -547,7 +547,7 @@
             <div class="flex items-center justify-between mb-5">
               <div>
                 <h2 class="text-lg font-semibold text-gray-900">Shipment Verification</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to start the payout hold window (Starter: 5 days, Pro: 2 days)</p>
+                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to start the payout hold window (Starter: 5 days, Pro: 5 days)</p>
               </div>
             </div>
             <div id="shipmentsList">
@@ -608,7 +608,7 @@
                 <p class="text-2xl font-bold text-orange-500" id="pendingPayout">$0.00</p>
               </div>
             </div>
-            <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts will show once shipped orders clear the tier hold window (Starter: 5 days, Pro: 2 days).</p>
+                <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts will show once shipped orders clear the tier hold window (Starter: 5 days, Pro: 5 days).</p>
             <div class="flex items-center justify-between">
               <p class="text-sm text-gray-600">View full earnings history and request payouts</p>
               <a href="seller-payouts.html" class="btn-primary text-sm">
@@ -659,7 +659,7 @@
                     <ul class="text-xs text-cyan-800 space-y-0.5 mb-3">
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Unlimited active listings (vs 25 on Starter)</li>
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Advanced analytics &amp; insights</li>
-                      <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority payout hold (2 days after shipment confirmation)</li>
+                      <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority payout handling (currently on a 5-day shipment hold)</li>
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority seller support &amp; featured badges</li>
                     </ul>
                     <button id="startUpgradeBtn" onclick="startTierUpgrade()" class="btn-primary text-sm">
@@ -1053,6 +1053,13 @@
     updateCartBadge();
     loadDashboard();
     loadOrdersPreview();
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('openUpgradeTier') === '1') {
+      openUpgradeTierFromSidebar();
+      params.delete('openUpgradeTier');
+      var nextQuery = params.toString();
+      window.history.replaceState({}, document.title, window.location.pathname + (nextQuery ? ('?' + nextQuery) : '') + window.location.hash);
+    }
   }
 
   // ── Dashboard Setup ────────────────────────────────────────────────────────────

@@ -494,6 +494,7 @@ async function notifyPriceChangeSubscribers(product, previousPrice, nextPrice) {
   const safeProductName = escapeHtml(product && product.name ? product.name : 'Product');
   const safeFrom = fromPrice.toFixed(2);
   const safeTo = toPrice.toFixed(2);
+  const newPricePoint = Number(toPrice.toFixed(2));
   const productPath = '/product-detail.html?id=' + encodeURIComponent(productId);
 
   for (const doc of docs) {
@@ -525,6 +526,18 @@ async function notifyPriceChangeSubscribers(product, previousPrice, nextPrice) {
       );
     }
     if (!shouldNotify) continue;
+    await upsertOrderNotification(
+      { userId: userId, type: 'price_alert_price_change', productId: productId, pricePoint: newPricePoint },
+      {
+        userId: userId,
+        type: 'price_alert_price_change',
+        productId: productId,
+        pricePoint: newPricePoint,
+        title: 'Price alert triggered',
+        body: `${product && product.name ? product.name : 'A tracked product'} changed from $${safeFrom} to $${safeTo}.`,
+        linkUrl: productPath
+      }
+    );
     await maybeSendPreferenceNotificationEmail(
       userId,
       'price_drop_alerts',
@@ -1893,7 +1906,7 @@ const DEFAULT_SALES_TAX_RATE = 0.10;
 const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
 const STANDARD_SELLER_HOLD_DAYS = 5;
-const PRO_SELLER_HOLD_DAYS = 2;
+const PRO_SELLER_HOLD_DAYS = 5;
 const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
@@ -2284,7 +2297,7 @@ async function buildPayoutSnapshot(order, options) {
     if (!payoutReleaseAt) {
       status = 'pending_delivery';
       blockedReason = 'Shipment timestamp is missing. Please refresh this order and try again.';
-    } else if (payoutReleaseAt.getTime() > now.getTime()) {
+    } else if (payoutReleaseAt.getTime() > now.getTime() && payoutMeta.forceReleaseHold !== true) {
       status = 'pending_hold';
       blockedReason = `Payout is held for ${holdDays} day${holdDays === 1 ? '' : 's'} after shipment confirmation.`;
     }
@@ -3323,7 +3336,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
         await sendEventEmailSafe(
           to,
           'Thanks for purchasing Pro Seller status',
-          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>10%</strong> platform fee per sale and <strong>$1/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>5%</strong> platform fee per sale and <strong>$1/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
@@ -5427,17 +5440,62 @@ app.post('/api/user/preferences', prefsRateLimit, async function(req, res) {
   if (token) {
     try { var d = jwt.verify(token, JWT_SECRET); userId = d.userId; } catch (_) {}
   }
-  const { cookieConsent } = req.body;
+  const payload = (req.body && typeof req.body === 'object') ? req.body : {};
+  const updates = {};
+  if (Object.prototype.hasOwnProperty.call(payload, 'cookieConsent')) {
+    updates.cookieConsent = payload.cookieConsent;
+  }
+  if (payload.taxExemption && typeof payload.taxExemption === 'object') {
+    const form = payload.taxExemption;
+    const normalizedState = String(form.state || '').trim().toUpperCase().slice(0, 20);
+    updates.taxExemption = {
+      org: String(form.org || '').trim().slice(0, 200),
+      taxId: String(form.taxId || '').trim().slice(0, 80),
+      type: String(form.type || '').trim().slice(0, 80),
+      state: /^[A-Z]{2}$/.test(normalizedState) ? normalizedState : '',
+      expiry: String(form.expiry || '').trim().slice(0, 40),
+      contact: String(form.contact || '').trim().slice(0, 200),
+      submitted: form.submitted === true,
+      approved: form.approved === true
+    };
+  }
+  const shouldNotifyTaxExemption = !!(updates.taxExemption && updates.taxExemption.submitted);
   if (userId) {
     try {
+      if (!Object.keys(updates).length) {
+        return res.json({});
+      }
       await db.collection('userPreferences').updateOne(
         { userId },
-        { $set: { userId, cookieConsent, updatedAt: new Date() } },
+        { $set: { userId, ...updates, updatedAt: new Date() } },
         { upsert: true }
       );
+      if (shouldNotifyTaxExemption) {
+        const user = await db.collection('users').findOne(
+          { _id: new ObjectId(userId) },
+          { projection: { email: 1, firstName: 1, lastName: 1 } }
+        );
+        const userEmail = normalizeEmail(user && user.email);
+        const fullName = `${String(user && user.firstName ? user.firstName : '').trim()} ${String(user && user.lastName ? user.lastName : '').trim()}`.trim();
+        await sendEventEmailSafe(
+          ADMIN_NOTIFICATION_EMAIL,
+          'New tax exemption form submitted',
+          `<p>A tax exemption application was submitted.</p>`
+            + `<p><strong>User ID:</strong> ${escapeHtml(String(userId || 'N/A'))}</p>`
+            + `<p><strong>User name:</strong> ${escapeHtml(fullName || 'N/A')}</p>`
+            + `<p><strong>User email:</strong> ${escapeHtml(String(userEmail || 'N/A'))}</p>`
+            + `<p><strong>Organization:</strong> ${escapeHtml(String(updates.taxExemption.org || 'N/A'))}</p>`
+            + `<p><strong>Tax ID:</strong> ${escapeHtml(String(updates.taxExemption.taxId || 'N/A'))}</p>`
+            + `<p><strong>Exemption type:</strong> ${escapeHtml(String(updates.taxExemption.type || 'N/A'))}</p>`
+            + `<p><strong>State:</strong> ${escapeHtml(String(updates.taxExemption.state || 'N/A'))}</p>`
+            + `<p><strong>Expiry:</strong> ${escapeHtml(String(updates.taxExemption.expiry || 'N/A'))}</p>`
+            + `<p><strong>Contact:</strong> ${escapeHtml(String(updates.taxExemption.contact || 'N/A'))}</p>`,
+          '/tax-exemption.html'
+        );
+      }
     } catch (_) {}
   }
-  res.json({ cookieConsent });
+  res.json(updates);
 });
 
 // POST /api/auth/change-password – change current user's password (auth required)
@@ -5952,7 +6010,7 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
         await sendEventEmailSafe(
           to,
           'Thanks for upgrading to Pro Seller',
-          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>10%</strong> platform fee plus <strong>$1/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller upgrade is complete.</p><p>Your new fee structure is now active: <strong>5%</strong> platform fee plus <strong>$1/month</strong> subscription.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
@@ -7700,26 +7758,58 @@ app.get('/api/user/price-alerts', publicApiRateLimit, verifyToken, async functio
 app.post('/api/user/price-alerts', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   const { productId, productName, productUrl, targetPrice } = req.body;
-  const normalizedProductId = productId ? String(productId).trim().slice(0, 100) : '';
-  const normalizedProductName = String(productName || productUrl || '').trim().slice(0, 200);
+  const normalizedProductUrl = String(productUrl || '').trim().slice(0, 500);
+  let normalizedProductId = '';
+  const explicitProductId = productId ? String(productId).trim() : '';
+  if (ObjectId.isValid(explicitProductId)) {
+    normalizedProductId = explicitProductId;
+  } else if (normalizedProductUrl) {
+    try {
+      const parsedUrl = new URL(normalizedProductUrl, 'https://zorexium.io');
+      const candidates = [
+        parsedUrl.searchParams.get('id'),
+        parsedUrl.searchParams.get('productId'),
+        parsedUrl.searchParams.get('listingId')
+      ];
+      const pathnameMatch = parsedUrl.pathname.match(/([a-f\d]{24})/i);
+      if (pathnameMatch && pathnameMatch[1]) candidates.push(pathnameMatch[1]);
+      for (const candidate of candidates) {
+        const trimmed = String(candidate || '').trim();
+        if (ObjectId.isValid(trimmed)) {
+          normalizedProductId = trimmed;
+          break;
+        }
+      }
+    } catch (_) {
+      const fallbackMatch = normalizedProductUrl.match(/([a-f\d]{24})/i);
+      if (fallbackMatch && ObjectId.isValid(fallbackMatch[1])) {
+        normalizedProductId = fallbackMatch[1];
+      }
+    }
+  }
+  const normalizedProductName = String(productName || normalizedProductUrl || '').trim().slice(0, 200);
   if (!normalizedProductName || !targetPrice) {
     return res.status(400).json({ error: 'productName (or productUrl) and targetPrice are required' });
   }
   const parsed = parseFloat(targetPrice);
   if (isNaN(parsed) || parsed <= 0) return res.status(400).json({ error: 'targetPrice must be a positive number' });
   let currentPrice = null;
+  let resolvedProductName = normalizedProductName;
   if (normalizedProductId && ObjectId.isValid(normalizedProductId)) {
     try {
-      const product = await db.collection('products').findOne({ _id: new ObjectId(normalizedProductId) }, { projection: { price: 1, salePrice: 1 } });
+      const product = await db.collection('products').findOne({ _id: new ObjectId(normalizedProductId) }, { projection: { name: 1, price: 1, salePrice: 1 } });
       const effective = getEffectiveListingPrice(product);
       if (Number.isFinite(effective)) currentPrice = effective;
+      if (product && product.name) {
+        resolvedProductName = String(product.name).trim().slice(0, 200);
+      }
     } catch (_) {}
   }
   const alert = {
     id: require('crypto').randomUUID(),
     productId: normalizedProductId,
-    productName: normalizedProductName,
-    productUrl: String(productUrl || '').trim().slice(0, 500),
+    productName: resolvedProductName,
+    productUrl: normalizedProductUrl,
     targetPrice: parsed,
     currentPrice: Number.isFinite(currentPrice) ? currentPrice : null,
     createdAt: new Date(),
@@ -7906,18 +7996,44 @@ async function assignStarterTierToExistingSellers() {
   }
 }
 
-async function downgradeProSellersToStarter() {
+async function releasePendingHoldPayoutsOnce() {
   if (!mongoConnected) return;
+  const migrationKey = 'release_pending_hold_payouts_2026_05_14';
   try {
-    const result = await db.collection('sellers').updateMany(
-      { tier: 'pro' },
-      { $set: { tier: 'starter', updatedAt: new Date(), proTierDowngraded: true, proTierDowngradedAt: new Date() } }
-    );
-    if (result.modifiedCount > 0) {
-      console.log(`✅ Pro Seller downgrade migration: ${result.modifiedCount} seller(s) downgraded from pro to starter`);
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+    const pendingHolds = await db.collection('payouts')
+      .find({ status: 'pending_hold' })
+      .toArray();
+    const summary = { scanned: pendingHolds.length, released: 0, failed: 0, deferred: 0 };
+    for (const payout of pendingHolds) {
+      const orderId = String(payout && payout.orderId ? payout.orderId : '').trim();
+      const sellerId = String(payout && payout.sellerId ? payout.sellerId : '').trim();
+      if (!orderId || !sellerId) continue;
+      const order = await db.collection('orders').findOne({ id: orderId });
+      if (!order) continue;
+      try {
+        const result = await sendStripeSellerPayout(order, {
+          triggerSource: 'one_time_hold_release_migration',
+          sellerId: sellerId,
+          forceReleaseHold: true
+        });
+        if (!result.ok) summary.failed++;
+        else if (result.deferred) summary.deferred++;
+        else summary.released++;
+      } catch (err) {
+        summary.failed++;
+        console.error('Failed one-time pending-hold payout release for order', orderId, '-', err.message);
+      }
     }
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: new Date(),
+      summary: summary
+    });
+    console.log(`✅ One-time pending hold payout release migration complete: ${summary.released} released, ${summary.failed} failed, ${summary.deferred} deferred`);
   } catch (err) {
-    console.error('⚠️  Pro Seller downgrade migration error:', err.message);
+    console.error('⚠️  One-time pending hold payout release migration error:', err.message);
   }
 }
 
@@ -8001,9 +8117,9 @@ async function start() {
       console.log('✅ Database connected — starting HTTP server');
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
-      await downgradeProSellersToStarter();
       await ensurePayoutIndexes();
       await runRetroactiveLegacyOrderRepairMigration();
+      await releasePendingHoldPayoutsOnce();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
     }
