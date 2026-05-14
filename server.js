@@ -1600,7 +1600,7 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
 });
 
 // ── GET /api/products/seller/:sellerId – products by seller (public) ───────────
-app.get('/api/products/seller/:sellerId', async function(req, res) {
+app.get('/api/products/seller/:sellerId', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { sellerId } = req.params;
@@ -1609,9 +1609,31 @@ app.get('/api/products/seller/:sellerId', async function(req, res) {
   }
 
   try {
-    const products = await db.collection('products')
+    // Primary lookup by sellerId field.
+    let products = await db.collection('products')
       .find({ sellerId })
       .toArray();
+
+    // Fallback: if no products found by sellerId, try matching by sellerName/sellerUsername.
+    // This surfaces listings created before sellerId was consistently populated.
+    if (products.length === 0) {
+      const sellerRecord = await db.collection('sellers').findOne(
+        { userId: sellerId },
+        { projection: { shopName: 1, sellerName: 1, sellerUsername: 1 } }
+      );
+      if (sellerRecord) {
+        const nameClauses = [];
+        if (sellerRecord.shopName) nameClauses.push({ sellerName: sellerRecord.shopName });
+        if (sellerRecord.sellerName) nameClauses.push({ sellerName: sellerRecord.sellerName });
+        if (sellerRecord.sellerUsername) nameClauses.push({ sellerUsername: sellerRecord.sellerUsername });
+        if (nameClauses.length > 0) {
+          products = await db.collection('products')
+            .find({ $or: nameClauses })
+            .toArray();
+        }
+      }
+    }
+
     res.json(products);
   } catch (error) {
     console.error('Error fetching seller products:', error);
@@ -1885,9 +1907,8 @@ const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
 const RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT = Math.max(1, Math.min(50, parseInt(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT, 10) || 20));
 const RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND = String(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND || 'true').trim().toLowerCase() !== 'false';
 // Historical write-off corrections for unrecoverable legacy earnings display mismatches.
-const SELLER_EARNINGS_WRITE_OFF_BY_SHOP = Object.freeze({
-  'adafa': 0.90
-});
+// (Empty: the retroactive repair now patches items.sellerId so earnings are computed correctly.)
+const SELLER_EARNINGS_WRITE_OFF_BY_SHOP = Object.freeze({});
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 const PAYPAL_PAYOUT_SCOPE = 'https://uri.paypal.com/services/payments/payouts';
 const envPayPalMode = String(process.env.PAYPAL_MODE || '').trim().toLowerCase();
@@ -3671,7 +3692,8 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession) {
   }
 }
 
-const RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY = 'retroactive_legacy_order_repair_v1';
+// v2: adds items.sellerId patching to ensure legacy orders surface in seller dashboard queries.
+const RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY = 'retroactive_legacy_order_repair_v2';
 
 async function findCompletedLegacyOrdersForRepair(limit) {
   const cappedLimit = Math.max(1, Math.min(50, parseInt(limit, 10) || 10));
@@ -3720,7 +3742,7 @@ async function findCompletedLegacyOrdersForRepair(limit) {
     { 'buyer.username': { $regex: /^steve$/i } }
   ];
 
-  return db.collection('orders')
+  const orders = await db.collection('orders')
     .find({
       status: 'completed',
       $and: [
@@ -3731,15 +3753,53 @@ async function findCompletedLegacyOrdersForRepair(limit) {
     .sort({ completedAt: 1, createdAt: 1 })
     .limit(cappedLimit)
     .toArray();
+
+  return { orders, sellerUserIds };
 }
 
 async function repairCompletedLegacyOrders(options) {
   const opts = options || {};
   const forceEmailResend = opts.forceEmailResend === true;
-  const matchedOrders = await findCompletedLegacyOrdersForRepair(opts.limit);
+  const { orders: matchedOrders, sellerUserIds } = await findCompletedLegacyOrdersForRepair(opts.limit);
+
+  // Pick the first discovered adafa userId as the canonical sellerId to stamp on untagged items.
+  const primaryAdafaUserId = sellerUserIds.size > 0 ? Array.from(sellerUserIds)[0] : '';
+  const adafaNamePattern = /adafa/i;
+
   const repairedOrderIds = [];
+  const now = new Date();
   for (const order of matchedOrders) {
-    const repaired = await processCompletedOrderAutomation(order, {
+    let orderToProcess = order;
+
+    // Patch items.sellerId on items that identify as adafa by name but are missing a valid sellerId.
+    // Without this, buildSellerOrderSummaries skips them and /api/orders/sold returns nothing.
+    if (primaryAdafaUserId && Array.isArray(order.items)) {
+      let itemsPatched = false;
+      const patchedItems = order.items.map(function(item) {
+        if (!item) return item;
+        // Only stamp the adafa userId when the item has no sellerId at all.
+        // If a sellerId is already present (even a different one), leave it unchanged.
+        const hasSellerId = !!item.sellerId;
+        const nameMatchesAdafa = (
+          adafaNamePattern.test(String(item.sellerName || '')) ||
+          adafaNamePattern.test(String(item.sellerUsername || ''))
+        );
+        if (!hasSellerId && nameMatchesAdafa) {
+          itemsPatched = true;
+          return { ...item, sellerId: primaryAdafaUserId };
+        }
+        return item;
+      });
+      if (itemsPatched) {
+        await db.collection('orders').updateOne(
+          { id: order.id },
+          { $set: { items: patchedItems, updatedAt: now } }
+        );
+        orderToProcess = { ...order, items: patchedItems };
+      }
+    }
+
+    const repaired = await processCompletedOrderAutomation(orderToProcess, {
       triggerSource: 'retroactive_steve_adafa_repair',
       forceEmailResend: forceEmailResend
     });
@@ -3881,7 +3941,7 @@ app.post('/api/admin/orders/repair-legacy', publicApiRateLimit, verifyToken, req
     const limit = Math.max(1, Math.min(50, parseInt(req.body && req.body.limit, 10) || 20));
     const forceEmailResend = req.body && req.body.forceEmailResend === true;
     if (dryRun) {
-      const matchedOrders = await findCompletedLegacyOrdersForRepair(limit);
+      const { orders: matchedOrders } = await findCompletedLegacyOrdersForRepair(limit);
       return res.json({
         dryRun: true,
         matchedCount: matchedOrders.length,
@@ -3951,11 +4011,36 @@ app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, r
 app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const orders = await db.collection('orders')
+    const sellerProfile = await db.collection('sellers').findOne(
+      { userId: req.userId },
+      { projection: { shopName: 1 } }
+    );
+
+    // Primary query: orders where an item carries the authenticated user's sellerId.
+    const primaryOrders = await db.collection('orders')
       // Seller dashboards and payout summaries should only include finalized completed sales.
       .find({ status: 'completed', 'items.sellerId': req.userId })
       .sort({ createdAt: -1 })
       .toArray();
+
+    // Fallback: check sellerSales records for any order IDs not already captured above.
+    // This surfaces legacy orders whose items.sellerId was not yet patched.
+    const primaryOrderIds = new Set(primaryOrders.map(function(o) { return String(o.id || ''); }));
+    const saleDocs = await db.collection('sellerSales')
+      .find({ sellerId: req.userId }, { projection: { orderId: 1 } })
+      .toArray();
+    const missingOrderIds = saleDocs
+      .map(function(s) { return String(s.orderId || ''); })
+      .filter(function(id) { return id && !primaryOrderIds.has(id); });
+    let fallbackOrders = [];
+    if (missingOrderIds.length > 0) {
+      fallbackOrders = await db.collection('orders')
+        .find({ status: 'completed', id: { $in: missingOrderIds } })
+        .sort({ createdAt: -1 })
+        .toArray();
+    }
+
+    const orders = primaryOrders.concat(fallbackOrders);
 
     const sellerOrders = orders.map(function(order) {
       const sellerSummaries = Array.isArray(order.sellerSummaries) && order.sellerSummaries.length > 0
