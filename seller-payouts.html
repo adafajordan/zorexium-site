@@ -494,7 +494,7 @@
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-6 h-6 bg-cyan-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-user-check text-cyan-500 text-xs"></i></span>
-                <span class="text-sm text-gray-600">Eligible payouts are sent through PayPal and tracked as <strong class="text-gray-900">Processing</strong> until provider confirmation.</span>
+                <span class="text-sm text-gray-600">Eligible payouts are sent through Stripe Connect and tracked as <strong class="text-gray-900">Paid</strong> after transfer creation.</span>
               </li>
               <li class="flex items-start gap-3">
                 <span class="w-6 h-6 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fas fa-calendar-check text-purple-500 text-xs"></i></span>
@@ -513,7 +513,7 @@
               <i class="fas fa-check-circle text-green-500"></i>
               <div>
                 <p class="text-sm font-semibold text-green-800">Bank payout route connected</p>
-                <p class="text-xs text-green-700 mt-0.5" id="payoutsConnectedEmail">Receiving payouts via PayPal.</p>
+                <p class="text-xs text-green-700 mt-0.5" id="payoutsConnectedEmail">Receiving payouts via Stripe Connect Express.</p>
               </div>
             </div>
             <div id="payoutsAccountPending" class="hidden mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3">
@@ -523,7 +523,7 @@
                 <p class="text-xs text-amber-700 mt-0.5" id="payoutsPendingEmail">Enter your verification code to activate payouts.</p>
               </div>
             </div>
-            <p class="text-sm text-gray-600 mb-4">Connect PayPal, complete bank setup securely in PayPal, then verify here to unlock payouts.</p>
+            <p class="text-sm text-gray-600 mb-4">Connect Stripe Express, complete Stripe onboarding, then refresh here to unlock payouts.</p>
             <div class="flex flex-col sm:flex-row gap-3">
               <button onclick="openPayoutsPaypalModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm transition-colors">
                 <i class="fas fa-university"></i> Manage Bank Payout Setup
@@ -535,7 +535,7 @@
             <div class="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
               <p class="text-xs text-blue-700 flex items-center gap-2">
                 <i class="fas fa-shield-alt text-blue-500"></i>
-                Your PayPal email is stored securely and used only for sending your earnings.
+                Your Stripe account ID is stored securely and used only for seller payout transfers.
               </p>
             </div>
           </div>
@@ -549,35 +549,31 @@
 
 </main>
 
-<!-- PayPal Bank Payout Modal -->
+<!-- Stripe Payout Setup Modal -->
 <div id="payoutsPaypalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
   <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-        <i class="fas fa-university text-blue-600"></i> Bank Payout Setup (PayPal)
+        <i class="fas fa-university text-blue-600"></i> Stripe Connect Payout Setup
       </h3>
       <button onclick="closePayoutsPaypalModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
     </div>
-    <p class="text-sm text-gray-600 mb-4">Enter your PayPal payout email, complete secure bank setup in PayPal, then verify your payout destination.</p>
+    <p class="text-sm text-gray-600 mb-4">Open Stripe Connect onboarding, complete bank/KYC steps, then refresh verification status.</p>
     <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">PayPal Email Address</label>
-      <input type="email" id="payoutsPaypalEmailInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="your@paypal.com" autocomplete="email">
+      <label class="block text-sm font-medium text-gray-700 mb-1">Connected Stripe Account ID</label>
+      <input type="text" id="payoutsPaypalEmailInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="acct_..." autocomplete="off" readonly>
     </div>
     <div class="mb-4 flex gap-2">
       <button onclick="openPayoutsPayPalBankOnboarding()" id="openPayoutsPayPalBankOnboardingBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 flex-1" disabled>
-        <i class="fab fa-paypal"></i> Open PayPal Bank Setup
+        <i class="fas fa-link"></i> Open Stripe Onboarding
       </button>
       <button onclick="confirmPayoutsBankLinked()" id="confirmPayoutsBankLinkedBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 flex-1">
-        <i class="fas fa-link"></i> I Linked My Bank
+        <i class="fas fa-sync-alt"></i> Refresh Status
       </button>
-    </div>
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
-      <input type="text" id="payoutsVerificationCodeInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="6-digit code" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
     </div>
     <div class="flex gap-3">
       <button onclick="savePayoutsPaypalAccount()" id="savePayoutsPaypalBtn" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm">
-        <i class="fas fa-save"></i> Save Account
+        <i class="fas fa-save"></i> Start Setup
       </button>
       <button onclick="verifyPayoutsPaypalAccount()" id="verifyPayoutsPaypalBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">
         Verify
@@ -635,17 +631,17 @@
     var bankStatus = String(sellerProfile.payoutProviderBankStatus || '').toLowerCase();
     if (sellerProfile.payoutAccountId && sellerProfile.payoutVerified && (!bankStatus || bankStatus === 'connected')) {
       if (connectedEl) connectedEl.classList.remove('hidden');
-      if (emailEl) emailEl.textContent = 'PayPal: ' + sellerProfile.payoutAccountId + ' · Bank linked in PayPal';
+      if (emailEl) emailEl.textContent = 'Stripe account: ' + sellerProfile.payoutAccountId + ' · Payouts enabled';
       return;
     }
     if (sellerProfile.payoutAccountId && (onboardingStatus === 'pending_provider' || bankStatus === 'pending_provider')) {
       if (pendingEl) pendingEl.classList.remove('hidden');
-      if (pendingEmailEl) pendingEmailEl.textContent = 'PayPal: ' + sellerProfile.payoutAccountId + ' · complete bank setup in PayPal first';
+      if (pendingEmailEl) pendingEmailEl.textContent = 'Stripe account: ' + sellerProfile.payoutAccountId + ' · complete onboarding in Stripe';
       return;
     }
     if (sellerProfile.payoutAccountId && onboardingStatus === 'pending_verification') {
       if (pendingEl) pendingEl.classList.remove('hidden');
-      if (pendingEmailEl) pendingEmailEl.textContent = 'PayPal: ' + sellerProfile.payoutAccountId + ' · verify to unlock payouts';
+      if (pendingEmailEl) pendingEmailEl.textContent = 'Stripe account: ' + sellerProfile.payoutAccountId + ' · verify to unlock payouts';
     }
   }
 
@@ -732,7 +728,7 @@
 
   function openPayoutsPayPalBankOnboarding() {
     if (!payoutsOnboardingUrl) {
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Save your PayPal payout email first.', 'error');
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Start Stripe payout setup first.', 'error');
       return;
     }
     window.open(payoutsOnboardingUrl, '_blank', 'noopener,noreferrer');
@@ -752,27 +748,22 @@
       sellerProfile.payoutOnboardingStatus = data.onboardingStatus || 'pending_verification';
       sellerProfile.payoutProviderBankStatus = data.providerBankStatus || 'pending_verification';
       renderPayoutAccountState();
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Verification code sent. Enter it to activate payouts.', 'success');
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Stripe payout status refreshed.', 'success');
     } catch (err) {
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification(err.message || 'Failed to confirm bank setup.', 'error');
     } finally {
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-link"></i> I Linked My Bank'; }
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Status'; }
     }
   }
 
   async function savePayoutsPaypalAccount() {
-    var email = (document.getElementById('payoutsPaypalEmailInput').value || '').trim();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Please enter a valid PayPal email address.', 'error');
-      return;
-    }
     var btn = document.getElementById('savePayoutsPaypalBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/start', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payoutAccountId: email })
+        body: JSON.stringify({})
       });
       if (!res.ok) {
         var setupErr = await res.json().catch(function() { return {}; });
@@ -780,7 +771,7 @@
       }
       var data = await res.json().catch(function() { return {}; });
       if (!sellerProfile) sellerProfile = {};
-      sellerProfile.payoutAccountId = email;
+      sellerProfile.payoutAccountId = data.payoutAccountId || sellerProfile.payoutAccountId || '';
       sellerProfile.payoutVerified = false;
       sellerProfile.payoutOnboardingStatus = data.onboardingStatus || 'pending_provider';
       sellerProfile.payoutProviderBankStatus = data.providerBankStatus || 'pending_provider';
@@ -789,7 +780,9 @@
       var openBtn = document.getElementById('openPayoutsPayPalBankOnboardingBtn');
       if (openBtn) openBtn.disabled = !payoutsOnboardingUrl;
       renderPayoutAccountState();
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Saved. Complete bank setup in PayPal, then click “I Linked My Bank”.', 'success');
+      var input = document.getElementById('payoutsPaypalEmailInput');
+      if (input) input.value = sellerProfile.payoutAccountId || '';
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Stripe setup started. Complete onboarding in Stripe, then click “Refresh Status”.', 'success');
     } catch (err) {
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification(err.message || 'Failed to save payout account. Please try again.', 'error');
     } finally {
@@ -798,18 +791,13 @@
   }
 
   async function verifyPayoutsPaypalAccount() {
-    var code = (document.getElementById('payoutsVerificationCodeInput').value || '').trim();
-    if (!/^\d{6}$/.test(code)) {
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Enter the 6-digit verification code.', 'error');
-      return;
-    }
     var btn = document.getElementById('verifyPayoutsPaypalBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = 'Verifying…'; }
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/verify', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code })
+        body: JSON.stringify({})
       });
       if (!res.ok) {
         var verifyErr = await res.json().catch(function() { return {}; });
@@ -824,7 +812,7 @@
       renderPayoutAccountState();
       closePayoutsPaypalModal();
       await loadEarnings();
-      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Payout account verified. Eligible shipped orders can now be paid.', 'success');
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Stripe payout account verified. Eligible shipped orders can now be paid.', 'success');
     } catch (err) {
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification(err.message || 'Failed to verify payout account.', 'error');
     } finally {

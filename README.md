@@ -27,6 +27,7 @@ Set the following in your Render service's **Environment** tab:
 | `STRIPE_SECRET_KEY` | ✅ Yes | Stripe secret key (`sk_...`) used by backend checkout/connect APIs |
 | `STRIPE_PUBLISHABLE_KEY` | ✅ Yes | Stripe publishable key (`pk_...`) exposed via `/api/config` |
 | `STRIPE_WEBHOOK_SECRET` | ✅ Yes | Stripe webhook signing secret (`whsec_...`) for `/api/stripe/webhook` |
+| `STRIPE_PRO_SELLER_PRICE_ID` | ✅ Yes | Stripe recurring Price ID (`price_...`) for the $1/month Pro Seller subscription |
 | `STRIPE_SUCCESS_URL` | Optional | Checkout success redirect URL (orderId/session_id are appended automatically) |
 | `STRIPE_CANCEL_URL` | Optional | Checkout cancel redirect URL |
 | `STRIPE_CONNECT_REFRESH_URL` | Optional | Stripe Connect onboarding refresh URL |
@@ -85,18 +86,12 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 
 ---
 
-## Payment Audit Summary
+## Payment Summary
 
-- Full detailed report: see [`PAYMENT_AUDIT.md`](./PAYMENT_AUDIT.md).
-
-- **Configured provider:** Stripe Checkout + Stripe Connect Express for active buyer checkout and seller payout onboarding.
-- **Current blockers for real payments:**
-  1. `server.js` still contains temporary troubleshooting overrides that force checkout purchases and Pro Seller subscriptions to `$1.00`, so production pricing is not using real cart totals or the intended recurring amount.
-  2. The checkout UI still calculates the cart total in the browser, but the backend currently sends PayPal a fixed `$1.00` amount. This means the buyer-facing total and the provider charge can diverge.
-  3. Pro Seller subscriptions depend on a PayPal billing plan ID. The deployment environment must provide a plan ID that matches the current `PAYPAL_MODE`; otherwise `/api/sellers/pro-plan` can fail or create a fresh test plan instead of using the intended live subscription.
-  4. Configure `PAYPAL_WEBHOOK_ID` and your PayPal webhook so asynchronous payout events can be signature-verified and reconciled by `/api/paypal/webhook`.
-- **What to verify in Render before going live:** set `PAYPAL_MODE=live`, use the matching live `PAYPAL_CLIENT_ID`/`PAYPAL_SECRET`, configure the correct live `PAYPAL_PRO_SELLER_PLAN_ID`, and confirm the PayPal merchant account is fully enabled for live checkout, subscriptions, and payouts. The actual secret values/account readiness cannot be confirmed from this repository alone.
-- **Recommended fixes before accepting real payments:** keep frontend totals aligned with backend charge amounts, configure PayPal webhooks for asynchronous state handling, and monitor server logs plus failed `orders`/`payouts` records for operational visibility.
+- Buyer checkout uses Stripe Checkout with embedded UI in `checkout.html`.
+- Seller payout onboarding uses Stripe Connect Express.
+- Seller payout release is delayed until shipment confirmation (`/api/orders/:orderId/ship`), then a Stripe transfer is created.
+- Pro Seller tier checkout uses Stripe subscription checkout and verifies completion server-side.
 
 ---
 

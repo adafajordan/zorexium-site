@@ -461,11 +461,14 @@
         <h2 class="text-xl font-bold text-gray-900 mb-2 flex items-center">
           <span class="step-badge">4</span>Payment
         </h2>
-        <p class="text-gray-400 text-base mb-5">Complete your purchase securely with Stripe Checkout. Pay with card using Stripe’s hosted checkout.</p>
+        <p class="text-gray-400 text-base mb-5">Complete your purchase securely with embedded Stripe Checkout. You’ll stay on this page while paying.</p>
         <button id="stripeCheckoutBtn" type="button" onclick="startStripeCheckout()" class="w-full sm:w-auto px-5 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors" disabled>
-          <i class="fas fa-credit-card mr-2"></i>Pay with Stripe
+          <i class="fas fa-credit-card mr-2"></i>Continue to Secure Payment
         </button>
         <p id="stripeNote" class="text-yellow-400 text-sm mt-3 hidden"><i class="fas fa-exclamation-triangle mr-1"></i>Please fill out all required fields above before paying.</p>
+        <div id="embeddedCheckoutMount" class="mt-5 hidden">
+          <div id="stripeEmbeddedCheckout" class="border border-gray-200 rounded-lg p-2"></div>
+        </div>
       </div>
 
     </div>
@@ -522,6 +525,7 @@
 
 <script src="notifications.js"></script>
 <script src="session.js"></script>
+<script src="https://js.stripe.com/v3"></script>
 <script>
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
 
@@ -564,6 +568,7 @@
   // ── Cart ──────────────────────────────────────────────────────────────────
   let cart = [];
   let firstOrderFreeShippingEligible = false;
+  let stripeClient = null;
 
   async function loadCart() {
     if (ZrxSession.isLoggedIn()) {
@@ -785,10 +790,18 @@
     const originalHtml = btn ? btn.innerHTML : '';
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Redirecting…';
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading secure payment…';
     }
 
     try {
+      if (!stripeClient) {
+        var configRes = await fetch(BACKEND_URL + '/api/config');
+        var configPayload = await configRes.json().catch(function() { return {}; });
+        if (!configRes.ok || !configPayload.stripePublishableKey) {
+          throw new Error('Stripe publishable key is not configured on this server.');
+        }
+        stripeClient = Stripe(configPayload.stripePublishableKey);
+      }
       var checkedShipping = document.querySelector('input[name="shipping"]:checked');
       var shippingMethod = checkedShipping ? checkedShipping.value : 'standard';
       var buyer = {
@@ -825,8 +838,17 @@
       });
       const payload = await res.json().catch(function() { return {}; });
       if (!res.ok) throw new Error(payload.error || 'Failed to start Stripe checkout');
-      if (!payload.checkoutUrl) throw new Error('Stripe checkout URL was not returned');
-      window.location.href = payload.checkoutUrl;
+      if (!payload.clientSecret) throw new Error('Stripe client secret was not returned');
+      const mountWrapper = document.getElementById('embeddedCheckoutMount');
+      const mountEl = document.getElementById('stripeEmbeddedCheckout');
+      if (!mountWrapper || !mountEl) throw new Error('Embedded checkout container is missing');
+      mountEl.innerHTML = '';
+      mountWrapper.classList.remove('hidden');
+      var checkout = await stripeClient.initEmbeddedCheckout({
+        clientSecret: payload.clientSecret
+      });
+      checkout.mount('#stripeEmbeddedCheckout');
+      if (btn) btn.classList.add('hidden');
     } catch (err) {
       ZrxNotify.showNotification(err && err.message ? err.message : 'Unable to start Stripe checkout. Please try again.', 'error');
       if (btn) {
