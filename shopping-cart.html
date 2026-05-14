@@ -438,16 +438,16 @@
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let cart = [];
   let promoDiscount = 0;
-  let firstOrderFreeShippingEligible = false;
+  let firstOrderFreeShippingActive = false;
 
   async function loadFirstOrderFreeShippingEligibility() {
-    firstOrderFreeShippingEligible = false;
+    firstOrderFreeShippingActive = false;
     if (!ZrxSession.isLoggedIn()) return;
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
       if (!res.ok) return;
       const orders = await res.json();
-      firstOrderFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+      firstOrderFreeShippingActive = Array.isArray(orders) && orders.length === 0;
     } catch (_) {}
   }
 
@@ -600,7 +600,7 @@
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     // Standard shipping is $1.00 per item; matches backend DEFAULT_SHIPPING_PER_ITEM_USD
     const shipping = cart.length > 0
-      ? (firstOrderFreeShippingEligible ? 0 : cart.length * 1.00)
+      ? (firstOrderFreeShippingActive ? 0 : cart.length * 1.00)
       : 0;
     const tax = subtotal * 0.10;
     const discount = subtotal * promoDiscount;
@@ -609,7 +609,7 @@
     document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
     const shippingEl = document.getElementById('shipping');
     if (shippingEl) {
-      if (cart.length > 0 && firstOrderFreeShippingEligible) {
+      if (cart.length > 0 && firstOrderFreeShippingActive) {
         shippingEl.innerHTML = '<span class="inline-flex items-center gap-1 text-green-600 font-semibold"><i class="fas fa-shipping-fast"></i> FREE</span>';
       } else {
         shippingEl.textContent = cart.length > 0 ? '$' + shipping.toFixed(2) : 'Free';

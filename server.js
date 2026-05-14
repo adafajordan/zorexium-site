@@ -2327,7 +2327,7 @@ function sanitizeSellerForClient(seller) {
 
 function toSafeDateFromUnixSeconds(unixSeconds) {
   const seconds = Number(unixSeconds);
-  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  if (!Number.isFinite(seconds)) return null;
   const date = new Date(seconds * 1000);
   return Number.isNaN(date.getTime()) ? null : date;
 }
@@ -3460,7 +3460,7 @@ async function activateProSellerTierForUser(userId, subscriptionId, options) {
         proTierDowngraded: false,
         updatedAt: new Date()
       },
-      $unset: { proTierDowngradedAt: '', proTierDowngradeScheduledFor: '', proSubscriptionCancellationScheduledAt: '' }
+      $unset: { proTierDowngradedAt: 1, proTierDowngradeScheduledFor: 1, proSubscriptionCancellationScheduledAt: 1 }
     }
   );
   await db.collection('users').updateOne(
@@ -4466,12 +4466,12 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
                 updatedAt: new Date()
               },
               $unset: {
-                proSubscriptionId: '',
-                proSubscriptionStatus: '',
-                proSubscriptionProvider: '',
-                proSubscriptionCancelAtPeriodEnd: '',
-                proTierDowngradeScheduledFor: '',
-                proSubscriptionCancellationScheduledAt: ''
+                proSubscriptionId: 1,
+                proSubscriptionStatus: 1,
+                proSubscriptionProvider: 1,
+                proSubscriptionCancelAtPeriodEnd: 1,
+                proTierDowngradeScheduledFor: 1,
+                proSubscriptionCancellationScheduledAt: 1
               }
             }
           );
@@ -6454,7 +6454,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
             proSubscriptionCancellationScheduledAt: now,
             updatedAt: now
           },
-          $unset: { proTierDowngradedAt: '' }
+          $unset: { proTierDowngradedAt: 1 }
         }
       );
       const scheduled = await db.collection('sellers').findOne({ userId: req.userId });
@@ -6481,12 +6481,12 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
           updatedAt: now
         },
         $unset: {
-          proSubscriptionId: '',
-          proSubscriptionStatus: '',
-          proSubscriptionProvider: '',
-          proSubscriptionCancelAtPeriodEnd: '',
-          proTierDowngradeScheduledFor: '',
-          proSubscriptionCancellationScheduledAt: ''
+          proSubscriptionId: 1,
+          proSubscriptionStatus: 1,
+          proSubscriptionProvider: 1,
+          proSubscriptionCancelAtPeriodEnd: 1,
+          proTierDowngradeScheduledFor: 1,
+          proSubscriptionCancellationScheduledAt: 1
         }
       }
     );
