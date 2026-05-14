@@ -494,7 +494,7 @@ async function notifyPriceChangeSubscribers(product, previousPrice, nextPrice) {
   const safeProductName = escapeHtml(product && product.name ? product.name : 'Product');
   const safeFrom = fromPrice.toFixed(2);
   const safeTo = toPrice.toFixed(2);
-  const pricePoint = Number(toPrice.toFixed(2));
+  const newPricePoint = Number(toPrice.toFixed(2));
   const productPath = '/product-detail.html?id=' + encodeURIComponent(productId);
 
   for (const doc of docs) {
@@ -527,12 +527,12 @@ async function notifyPriceChangeSubscribers(product, previousPrice, nextPrice) {
     }
     if (!shouldNotify) continue;
     await upsertOrderNotification(
-      { userId: userId, type: 'price_alert_price_change', productId: productId, pricePoint: pricePoint },
+      { userId: userId, type: 'price_alert_price_change', productId: productId, pricePoint: newPricePoint },
       {
         userId: userId,
         type: 'price_alert_price_change',
         productId: productId,
-        pricePoint: pricePoint,
+        pricePoint: newPricePoint,
         title: 'Price alert triggered',
         body: `${product && product.name ? product.name : 'A tracked product'} changed from $${safeFrom} to $${safeTo}.`,
         linkUrl: productPath
@@ -5447,11 +5447,12 @@ app.post('/api/user/preferences', prefsRateLimit, async function(req, res) {
   }
   if (payload.taxExemption && typeof payload.taxExemption === 'object') {
     const form = payload.taxExemption;
+    const normalizedState = String(form.state || '').trim().toUpperCase().slice(0, 20);
     updates.taxExemption = {
       org: String(form.org || '').trim().slice(0, 200),
       taxId: String(form.taxId || '').trim().slice(0, 80),
       type: String(form.type || '').trim().slice(0, 80),
-      state: String(form.state || '').trim().toUpperCase().slice(0, 20),
+      state: /^[A-Z]{2}$/.test(normalizedState) ? normalizedState : '',
       expiry: String(form.expiry || '').trim().slice(0, 40),
       contact: String(form.contact || '').trim().slice(0, 200),
       submitted: form.submitted === true,
@@ -8003,7 +8004,6 @@ async function releasePendingHoldPayoutsOnce() {
     if (existing) return;
     const pendingHolds = await db.collection('payouts')
       .find({ status: 'pending_hold' })
-      .limit(1000)
       .toArray();
     const summary = { scanned: pendingHolds.length, released: 0, failed: 0, deferred: 0 };
     for (const payout of pendingHolds) {

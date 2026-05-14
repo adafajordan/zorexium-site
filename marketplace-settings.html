@@ -1094,7 +1094,12 @@
   }
 
   function msEscAttr(value) {
-    return String(value || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function msParsePriceAlertProduct(inputValue) {
@@ -1140,10 +1145,16 @@
         + '<td class="px-4 py-3 font-semibold text-emerald-600">$' + (Number.isFinite(target) ? target.toFixed(2) : '0.00') + '</td>'
         + '<td class="px-4 py-3 text-gray-600">' + (hasCurrent ? ('$' + current.toFixed(2)) : '—') + '</td>'
         + '<td class="px-4 py-3">' + via + '</td>'
-        + '<td class="px-4 py-3"><button type="button" onclick="msDeletePriceAlert(\'' + alertId + '\')" class="text-xs text-red-600 hover:text-red-700 font-medium">Remove</button></td>'
+        + '<td class="px-4 py-3"><button type="button" data-price-alert-remove="1" data-alert-id="' + alertId + '" class="text-xs text-red-600 hover:text-red-700 font-medium">Remove</button></td>'
         + '</tr>';
     }).join('');
     tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
+    tbody.querySelectorAll('button[data-price-alert-remove="1"]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var alertId = String(btn.getAttribute('data-alert-id') || '').trim();
+        msDeletePriceAlert(alertId);
+      });
+    });
     var nextEmpty = document.getElementById('msPriceAlertsEmpty');
     if (nextEmpty) nextEmpty.style.display = 'none';
   }
