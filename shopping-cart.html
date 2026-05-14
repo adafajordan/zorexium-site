@@ -438,6 +438,20 @@
   const BACKEND_URL = 'https://zorexium-backend.onrender.com';
   let cart = [];
   let promoDiscount = 0;
+  let firstOrderFreeShippingActive = false;
+
+  async function loadFirstOrderFreeShippingEligibility() {
+    firstOrderFreeShippingActive = false;
+    if (!ZrxSession.isLoggedIn()) return;
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      if (!res.ok) return;
+      const orders = await res.json();
+      firstOrderFreeShippingActive = Array.isArray(orders) && orders.length === 0;
+    } catch (err) {
+      console.warn('Unable to load first-order free-shipping eligibility:', err);
+    }
+  }
 
   async function loadCart() {
     if (ZrxSession.isLoggedIn()) {
@@ -456,6 +470,7 @@
       // Guest: load from localStorage
       try { cart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) { cart = []; }
     }
+    await loadFirstOrderFreeShippingEligibility();
     renderCart();
   }
 
@@ -586,13 +601,22 @@
   function updateSummary() {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     // Standard shipping is $1.00 per item; matches backend DEFAULT_SHIPPING_PER_ITEM_USD
-    const shipping = cart.length > 0 ? cart.length * 1.00 : 0;
+    const shipping = cart.length > 0
+      ? (firstOrderFreeShippingActive ? 0 : cart.length * 1.00)
+      : 0;
     const tax = subtotal * 0.10;
     const discount = subtotal * promoDiscount;
     const total = subtotal + shipping + tax - discount;
 
     document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
-    document.getElementById('shipping').textContent = cart.length > 0 ? '$' + shipping.toFixed(2) : 'Free';
+    const shippingEl = document.getElementById('shipping');
+    if (shippingEl) {
+      if (cart.length > 0 && firstOrderFreeShippingActive) {
+        shippingEl.innerHTML = '<span class="inline-flex items-center gap-1 text-green-600 font-semibold"><i class="fas fa-shipping-fast"></i> FREE</span>';
+      } else {
+        shippingEl.textContent = cart.length > 0 ? '$' + shipping.toFixed(2) : 'Free';
+      }
+    }
     document.getElementById('tax').textContent = '$' + tax.toFixed(2);
     document.getElementById('total').textContent = '$' + total.toFixed(2);
 
@@ -741,4 +765,3 @@
     </script>
 </body>
 </html>
-

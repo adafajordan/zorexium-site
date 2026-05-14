@@ -453,6 +453,9 @@
             </div>
             <span class="text-cyan-400 font-bold text-base" id="standardShippingCost"></span>
           </label>
+          <p id="firstOrderShippingHint" class="hidden text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <i class="fas fa-shipping-fast mr-1"></i> First-purchase free shipping is active for this order.
+          </p>
         </div>
       </div>
 
@@ -618,6 +621,23 @@
     return { subtotal, shipping, tax, total };
   }
 
+  function renderFirstOrderFreeShippingUi(shipping) {
+    const summaryShipping = document.getElementById('summaryShipping');
+    const shippingCostLabel = document.getElementById('standardShippingCost');
+    const firstOrderHint = document.getElementById('firstOrderShippingHint');
+    if (firstOrderFreeShippingEligible) {
+      const freeMarkup = '<span class="inline-flex items-center gap-1 text-green-600 font-semibold"><i class="fas fa-shipping-fast"></i> FREE</span>';
+      if (summaryShipping) summaryShipping.innerHTML = freeMarkup;
+      if (shippingCostLabel) shippingCostLabel.innerHTML = freeMarkup;
+      if (firstOrderHint) firstOrderHint.classList.remove('hidden');
+      return;
+    }
+    const paidLabel = '$' + shipping.toFixed(2);
+    if (summaryShipping) summaryShipping.textContent = paidLabel;
+    if (shippingCostLabel) shippingCostLabel.textContent = paidLabel;
+    if (firstOrderHint) firstOrderHint.classList.add('hidden');
+  }
+
   function getFullName() {
     return (document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value).trim();
   }
@@ -625,12 +645,9 @@
   function renderSummary() {
     const { subtotal, shipping, tax, total } = calcTotals();
     document.getElementById('summarySubtotal').textContent = '$' + subtotal.toFixed(2);
-    document.getElementById('summaryShipping').textContent = firstOrderFreeShippingEligible ? 'FREE' : ('$' + shipping.toFixed(2));
     document.getElementById('summaryTax').textContent = '$' + tax.toFixed(2);
     document.getElementById('summaryTotal').textContent = '$' + total.toFixed(2);
-
-    const shippingCostLabel = document.getElementById('standardShippingCost');
-    if (shippingCostLabel) shippingCostLabel.textContent = firstOrderFreeShippingEligible ? 'FREE' : ('$' + shipping.toFixed(2));
+    renderFirstOrderFreeShippingUi(shipping);
 
     const deliveryDate = getSelectedDeliveryDate();
     document.getElementById('summaryDelivery').textContent =

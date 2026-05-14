@@ -479,12 +479,18 @@
     grid.innerHTML = products.map(product => {
       var parsedQuantity = parseInt(product.quantity, 10);
       var isOutOfStock = !isNaN(parsedQuantity) && parsedQuantity <= 0;
+      var featuredBadge = product && product.isFeaturedListing
+        ? '<span class="absolute top-2 right-2 inline-flex items-center gap-1 text-[10px] font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 rounded-full"><i class="fas fa-certificate"></i> Featured</span>'
+        : '';
       var addToCartClass = isOutOfStock
         ? 'bg-gray-500 text-white px-3 py-3 rounded text-base font-semibold cursor-not-allowed opacity-70'
         : 'bg-cyan-600 hover:bg-cyan-700 text-white px-3 py-3 rounded text-base font-semibold';
       return `
       <div class="product-card">
-        <img src="${product.image || 'https://placehold.co/300x200/333/fff?text=Product'}" alt="${product.name}" class="product-image" onclick="viewProduct('${product._id}')">
+        <div class="relative">
+          <img src="${product.image || 'https://placehold.co/300x200/333/fff?text=Product'}" alt="${product.name}" class="product-image" onclick="viewProduct('${product._id}')">
+          ${featuredBadge}
+        </div>
         <div class="p-4">
           <h3 class="text-gray-900 font-semibold flex-1 line-clamp-2 mb-2">${product.name}</h3>
           <div class="mb-3">
