@@ -92,6 +92,8 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 - Seller payout onboarding uses Stripe Connect Express.
 - Seller payout release is delayed until shipment confirmation (`/api/orders/:orderId/ship`) plus hold time (Starter: 5 days, Pro: 2 days), then a Stripe transfer is created.
 - Seller payout share is subtotal-only: Starter receives 90%, Pro receives 95% (shipping and tax stay with the platform).
+- Completed purchase automation now runs consistently for both PayPal capture and Stripe webhook flows: order sync, inventory sync/inactivation, payout readiness, and buyer/seller/admin purchase emails.
+- A startup migration repairs the historical `steve` → `adafa` completed order flow, and admins can rerun it with `POST /api/admin/orders/repair-steve-adafa`.
 - Pro Seller tier checkout uses Stripe subscription checkout and verifies completion server-side.
 
 ---
