@@ -971,6 +971,7 @@
             var BACKEND_URL = 'https://zorexium-backend.onrender.com';
             var homeProductsList = [];
             window._allHomeProducts = [];
+            var firstPurchaseFreeShippingEligible = !(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn());
 
             function escHtml(str) {
                 return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -996,6 +997,9 @@
                     return '<div class="spec-row"><span class="spec-label">' + escHtml(e[0]) + ':</span><span>' + escHtml(String(e[1])) + '</span></div>';
                 }).join('');
                 var detailUrl = 'product-detail.html?id=' + encodeURIComponent(id);
+                var freeShippingBadge = firstPurchaseFreeShippingEligible
+                    ? '<p class="text-xs font-semibold text-green-600 mt-1 inline-flex items-center gap-1"><i class="fas fa-shipping-fast"></i> Free shipping on your first purchase</p>'
+                    : '';
                 return '<div class="product-card overflow-hidden cursor-pointer" onclick="if(window.ZrxSpa){ZrxSpa.navigate(\'' + escHtml(detailUrl) + '\')}else{window.location.href=\'' + escHtml(detailUrl) + '\'}">' +
                     // Make the image visually dominant: fill the full top media half of each card.
                     '<div class="relative bg-gray-50 h-48 overflow-hidden">' +
@@ -1012,6 +1016,7 @@
                     '<span class="text-xl font-bold text-gray-900">$' + price.toFixed(2) + '</span>' +
                     (origPrice && origPrice > price ? '<span class="price-strike text-sm">$' + origPrice.toFixed(2) + '</span>' : '') +
                     '</div>' +
+                    freeShippingBadge +
                     '<div class="flex gap-2 mt-3">' +
                     '<a href="' + escHtml(detailUrl) + '" class="flex-1 border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-medium py-2 rounded text-center transition-colors" onclick="event.stopPropagation()">Details</a>' +
                     '<button class="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold py-2 rounded transition-colors" onclick="event.stopPropagation();homeAddToCart(' + index + ')">Add to Cart</button>' +
@@ -1068,6 +1073,28 @@
                 }
                 if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Added to cart!', 'success');
             };
+
+            async function resolveFirstPurchaseFreeShippingEligibility() {
+                firstPurchaseFreeShippingEligible = true;
+                if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) return;
+                try {
+                    var res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+                    if (!res.ok) {
+                        firstPurchaseFreeShippingEligible = false;
+                        return;
+                    }
+                    var orders = await res.json();
+                    firstPurchaseFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+                } catch (_) {
+                    firstPurchaseFreeShippingEligible = false;
+                } finally {
+                    if (homeProductsList.length > 0) {
+                        window._renderHomeProducts(homeProductsList);
+                    }
+                }
+            }
+
+            resolveFirstPurchaseFreeShippingEligibility();
 
             fetch(BACKEND_URL + '/api/products')
                 .then(function(res) { return res.json(); })

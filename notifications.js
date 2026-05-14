@@ -181,6 +181,7 @@
 
   function injectNotificationBell() {
     if (document.getElementById('zrx-notif-bell')) return;
+    if (!getAuthToken()) return;
     var cartLink = document.getElementById('headerCartLink');
     if (!cartLink) return;
 
@@ -224,7 +225,19 @@
     });
   }
 
+  function replaceGuestEmailNotificationsWithCart() {
+    var token = getAuthToken();
+    if (token) return;
+    var guestMenu = document.getElementById('headerAccountListsGuest');
+    if (!guestMenu) return;
+    guestMenu.querySelectorAll('a[href="email-notifications.html"]').forEach(function(link) {
+      link.setAttribute('href', 'shopping-cart.html');
+      link.innerHTML = '<i class="fas fa-shopping-cart text-cyan-600 w-4 text-center"></i>Shopping Cart';
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
+    replaceGuestEmailNotificationsWithCart();
     injectNotificationBell();
     fetchNotifications();
     setInterval(fetchNotifications, 60000);
