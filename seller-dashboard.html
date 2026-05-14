@@ -1723,7 +1723,7 @@
       .then(function(r) { return r.json(); })
       .then(function(planData) {
         if (!planData.planId) throw new Error('Pro Seller subscription plan is unavailable. Please try again later.');
-        loadDashPayPalSubSDK('stripe', planData.planId);
+        loadDashPayPalSubSDK(planData.planId);
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
@@ -1734,7 +1734,7 @@
       });
   }
 
-  function loadDashPayPalSubSDK(clientId, planId) {
+  function loadDashPayPalSubSDK(planId) {
     _dashPendingPlanId = planId;
     renderDashPayPalButtons(_dashPendingPlanId);
   }

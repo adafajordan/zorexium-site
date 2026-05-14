@@ -643,7 +643,7 @@
   var pendingProPlanId = null;
   var activeProCheckoutSessionId = null;
 
-  function loadPayPalSubSDK(clientId, planId) {
+  function loadPayPalSubSDK(planId) {
     pendingProPlanId = planId;
     renderPayPalSubscriptionButtons(planId);
   }
@@ -720,7 +720,7 @@
           markProUnavailable();
           throw new Error('The Pro Seller subscription plan is not currently available. Please select the Starter plan or try again later.');
         }
-        loadPayPalSubSDK('stripe', planData.planId);
+        loadPayPalSubSDK(planData.planId);
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);

@@ -1878,8 +1878,9 @@ const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
+// Historical write-off corrections for unrecoverable legacy earnings display mismatches.
 const SELLER_EARNINGS_WRITE_OFF_BY_SHOP = Object.freeze({
-  adafa: 0.90
+  'adafa': 0.90
 });
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 const PAYPAL_PAYOUT_SCOPE = 'https://uri.paypal.com/services/payments/payouts';
@@ -1910,10 +1911,6 @@ function getStripeCheckoutSuccessUrl(orderId) {
   } catch (_) {
     return fallback;
   }
-}
-
-function getStripeCheckoutReturnUrl(orderId) {
-  return getStripeCheckoutSuccessUrl(orderId);
 }
 
 function getStripeCheckoutCancelUrl() {
@@ -3221,7 +3218,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       mode: 'payment',
       ui_mode: 'embedded',
       line_items: checkoutLineItems,
-      return_url: getStripeCheckoutReturnUrl(orderId),
+      return_url: getStripeCheckoutSuccessUrl(orderId),
       customer_email: normalizedBuyerEmail,
       metadata: { orderId: orderId },
       client_reference_id: orderId
