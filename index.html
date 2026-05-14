@@ -55,6 +55,7 @@
         .spec-label { font-weight: 500; color: #374151; }
         .price-strike { text-decoration: line-through; color: #9ca3af; }
         .save-badge { background: #fee2e2; color: #dc2626; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+        .free-shipping-badge { color: #16a34a; font-size: 12px; font-weight: 500; }
         /* Sidebar accordion */
         .sidebar-submenu { overflow: hidden; max-height: 0; transition: max-height 0.25s ease; }
         .sidebar-submenu.open { max-height: 500px; }
@@ -253,7 +254,7 @@
 
                 <!-- Right Side Actions -->
                 <div class="flex items-center space-x-5">
-                    <!-- Account &amp; Lists hover menu – shown only when NOT logged in (replaces cart icon) -->
+                    <!-- Account &amp; Lists hover menu – shown only when NOT logged in -->
                     <div id="headerAccountListsGuest" class="relative hidden nav-dropdown-trigger">
                         <button class="flex items-center gap-2 text-gray-700 hover:text-black px-3 py-2 rounded-md cursor-pointer">
                             <i class="fas fa-user text-2xl"></i>
@@ -876,7 +877,7 @@
                 if(userDropHead){ userDropHead.classList.remove('hidden'); }
                 if(verifiedBtn){ verifiedBtn.classList.remove('hidden'); }
             } else {
-                if(cartLink)   { cartLink.classList.add('hidden'); }
+                if(cartLink)   { cartLink.classList.remove('hidden'); }
                 if(acctListsGuest){ acctListsGuest.classList.remove('hidden'); acctListsGuest.classList.add('flex'); }
                 if(acctSection){ acctSection.classList.add('hidden'); acctSection.classList.remove('flex'); }
                 if(loginForm)  { loginForm.classList.remove('hidden'); loginForm.classList.add('flex'); }
@@ -998,7 +999,7 @@
                 }).join('');
                 var detailUrl = 'product-detail.html?id=' + encodeURIComponent(id);
                 var freeShippingBadge = firstPurchaseFreeShippingEligible
-                    ? '<p class="text-xs font-semibold text-green-600 mt-1 inline-flex items-center gap-1"><i class="fas fa-shipping-fast"></i> Free shipping on your first purchase</p>'
+                    ? '<p class="free-shipping-badge"><i class="fas fa-truck text-xs mr-1"></i>Free Shipping</p>'
                     : '';
                 return '<div class="product-card overflow-hidden cursor-pointer" onclick="if(window.ZrxSpa){ZrxSpa.navigate(\'' + escHtml(detailUrl) + '\')}else{window.location.href=\'' + escHtml(detailUrl) + '\'}">' +
                     // Make the image visually dominant: fill the full top media half of each card.
