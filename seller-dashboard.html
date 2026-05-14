@@ -351,7 +351,7 @@
     <div id="proDowngradeNotice" class="hidden mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-3">
       <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
       <div class="flex-1 text-sm text-amber-800">
-        <span class="font-semibold">Your account has been updated:</span> Your seller account has been downgraded from <strong>Pro Seller</strong> to <strong>Starter</strong> tier. Pro Seller subscriptions now require a verified $1/month PayPal subscription. You can upgrade to Pro again from your account settings or by re-registering.
+        <span class="font-semibold">Your account has been updated:</span> Your seller account has been downgraded from <strong>Pro Seller</strong> to <strong>Starter</strong> tier. Pro Seller subscriptions now require a verified $1/month Stripe subscription. You can upgrade to Pro again from your account settings or by re-registering.
       </div>
       <button onclick="dismissDowngradeNotice()" class="text-amber-600 hover:text-amber-800 flex-shrink-0 text-lg leading-none">&times;</button>
     </div>
@@ -668,14 +668,14 @@
                   </div>
                 </div>
               </div>
-              <!-- PayPal subscription panel (hidden until Upgrade clicked) -->
+              <!-- Stripe subscription panel (hidden until Upgrade clicked) -->
               <div id="upgradePayPalPanel" class="hidden border-2 border-cyan-300 rounded-xl p-5 bg-white">
-                <p class="text-sm font-semibold text-gray-800 mb-1">Complete PayPal subscription to activate Pro</p>
-                <p class="text-xs text-gray-500 mb-3">A recurring $1/month subscription is required. Cancel anytime from your PayPal account.</p>
+                <p class="text-sm font-semibold text-gray-800 mb-1">Complete Stripe subscription to activate Pro</p>
+                <p class="text-xs text-gray-500 mb-3">A recurring $1/month subscription is required. Cancel anytime from your Stripe customer portal.</p>
                 <div id="dashPaypalContainer" class="min-h-[45px]"></div>
                 <p id="dashPaypalError" class="hidden text-red-600 text-sm mt-3 flex items-center gap-2">
                   <i class="fas fa-exclamation-circle"></i>
-                  <span id="dashPaypalErrorMsg">Failed to load PayPal. Please check your connection and try again.</span>
+                  <span id="dashPaypalErrorMsg">Failed to start Stripe checkout. Please check your connection and try again.</span>
                   <button onclick="retryDashPayPal()" class="ml-2 underline text-red-700 hover:text-red-900 bg-transparent border-0 cursor-pointer text-sm">Retry</button>
                 </p>
                 <div id="dashPaypalConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
@@ -1016,6 +1016,7 @@
       if (!sellerRes.ok) { window.location.href = 'seller-signup.html'; return; }
       sellerData = await sellerRes.json();
       await syncStripeConnectStatus();
+      await verifyDashStripeUpgradeIfReturned();
       sellerData.products = [];
 
       // Use sellerId from the seller profile directly
@@ -1716,78 +1717,78 @@
   function initDashProPayment() {
     var container = document.getElementById('dashPaypalContainer');
     if (container) {
-      container.innerHTML = '<div class="text-sm text-gray-500 flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i><span>Loading PayPal payment options…</span></div>';
+      container.innerHTML = '<div class="text-sm text-gray-500 flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i><span>Preparing Stripe checkout…</span></div>';
     }
-    fetch(BACKEND_URL + '/api/config')
+    fetch(BACKEND_URL + '/api/sellers/pro-plan')
       .then(function(r) { return r.json(); })
-      .then(function(config) {
-        if (!config.paypalClientId) throw new Error('PayPal is not configured on this server. Please try again later or contact support.');
-        return fetch(BACKEND_URL + '/api/sellers/pro-plan')
-          .then(function(r) { return r.json(); })
-          .then(function(planData) {
-            if (!planData.planId) throw new Error('Pro Seller subscription plan is unavailable. Please try again later.');
-            loadDashPayPalSubSDK(config.paypalClientId, planData.planId);
-          });
+      .then(function(planData) {
+        if (!planData.planId) throw new Error('Pro Seller subscription plan is unavailable. Please try again later.');
+        loadDashPayPalSubSDK(planData.planId);
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
         var errEl  = document.getElementById('dashPaypalError');
         var msgEl  = document.getElementById('dashPaypalErrorMsg');
-        if (msgEl) msgEl.textContent = err.message || 'Failed to load PayPal. Please check your connection and try again.';
+        if (msgEl) msgEl.textContent = err.message || 'Failed to start Stripe checkout. Please check your connection and try again.';
         if (errEl) errEl.classList.remove('hidden');
       });
   }
 
-  function loadDashPayPalSubSDK(clientId, planId) {
-    if (_dashPaypalSubSDKLoaded) { renderDashPayPalButtons(planId); return; }
-    if (_dashPaypalSubSDKLoading) return;
-    _dashPaypalSubSDKLoading = true;
+  function loadDashPayPalSubSDK(planId) {
     _dashPendingPlanId = planId;
-    var script = document.createElement('script');
-    script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(clientId) + '&vault=true&intent=subscription';
-    script.onload = function() {
-      _dashPaypalSubSDKLoaded = true;
-      _dashPaypalSubSDKLoading = false;
-      renderDashPayPalButtons(_dashPendingPlanId);
-    };
-    script.onerror = function() {
-      _dashPaypalSubSDKLoading = false;
-      var errEl = document.getElementById('dashPaypalError');
-      var msgEl = document.getElementById('dashPaypalErrorMsg');
-      if (msgEl) msgEl.textContent = 'Failed to load PayPal SDK. Please check your connection and try again.';
-      if (errEl) errEl.classList.remove('hidden');
-    };
-    document.head.appendChild(script);
+    renderDashPayPalButtons(_dashPendingPlanId);
   }
 
   function renderDashPayPalButtons(planId) {
     var container = document.getElementById('dashPaypalContainer');
     if (!container) return;
-    container.innerHTML = '';
-    paypal.Buttons({
-      style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'subscribe' },
-      createSubscription: function(data, actions) {
-        return actions.subscription.create({ 'plan_id': planId });
-      },
-      onApprove: function(data) {
-        _dashProSubscriptionId = data.subscriptionID;
-        var confirmed = document.getElementById('dashPaypalConfirmed');
-        var errEl     = document.getElementById('dashPaypalError');
-        if (confirmed) confirmed.classList.remove('hidden');
-        if (errEl)     errEl.classList.add('hidden');
-        completeDashUpgrade(_dashProSubscriptionId);
-      },
-      onError: function(err) {
-        console.error('PayPal subscription error:', err);
-        var errEl = document.getElementById('dashPaypalError');
-        var msgEl = document.getElementById('dashPaypalErrorMsg');
-        if (msgEl) msgEl.textContent = 'Payment failed. Please try again.';
-        if (errEl) errEl.classList.remove('hidden');
-      },
-      onCancel: function() {
-        ZrxNotify.showNotification('Payment cancelled.', 'info');
-      }
-    }).render('#dashPaypalContainer');
+    container.innerHTML = '<button type="button" onclick="startDashStripeCheckout()" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';
+  }
+
+  async function startDashStripeCheckout() {
+    try {
+      var errEl = document.getElementById('dashPaypalError');
+      if (errEl) errEl.classList.add('hidden');
+      var res = await ZrxSession.fetch(BACKEND_URL + '/api/stripe/pro-subscription/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ mode: 'upgrade' })
+      });
+      var data = await res.json().catch(function() { return {}; });
+      if (!res.ok) throw new Error(data.error || 'Unable to start Stripe checkout');
+      if (!data.checkoutUrl) throw new Error('Stripe checkout URL was not returned');
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      var errBox = document.getElementById('dashPaypalError');
+      var msgEl = document.getElementById('dashPaypalErrorMsg');
+      if (msgEl) msgEl.textContent = err.message || 'Unable to start Stripe checkout.';
+      if (errBox) errBox.classList.remove('hidden');
+    }
+  }
+
+  async function verifyDashStripeUpgradeIfReturned() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tierUpgrade') !== 'success') return;
+    const sessionId = (params.get('session_id') || '').trim();
+    if (!sessionId) return;
+    try {
+      var verifyRes = await ZrxSession.fetch(BACKEND_URL + '/api/stripe/pro-subscription/verify?session_id=' + encodeURIComponent(sessionId), {
+        credentials: 'include'
+      });
+      var verifyData = await verifyRes.json().catch(function() { return {}; });
+      if (!verifyRes.ok) throw new Error(verifyData.error || 'Stripe checkout verification failed');
+      await completeDashUpgrade(verifyData.subscriptionId || '');
+      params.delete('tierUpgrade');
+      params.delete('session_id');
+      var nextQuery = params.toString();
+      window.history.replaceState({}, document.title, window.location.pathname + (nextQuery ? ('?' + nextQuery) : '') + window.location.hash);
+    } catch (err) {
+      var errBox = document.getElementById('dashPaypalError');
+      var msgEl = document.getElementById('dashPaypalErrorMsg');
+      if (msgEl) msgEl.textContent = err.message || 'Unable to verify Stripe checkout.';
+      if (errBox) errBox.classList.remove('hidden');
+    }
   }
 
   async function completeDashUpgrade(subscriptionId) {

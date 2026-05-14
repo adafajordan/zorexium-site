@@ -812,6 +812,7 @@ app.get('/api/config', function(req, res) {
     paypalClientId: process.env.PAYPAL_CLIENT_ID || null,
     paypalBankOnboardingUrl: getPayPalBankOnboardingUrlFromEnv(),
     stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY || null,
+    stripeProSellerPriceId: process.env.STRIPE_PRO_SELLER_PRICE_ID || null,
     googleClientId: GOOGLE_CLIENT_ID || null
   });
 });
@@ -1856,6 +1857,7 @@ const PAYPAL_PRO_SELLER_PLAN_ID = process.env.PAYPAL_PRO_SELLER_PLAN_ID || null;
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+const STRIPE_PRO_SELLER_PRICE_ID = process.env.STRIPE_PRO_SELLER_PRICE_ID || '';
 const STRIPE_SUCCESS_URL = process.env.STRIPE_SUCCESS_URL || '';
 const STRIPE_CANCEL_URL = process.env.STRIPE_CANCEL_URL || '';
 const STRIPE_CONNECT_REFRESH_URL = process.env.STRIPE_CONNECT_REFRESH_URL || '';
@@ -1866,10 +1868,7 @@ const PRO_SELLER_MONTHLY_PRICE_USD = '1.00';
 // Standard shipping rate per item (USD) — $1.00 per item
 const DEFAULT_SHIPPING_PER_ITEM_USD = 1.00;
 const DEFAULT_SALES_TAX_RATE = 0.10;
-const envPlatformFeeRate = Number(process.env.PLATFORM_FEE_RATE);
-const PLATFORM_FEE_RATE = Number.isFinite(envPlatformFeeRate) && envPlatformFeeRate >= 0 && envPlatformFeeRate < 1
-  ? envPlatformFeeRate
-  : 0.10;
+const PLATFORM_FEE_RATE = 0.10;
 const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
@@ -1879,6 +1878,10 @@ const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
+// Historical write-off corrections for unrecoverable legacy earnings display mismatches.
+const SELLER_EARNINGS_WRITE_OFF_BY_SHOP = Object.freeze({
+  'adafa': 0.90
+});
 const PAYPAL_BANK_ONBOARDING_URL = getPayPalBankOnboardingUrlFromEnv();
 const PAYPAL_PAYOUT_SCOPE = 'https://uri.paypal.com/services/payments/payouts';
 const envPayPalMode = String(process.env.PAYPAL_MODE || '').trim().toLowerCase();
@@ -1928,6 +1931,13 @@ function toStripeAmountCents(value) {
   if (!Number.isFinite(numeric) || numeric <= 0) return 0;
   const normalized = Math.trunc((numeric + Number.EPSILON) * 100);
   return Math.max(0, normalized);
+}
+
+function normalizePayoutAccountId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.includes('@')) return normalizeEmail(raw);
+  return raw.slice(0, 128);
 }
 
 function normalizeCountryCode(value) {
@@ -2106,7 +2116,7 @@ function getLinkedSellerPayoutDestination(order, sellerId) {
   let hasVerifiedDestination = false;
   (Array.isArray(order && order.items) ? order.items : []).forEach(function(item) {
     if (String(item && item.sellerId ? item.sellerId : '') !== targetSellerId) return;
-    const payoutAccountId = normalizeEmail(item && item.sellerPayoutAccountId ? item.sellerPayoutAccountId : '');
+    const payoutAccountId = normalizePayoutAccountId(item && item.sellerPayoutAccountId ? item.sellerPayoutAccountId : '');
     if (payoutAccountId) payoutAccountIds.add(payoutAccountId);
     const bankStatus = String(item && item.sellerPayoutBankStatus ? item.sellerPayoutBankStatus : '').toLowerCase();
     if (item && item.sellerPayoutVerified === true && (!bankStatus || bankStatus === 'connected')) hasVerifiedDestination = true;
@@ -2161,9 +2171,11 @@ async function buildPayoutSnapshot(order, options) {
     linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
     seller = await db.collection('sellers').findOne(
       { userId: sellerInfo.sellerId },
-      { projection: { payoutAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, userId: 1, shopName: 1 } }
+      { projection: { payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, userId: 1, shopName: 1 } }
     );
-    sellerPayoutAccountId = normalizeEmail(seller && seller.payoutAccountId ? seller.payoutAccountId : '');
+    sellerPayoutAccountId = normalizePayoutAccountId(
+      seller && (seller.stripeAccountId || seller.payoutAccountId) ? (seller.stripeAccountId || seller.payoutAccountId) : ''
+    );
     const providerBankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
     hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified && (!providerBankStatus || providerBankStatus === 'connected'));
     hasLinkedVerifiedAccount = !!linkedPayoutDestination.verified;
@@ -2217,7 +2229,7 @@ async function buildPayoutSnapshot(order, options) {
     platformFee: platformFee,
     currency: payoutCurrency,
     items: Array.isArray(order && order.items) ? order.items : [],
-    method: 'PayPal',
+    method: 'Stripe Connect Express',
     placedAt: order.createdAt || now,
     shippedAt: order && order.shippedAt ? new Date(order.shippedAt) : null,
     shippingStatus: String(order && order.shippingStatus ? order.shippingStatus : ''),
@@ -2657,7 +2669,7 @@ async function syncCompletedOrderRecords(order) {
   return { ...order, ...orderUpdates };
 }
 
-async function sendPayPalSellerPayout(order, options) {
+async function sendStripeSellerPayout(order, options) {
   const payoutMeta = options || {};
   const snapshot = await buildPayoutSnapshot(order, payoutMeta);
   const orderId = snapshot.orderId;
@@ -2709,8 +2721,8 @@ async function sendPayPalSellerPayout(order, options) {
     return { ok: true, deferred: true, reason: snapshot.blockedReason };
   }
 
-  if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-    const reason = 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server';
+  if (!stripe || !STRIPE_SECRET_KEY) {
+    const reason = 'Stripe is not configured on the server';
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       { $set: { status: 'failed', error: reason, onboardingRequired: false, updatedAt: new Date() } }
@@ -2735,146 +2747,58 @@ async function sendPayPalSellerPayout(order, options) {
     );
     return { ok: false, error: reason };
   }
+  if (!snapshot.receiverEmail) {
+    const reason = 'Seller payout destination is missing';
+    await db.collection('payouts').updateOne(
+      { orderId: orderId },
+      { $set: { status: 'failed', error: reason, onboardingRequired: true, updatedAt: new Date() } }
+    );
+    return { ok: false, error: reason };
+  }
+  if (!/^acct_[A-Za-z0-9]+$/.test(String(snapshot.receiverEmail || '').trim())) {
+    const reason = 'Seller payout destination must be a Stripe Connect account ID';
+    await db.collection('payouts').updateOne(
+      { orderId: orderId },
+      { $set: { status: 'failed', error: reason, onboardingRequired: true, updatedAt: new Date() } }
+    );
+    return { ok: false, error: reason };
+  }
 
   await db.collection('payouts').updateOne(
     { orderId: orderId },
     { $set: { status: 'processing', onboardingRequired: false, lastAttemptAt: new Date(), updatedAt: new Date(), error: null } }
   );
 
-  let accessToken = '';
-  let paypalApiUrl = PAYPAL_API;
-  let tokenScopes = [];
   try {
-    ({ token: accessToken, apiUrl: paypalApiUrl, scopes: tokenScopes } = await fetchPayPalAccessToken());
-  } catch (tokenFetchError) {
-    const reason = tokenFetchError.message || 'Failed to authenticate with PayPal';
-    await db.collection('payouts').updateOne(
-      { orderId: orderId },
-      {
-          $set: {
-            status: 'failed',
-            error: reason,
-            onboardingRequired: false,
-            paypalError: {
-              name: tokenFetchError.name || 'Error',
-              message: tokenFetchError.message || reason,
-            stack: tokenFetchError.stack || null
-          },
-          updatedAt: new Date()
-        }
+    const transfer = await stripe.transfers.create({
+      amount: toStripeAmountCents(snapshot.payoutAmount),
+      currency: String(snapshot.payoutCurrency || 'USD').toLowerCase(),
+      destination: String(snapshot.receiverEmail),
+      metadata: {
+        orderId: orderId,
+        sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
+        triggerSource: String(payoutMeta.triggerSource || '')
       }
-    );
-    return { ok: false, error: reason };
-  }
-  if (!hasPayPalPayoutScope(tokenScopes)) {
-    const reason = `PayPal token is missing the payouts scope. Enable PayPal Payouts in your PayPal developer console for this ${PAYPAL_MODE} mode app, then retry.`;
-    await db.collection('payouts').updateOne(
-      { orderId: orderId },
-      {
-        $set: {
-          status: 'failed',
-          error: reason,
-          onboardingRequired: false,
-          paypalError: {
-            name: 'MISSING_PAYOUT_SCOPE',
-            message: reason,
-            mode: PAYPAL_MODE,
-            scopes: tokenScopes
-          },
-          updatedAt: new Date()
-        }
-      }
-    );
-    return { ok: false, error: reason };
-  }
-
-  const senderBatchId = `zrx-${orderId.replace(/[^a-zA-Z0-9]/g, '').slice(0, PAYOUT_BATCH_ORDER_ID_SLICE)}-${Date.now()}-${crypto.randomUUID().replace(/-/g, '').slice(0, PAYOUT_BATCH_UUID_SLICE)}`;
-  const payoutPayload = {
-    sender_batch_header: {
-      sender_batch_id: senderBatchId,
-      email_subject: `You have a payout from ${PAYOUT_BRAND_NAME}`,
-      email_message: `Your payout for order ${orderId} is on the way.`
-    },
-    items: [{
-      recipient_type: 'EMAIL',
-      amount: { value: snapshot.payoutAmount.toFixed(2), currency: snapshot.payoutCurrency },
-      receiver: snapshot.receiverEmail,
-      note: `Seller payout for order ${orderId}`,
-      sender_item_id: orderId.slice(0, 127)
-    }]
-  };
-
-  try {
-    const payoutRes = await fetch(`${paypalApiUrl}/v1/payments/payouts`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payoutPayload)
     });
-    const payoutData = await payoutRes.json();
-
-    if (!payoutRes.ok) {
-      const apiErr = payoutData && (payoutData.message || payoutData.name || payoutData.error_description);
-      let reason = apiErr || 'PayPal payout request failed';
-      // Provide a specific, actionable message when Payouts is not enabled for this PayPal app.
-      if (payoutData && payoutData.name === 'AUTHORIZATION_ERROR') {
-        const debugId = payoutData && payoutData.debug_id ? ` Debug ID: ${payoutData.debug_id}.` : '';
-        reason = `PayPal ${PAYPAL_MODE} app is not authorized for Payouts.${debugId} Enable Payouts for this app in PayPal, then retry. Admins can also mark the payout as paid manually.`;
-      }
-      await db.collection('payouts').updateOne(
-        { orderId: orderId },
-        {
-          $set: {
-            status: 'failed',
-            error: reason,
-            paypalError: payoutData,
-            payoutAccountId: snapshot.receiverEmail,
-            onboardingRequired: false,
-            updatedAt: new Date()
-          }
-        }
-      );
-      return { ok: false, error: reason };
-    }
-
-    const batchHeader = payoutData && payoutData.batch_header ? payoutData.batch_header : {};
-    const batchStatus = String(batchHeader && batchHeader.batch_status ? batchHeader.batch_status : '').toUpperCase();
     const payoutUpdates = {
       payoutAccountId: snapshot.receiverEmail,
-      paypalPayoutBatchId: batchHeader && batchHeader.payout_batch_id ? batchHeader.payout_batch_id : null,
-      paypalBatchStatus: batchStatus || null,
-      paypalPayoutResponse: payoutData,
+      stripeTransferId: String(transfer && transfer.id ? transfer.id : ''),
+      stripeTransferResponse: transfer,
       updatedAt: new Date(),
       onboardingRequired: false,
-      error: null
+      error: null,
+      status: 'paid',
+      paidAt: new Date()
     };
-    let resultingStatus = 'processing';
-    if (batchStatus === 'SUCCESS') {
-      resultingStatus = 'paid';
-      payoutUpdates.paidAt = new Date();
-    } else if (batchStatus === 'DENIED' || batchStatus === 'CANCELED') {
-      resultingStatus = 'failed';
-      payoutUpdates.error = `PayPal payout batch status: ${batchStatus}`;
-    }
-    payoutUpdates.status = resultingStatus;
-
     await db.collection('payouts').updateOne(
       { orderId: orderId },
       {
         $set: payoutUpdates
       }
     );
-
-    if (resultingStatus === 'failed') {
-      return { ok: false, error: payoutUpdates.error || 'PayPal payout failed', payout: payoutData };
-    }
-    if (resultingStatus === 'paid') {
-      const paidPayout = await db.collection('payouts').findOne({ orderId: orderId });
-      await notifyAdminPayoutPaidIfNeeded(paidPayout, 'paypal_api');
-    }
-    return { ok: true, payout: payoutData, processing: resultingStatus === 'processing' };
+    const paidPayout = await db.collection('payouts').findOne({ orderId: orderId });
+    await notifyAdminPayoutPaidIfNeeded(paidPayout, 'stripe_transfer');
+    return { ok: true, payout: transfer, processing: false };
   } catch (error) {
     await db.collection('payouts').updateOne(
       { orderId: orderId },
@@ -2882,6 +2806,10 @@ async function sendPayPalSellerPayout(order, options) {
     );
     return { ok: false, error: error.message };
   }
+}
+
+async function sendPayPalSellerPayout(order, options) {
+  return sendStripeSellerPayout(order, options);
 }
 
 async function retryEligibleBlockedPayoutsForSeller(sellerId, triggerSource) {
@@ -2899,7 +2827,7 @@ async function retryEligibleBlockedPayoutsForSeller(sellerId, triggerSource) {
     if (String(order.shippingStatus || '').toLowerCase() !== 'shipped') continue;
     summary.attempted++;
     try {
-      const result = await sendPayPalSellerPayout(order, { triggerSource: triggerSource || 'onboarding_verified' });
+      const result = await sendStripeSellerPayout(order, { triggerSource: triggerSource || 'onboarding_verified' });
       if (!result.ok) summary.failed++;
       else if (result.deferred) summary.deferred++;
       else if (result.processing) summary.processing++;
@@ -2913,79 +2841,103 @@ async function retryEligibleBlockedPayoutsForSeller(sellerId, triggerSource) {
 }
 
 // ── PRO SELLER SUBSCRIPTION PLAN ─────────────────────────────────────────────
-let cachedProSellerPlanId = PAYPAL_PRO_SELLER_PLAN_ID;
-
-async function ensurePayPalProSellerPlan() {
-  if (cachedProSellerPlanId) return cachedProSellerPlanId;
-  if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) return null;
-
-  try {
-    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
-
-    // 1. Create a product (service)
-    const productRes = await fetch(`${paypalApiUrl}/v1/catalogs/products`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Zorexium Pro Seller Subscription',
-        description: 'Monthly Pro Seller subscription on Zorexium ($1/month)',
-        type: 'SERVICE',
-        category: 'SOFTWARE'
-      })
-    });
-    const product = await productRes.json();
-    if (!productRes.ok) throw new Error(`PayPal product creation failed: ${product.message || JSON.stringify(product)}`);
-
-    // 2. Create a monthly billing plan
-    const planRes = await fetch(`${paypalApiUrl}/v1/billing/plans`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        product_id: product.id,
-        name: 'Pro Seller Monthly',
-        status: 'ACTIVE',
-        billing_cycles: [{
-          frequency: { interval_unit: 'MONTH', interval_count: 1 },
-          tenure_type: 'REGULAR',
-          sequence: 1,
-          total_cycles: 0,
-          pricing_scheme: {
-            fixed_price: { value: PRO_SELLER_MONTHLY_PRICE_USD, currency_code: 'USD' }
-          }
-        }],
-        payment_preferences: {
-          auto_bill_outstanding: true,
-          setup_fee: { value: '0', currency_code: 'USD' },
-          setup_fee_failure_action: 'CONTINUE',
-          payment_failure_threshold: 3
-        }
-      })
-    });
-    const plan = await planRes.json();
-    if (!planRes.ok) throw new Error(`PayPal plan creation failed: ${plan.message || JSON.stringify(plan)}`);
-
-    cachedProSellerPlanId = plan.id;
-    console.log(`✅ PayPal Pro Seller plan created: ${cachedProSellerPlanId}`);
-    return cachedProSellerPlanId;
-  } catch (err) {
-    console.error('⚠️  Failed to create PayPal Pro Seller plan:', err.message);
-    return null;
-  }
+function getStripeProSellerPriceId() {
+  const value = String(STRIPE_PRO_SELLER_PRICE_ID || '').trim();
+  return /^price_[A-Za-z0-9]+$/.test(value) ? value : null;
 }
 
-// GET /api/sellers/pro-plan – return PayPal subscription plan ID for Pro Seller
+async function verifyStripeProSellerSubscription(subscriptionId) {
+  ensureStripeConfigured();
+  const id = String(subscriptionId || '').trim();
+  if (!/^sub_[A-Za-z0-9]+$/.test(id)) {
+    throw new Error('subscriptionId is required');
+  }
+  const subscription = await stripe.subscriptions.retrieve(id);
+  const status = String(subscription && subscription.status ? subscription.status : '').toLowerCase();
+  if (!['active', 'trialing'].includes(status)) {
+    throw new Error('Stripe subscription could not be verified. Please try again.');
+  }
+  return subscription;
+}
+
+// GET /api/sellers/pro-plan – return Stripe price ID for Pro Seller
 app.get('/api/sellers/pro-plan', async function(req, res) {
   try {
-    const planId = await ensurePayPalProSellerPlan();
-    if (!planId) return res.status(503).json({ error: 'PayPal Pro Seller plan is not available. Please try again later.' });
-    res.json({ planId });
+    const priceId = getStripeProSellerPriceId();
+    if (!priceId) return res.status(503).json({ error: 'Stripe Pro Seller price is not configured. Set STRIPE_PRO_SELLER_PRICE_ID.' });
+    res.json({ planId: priceId, provider: 'stripe' });
   } catch (err) {
     console.error('Error fetching pro seller plan:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST /api/sellers/subscription/confirm – verify PayPal subscription and create Pro Seller profile
+// POST /api/stripe/pro-subscription/session – create a Stripe Checkout session for Pro Seller subscription
+app.post('/api/stripe/pro-subscription/session', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    ensureStripeConfigured();
+    const seller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { userId: 1, tier: 1 } });
+    const mode = String(req.body && req.body.mode ? req.body.mode : 'signup').trim().toLowerCase();
+    if (seller && seller.tier === 'pro' && mode === 'upgrade') {
+      return res.status(409).json({ error: 'Already on Pro tier' });
+    }
+    const priceId = getStripeProSellerPriceId();
+    if (!priceId) return res.status(503).json({ error: 'Stripe Pro Seller price is not configured. Set STRIPE_PRO_SELLER_PRICE_ID.' });
+    const successBase = mode === 'upgrade'
+      ? makeAbsoluteUrl('/seller-dashboard.html?tierUpgrade=success')
+      : makeAbsoluteUrl('/seller-signup.html?proCheckout=success');
+    const cancelBase = mode === 'upgrade'
+      ? makeAbsoluteUrl('/seller-dashboard.html?tierUpgrade=cancelled')
+      : makeAbsoluteUrl('/seller-signup.html?proCheckout=cancelled');
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successBase + '&session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: cancelBase,
+      metadata: {
+        userId: String(req.userId),
+        flow: mode === 'upgrade' ? 'pro_upgrade' : 'pro_signup'
+      }
+    });
+    res.json({ sessionId: session.id, checkoutUrl: session.url });
+  } catch (error) {
+    console.error('Error creating Stripe Pro subscription session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/stripe/pro-subscription/verify – verify completed Stripe Checkout subscription session
+app.get('/api/stripe/pro-subscription/verify', publicApiRateLimit, verifyToken, async function(req, res) {
+  try {
+    ensureStripeConfigured();
+    const sessionId = String(req.query && req.query.session_id ? req.query.session_id : '').trim();
+    if (!/^cs_[A-Za-z0-9]+$/.test(sessionId)) return res.status(400).json({ error: 'Invalid Stripe session_id' });
+    const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['subscription'] });
+    const sessionUserId = String(session && session.metadata && session.metadata.userId ? session.metadata.userId : '');
+    if (sessionUserId && sessionUserId !== String(req.userId)) {
+      return res.status(403).json({ error: 'Session does not belong to the authenticated user' });
+    }
+    if (String(session && session.payment_status ? session.payment_status : '').toLowerCase() !== 'paid') {
+      return res.status(409).json({ error: 'Subscription payment is not completed yet' });
+    }
+    const sessionSubscription = session && session.subscription
+      ? (typeof session.subscription === 'string' ? session.subscription : session.subscription.id)
+      : '';
+    const subscription = await verifyStripeProSellerSubscription(sessionSubscription);
+    res.json({
+      success: true,
+      sessionId: session.id,
+      subscriptionId: sessionSubscription,
+      status: subscription.status
+    });
+  } catch (error) {
+    console.error('Error verifying Stripe Pro subscription session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/sellers/subscription/confirm – verify Stripe subscription and create Pro Seller profile
 app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
@@ -3004,20 +2956,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
       return res.status(400).json({ error: 'accountType and shopName are required' });
     }
 
-    // Verify the subscription with PayPal
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
-    }
-    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
-    const subRes = await fetch(`${paypalApiUrl}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
-    });
-    const subData = await subRes.json();
-
-    if (!subRes.ok || !['ACTIVE', 'APPROVED'].includes(subData.status)) {
-      console.error('PayPal subscription verification failed:', subData);
-      return res.status(400).json({ error: 'PayPal subscription could not be verified. Please try again.' });
-    }
+    const subscription = await verifyStripeProSellerSubscription(subscriptionId);
 
     const seller = {
       userId: req.userId,
@@ -3042,7 +2981,8 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
       isVerified: false,
       tier: 'pro',
       proSubscriptionId: subscriptionId,
-      proSubscriptionStatus: subData.status,
+      proSubscriptionStatus: String(subscription && subscription.status ? subscription.status : 'active'),
+      proSubscriptionProvider: 'stripe',
       createdAt: new Date()
     };
 
@@ -3139,7 +3079,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       ? await db.collection('sellers')
           .find(
             { userId: { $in: sellerIds } },
-            { projection: { userId: 1, payoutAccountId: 1, payoutVerified: 1, payoutOnboardingStatus: 1, payoutProviderBankStatus: 1 } }
+            { projection: { userId: 1, payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutOnboardingStatus: 1, payoutProviderBankStatus: 1 } }
           )
           .toArray()
       : [];
@@ -3189,7 +3129,11 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         sellerId: sellerId,
         sellerName: String(product && (product.sellerName || product.sellerUsername) ? (product.sellerName || product.sellerUsername) : (item && item.sellerName ? item.sellerName : '')),
         sellerUsername: String(product && product.sellerUsername ? product.sellerUsername : ''),
-        sellerPayoutAccountId: normalizeEmail(sellerPayoutProfile && sellerPayoutProfile.payoutAccountId ? sellerPayoutProfile.payoutAccountId : ''),
+        sellerPayoutAccountId: normalizePayoutAccountId(
+          sellerPayoutProfile && (sellerPayoutProfile.stripeAccountId || sellerPayoutProfile.payoutAccountId)
+            ? (sellerPayoutProfile.stripeAccountId || sellerPayoutProfile.payoutAccountId)
+            : ''
+        ),
         sellerPayoutVerified: !!(sellerPayoutProfile && sellerPayoutProfile.payoutVerified),
         sellerPayoutOnboardingStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutOnboardingStatus ? sellerPayoutProfile.payoutOnboardingStatus : ''),
         sellerPayoutBankStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutProviderBankStatus ? sellerPayoutProfile.payoutProviderBankStatus : ''),
@@ -3272,9 +3216,9 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     }
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
+      ui_mode: 'embedded',
       line_items: checkoutLineItems,
-      success_url: getStripeCheckoutSuccessUrl(orderId),
-      cancel_url: getStripeCheckoutCancelUrl(),
+      return_url: getStripeCheckoutSuccessUrl(orderId),
       customer_email: normalizedBuyerEmail,
       metadata: { orderId: orderId },
       client_reference_id: orderId
@@ -3310,7 +3254,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     
     res.json({
       orderId,
-      checkoutUrl: checkoutSession.url,
+      clientSecret: checkoutSession.client_secret,
       stripeSessionId: checkoutSession.id,
       totals: { subtotal, shipping, tax, total, currency: 'USD' },
       firstOrderFreeShippingApplied
@@ -3420,7 +3364,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
     // Auto-create and send seller payout for this order
     let payoutResult = null;
     try {
-      payoutResult = await sendPayPalSellerPayout(syncedOrder, { triggerSource: 'capture' });
+      payoutResult = await sendStripeSellerPayout(syncedOrder, { triggerSource: 'capture' });
       if (!payoutResult.ok) {
         console.error('Automatic payout failed for order', syncedOrder.id, '-', payoutResult.error);
       } else if (payoutResult.deferred) {
@@ -3448,7 +3392,7 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
           body: payoutSent
             ? `Your payout for order ${syncedOrder.id} was sent.`
             : payoutProcessing
-              ? `Your payout for order ${syncedOrder.id} is processing with PayPal.`
+              ? `Your payout for order ${syncedOrder.id} is being processed via Stripe.`
             : `Order ${syncedOrder.id} payout is currently ${payoutResult && payoutResult.reason ? payoutResult.reason.toLowerCase() : 'pending review'}.`,
           linkUrl: '/seller-payouts.html'
         }
@@ -3711,6 +3655,10 @@ app.get('/api/orders', publicApiRateLimit, verifyToken, async function(req, res)
 app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
+    const sellerProfile = await db.collection('sellers').findOne(
+      { userId: req.userId },
+      { projection: { shopName: 1 } }
+    );
     const orders = await db.collection('orders')
       // Only return finalized completed orders for buyer purchase history/account views.
       .find({ status: 'completed', $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
@@ -3760,6 +3708,20 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
           || '—'
       };
     });
+    const writeOffAmount = Number(
+      SELLER_EARNINGS_WRITE_OFF_BY_SHOP[String(sellerProfile && sellerProfile.shopName ? sellerProfile.shopName : '').trim().toLowerCase()] || 0
+    );
+    if (Number.isFinite(writeOffAmount) && writeOffAmount > 0) {
+      let remainingWriteOff = parseFloat(writeOffAmount.toFixed(2));
+      for (let i = 0; i < sellerOrders.length && remainingWriteOff > 0; i += 1) {
+        const currentNet = Number(sellerOrders[i].sellerNetTotal);
+        if (!Number.isFinite(currentNet) || currentNet <= 0) continue;
+        const applied = Math.min(currentNet, remainingWriteOff);
+        sellerOrders[i].sellerNetTotal = parseFloat((currentNet - applied).toFixed(2));
+        sellerOrders[i].sellerWriteOffApplied = parseFloat(applied.toFixed(2));
+        remainingWriteOff = parseFloat((remainingWriteOff - applied).toFixed(2));
+      }
+    }
     res.json(sellerOrders);
   } catch (error) {
     console.error('Error fetching seller orders:', error);
@@ -3848,7 +3810,7 @@ app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async fun
     let payoutResult = null;
     try {
       const refreshedOrder = await db.collection('orders').findOne({ id: orderId });
-      payoutResult = await sendPayPalSellerPayout(refreshedOrder || { ...order, shippingStatus: 'shipped', shippedAt: now }, { triggerSource: 'shipment_verified' });
+      payoutResult = await sendStripeSellerPayout(refreshedOrder || { ...order, shippingStatus: 'shipped', shippedAt: now }, { triggerSource: 'shipment_verified' });
       if (!payoutResult.ok) {
         console.error('Failed to process shipment-triggered payout for order', orderId, '-', payoutResult.error);
       }
@@ -4821,7 +4783,7 @@ app.post('/api/sellers', publicApiRateLimit, verifyToken, async function(req, re
 
     // Pro tier requires payment via /api/sellers/subscription/confirm
     if (resolvedTier === 'pro') {
-      return res.status(400).json({ error: 'Pro Seller registration requires a PayPal subscription. Please use the subscription signup flow.' });
+      return res.status(400).json({ error: 'Pro Seller registration requires a Stripe subscription. Please use the subscription signup flow.' });
     }
 
     const seller = {
@@ -5118,33 +5080,27 @@ app.get('/api/stripe/connect/dashboard-link', publicApiRateLimit, verifyToken, a
 // POST /api/sellers/me/payout-account/start – begin payout account onboarding (auth required)
 app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-
-  const payoutAccountId = normalizeEmail(req.body && req.body.payoutAccountId);
-  if (!payoutAccountId || !isLikelyEmail(payoutAccountId)) {
-    return res.status(400).json({ error: 'A valid PayPal email is required' });
-  }
-
   try {
-    const seller = await db.collection('sellers').findOne(
-      { userId: req.userId },
-      { projection: { userId: 1, shopName: 1 } }
-    );
-    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
-
+    const result = await getOrCreateStripeConnectAccountForSeller(req.userId);
+    if (result.error) return res.status(404).json({ error: result.error });
+    const accountLink = await stripe.accountLinks.create({
+      account: result.accountId,
+      refresh_url: getStripeConnectRefreshUrl(),
+      return_url: getStripeConnectReturnUrl(),
+      type: 'account_onboarding'
+    });
     const now = new Date();
-    const onboardingUrl = PAYPAL_BANK_ONBOARDING_URL;
     await db.collection('sellers').updateOne(
       { userId: req.userId },
       {
         $set: {
-          // Bank details are entered in PayPal only; we store safe linkage/status metadata in our DB.
-          payoutAccountId: payoutAccountId,
-          payoutProvider: 'paypal',
-          payoutProviderDestinationType: 'paypal_wallet_bank',
+          payoutProvider: 'stripe',
+          payoutProviderDestinationType: 'stripe_connect_express',
+          payoutAccountId: result.accountId,
+          stripeAccountId: result.accountId,
           payoutProviderBankStatus: 'pending_provider',
-          payoutProviderBankOnboardingUrl: onboardingUrl,
+          payoutProviderBankOnboardingUrl: accountLink.url,
           payoutProviderBankOnboardingStartedAt: now,
-          payoutProviderBankLinked: false,
           payoutVerified: false,
           payoutOnboardingStatus: 'pending_provider',
           payoutOnboardingStartedAt: now,
@@ -5154,19 +5110,18 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
           payoutVerificationCodeHash: '',
           payoutVerificationCodeExpiresAt: '',
           payoutVerificationMethod: '',
-          payoutProviderBankLinkedAt: '',
-          payoutOnboardingCompletedAt: ''
+          payoutProviderBankLinkedAt: ''
         }
       }
     );
 
     res.json({
       success: true,
-      payoutAccountId: payoutAccountId,
-      provider: 'paypal',
+      payoutAccountId: result.accountId,
+      provider: 'stripe',
       providerBankStatus: 'pending_provider',
       onboardingStatus: 'pending_provider',
-      onboardingUrl: onboardingUrl
+      onboardingUrl: accountLink.url
     });
   } catch (error) {
     console.error('Error starting payout onboarding:', error);
@@ -5174,63 +5129,22 @@ app.post('/api/sellers/me/payout-account/start', publicApiRateLimit, verifyToken
   }
 });
 
-// POST /api/sellers/me/payout-account/bank-linked – seller confirms PayPal bank linking and requests verification code (auth required)
+// POST /api/sellers/me/payout-account/bank-linked – refresh Stripe Connect onboarding status (auth required)
 app.post('/api/sellers/me/payout-account/bank-linked', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const seller = await db.collection('sellers').findOne(
-      { userId: req.userId },
-      { projection: { payoutAccountId: 1 } }
-    );
-    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
-    const payoutAccountId = normalizeEmail(seller && seller.payoutAccountId ? seller.payoutAccountId : '');
-    if (!payoutAccountId || !isLikelyEmail(payoutAccountId)) {
-      return res.status(409).json({ error: 'Save a valid PayPal payout email before confirming bank setup' });
-    }
-
-    const code = generatePayoutVerificationCode();
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + PAYOUT_VERIFICATION_CODE_EXPIRATION_MS);
-    await db.collection('sellers').updateOne(
-      { userId: req.userId },
-      {
-        $set: {
-          payoutProvider: 'paypal',
-          payoutProviderDestinationType: 'paypal_wallet_bank',
-          payoutProviderBankStatus: 'pending_verification',
-          payoutProviderBankLinked: true,
-          payoutProviderBankLinkedAt: now,
-          payoutVerified: false,
-          payoutOnboardingStatus: 'pending_verification',
-          payoutOnboardingStartedAt: now,
-          payoutVerificationCodeHash: hashPayoutVerificationCode(code),
-          payoutVerificationCodeExpiresAt: expiresAt,
-          payoutVerificationMethod: 'email_code',
-          updatedAt: now
-        }
-      }
-    );
-
-    await sendEventEmailSafe(
-      payoutAccountId,
-      'Verify your Zorexium payout account',
-      `<p>Your payout verification code is <strong>${escapeHtml(code)}</strong>.</p>` +
-      `<p>Enter this code in your seller dashboard to confirm your PayPal payout destination for bank transfers.</p>` +
-      `<p>This code expires in 15 minutes.</p>`,
-      '/seller-dashboard.html#payouts'
-    );
-
+    const status = await getStripeConnectStatusForSeller(req.userId);
+    if (status.error) return res.status(404).json({ error: status.error });
     res.json({
       success: true,
-      payoutAccountId: payoutAccountId,
-      provider: 'paypal',
-      providerBankStatus: 'pending_verification',
-      onboardingStatus: 'pending_verification',
-      expiresAt: expiresAt
+      payoutAccountId: status.accountId || null,
+      provider: 'stripe',
+      providerBankStatus: status.connected ? 'connected' : 'pending_provider',
+      onboardingStatus: status.connected ? 'connected' : 'pending_provider'
     });
   } catch (error) {
-    console.error('Error confirming payout bank linking:', error);
+    console.error('Error refreshing payout account status:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -5239,63 +5153,18 @@ app.post('/api/sellers/me/payout-account/bank-linked', publicApiRateLimit, verif
 app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
-  const code = String(req.body && req.body.code ? req.body.code : '').trim();
-  if (!/^\d{6}$/.test(code)) {
-    return res.status(400).json({ error: 'Verification code must be a 6-digit number' });
-  }
-
   try {
-    const seller = await db.collection('sellers').findOne(
-      { userId: req.userId },
-      { projection: { payoutAccountId: 1, payoutOnboardingStatus: 1, payoutVerificationCodeHash: 1, payoutVerificationCodeExpiresAt: 1 } }
-    );
-    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
-    if (String(seller.payoutOnboardingStatus || '').toLowerCase() === 'pending_provider') {
-      return res.status(409).json({ error: 'Complete PayPal bank onboarding and confirm bank linking first so a verification code can be sent.' });
+    const status = await getStripeConnectStatusForSeller(req.userId);
+    if (status.error) return res.status(404).json({ error: status.error });
+    if (!status.connected) {
+      return res.status(409).json({ error: 'Complete Stripe Connect onboarding first.' });
     }
-    if (!seller.payoutVerificationCodeHash || !seller.payoutVerificationCodeExpiresAt) {
-      return res.status(409).json({ error: 'Start payout setup first to request a verification code' });
-    }
-    if (new Date(seller.payoutVerificationCodeExpiresAt).getTime() < Date.now()) {
-      return res.status(410).json({ error: 'Verification code has expired. Request a new code.' });
-    }
-    const incomingHash = hashPayoutVerificationCode(code);
-    const storedHash = String(seller.payoutVerificationCodeHash || '');
-    const incomingBuffer = Buffer.from(incomingHash, 'hex');
-    const storedBuffer = Buffer.from(storedHash, 'hex');
-    if (incomingBuffer.length !== storedBuffer.length || !crypto.timingSafeEqual(incomingBuffer, storedBuffer)) {
-      return res.status(400).json({ error: 'Invalid verification code' });
-    }
-
-    const now = new Date();
-    await db.collection('sellers').updateOne(
-      { userId: req.userId },
-      {
-        $set: {
-          payoutProvider: 'paypal',
-          payoutProviderDestinationType: 'paypal_wallet_bank',
-          payoutProviderBankStatus: 'connected',
-          payoutProviderBankLinked: true,
-          payoutProviderBankLinkedAt: now,
-          payoutVerified: true,
-          payoutOnboardingStatus: 'connected',
-          payoutOnboardingCompletedAt: now,
-          updatedAt: now
-        },
-        $unset: {
-          payoutVerificationCodeHash: '',
-          payoutVerificationCodeExpiresAt: '',
-          payoutVerificationMethod: ''
-        }
-      }
-    );
-
-    const updatedSeller = await db.collection('sellers').findOne({ userId: req.userId });
+    const updatedSeller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { payoutAccountId: 1, stripeAccountId: 1 } });
     const retrySummary = await retryEligibleBlockedPayoutsForSeller(req.userId, 'onboarding_verified');
     res.json({
       success: true,
-      payoutAccountId: updatedSeller && updatedSeller.payoutAccountId ? updatedSeller.payoutAccountId : null,
-      provider: 'paypal',
+      payoutAccountId: updatedSeller && (updatedSeller.stripeAccountId || updatedSeller.payoutAccountId) ? (updatedSeller.stripeAccountId || updatedSeller.payoutAccountId) : null,
+      provider: 'stripe',
       providerBankStatus: 'connected',
       payoutVerified: true,
       onboardingStatus: 'connected',
@@ -5322,7 +5191,7 @@ app.post('/api/sellers/assign-starter-tier', publicApiRateLimit, verifyToken, as
   }
 });
 
-// POST /api/sellers/upgrade-to-pro – upgrade existing seller to Pro tier via PayPal subscription (auth required)
+// POST /api/sellers/upgrade-to-pro – upgrade existing seller to Pro tier via Stripe subscription (auth required)
 app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
@@ -5335,23 +5204,12 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
       return res.status(400).json({ error: 'subscriptionId is required' });
     }
 
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      return res.status(503).json({ error: 'PayPal credentials (PAYPAL_CLIENT_ID and/or PAYPAL_SECRET) are not configured on the server' });
-    }
-    const { token: accessToken, apiUrl: paypalApiUrl } = await fetchPayPalAccessToken();
-    const subRes = await fetch(`${paypalApiUrl}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}`, {
-      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
-    });
-    const subData = await subRes.json();
-
-    if (!subRes.ok || !['ACTIVE', 'APPROVED'].includes(subData.status)) {
-      console.error('PayPal subscription verification failed:', subData);
-      return res.status(400).json({ error: 'PayPal subscription could not be verified. Please try again.' });
-    }
+    const subscription = await verifyStripeProSellerSubscription(subscriptionId);
 
     await db.collection('sellers').updateOne(
       { userId: req.userId },
-      { $set: { tier: 'pro', proSubscriptionId: subscriptionId, proSubscriptionStatus: subData.status,
+      { $set: { tier: 'pro', proSubscriptionId: subscriptionId, proSubscriptionStatus: String(subscription && subscription.status ? subscription.status : 'active'),
+                proSubscriptionProvider: 'stripe',
                 proTierDowngraded: false, updatedAt: new Date() } }
     );
     const updated = await db.collection('sellers').findOne({ userId: req.userId });
@@ -5387,7 +5245,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
     await db.collection('sellers').updateOne(
       { userId: req.userId },
       { $set: { tier: 'starter', proTierDowngraded: true, proTierDowngradedAt: new Date(), updatedAt: new Date() },
-        $unset: { proSubscriptionId: '', proSubscriptionStatus: '' } }
+        $unset: { proSubscriptionId: '', proSubscriptionStatus: '', proSubscriptionProvider: '' } }
     );
     const updated = await db.collection('sellers').findOne({ userId: req.userId });
     const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
@@ -5717,10 +5575,10 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
     );
     const bankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
     if (!seller || !seller.payoutVerified || (bankStatus && bankStatus !== 'connected')) {
-      return res.status(409).json({ error: 'Complete and verify your PayPal bank payout onboarding before pushing payouts' });
+      return res.status(409).json({ error: 'Complete and verify your Stripe payout onboarding before pushing payouts' });
     }
 
-    const payoutResult = await sendPayPalSellerPayout(order, { triggerSource: 'api' });
+    const payoutResult = await sendStripeSellerPayout(order, { triggerSource: 'api' });
     if (!payoutResult.ok) {
       console.error('Manual payout trigger failed for order', orderId, '-', payoutResult.error);
       return res.status(502).json({ error: payoutResult.error || 'Payout failed' });
@@ -5890,7 +5748,7 @@ app.post('/api/payouts/:id/send', publicApiRateLimit, verifyToken, async functio
       return res.status(409).json({ error: 'Payouts become eligible after the seller marks the order as shipped' });
     }
 
-    const payoutResult = await sendPayPalSellerPayout(order, { triggerSource: req.isAdmin ? 'admin_manual' : 'api' });
+    const payoutResult = await sendStripeSellerPayout(order, { triggerSource: req.isAdmin ? 'admin_manual' : 'api' });
     if (!payoutResult.ok) {
       return res.status(502).json({ error: payoutResult.error || 'Failed to send payout' });
     }
