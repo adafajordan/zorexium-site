@@ -513,6 +513,7 @@
   let brandName = '';
   let brandSlug = '';
   let brandSellerTotalSales = null;
+  let firstOrderFreeShippingEligible = false;
 
   // ── Init ────────────────────────────────────────────────────────────────────
   function updateBrandPageTitle(name) {
@@ -535,6 +536,7 @@
     window._brandStoreSellerId = sellerId;
 
     updateBrandPageTitle(brandName);
+    await loadFirstOrderFreeShippingEligibility();
     updateCartBadge();
 
     // Load seller profile to populate banner, logo, and description
@@ -543,6 +545,17 @@
     }
 
     await loadProducts();
+  }
+
+  async function loadFirstOrderFreeShippingEligibility() {
+    firstOrderFreeShippingEligible = false;
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      if (!res.ok) return;
+      const orders = await res.json();
+      firstOrderFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+    } catch (_) {}
   }
 
   async function loadSellerProfile(sellerId) {
@@ -833,6 +846,7 @@
       <span class="text-xl font-bold text-gray-900">$${price.toFixed(2)}</span>
       ${origPrice && origPrice > price ? `<span class="price-strike text-sm">$${origPrice.toFixed(2)}</span>` : ''}
     </div>
+    ${firstOrderFreeShippingEligible ? '<p class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-green-600"><i class="fas fa-shipping-fast"></i> Free Shipping</p>' : ''}
     <div class="flex gap-2 mt-3">
       <a href="product-detail.html?id=${escHtml(productId)}"
         class="flex-1 border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-medium py-2 rounded text-center transition-colors"

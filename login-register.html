@@ -255,7 +255,7 @@
                             <a href="order-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
                             <a href="returns-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-exchange-alt text-cyan-600 w-4 text-center"></i>Returns History</a>
                             <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
-                            <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
+                            <a href="shopping-cart.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shopping-cart text-cyan-600 w-4 text-center"></i>Shopping Cart</a>
                             <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
                             <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
                             <!-- Zorexium -->
@@ -677,8 +677,9 @@
           localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
         } catch (ex) {}
       }
+      await lrMergeGuestCartIntoAccount();
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Signed in successfully!', 'success');
-      window.location.href = 'index.html';
+      window.location.href = lrResolveReturnToPath();
     } catch (err) {
       errMsg.textContent = 'Sign in failed. Please check your connection and try again.';
       errEl.classList.remove('hidden');
@@ -735,8 +736,9 @@
           localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
         } catch (ex) {}
       }
+      await lrMergeGuestCartIntoAccount();
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Signed in successfully!', 'success');
-      window.location.href = 'index.html';
+      window.location.href = lrResolveReturnToPath();
     } catch (err) {
       errMsg.textContent = 'Login failed. Please check your connection and try again.';
       errEl.classList.remove('hidden');
@@ -799,7 +801,9 @@
             : { email: email, username: username };
           localStorage.setItem('_zrx_user', JSON.stringify(userInfo));
         } catch (ex) {}
-        setTimeout(function() { window.location.href = 'index.html'; }, 1500);
+        await lrMergeGuestCartIntoAccount();
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Signed in successfully!', 'success');
+        window.location.href = lrResolveReturnToPath();
       } else {
         // Server did not return a token — switch to login tab so user can sign in
         setTimeout(function() { lrShowTab('login'); }, 2500);
@@ -849,6 +853,56 @@
       if (next && next.charAt(0) === '/' && next.charAt(1) !== '/') return next;
     } catch (e) {}
     return '/index.html';
+  }
+
+  async function lrMergeGuestCartIntoAccount() {
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    var guestItems = [];
+    try {
+      guestItems = JSON.parse(localStorage.getItem('guestCart') || '[]');
+    } catch (e) {
+      guestItems = [];
+    }
+    if (!Array.isArray(guestItems) || guestItems.length === 0) {
+      try { localStorage.removeItem('pendingCheckout'); } catch (e) {}
+      return;
+    }
+
+    try {
+      var currentItems = [];
+      var cartRes = await ZrxSession.fetch(LR_BACKEND + '/api/cart', { credentials: 'include' });
+      if (cartRes.ok) {
+        var cartPayload = await cartRes.json();
+        currentItems = Array.isArray(cartPayload && cartPayload.items) ? cartPayload.items : [];
+      }
+
+      var mergedById = Object.create(null);
+      currentItems.forEach(function(item) {
+        if (!item || !item.id) return;
+        mergedById[item.id] = Object.assign({}, item, { quantity: parseInt(item.quantity, 10) || 1 });
+      });
+      guestItems.forEach(function(item) {
+        if (!item || !item.id) return;
+        var guestQty = parseInt(item.quantity, 10) || 1;
+        if (mergedById[item.id]) {
+          mergedById[item.id].quantity += guestQty;
+        } else {
+          mergedById[item.id] = Object.assign({}, item, { quantity: guestQty });
+        }
+      });
+
+      var mergedItems = Object.keys(mergedById).map(function(id) { return mergedById[id]; });
+      await ZrxSession.fetch(LR_BACKEND + '/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ items: mergedItems })
+      });
+      localStorage.removeItem('guestCart');
+      localStorage.removeItem('pendingCheckout');
+    } catch (e) {
+      // Keep guest cart if merge fails so it can be retried.
+    }
   }
 
   function lrGoogleErrorMessage(code) {
@@ -947,9 +1001,10 @@
         throw new Error((data && data.error) || 'google_auth_failed');
       }
       lrStoreAuthSession(data);
+      await lrMergeGuestCartIntoAccount();
       var destination = (data.redirectTo && data.redirectTo.charAt(0) === '/' && data.redirectTo.charAt(1) !== '/')
         ? data.redirectTo
-        : '/index.html';
+        : lrResolveReturnToPath();
       window.location.href = destination;
     } catch (error) {
       lrShowGoogleError(error && error.message ? error.message : 'google_auth_failed');
@@ -988,9 +1043,10 @@
       var data = await res.json();
       if (!res.ok || !data || !data.token) throw new Error((data && data.error) || 'Google sign-in failed');
       lrStoreAuthSession(data);
+      await lrMergeGuestCartIntoAccount();
       var destination = (data.redirectTo && data.redirectTo.charAt(0) === '/' && data.redirectTo.charAt(1) !== '/')
         ? data.redirectTo
-        : '/index.html';
+        : lrResolveReturnToPath();
       window.location.href = destination;
     } catch (error) {
       errMsg.textContent = 'Google sign-in failed. Please try again.';

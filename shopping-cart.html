@@ -237,7 +237,7 @@
                             <a href="order-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-box text-cyan-600 w-4 text-center"></i>Order History</a>
                             <a href="returns-history.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-exchange-alt text-cyan-600 w-4 text-center"></i>Returns History</a>
                             <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
-                            <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
+                            <a href="shopping-cart.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-shopping-cart text-cyan-600 w-4 text-center"></i>Shopping Cart</a>
                             <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
                             <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
                             <!-- Zorexium -->
@@ -430,6 +430,24 @@
         <a href="messages.html" class="bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-4 shadow-lg flex items-center justify-center w-14 h-14">
             <i class="fas fa-comment-dots text-3xl"></i>
         </a>
+    </div>
+
+    <div id="checkoutAuthModal" class="fixed inset-0 z-[120] hidden items-center justify-center bg-black/60 px-4">
+      <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-gray-900">Sign in to continue checkout</h3>
+          <button type="button" id="checkoutAuthModalClose" class="text-gray-400 hover:text-gray-600" aria-label="Close">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="px-6 py-5">
+          <p class="text-sm text-gray-600 mb-5">Please sign in or create an account to finish your purchase. Your cart will be saved to your account after login or registration.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a href="login-register.html?next=%2Fcheckout.html" class="text-center px-4 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold transition-colors">Sign In</a>
+            <a href="login-register.html?tab=register&next=%2Fcheckout.html" class="text-center px-4 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold transition-colors">Create Account</a>
+          </div>
+        </div>
+      </div>
     </div>
 
 <script src="notifications.js"></script>
@@ -635,10 +653,42 @@
       ZrxNotify.showNotification('Your cart is empty', 'info');
       return;
     }
+    if (typeof ZrxSession !== 'undefined' && !ZrxSession.isLoggedIn()) {
+      try {
+        localStorage.setItem('guestCart', JSON.stringify(cart));
+        localStorage.setItem('pendingCheckout', '1');
+      } catch (_) {}
+      openCheckoutAuthModal();
+      return;
+    }
     window.location.href = 'checkout.html';
   }
 
-  window.addEventListener('load', loadCart);
+  function openCheckoutAuthModal() {
+    const modal = document.getElementById('checkoutAuthModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeCheckoutAuthModal() {
+    const modal = document.getElementById('checkoutAuthModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  window.addEventListener('load', function() {
+    loadCart();
+    const closeBtn = document.getElementById('checkoutAuthModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeCheckoutAuthModal);
+    const modal = document.getElementById('checkoutAuthModal');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeCheckoutAuthModal();
+      });
+    }
+  });
 </script>
 
 <script src="profile-picture.js"></script>
