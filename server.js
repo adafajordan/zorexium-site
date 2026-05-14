@@ -2027,7 +2027,7 @@ function addUtcDays(dateValue, dayCount) {
 function getConnectedSellerStripeAccountId(seller) {
   if (!seller || typeof seller !== 'object') return '';
   const accountId = normalizePayoutAccountId(
-    seller && (seller.stripeAccountId || seller.payoutAccountId) ? (seller.stripeAccountId || seller.payoutAccountId) : ''
+    seller ? (seller.stripeAccountId || seller.payoutAccountId || '') : ''
   );
   if (!isStripeConnectAccountId(accountId)) return '';
   const providerBankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
@@ -2358,7 +2358,7 @@ async function buildPayoutSnapshot(order, options) {
       { projection: { payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, userId: 1, shopName: 1 } }
     );
     sellerPayoutAccountId = normalizePayoutAccountId(
-      seller && (seller.stripeAccountId || seller.payoutAccountId) ? (seller.stripeAccountId || seller.payoutAccountId) : ''
+      seller ? (seller.stripeAccountId || seller.payoutAccountId || '') : ''
     );
     const providerBankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
     hasCurrentVerifiedAccount = !!(seller && seller.payoutVerified && (!providerBankStatus || providerBankStatus === 'connected'));
@@ -3134,6 +3134,7 @@ async function sendStripeSellerPayout(order, options) {
   }
 
   const payoutCurrency = String(snapshot.payoutCurrency || 'USD').toLowerCase();
+  const payoutCurrencyUpper = payoutCurrency.toUpperCase();
   const payoutAmountCents = toStripeAmountCents(snapshot.payoutAmount);
   const sourceTransaction = await ensureStripeChargeIdOnOrder(order);
   const shouldRequireAvailableBalance = !isStripeChargeId(sourceTransaction);
@@ -3141,7 +3142,7 @@ async function sendStripeSellerPayout(order, options) {
   if (shouldRequireAvailableBalance) {
     const availableBalanceCents = await getAvailableStripeBalanceAmount(payoutCurrency);
     if (availableBalanceCents < payoutAmountCents) {
-      const reason = `Stripe available balance is insufficient for immediate transfer (${(availableBalanceCents / 100).toFixed(2)} ${String(snapshot.payoutCurrency || 'USD').toUpperCase()} available).`;
+      const reason = `Stripe available balance is insufficient for immediate transfer (${(availableBalanceCents / 100).toFixed(2)} ${payoutCurrencyUpper} available).`;
       await db.collection('payouts').updateOne(
         payoutDocQuery,
         {
