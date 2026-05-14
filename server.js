@@ -2344,7 +2344,8 @@ function isEndedStripeSubscriptionStatus(status) {
 }
 
 async function decorateProductsWithSellerTierBenefits(products) {
-  if (!Array.isArray(products) || products.length === 0) return Array.isArray(products) ? products : [];
+  if (!Array.isArray(products)) return [];
+  if (products.length === 0) return products;
   const sellerIds = Array.from(new Set(products.map(function(product) {
     return String(product && product.sellerId ? product.sellerId : '').trim();
   }).filter(Boolean)));
@@ -4453,6 +4454,8 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
       if (subscriptionId) {
         const subscriptionStatus = normalizeStripeSubscriptionStatus(subscription && subscription.status ? subscription.status : '');
         const currentPeriodEnd = toSafeDateFromUnixSeconds(subscription && subscription.current_period_end ? subscription.current_period_end : null);
+        // Subscription delete/end events remove Pro benefits immediately; non-ended updates keep Pro
+        // active while storing next-cycle downgrade scheduling metadata.
         const shouldDowngradeNow = event.type === 'customer.subscription.deleted'
           || isEndedStripeSubscriptionStatus(subscriptionStatus);
         if (shouldDowngradeNow) {

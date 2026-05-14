@@ -1056,7 +1056,13 @@
     }
 
     if (insightsEl) {
-      var zeroSaleCount = Math.max(0, (sellerData.products || []).length - Object.keys(productStats).length);
+      var soldProductIds = new Set(Object.keys(productStats));
+      var zeroSaleCount = (sellerData.products || []).filter(function(product) {
+        var isActive = String(product && product.status ? product.status : 'active').toLowerCase() === 'active';
+        if (!isActive) return false;
+        var productId = String(product && (product.id || product._id) ? (product.id || product._id) : '').trim();
+        return !productId || !soldProductIds.has(productId);
+      }).length;
       var insights = [];
       if (topProducts[0]) {
         insights.push('Top performer: ' + escHtml(topProducts[0].name) + ' (' + fmtCurrency(topProducts[0].revenue) + ' revenue).');

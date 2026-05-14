@@ -448,7 +448,9 @@
       if (!res.ok) return;
       const orders = await res.json();
       firstOrderFreeShippingActive = Array.isArray(orders) && orders.length === 0;
-    } catch (_) {}
+    } catch (err) {
+      console.warn('Unable to load first-order free-shipping eligibility:', err);
+    }
   }
 
   async function loadCart() {
