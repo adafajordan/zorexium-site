@@ -1962,6 +1962,10 @@ function toStripeAmountCents(value) {
   return Math.max(0, normalized);
 }
 
+function isStripeCheckoutSessionId(value) {
+  return /^cs_[A-Za-z0-9_]+$/.test(String(value || '').trim());
+}
+
 function normalizePayoutAccountId(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -2116,7 +2120,8 @@ function getOrderSellerInfos(order) {
       });
     } else {
       // Keep the first seller metadata encountered for a sellerId.
-      // Items should be normalized before checkout so seller metadata remains consistent across order lines.
+      // If later line items for the same sellerId contain different sellerName/sellerUsername values,
+      // the earliest values win for payout/notification labeling on this order.
     }
   });
   return Array.from(sellerMap.values());
@@ -2128,7 +2133,7 @@ function getOrderSellerInfo(order) {
     return { error: 'Seller ID missing on order item' };
   }
   if (sellerInfos.length > 1) {
-    return { error: 'Order includes multiple sellers; specify a sellerId to target a single payout.' };
+    return { error: 'Order includes multiple sellers; use the sellerId parameter to target a specific seller payout.' };
   }
   return sellerInfos[0];
 }
@@ -3083,6 +3088,7 @@ async function sendStripeSellerPayoutsForOrder(order, options) {
   if (failed) {
     // Partial successes are preserved in `results` so callers/admin tooling can see
     // which sellers were paid and which sellers still require retry/remediation.
+    // Each results entry includes { sellerId, ok, ... }.
     return { ok: false, error: failed.error || 'One or more seller payouts failed', results: results };
   }
   const allDeferred = results.length > 0 && results.every(function(result) { return result.deferred; });
@@ -4473,6 +4479,7 @@ app.get('/api/orders/:orderId', publicApiRateLimit, async function(req, res) {
 });
 
 // POST /api/orders/:orderId/reconcile-stripe – finalize a pending Stripe order by checking Stripe directly
+// sessionId is optional; when omitted the server uses order.stripeCheckoutSessionId.
 app.post('/api/orders/:orderId/reconcile-stripe', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   if (!stripe || !STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Stripe is not configured on the server' });
@@ -4481,7 +4488,7 @@ app.post('/api/orders/:orderId/reconcile-stripe', publicApiRateLimit, async func
     return res.status(400).json({ error: `Invalid orderId (max ${MAX_ORDER_ID_LENGTH} characters)` });
   }
   const sessionId = String(req.body && req.body.sessionId ? req.body.sessionId : '').trim();
-  if (sessionId && !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
+  if (sessionId && !isStripeCheckoutSessionId(sessionId)) {
     return res.status(400).json({ error: 'Invalid Stripe sessionId' });
   }
   try {
@@ -4522,7 +4529,7 @@ app.post('/api/admin/orders/reconcile-stripe', publicApiRateLimit, verifyToken, 
   if (!orderId && !sessionId) {
     return res.status(400).json({ error: 'orderId or sessionId is required' });
   }
-  if (sessionId && !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
+  if (sessionId && !isStripeCheckoutSessionId(sessionId)) {
     return res.status(400).json({ error: 'Invalid Stripe sessionId' });
   }
   try {
@@ -7931,7 +7938,7 @@ async function activateAllProducts() {
   }
 }
 
-async function ensureOperationalIndexes() {
+async function ensurePayoutIndexes() {
   if (!mongoConnected) return;
   try {
     await db.collection('payouts').createIndex(
@@ -7995,7 +8002,7 @@ async function start() {
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
       await downgradeProSellersToStarter();
-      await ensureOperationalIndexes();
+      await ensurePayoutIndexes();
       await runRetroactiveLegacyOrderRepairMigration();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
