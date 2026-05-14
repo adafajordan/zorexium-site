@@ -1876,11 +1876,14 @@ const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
 const PAYOUT_BATCH_UUID_SLICE = 16;
+const MAX_ORDER_EMAIL_DISPATCH_KEY_LENGTH = 100;
 // Limit how many blocked payouts are retried per verification request to avoid long-running retries.
 const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
+const RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT = Math.max(1, Math.min(50, parseInt(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT, 10) || 20));
+const RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND = String(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND || 'true').trim().toLowerCase() !== 'false';
 // Historical write-off corrections for unrecoverable legacy earnings display mismatches.
 const SELLER_EARNINGS_WRITE_OFF_BY_SHOP = Object.freeze({
   'adafa': 0.90
@@ -2442,7 +2445,7 @@ async function upsertOrderNotification(query, notificationDoc) {
 
 async function claimOrderEmailDispatch(orderId, dispatchKey) {
   const normalizedOrderId = String(orderId || '').trim();
-  const normalizedKey = String(dispatchKey || '').trim().replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 100);
+  const normalizedKey = String(dispatchKey || '').trim().replace(/[^A-Za-z0-9_-]/g, '_').slice(0, MAX_ORDER_EMAIL_DISPATCH_KEY_LENGTH);
   if (!normalizedOrderId || !normalizedKey) return false;
   const fieldPath = `emailDispatch.${normalizedKey}At`;
   const result = await db.collection('orders').updateOne(
@@ -3668,15 +3671,15 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession) {
   }
 }
 
-const STEVE_ADAFA_REPAIR_MIGRATION_KEY = 'retroactive_steve_adafa_order_repair_v1';
+const RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY = 'retroactive_legacy_order_repair_v1';
 
-async function findCompletedSteveToAdafaOrders(limit) {
+async function findCompletedLegacyOrdersForRepair(limit) {
   const cappedLimit = Math.max(1, Math.min(50, parseInt(limit, 10) || 10));
   const sellerUserIds = new Set();
   const adafaUsers = await db.collection('users').find(
     {
       $or: [
-        { email: { $regex: /^adafa(\+[^@]+)?@/i } },
+        { email: { $regex: /^adafa(\+[^@]+)?@.+/i } },
         { firstName: { $regex: /^adafa$/i } },
         { username: { $regex: /^adafa$/i } }
       ]
@@ -3711,8 +3714,8 @@ async function findCompletedSteveToAdafaOrders(limit) {
   }
 
   const buyerClauses = [
-    { buyerEmail: { $regex: /^steve(\+[^@]+)?@/i } },
-    { 'buyer.email': { $regex: /^steve(\+[^@]+)?@/i } },
+    { buyerEmail: { $regex: /^steve(\+[^@]+)?@.+/i } },
+    { 'buyer.email': { $regex: /^steve(\+[^@]+)?@.+/i } },
     { 'buyer.firstName': { $regex: /^steve$/i } },
     { 'buyer.username': { $regex: /^steve$/i } }
   ];
@@ -3730,10 +3733,10 @@ async function findCompletedSteveToAdafaOrders(limit) {
     .toArray();
 }
 
-async function repairCompletedSteveToAdafaOrders(options) {
+async function repairCompletedLegacyOrders(options) {
   const opts = options || {};
   const forceEmailResend = opts.forceEmailResend === true;
-  const matchedOrders = await findCompletedSteveToAdafaOrders(opts.limit);
+  const matchedOrders = await findCompletedLegacyOrdersForRepair(opts.limit);
   const repairedOrderIds = [];
   for (const order of matchedOrders) {
     const repaired = await processCompletedOrderAutomation(order, {
@@ -3745,9 +3748,9 @@ async function repairCompletedSteveToAdafaOrders(options) {
       {
         $set: {
           retroactiveRepair: {
-            key: STEVE_ADAFA_REPAIR_MIGRATION_KEY,
+            key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY,
             repairedAt: new Date(),
-            triggerSource: 'retroactive_steve_adafa_repair'
+            triggerSource: 'retroactive_legacy_order_repair'
           },
           updatedAt: new Date()
         }
@@ -3772,26 +3775,29 @@ async function repairCompletedSteveToAdafaOrders(options) {
   };
 }
 
-async function runRetroactiveSteveAdafaRepairMigration() {
+async function runRetroactiveLegacyOrderRepairMigration() {
   if (!mongoConnected) return;
   try {
-    const existing = await db.collection('appMigrations').findOne({ key: STEVE_ADAFA_REPAIR_MIGRATION_KEY });
+    const existing = await db.collection('appMigrations').findOne({ key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY });
     if (existing && existing.appliedAt) return;
-    const repairSummary = await repairCompletedSteveToAdafaOrders({ limit: 20, forceEmailResend: true });
+    const repairSummary = await repairCompletedLegacyOrders({
+      limit: RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT,
+      forceEmailResend: RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND
+    });
     await db.collection('appMigrations').updateOne(
-      { key: STEVE_ADAFA_REPAIR_MIGRATION_KEY },
+      { key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY },
       {
         $set: {
-          key: STEVE_ADAFA_REPAIR_MIGRATION_KEY,
+          key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY,
           appliedAt: new Date(),
           summary: repairSummary
         }
       },
       { upsert: true }
     );
-    console.log(`✅ Retroactive steve→adafa order repair complete: ${repairSummary.repairedCount} order(s) repaired`);
+    console.log(`✅ Retroactive legacy order repair complete: ${repairSummary.repairedCount} order(s) repaired`);
   } catch (error) {
-    console.error('⚠️  Retroactive steve→adafa order repair failed:', error.message);
+    console.error('⚠️  Retroactive legacy order repair failed:', error.message);
   }
 }
 
@@ -3867,15 +3873,15 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
   res.json({ received: true });
 });
 
-// POST /api/admin/orders/repair-steve-adafa – rerun retroactive order repair for the legacy steve→adafa transaction
-app.post('/api/admin/orders/repair-steve-adafa', publicApiRateLimit, verifyToken, requireAdmin, async function(req, res) {
+// POST /api/admin/orders/repair-legacy – rerun the retroactive legacy order repair flow
+app.post('/api/admin/orders/repair-legacy', publicApiRateLimit, verifyToken, requireAdmin, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     const dryRun = req.body && req.body.dryRun === true;
     const limit = Math.max(1, Math.min(50, parseInt(req.body && req.body.limit, 10) || 20));
     const forceEmailResend = req.body && req.body.forceEmailResend === true;
     if (dryRun) {
-      const matchedOrders = await findCompletedSteveToAdafaOrders(limit);
+      const matchedOrders = await findCompletedLegacyOrdersForRepair(limit);
       return res.json({
         dryRun: true,
         matchedCount: matchedOrders.length,
@@ -3890,10 +3896,10 @@ app.post('/api/admin/orders/repair-steve-adafa', publicApiRateLimit, verifyToken
         })
       });
     }
-    const repairSummary = await repairCompletedSteveToAdafaOrders({ limit: limit, forceEmailResend: forceEmailResend });
+    const repairSummary = await repairCompletedLegacyOrders({ limit: limit, forceEmailResend: forceEmailResend });
     res.json({ success: true, ...repairSummary });
   } catch (error) {
-    console.error('Error repairing steve→adafa orders:', error);
+    console.error('Error repairing legacy orders:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -7532,7 +7538,7 @@ async function start() {
       await assignStarterTierToExistingSellers();
       await downgradeProSellersToStarter();
       await activateAllProducts();
-      await runRetroactiveSteveAdafaRepairMigration();
+      await runRetroactiveLegacyOrderRepairMigration();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
     }
