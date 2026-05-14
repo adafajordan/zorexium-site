@@ -2126,7 +2126,9 @@ function getSellerFinancials(order, sellerId) {
   const sellerItems = (Array.isArray(order && order.items) ? order.items : []).filter(function(item) {
     return String(item && item.sellerId ? item.sellerId : '') === targetSellerId;
   });
-  const sellerTier = normalizeSellerTier(sellerItems[0] && sellerItems[0].sellerTier ? sellerItems[0].sellerTier : 'starter');
+  const sellerTier = sellerItems.some(function(item) {
+    return normalizeSellerTier(item && item.sellerTier ? item.sellerTier : 'starter') === 'pro';
+  }) ? 'pro' : 'starter';
   const payoutRate = getSellerPayoutRateByTier(sellerTier);
   const grossAmountRaw = sellerItems.reduce(function(sum, item) {
     const quantity = parseInt(item && item.quantity, 10);
@@ -3765,6 +3767,7 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
       const sellerItems = (Array.isArray(order.items) ? order.items : []).filter(function(item) {
         return String(item && item.sellerId ? item.sellerId : '') === String(req.userId);
       });
+      const sellerFinancialsFallback = sellerSummary ? null : getSellerFinancials(order, req.userId);
       return {
         ...order,
         sellerItems: sellerItems,
@@ -3776,10 +3779,10 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
           const unitPrice = parseFloat(item && item.price) || 0;
           return sum + parseFloat((unitPrice * quantity).toFixed(2));
         }, 0),
-        sellerNetTotal: sellerSummary ? sellerSummary.netTotal : getSellerFinancials(order, req.userId).payoutAmount,
+        sellerNetTotal: sellerSummary ? sellerSummary.netTotal : (sellerFinancialsFallback ? sellerFinancialsFallback.payoutAmount : 0),
         sellerTier: sellerSummary
           ? normalizeSellerTier(sellerSummary.sellerTier || sellerSummary.tier || 'starter')
-          : normalizeSellerTier(sellerItems[0] && sellerItems[0].sellerTier ? sellerItems[0].sellerTier : 'starter'),
+          : normalizeSellerTier(sellerFinancialsFallback && sellerFinancialsFallback.sellerTier ? sellerFinancialsFallback.sellerTier : (sellerItems[0] && sellerItems[0].sellerTier ? sellerItems[0].sellerTier : 'starter')),
         buyerDisplayName: [order && order.buyer ? order.buyer.firstName : '', order && order.buyer ? order.buyer.lastName : ''].filter(Boolean).join(' ').trim()
           || normalizeEmail(order && order.buyerEmail ? order.buyerEmail : '')
           || '—'
