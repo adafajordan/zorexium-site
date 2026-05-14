@@ -1084,15 +1084,10 @@
                 }
                 try {
                     var res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
-                    if (!res.ok) {
-                        firstPurchaseFreeShippingEligible = false;
-                        return;
-                    }
+                    if (!res.ok) return;
                     var orders = await res.json();
                     firstPurchaseFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
-                } catch (_) {
-                    firstPurchaseFreeShippingEligible = false;
-                } finally {
+                } catch (_) {} finally {
                     if (homeProductsList.length > 0) {
                         window._renderHomeProducts(homeProductsList);
                     }

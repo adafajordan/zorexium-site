@@ -643,7 +643,7 @@
   }
 
   function showCheckoutAuthModal() {
-    try { localStorage.setItem('guestCart', JSON.stringify(cart || [])); } catch (_) {}
+    try { localStorage.setItem('guestCart', JSON.stringify(cart || [])); } catch (err) { console.warn('Failed to persist guest cart before auth:', err); }
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 z-[10050] flex items-center justify-center bg-black/70 px-4';
     overlay.innerHTML = `
