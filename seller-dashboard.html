@@ -1726,7 +1726,7 @@
     fetch(BACKEND_URL + '/api/sellers/pro-plan')
       .then(function(r) { return r.json(); })
       .then(function(planData) {
-        loadDashPayPalSubSDK(planData.planId);
+        loadDashPayPalSubSDK();
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
@@ -1737,12 +1737,12 @@
       });
   }
 
-  function loadDashPayPalSubSDK(planId) {
-    _dashPendingPlanId = planId;
-    renderDashPayPalButtons(_dashPendingPlanId);
+  function loadDashPayPalSubSDK() {
+    _dashPendingPlanId = null;
+    renderDashPayPalButtons();
   }
 
-  function renderDashPayPalButtons(planId) {
+  function renderDashPayPalButtons() {
     var container = document.getElementById('dashPaypalContainer');
     if (!container) return;
     container.innerHTML = '<button type="button" onclick="startDashStripeCheckout()" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';

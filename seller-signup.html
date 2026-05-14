@@ -643,12 +643,12 @@
   var pendingProPlanId = null;
   var activeProCheckoutSessionId = null;
 
-  function loadPayPalSubSDK(planId) {
-    pendingProPlanId = planId;
-    renderPayPalSubscriptionButtons(planId);
+  function loadPayPalSubSDK() {
+    pendingProPlanId = null;
+    renderPayPalSubscriptionButtons();
   }
 
-  function renderPayPalSubscriptionButtons(planId) {
+  function renderPayPalSubscriptionButtons() {
     var container = document.getElementById('paypal-subscription-container');
     if (!container) return;
     container.innerHTML = '<button type="button" onclick="startStripeProCheckout()" class="w-full sm:w-auto px-5 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';
@@ -716,7 +716,7 @@
     fetch(BACKEND_URL + '/api/sellers/pro-plan')
       .then(function(r) { return r.json(); })
       .then(function(planData) {
-        loadPayPalSubSDK(planData.planId);
+        loadPayPalSubSDK();
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
