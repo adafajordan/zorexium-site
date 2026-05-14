@@ -1906,6 +1906,8 @@ const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
 const RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT = Math.max(1, Math.min(50, parseInt(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT, 10) || 20));
 const RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND = String(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND || 'true').trim().toLowerCase() !== 'false';
+const RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_START_UTC = new Date('2026-05-13T00:00:00.000Z');
+const RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_END_UTC = new Date('2026-05-16T00:00:00.000Z');
 // Historical write-off corrections for unrecoverable legacy earnings display mismatches.
 // (Empty: the retroactive repair now patches items.sellerId so earnings are computed correctly.)
 const SELLER_EARNINGS_WRITE_OFF_BY_SHOP = Object.freeze({});
@@ -3631,7 +3633,9 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
   }
 });
 
-async function completeStripeCheckoutOrder(orderId, checkoutSession) {
+async function completeStripeCheckoutOrder(orderId, checkoutSession, options) {
+  const opts = options || {};
+  const shouldRunAutomation = opts.runAutomation !== false;
   if (!orderId) return { ok: false, error: 'Missing orderId' };
   let reservedInventory = [];
   let committed = false;
@@ -3641,7 +3645,12 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession) {
     if (!order) {
       order = await db.collection('orders').findOne({ id: orderId });
       if (order && String(order.status || '').toLowerCase() === 'completed') {
-        return { ok: true, alreadyCompleted: true, order: order };
+        if (!shouldRunAutomation) return { ok: true, alreadyCompleted: true, order: order };
+        const completionResult = await processCompletedOrderAutomation(order, {
+          triggerSource: String(opts.triggerSource || 'stripe_completion_reconcile'),
+          forceEmailResend: opts.forceEmailResend === true
+        });
+        return { ok: true, alreadyCompleted: true, order: completionResult.order, payoutResult: completionResult.payoutResult };
       }
     }
     if (!order) return { ok: false, error: 'Order not found' };
@@ -3679,7 +3688,17 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession) {
     committed = true;
     const finalizedOrder = await db.collection('orders').findOne({ id: orderId });
     const syncedOrder = await syncCompletedOrderRecords(finalizedOrder || completedOrderDoc);
-    return { ok: true, order: syncedOrder || finalizedOrder || completedOrderDoc };
+    if (!shouldRunAutomation) {
+      return { ok: true, order: syncedOrder || finalizedOrder || completedOrderDoc };
+    }
+    const completionResult = await processCompletedOrderAutomation(
+      syncedOrder || finalizedOrder || completedOrderDoc,
+      {
+        triggerSource: String(opts.triggerSource || 'stripe_webhook'),
+        forceEmailResend: opts.forceEmailResend === true
+      }
+    );
+    return { ok: true, order: completionResult.order, payoutResult: completionResult.payoutResult };
   } catch (error) {
     if (!committed && reservedInventory.length > 0) {
       try {
@@ -3692,10 +3711,10 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession) {
   }
 }
 
-// v2: adds items.sellerId patching to ensure legacy orders surface in seller dashboard queries.
-const RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY = 'retroactive_legacy_order_repair_v2';
+// v3: expands legacy repair to include paid-but-pending Stripe sessions from the May 14, 2026 purchase window.
+const RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY = 'retroactive_legacy_order_repair_v3';
 
-async function findCompletedLegacyOrdersForRepair(limit) {
+async function findLegacyOrdersForRepair(limit) {
   const cappedLimit = Math.max(1, Math.min(50, parseInt(limit, 10) || 10));
   const sellerUserIds = new Set();
   const adafaUsers = await db.collection('users').find(
@@ -3742,25 +3761,77 @@ async function findCompletedLegacyOrdersForRepair(limit) {
     { 'buyer.username': { $regex: /^steve$/i } }
   ];
 
-  const orders = await db.collection('orders')
+  const inWindowClause = {
+    $or: [
+      { createdAt: { $gte: RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_START_UTC, $lt: RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_END_UTC } },
+      { completedAt: { $gte: RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_START_UTC, $lt: RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_END_UTC } },
+      { updatedAt: { $gte: RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_START_UTC, $lt: RETROACTIVE_LEGACY_ORDER_REPAIR_WINDOW_END_UTC } }
+    ]
+  };
+  const sharedMatchClauses = [{ $or: buyerClauses }, { $or: sellerClauses }];
+
+  const completedOrders = await db.collection('orders')
     .find({
       status: 'completed',
-      $and: [
-        { $or: buyerClauses },
-        { $or: sellerClauses }
-      ]
+      $and: sharedMatchClauses.concat([inWindowClause])
     })
     .sort({ completedAt: 1, createdAt: 1 })
     .limit(cappedLimit)
     .toArray();
 
-  return { orders, sellerUserIds };
+  const pendingOrders = await db.collection('pendingOrders')
+    .find({
+      paymentProvider: 'stripe',
+      stripeCheckoutSessionId: { $exists: true, $ne: '' },
+      $and: sharedMatchClauses.concat([inWindowClause])
+    })
+    .sort({ createdAt: 1 })
+    .limit(cappedLimit)
+    .toArray();
+
+  if (completedOrders.length === 0 && pendingOrders.length === 0) {
+    const fallbackCompletedOrders = await db.collection('orders')
+      .find({
+        status: 'completed',
+        $and: sharedMatchClauses
+      })
+      .sort({ completedAt: 1, createdAt: 1 })
+      .limit(cappedLimit)
+      .toArray();
+    return { completedOrders: fallbackCompletedOrders, pendingOrders: [], sellerUserIds };
+  }
+
+  return { completedOrders, pendingOrders, sellerUserIds };
+}
+
+async function getPaidStripeCheckoutSessionForRepair(order) {
+  const orderId = String(order && order.id ? order.id : '').trim();
+  const stripeCheckoutSessionId = String(order && order.stripeCheckoutSessionId ? order.stripeCheckoutSessionId : '').trim();
+  if (!orderId || !stripeCheckoutSessionId || !stripe || !STRIPE_SECRET_KEY) return null;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(stripeCheckoutSessionId);
+    if (!session || !session.id) return null;
+    const mappedOrderId = String(
+      (session && session.metadata && session.metadata.orderId)
+        || (session && session.client_reference_id)
+        || ''
+    ).trim();
+    if (mappedOrderId && mappedOrderId !== orderId) return null;
+    const paymentStatus = String(session && session.payment_status ? session.payment_status : '').toLowerCase();
+    const checkoutStatus = String(session && session.status ? session.status : '').toLowerCase();
+    const isPaid = paymentStatus === 'paid' || paymentStatus === 'no_payment_required' || checkoutStatus === 'complete';
+    return isPaid ? session : null;
+  } catch (error) {
+    console.error('Failed to retrieve Stripe Checkout session for legacy repair:', error && error.message ? error.message : error);
+    return null;
+  }
 }
 
 async function repairCompletedLegacyOrders(options) {
   const opts = options || {};
   const forceEmailResend = opts.forceEmailResend === true;
-  const { orders: matchedOrders, sellerUserIds } = await findCompletedLegacyOrdersForRepair(opts.limit);
+  const { completedOrders, pendingOrders, sellerUserIds } = await findLegacyOrdersForRepair(opts.limit);
+  const matchedOrders = completedOrders.concat(pendingOrders);
 
   // Pick the first discovered adafa userId as the canonical sellerId to stamp on untagged items.
   const primaryAdafaUserId = sellerUserIds.size > 0 ? Array.from(sellerUserIds)[0] : '';
@@ -3768,6 +3839,9 @@ async function repairCompletedLegacyOrders(options) {
 
   const repairedOrderIds = [];
   const now = new Date();
+  const pendingOrderIds = new Set((Array.isArray(pendingOrders) ? pendingOrders : []).map(function(doc) {
+    return String(doc && doc.id ? doc.id : '');
+  }));
   for (const order of matchedOrders) {
     let orderToProcess = order;
 
@@ -3791,7 +3865,10 @@ async function repairCompletedLegacyOrders(options) {
         return item;
       });
       if (itemsPatched) {
-        await db.collection('orders').updateOne(
+        const sourceCollection = pendingOrderIds.has(String(order && order.id ? order.id : ''))
+          ? 'pendingOrders'
+          : 'orders';
+        await db.collection(sourceCollection).updateOne(
           { id: order.id },
           { $set: { items: patchedItems, updatedAt: now } }
         );
@@ -3799,12 +3876,27 @@ async function repairCompletedLegacyOrders(options) {
       }
     }
 
-    const repaired = await processCompletedOrderAutomation(orderToProcess, {
-      triggerSource: 'retroactive_steve_adafa_repair',
-      forceEmailResend: forceEmailResend
-    });
+    let repaired = null;
+    const isAlreadyCompleted = String(orderToProcess && orderToProcess.status ? orderToProcess.status : '').toLowerCase() === 'completed';
+    if (isAlreadyCompleted) {
+      repaired = await processCompletedOrderAutomation(orderToProcess, {
+        triggerSource: 'retroactive_steve_adafa_repair',
+        forceEmailResend: forceEmailResend
+      });
+    } else {
+      const paidSession = await getPaidStripeCheckoutSessionForRepair(orderToProcess);
+      if (!paidSession) continue;
+      const completion = await completeStripeCheckoutOrder(orderToProcess.id, paidSession, {
+        triggerSource: 'retroactive_steve_adafa_repair',
+        forceEmailResend: forceEmailResend
+      });
+      if (!completion.ok) continue;
+      repaired = { order: completion.order, payoutResult: completion.payoutResult };
+    }
+
+    if (!repaired || !repaired.order) continue;
     await db.collection('orders').updateOne(
-      { id: order.id },
+      { id: String(repaired.order.id || order.id) },
       {
         $set: {
           retroactiveRepair: {
@@ -3817,7 +3909,7 @@ async function repairCompletedLegacyOrders(options) {
       }
     );
     repairedOrderIds.push({
-      orderId: String(order && order.id ? order.id : ''),
+      orderId: String(repaired.order && repaired.order.id ? repaired.order.id : ''),
       receiptId: repaired && repaired.order ? String(repaired.order.receiptId || '') : '',
       payoutStatus: repaired && repaired.payoutResult
         ? (
@@ -3893,9 +3985,6 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
           console.error('Stripe checkout completion failed:', completion.error);
           return res.status(500).json({ error: 'Failed to finalize Stripe checkout order' });
         }
-        if (completion.order) {
-          await processCompletedOrderAutomation(completion.order, { triggerSource: 'stripe_webhook' });
-        }
       }
     }
 
@@ -3941,7 +4030,8 @@ app.post('/api/admin/orders/repair-legacy', publicApiRateLimit, verifyToken, req
     const limit = Math.max(1, Math.min(50, parseInt(req.body && req.body.limit, 10) || 20));
     const forceEmailResend = req.body && req.body.forceEmailResend === true;
     if (dryRun) {
-      const { orders: matchedOrders } = await findCompletedLegacyOrdersForRepair(limit);
+      const legacyMatches = await findLegacyOrdersForRepair(limit);
+      const matchedOrders = (legacyMatches.completedOrders || []).concat(legacyMatches.pendingOrders || []);
       return res.json({
         dryRun: true,
         matchedCount: matchedOrders.length,
