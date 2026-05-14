@@ -433,18 +433,18 @@
             </h2>
             <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $1/month subscription is required for the Pro Seller tier. Complete payment securely with Stripe to continue your registration.</p>
             <div class="ml-9">
-              <div id="paypal-subscription-container" class="min-h-[45px]"></div>
-              <div id="paypalSubError" class="hidden text-red-600 text-sm mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div id="pro-subscription-container" class="min-h-[45px]"></div>
+              <div id="proSubError" class="hidden text-red-600 text-sm mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <div class="flex items-start gap-2 flex-wrap">
                   <i class="fas fa-exclamation-circle flex-shrink-0 mt-0.5"></i>
-                  <span id="paypalSubErrorMsg">Failed to start Stripe checkout. Please check your connection and try again.</span>
+                  <span id="proSubErrorMsg">Failed to start Stripe checkout. Please check your connection and try again.</span>
                 </div>
-                <div id="paypalSubActions" class="mt-2 flex gap-2 flex-wrap">
-                  <button type="button" id="paypalSubRetryBtn" onclick="retryPaypalSubLoad()" class="text-xs px-3 py-1.5 bg-white border border-red-300 text-red-700 rounded-md hover:bg-red-50 cursor-pointer">Retry</button>
+                <div id="proSubActions" class="mt-2 flex gap-2 flex-wrap">
+                  <button type="button" id="proSubRetryBtn" onclick="retryProSubLoad()" class="text-xs px-3 py-1.5 bg-white border border-red-300 text-red-700 rounded-md hover:bg-red-50 cursor-pointer">Retry</button>
                   <button type="button" onclick="switchToStarterTier()" class="text-xs px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 cursor-pointer">Switch to Starter (Free)</button>
                 </div>
               </div>
-              <div id="paypalSubConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
+              <div id="proSubConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
                 <i class="fas fa-check-circle text-green-500"></i>
                 <span>Subscription confirmed! Complete the form below and click Submit to finish your registration.</span>
               </div>
@@ -638,33 +638,33 @@
 
   // ── Pro Subscription Checkout State ───────────────────────────────────────
   var proSubscriptionId = null;
-  var paypalSubSDKLoaded = false;
-  var paypalSubSDKLoading = false;
+  var proSubSDKLoaded = false;
+  var proSubSDKLoading = false;
   var pendingProPlanId = null;
   var activeProCheckoutSessionId = null;
 
-  function loadPayPalSubSDK() {
+  function loadProSubCheckout() {
     pendingProPlanId = null;
-    renderPayPalSubscriptionButtons();
+    renderProSubscriptionButtons();
   }
 
-  function renderPayPalSubscriptionButtons() {
-    var container = document.getElementById('paypal-subscription-container');
+  function renderProSubscriptionButtons() {
+    var container = document.getElementById('pro-subscription-container');
     if (!container) return;
     container.innerHTML = '<button type="button" onclick="startStripeProCheckout()" class="w-full sm:w-auto px-5 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';
   }
 
-  function retryPaypalSubLoad() {
-    var errEl = document.getElementById('paypalSubError');
+  function retryProSubLoad() {
+    var errEl = document.getElementById('proSubError');
     if (errEl) errEl.classList.add('hidden');
-    paypalSubSDKLoaded = false;
-    paypalSubSDKLoading = false;
+    proSubSDKLoaded = false;
+    proSubSDKLoading = false;
     initProPayment();
   }
 
   async function startStripeProCheckout() {
     try {
-      var errEl = document.getElementById('paypalSubError');
+      var errEl = document.getElementById('proSubError');
       if (errEl) errEl.classList.add('hidden');
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/stripe/pro-subscription/session', {
         method: 'POST',
@@ -678,9 +678,9 @@
       activeProCheckoutSessionId = data.sessionId || null;
       window.location.href = data.checkoutUrl;
     } catch (err) {
-      var msgEl = document.getElementById('paypalSubErrorMsg');
+      var msgEl = document.getElementById('proSubErrorMsg');
       if (msgEl) msgEl.textContent = err.message || 'Failed to start Stripe checkout.';
-      var errorBox = document.getElementById('paypalSubError');
+      var errorBox = document.getElementById('proSubError');
       if (errorBox) errorBox.classList.remove('hidden');
     }
   }
@@ -697,17 +697,17 @@
       const data = await res.json().catch(function() { return {}; });
       if (!res.ok) throw new Error(data.error || 'Stripe checkout verification failed');
       proSubscriptionId = data.subscriptionId || null;
-      document.getElementById('paypalSubConfirmed').classList.remove('hidden');
-      document.getElementById('paypalSubError').classList.add('hidden');
+      document.getElementById('proSubConfirmed').classList.remove('hidden');
+      document.getElementById('proSubError').classList.add('hidden');
       ZrxNotify.showNotification('Subscription confirmed! Complete the form and click Submit.', 'success');
       params.delete('proCheckout');
       params.delete('session_id');
       var nextQuery = params.toString();
       window.history.replaceState({}, document.title, window.location.pathname + (nextQuery ? ('?' + nextQuery) : ''));
     } catch (err) {
-      var msgEl = document.getElementById('paypalSubErrorMsg');
+      var msgEl = document.getElementById('proSubErrorMsg');
       if (msgEl) msgEl.textContent = err.message || 'Unable to verify Stripe checkout.';
-      var errEl = document.getElementById('paypalSubError');
+      var errEl = document.getElementById('proSubError');
       if (errEl) errEl.classList.remove('hidden');
     }
   }
@@ -716,13 +716,13 @@
     fetch(BACKEND_URL + '/api/sellers/pro-plan')
       .then(function(r) { return r.json(); })
       .then(function(planData) {
-        loadPayPalSubSDK();
+        loadProSubCheckout();
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
-        var msgEl = document.getElementById('paypalSubErrorMsg');
+        var msgEl = document.getElementById('proSubErrorMsg');
         if (msgEl) msgEl.textContent = err.message || 'Failed to start Stripe checkout. Please check your connection and try again.';
-        var errEl = document.getElementById('paypalSubError');
+        var errEl = document.getElementById('proSubError');
         if (errEl) errEl.classList.remove('hidden');
       });
   }
@@ -925,7 +925,7 @@
       if (proPaymentSection) proPaymentSection.classList.remove('hidden');
       if (shopDetailsStepNum) shopDetailsStepNum.textContent = '4';
       // Lazy-load the Stripe subscription checkout button
-      if (!paypalSubSDKLoaded && !paypalSubSDKLoading) {
+      if (!proSubSDKLoaded && !proSubSDKLoading) {
         initProPayment();
       }
     } else {

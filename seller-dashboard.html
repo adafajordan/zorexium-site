@@ -716,16 +716,16 @@
                 </div>
               </div>
               <!-- Stripe subscription panel (hidden until Upgrade clicked) -->
-              <div id="upgradePayPalPanel" class="hidden border-2 border-cyan-300 rounded-xl p-5 bg-white">
+              <div id="upgradeProPanel" class="hidden border-2 border-cyan-300 rounded-xl p-5 bg-white">
                 <p class="text-sm font-semibold text-gray-800 mb-1">Complete Stripe subscription to activate Pro</p>
                 <p class="text-xs text-gray-500 mb-3">A recurring $1/month subscription is required. Cancel anytime from your Stripe customer portal.</p>
-                <div id="dashPaypalContainer" class="min-h-[45px]"></div>
-                <p id="dashPaypalError" class="hidden text-red-600 text-sm mt-3 flex items-center gap-2">
+                <div id="dashStripeContainer" class="min-h-[45px]"></div>
+                <p id="dashStripeError" class="hidden text-red-600 text-sm mt-3 flex items-center gap-2">
                   <i class="fas fa-exclamation-circle"></i>
-                  <span id="dashPaypalErrorMsg">Failed to start Stripe checkout. Please check your connection and try again.</span>
-                  <button onclick="retryDashPayPal()" class="ml-2 underline text-red-700 hover:text-red-900 bg-transparent border-0 cursor-pointer text-sm">Retry</button>
+                  <span id="dashStripeErrorMsg">Failed to start Stripe checkout. Please check your connection and try again.</span>
+                  <button onclick="retryDashStripeCheckout()" class="ml-2 underline text-red-700 hover:text-red-900 bg-transparent border-0 cursor-pointer text-sm">Retry</button>
                 </p>
-                <div id="dashPaypalConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
+                <div id="dashStripeConfirmed" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700 text-sm font-medium">
                   <i class="fas fa-check-circle text-green-500"></i>
                   <span>Subscription confirmed! Completing your upgrade…</span>
                 </div>
@@ -1811,8 +1811,8 @@
   });
 
   // ── Tier Change (upgrade / downgrade) ─────────────────────────────────────────
-  var _dashPaypalSubSDKLoaded = false;
-  var _dashPaypalSubSDKLoading = false;
+  var _dashStripeCheckoutLoaded = false;
+  var _dashStripeCheckoutLoading = false;
   var _dashPendingPlanId = null;
   var _dashProSubscriptionId = null;
 
@@ -1904,64 +1904,64 @@
   }
 
   function startTierUpgrade() {
-    var panel = document.getElementById('upgradePayPalPanel');
+    var panel = document.getElementById('upgradeProPanel');
     var btn   = document.getElementById('startUpgradeBtn');
     if (panel) panel.classList.remove('hidden');
     if (btn)   btn.classList.add('hidden');
-    if (!_dashPaypalSubSDKLoaded && !_dashPaypalSubSDKLoading) {
+    if (!_dashStripeCheckoutLoaded && !_dashStripeCheckoutLoading) {
       initDashProPayment();
     }
   }
 
   function cancelTierUpgrade() {
-    var panel = document.getElementById('upgradePayPalPanel');
+    var panel = document.getElementById('upgradeProPanel');
     var btn   = document.getElementById('startUpgradeBtn');
     if (panel) panel.classList.add('hidden');
     if (btn)   btn.classList.remove('hidden');
     _dashProSubscriptionId = null;
   }
 
-  function retryDashPayPal() {
-    var errEl = document.getElementById('dashPaypalError');
+  function retryDashStripeCheckout() {
+    var errEl = document.getElementById('dashStripeError');
     if (errEl) errEl.classList.add('hidden');
-    _dashPaypalSubSDKLoaded = false;
-    _dashPaypalSubSDKLoading = false;
+    _dashStripeCheckoutLoaded = false;
+    _dashStripeCheckoutLoading = false;
     initDashProPayment();
   }
 
   function initDashProPayment() {
-    var container = document.getElementById('dashPaypalContainer');
+    var container = document.getElementById('dashStripeContainer');
     if (container) {
       container.innerHTML = '<div class="text-sm text-gray-500 flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i><span>Preparing Stripe checkout…</span></div>';
     }
     fetch(BACKEND_URL + '/api/sellers/pro-plan')
       .then(function(r) { return r.json(); })
       .then(function(planData) {
-        loadDashPayPalSubSDK();
+        loadDashStripeCheckout();
       })
       .catch(function(err) {
         console.error('Failed to init Pro payment:', err);
-        var errEl  = document.getElementById('dashPaypalError');
-        var msgEl  = document.getElementById('dashPaypalErrorMsg');
+        var errEl  = document.getElementById('dashStripeError');
+        var msgEl  = document.getElementById('dashStripeErrorMsg');
         if (msgEl) msgEl.textContent = err.message || 'Failed to start Stripe checkout. Please check your connection and try again.';
         if (errEl) errEl.classList.remove('hidden');
       });
   }
 
-  function loadDashPayPalSubSDK() {
+  function loadDashStripeCheckout() {
     _dashPendingPlanId = null;
-    renderDashPayPalButtons();
+    renderDashStripeButtons();
   }
 
-  function renderDashPayPalButtons() {
-    var container = document.getElementById('dashPaypalContainer');
+  function renderDashStripeButtons() {
+    var container = document.getElementById('dashStripeContainer');
     if (!container) return;
     container.innerHTML = '<button type="button" onclick="startDashStripeCheckout()" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';
   }
 
   async function startDashStripeCheckout() {
     try {
-      var errEl = document.getElementById('dashPaypalError');
+      var errEl = document.getElementById('dashStripeError');
       if (errEl) errEl.classList.add('hidden');
       var res = await ZrxSession.fetch(BACKEND_URL + '/api/stripe/pro-subscription/session', {
         method: 'POST',
@@ -1974,8 +1974,8 @@
       if (!data.checkoutUrl) throw new Error('Stripe checkout URL was not returned');
       window.location.href = data.checkoutUrl;
     } catch (err) {
-      var errBox = document.getElementById('dashPaypalError');
-      var msgEl = document.getElementById('dashPaypalErrorMsg');
+      var errBox = document.getElementById('dashStripeError');
+      var msgEl = document.getElementById('dashStripeErrorMsg');
       if (msgEl) msgEl.textContent = err.message || 'Unable to start Stripe checkout.';
       if (errBox) errBox.classList.remove('hidden');
     }
@@ -2013,8 +2013,8 @@
           }
         }
       } catch (_) {}
-      var errBox = document.getElementById('dashPaypalError');
-      var msgEl = document.getElementById('dashPaypalErrorMsg');
+      var errBox = document.getElementById('dashStripeError');
+      var msgEl = document.getElementById('dashStripeErrorMsg');
       if (msgEl) msgEl.textContent = err.message || 'Unable to verify Stripe checkout.';
       if (errBox) errBox.classList.remove('hidden');
     }
@@ -2036,8 +2036,8 @@
       loadDashboard();
       cancelTierUpgrade();
     } catch (err) {
-      var errEl = document.getElementById('dashPaypalError');
-      var msgEl = document.getElementById('dashPaypalErrorMsg');
+      var errEl = document.getElementById('dashStripeError');
+      var msgEl = document.getElementById('dashStripeErrorMsg');
       if (msgEl) msgEl.textContent = err.message || 'Upgrade failed. Please contact support.';
       if (errEl) errEl.classList.remove('hidden');
     }
