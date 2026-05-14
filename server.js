@@ -7995,21 +7995,6 @@ async function assignStarterTierToExistingSellers() {
   }
 }
 
-async function downgradeProSellersToStarter() {
-  if (!mongoConnected) return;
-  try {
-    const result = await db.collection('sellers').updateMany(
-      { tier: 'pro' },
-      { $set: { tier: 'starter', updatedAt: new Date(), proTierDowngraded: true, proTierDowngradedAt: new Date() } }
-    );
-    if (result.modifiedCount > 0) {
-      console.log(`✅ Pro Seller downgrade migration: ${result.modifiedCount} seller(s) downgraded from pro to starter`);
-    }
-  } catch (err) {
-    console.error('⚠️  Pro Seller downgrade migration error:', err.message);
-  }
-}
-
 async function releasePendingHoldPayoutsOnce() {
   if (!mongoConnected) return;
   const migrationKey = 'release_pending_hold_payouts_2026_05_14';
@@ -8029,7 +8014,7 @@ async function releasePendingHoldPayoutsOnce() {
       if (!order) continue;
       try {
         const result = await sendStripeSellerPayout(order, {
-          triggerSource: 'one_time_hold_release_test',
+          triggerSource: 'one_time_hold_release_migration',
           sellerId: sellerId,
           forceReleaseHold: true
         });
