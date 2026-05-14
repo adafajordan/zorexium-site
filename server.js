@@ -8299,7 +8299,6 @@ async function forceAdafaProSellerTierOnce() {
     const adafaUsers = await db.collection('users').find(
       {
         $or: [
-          { email: { $regex: /^adafa(\+[^@]+)?@.+/i } },
           { firstName: { $regex: /^adafa$/i } },
           { username: { $regex: /^adafa$/i } }
         ]
