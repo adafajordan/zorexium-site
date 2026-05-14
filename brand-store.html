@@ -513,6 +513,7 @@
   let brandName = '';
   let brandSlug = '';
   let brandSellerTotalSales = null;
+  let firstPurchaseFreeShippingEligible = true;
 
   // ── Init ────────────────────────────────────────────────────────────────────
   function updateBrandPageTitle(name) {
@@ -542,7 +543,18 @@
       loadSellerProfile(sellerId);
     }
 
+    await loadFirstPurchaseFreeShippingEligibility();
     await loadProducts();
+  }
+
+  async function loadFirstPurchaseFreeShippingEligibility() {
+    if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) return;
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      if (!res.ok) return;
+      const orders = await res.json();
+      firstPurchaseFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+    } catch (_) {}
   }
 
   async function loadSellerProfile(sellerId) {
@@ -833,6 +845,7 @@
       <span class="text-xl font-bold text-gray-900">$${price.toFixed(2)}</span>
       ${origPrice && origPrice > price ? `<span class="price-strike text-sm">$${origPrice.toFixed(2)}</span>` : ''}
     </div>
+    ${firstPurchaseFreeShippingEligible ? '<p class="text-xs font-semibold text-green-600 mt-1 inline-flex items-center gap-1"><i class="fas fa-shipping-fast"></i> Free shipping on your first purchase</p>' : ''}
     <div class="flex gap-2 mt-3">
       <a href="product-detail.html?id=${escHtml(productId)}"
         class="flex-1 border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-medium py-2 rounded text-center transition-colors"

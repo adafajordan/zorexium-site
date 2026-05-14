@@ -799,7 +799,40 @@
     return Object.values(commissionMap);
   }
 
+  function promptCheckoutLoginRequired() {
+    try { localStorage.setItem('guestCart', JSON.stringify(cart || [])); } catch (err) { console.warn('Failed to persist guest cart before auth:', err); }
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[10050] flex items-center justify-center bg-black/70 px-4';
+    overlay.innerHTML = `
+      <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 p-6">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <h3 class="text-xl font-bold text-gray-900">Sign in required</h3>
+          <button type="button" class="text-gray-400 hover:text-gray-600 text-lg leading-none" data-auth-close>&times;</button>
+        </div>
+        <p class="text-sm text-gray-600 mb-5">You must log in or create an account before completing checkout. Your cart will be saved to your account.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button type="button" data-auth-login class="w-full px-4 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Log In</button>
+          <button type="button" data-auth-register class="w-full px-4 py-2.5 border border-cyan-500 text-cyan-600 hover:bg-cyan-50 rounded-lg font-semibold text-sm transition-colors">Create Account</button>
+        </div>
+      </div>
+    `;
+    function closeModal() { overlay.remove(); }
+    overlay.querySelector('[data-auth-close]').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    overlay.querySelector('[data-auth-login]').addEventListener('click', function() {
+      window.location.href = 'login-register.html?next=/checkout.html';
+    });
+    overlay.querySelector('[data-auth-register]').addEventListener('click', function() {
+      window.location.href = 'login-register.html?register=1&next=/checkout.html';
+    });
+    document.body.appendChild(overlay);
+  }
+
   async function startStripeCheckout() {
+    if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) {
+      promptCheckoutLoginRequired();
+      return;
+    }
     if (!validateForm()) {
       updateCheckoutState();
       return;

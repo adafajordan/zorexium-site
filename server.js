@@ -3687,7 +3687,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
   }
 });
 
-// ── CREATE ORDER (No auth required - guest checkout) ────────────────────────────────────────
+// ── CREATE ORDER (Auth required) ────────────────────────────────────────
 app.post('/api/orders', publicApiRateLimit, async function(req, res) {
   try {
     if (!mongoConnected) {
@@ -3697,6 +3697,9 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
 
     const { items, buyer, shippingMethod } = req.body;
     const checkoutUser = getOptionalCheckoutUser(req);
+    if (!checkoutUser || !checkoutUser.userId) {
+      return res.status(401).json({ error: 'Please sign in or create an account before checkout.' });
+    }
     
     if (!items || items.length === 0) {
       return res.status(400).json({ error: 'No items in order' });
