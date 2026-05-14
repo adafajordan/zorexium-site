@@ -984,6 +984,9 @@
                 var origPrice = product.originalPrice ? parseFloat(product.originalPrice) : null;
                 var savePct = (origPrice && origPrice > price) ? Math.round(((origPrice - price) / origPrice) * 100) : 0;
                 var rating = parseFloat(product.rating) || 0;
+                var featuredBadge = product && product.isFeaturedListing
+                    ? '<span class="absolute top-2 right-2 inline-flex items-center gap-1 text-[10px] font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200 px-2 py-0.5 rounded-full"><i class="fas fa-certificate"></i> Featured</span>'
+                    : '';
                 var stars = rating > 0
                     ? [0,1,2,3,4].map(function(i) { return '<i class="fas fa-star text-xs ' + (i < Math.round(rating) ? 'text-yellow-400' : 'text-gray-300') + '"></i>'; }).join('')
                     : '';
@@ -998,6 +1001,7 @@
                     '<div class="relative bg-gray-50 h-48 overflow-hidden">' +
                     '<img src="' + escHtml(img) + '" alt="' + escHtml(name) + '" class="w-full h-full object-cover" onerror="this.src=\'https://placehold.co/300x192/f3f4f6/9ca3af?text=No+Image\'">' +
                     (savePct >= 5 ? '<span class="save-badge absolute top-2 left-2">Save ' + savePct + '%</span>' : '') +
+                    featuredBadge +
                     '</div>' +
                     '<div class="p-3">' +
                     (stars ? '<div class="flex items-center mb-1">' + stars + reviewCount + '</div>' : '') +

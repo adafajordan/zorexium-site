@@ -1459,7 +1459,8 @@ app.get('/api/products', publicApiRateLimit, async function(req, res) {
       query.status = 'active';
     }
     const products = await db.collection('products').find(query).toArray();
-    res.json(products);
+    const decoratedProducts = await decorateProductsWithSellerTierBenefits(products);
+    res.json(decoratedProducts);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: error.message });
@@ -1647,7 +1648,8 @@ app.get('/api/products/seller/:sellerId', publicApiRateLimit, async function(req
       }
     }
 
-    res.json(products);
+    const decoratedProducts = await decorateProductsWithSellerTierBenefits(products);
+    res.json(decoratedProducts);
   } catch (error) {
     console.error('Error fetching seller products:', error);
     res.status(500).json({ error: error.message });
@@ -1664,7 +1666,8 @@ app.get('/api/products/:id', async function(req, res) {
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    res.json(product);
+    const decorated = await decorateProductsWithSellerTierBenefits([product]);
+    res.json(decorated[0] || product);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -2320,6 +2323,52 @@ function sanitizeSellerForClient(seller) {
   delete safeSeller.payoutVerificationCodeExpiresAt;
   delete safeSeller.payoutVerificationMethod;
   return safeSeller;
+}
+
+function toSafeDateFromUnixSeconds(unixSeconds) {
+  const seconds = Number(unixSeconds);
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  const date = new Date(seconds * 1000);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeStripeSubscriptionStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function isEndedStripeSubscriptionStatus(status) {
+  const normalized = normalizeStripeSubscriptionStatus(status);
+  return normalized === 'canceled'
+    || normalized === 'incomplete_expired'
+    || normalized === 'unpaid';
+}
+
+async function decorateProductsWithSellerTierBenefits(products) {
+  if (!Array.isArray(products) || products.length === 0) return Array.isArray(products) ? products : [];
+  const sellerIds = Array.from(new Set(products.map(function(product) {
+    return String(product && product.sellerId ? product.sellerId : '').trim();
+  }).filter(Boolean)));
+  const sellers = sellerIds.length > 0
+    ? await db.collection('sellers').find(
+        { userId: { $in: sellerIds } },
+        { projection: { userId: 1, tier: 1 } }
+      ).toArray()
+    : [];
+  const sellerTierById = new Map(sellers.map(function(seller) {
+    const userId = String(seller && seller.userId ? seller.userId : '').trim();
+    return [userId, normalizeSellerTier(seller && seller.tier ? seller.tier : 'starter')];
+  }));
+  return products.map(function(product) {
+    const sellerId = String(product && product.sellerId ? product.sellerId : '').trim();
+    const sellerTier = sellerTierById.get(sellerId) || 'starter';
+    const isFeaturedListing = sellerTier === 'pro';
+    return {
+      ...product,
+      sellerTier: sellerTier,
+      isFeaturedListing: isFeaturedListing,
+      featuredListingBadge: isFeaturedListing ? 'Featured Listing' : ''
+    };
+  });
 }
 
 async function buildPayoutSnapshot(order, options) {
@@ -3407,10 +3456,11 @@ async function activateProSellerTierForUser(userId, subscriptionId, options) {
         proSubscriptionId: resolvedSubscriptionId,
         proSubscriptionStatus: resolvedStatus,
         proSubscriptionProvider: 'stripe',
+        proSubscriptionCancelAtPeriodEnd: false,
         proTierDowngraded: false,
         updatedAt: new Date()
       },
-      $unset: { proTierDowngradedAt: '' }
+      $unset: { proTierDowngradedAt: '', proTierDowngradeScheduledFor: '', proSubscriptionCancellationScheduledAt: '' }
     }
   );
   await db.collection('users').updateOne(
@@ -4393,6 +4443,50 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
         if (!completion.ok) {
           console.error('Stripe checkout completion failed:', completion.error);
           return res.status(500).json({ error: 'Failed to finalize Stripe checkout order' });
+        }
+      }
+    }
+
+    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+      const subscription = event.data && event.data.object ? event.data.object : null;
+      const subscriptionId = String(subscription && subscription.id ? subscription.id : '').trim();
+      if (subscriptionId) {
+        const subscriptionStatus = normalizeStripeSubscriptionStatus(subscription && subscription.status ? subscription.status : '');
+        const currentPeriodEnd = toSafeDateFromUnixSeconds(subscription && subscription.current_period_end ? subscription.current_period_end : null);
+        const shouldDowngradeNow = event.type === 'customer.subscription.deleted'
+          || isEndedStripeSubscriptionStatus(subscriptionStatus);
+        if (shouldDowngradeNow) {
+          await db.collection('sellers').updateMany(
+            { proSubscriptionId: subscriptionId },
+            {
+              $set: {
+                tier: 'starter',
+                proTierDowngraded: true,
+                proTierDowngradedAt: new Date(),
+                updatedAt: new Date()
+              },
+              $unset: {
+                proSubscriptionId: '',
+                proSubscriptionStatus: '',
+                proSubscriptionProvider: '',
+                proSubscriptionCancelAtPeriodEnd: '',
+                proTierDowngradeScheduledFor: '',
+                proSubscriptionCancellationScheduledAt: ''
+              }
+            }
+          );
+        } else {
+          await db.collection('sellers').updateMany(
+            { proSubscriptionId: subscriptionId },
+            {
+              $set: {
+                proSubscriptionStatus: subscriptionStatus || 'active',
+                proSubscriptionCancelAtPeriodEnd: !!(subscription && subscription.cancel_at_period_end),
+                proTierDowngradeScheduledFor: (subscription && subscription.cancel_at_period_end && currentPeriodEnd) ? currentPeriodEnd : null,
+                updatedAt: new Date()
+              }
+            }
+          );
         }
       }
     }
@@ -6322,10 +6416,79 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
     if (seller.tier === 'starter') return res.status(400).json({ error: 'Already on Starter tier' });
 
+    const subscriptionId = String(seller && seller.proSubscriptionId ? seller.proSubscriptionId : '').trim();
+    const now = new Date();
+    let effectiveDowngradeAt = null;
+    let subscriptionStatus = normalizeStripeSubscriptionStatus(seller && seller.proSubscriptionStatus ? seller.proSubscriptionStatus : 'active') || 'active';
+    let cancelAtPeriodEndScheduled = false;
+
+    if (subscriptionId && stripe && STRIPE_SECRET_KEY) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const stripeStatus = normalizeStripeSubscriptionStatus(subscription && subscription.status ? subscription.status : subscriptionStatus);
+      const currentPeriodEnd = toSafeDateFromUnixSeconds(subscription && subscription.current_period_end ? subscription.current_period_end : null);
+      subscriptionStatus = stripeStatus || subscriptionStatus;
+
+      if (isEndedStripeSubscriptionStatus(stripeStatus)) {
+        effectiveDowngradeAt = now;
+      } else {
+        const updatedSubscription = (subscription && subscription.cancel_at_period_end === true)
+          ? subscription
+          : await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
+        const scheduledPeriodEnd = toSafeDateFromUnixSeconds(updatedSubscription && updatedSubscription.current_period_end ? updatedSubscription.current_period_end : null);
+        effectiveDowngradeAt = scheduledPeriodEnd || currentPeriodEnd || now;
+        subscriptionStatus = normalizeStripeSubscriptionStatus(updatedSubscription && updatedSubscription.status ? updatedSubscription.status : stripeStatus) || subscriptionStatus;
+        cancelAtPeriodEndScheduled = true;
+      }
+    } else {
+      effectiveDowngradeAt = now;
+    }
+
+    if (cancelAtPeriodEndScheduled && effectiveDowngradeAt && effectiveDowngradeAt.getTime() > now.getTime()) {
+      await db.collection('sellers').updateOne(
+        { userId: req.userId },
+        {
+          $set: {
+            proSubscriptionStatus: subscriptionStatus || 'active',
+            proSubscriptionCancelAtPeriodEnd: true,
+            proTierDowngradeScheduledFor: effectiveDowngradeAt,
+            proSubscriptionCancellationScheduledAt: now,
+            updatedAt: now
+          },
+          $unset: { proTierDowngradedAt: '' }
+        }
+      );
+      const scheduled = await db.collection('sellers').findOne({ userId: req.userId });
+      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
+      await sendAdminNotificationSafe(
+        'Pro seller downgrade scheduled',
+        `<p>A seller requested downgrade from Pro to Starter at period end.</p>`
+          + `<p><strong>Shop name:</strong> ${escapeHtml(String((scheduled && scheduled.shopName) || 'N/A'))}</p>`
+          + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
+          + `<p><strong>User email:</strong> ${escapeHtml(String(normalizeEmail(user && user.email) || 'N/A'))}</p>`
+          + `<p><strong>Effective date:</strong> ${escapeHtml(effectiveDowngradeAt.toISOString())}</p>`,
+        '/seller-dashboard.html#tier'
+      );
+      return res.json({ ...scheduled, downgradeScheduled: true, downgradeEffectiveAt: effectiveDowngradeAt });
+    }
+
     await db.collection('sellers').updateOne(
       { userId: req.userId },
-      { $set: { tier: 'starter', proTierDowngraded: true, proTierDowngradedAt: new Date(), updatedAt: new Date() },
-        $unset: { proSubscriptionId: '', proSubscriptionStatus: '', proSubscriptionProvider: '' } }
+      {
+        $set: {
+          tier: 'starter',
+          proTierDowngraded: true,
+          proTierDowngradedAt: now,
+          updatedAt: now
+        },
+        $unset: {
+          proSubscriptionId: '',
+          proSubscriptionStatus: '',
+          proSubscriptionProvider: '',
+          proSubscriptionCancelAtPeriodEnd: '',
+          proTierDowngradeScheduledFor: '',
+          proSubscriptionCancellationScheduledAt: ''
+        }
+      }
     );
     const updated = await db.collection('sellers').findOne({ userId: req.userId });
     const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
@@ -6337,7 +6500,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
         + `<p><strong>User email:</strong> ${escapeHtml(String(normalizeEmail(user && user.email) || 'N/A'))}</p>`,
       '/seller-dashboard.html#tier'
     );
-    res.json(updated);
+    res.json({ ...updated, downgradeScheduled: false, downgradeEffectiveAt: now });
   } catch (error) {
     console.error('Error downgrading seller to Starter:', error);
     res.status(500).json({ error: error.message });
