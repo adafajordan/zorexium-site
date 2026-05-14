@@ -7,7 +7,7 @@ const sgMail = require('@sendgrid/mail');
 const twilio = require('twilio');
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@zorexium.io';
-const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexium.io';
+const ADMIN_NOTIFICATION_EMAIL = process.env.ADMIN_EMAIL || 'admin@zorexiumlabs.com';
 const APP_BASE_URL = process.env.BASE_URL || 'https://zorexium.io';
 const TEST_SMS_MESSAGE_TEMPLATE = 'Zorexium SMS test: your Twilio setup is working. Visit {{url}} to manage alerts.';
 const MIN_E164_DIGITS = 8;
@@ -1876,11 +1876,14 @@ const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
 const PAYOUT_BATCH_UUID_SLICE = 16;
+const MAX_ORDER_EMAIL_DISPATCH_KEY_LENGTH = 100;
 // Limit how many blocked payouts are retried per verification request to avoid long-running retries.
 const MAX_BLOCKED_PAYOUT_RETRY_BATCH = 100;
 const PAYOUT_VERIFICATION_CODE_LENGTH = 6;
 const PAYOUT_VERIFICATION_CODE_EXPIRATION_MS = 15 * 60 * 1000;
 const MAX_MANUAL_PAY_NOTE_LENGTH = 500;
+const RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT = Math.max(1, Math.min(50, parseInt(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT, 10) || 20));
+const RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND = String(process.env.RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND || 'true').trim().toLowerCase() !== 'false';
 // Historical write-off corrections for unrecoverable legacy earnings display mismatches.
 const SELLER_EARNINGS_WRITE_OFF_BY_SHOP = Object.freeze({
   'adafa': 0.90
@@ -2438,6 +2441,150 @@ async function upsertOrderNotification(query, notificationDoc) {
   } catch (notificationErr) {
     console.error('Failed to persist order notification:', notificationErr.message);
   }
+}
+
+async function claimOrderEmailDispatch(orderId, dispatchKey) {
+  const normalizedOrderId = String(orderId || '').trim();
+  const normalizedKey = String(dispatchKey || '').trim().replace(/[^A-Za-z0-9_-]/g, '_').slice(0, MAX_ORDER_EMAIL_DISPATCH_KEY_LENGTH);
+  if (!normalizedOrderId || !normalizedKey) return false;
+  const fieldPath = `emailDispatch.${normalizedKey}At`;
+  const result = await db.collection('orders').updateOne(
+    { id: normalizedOrderId, [fieldPath]: { $exists: false } },
+    { $set: { [fieldPath]: new Date(), updatedAt: new Date() } }
+  );
+  return result.modifiedCount > 0;
+}
+
+async function processCompletedOrderAutomation(order, options) {
+  const opts = options || {};
+  const syncedOrder = await syncCompletedOrderRecords(order);
+  const triggerSource = String(opts.triggerSource || 'order_completed');
+  const forceEmailResend = opts.forceEmailResend === true;
+
+  let payoutResult = null;
+  try {
+    payoutResult = await sendStripeSellerPayout(syncedOrder, { triggerSource: triggerSource });
+    if (!payoutResult.ok) {
+      console.error('Automatic payout failed for order', syncedOrder.id, '-', payoutResult.error);
+    } else if (payoutResult.deferred) {
+      console.log('Payout queued for order', syncedOrder.id, '-', payoutResult.reason);
+    } else if (payoutResult.alreadyPaid) {
+      console.log('Automatic payout skipped (already paid) for order', syncedOrder.id);
+    } else {
+      console.log('Automatic payout sent for order', syncedOrder.id);
+    }
+  } catch (payoutErr) {
+    console.error('Failed to process automatic payout:', payoutErr.message);
+  }
+
+  const payoutSeller = getOrderSellerInfo(syncedOrder);
+  if (payoutSeller.sellerId) {
+    const payoutSent = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && !payoutResult.processing);
+    const payoutProcessing = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && payoutResult.processing);
+    await upsertOrderNotification(
+      { userId: payoutSeller.sellerId, type: 'payout_update', orderId: syncedOrder.id },
+      {
+        userId: payoutSeller.sellerId,
+        type: 'payout_update',
+        orderId: syncedOrder.id,
+        title: payoutSent ? 'Payout sent' : (payoutProcessing ? 'Payout processing' : 'Payout status updated'),
+        body: payoutSent
+          ? `Your payout for order ${syncedOrder.id} was sent.`
+          : payoutProcessing
+            ? `Your payout for order ${syncedOrder.id} is being processed via Stripe.`
+          : `Order ${syncedOrder.id} payout is currently ${payoutResult && payoutResult.reason ? payoutResult.reason.toLowerCase() : 'pending review'}.`,
+        linkUrl: '/seller-payouts.html'
+      }
+    );
+  }
+
+  const buyerEmail = normalizeEmail(syncedOrder.buyerEmail || (syncedOrder.buyer && syncedOrder.buyer.email) || '');
+  if (buyerEmail) {
+    const shouldSendBuyerEmail = forceEmailResend || await claimOrderEmailDispatch(syncedOrder.id, 'buyer_purchase_thanks');
+    if (shouldSendBuyerEmail) {
+      const buyerFirstName = escapeHtml(syncedOrder.buyer && syncedOrder.buyer.firstName ? syncedOrder.buyer.firstName : '');
+      const safeOrderId = escapeHtml(syncedOrder.id);
+      const safeReceiptId = escapeHtml(syncedOrder.receiptId || 'pending');
+      await sendEventEmailSafe(
+        buyerEmail,
+        'Thank you for your purchase on Zorexium',
+        `<p>Thanks for your order${buyerFirstName ? ', ' + buyerFirstName : ''}!</p><p>Your order <strong>${safeOrderId}</strong> has been confirmed.</p><p>Your receipt ID is <strong>${safeReceiptId}</strong>.</p>`,
+        '/payment-success.html?orderId=' + encodeURIComponent(syncedOrder.id)
+      );
+    }
+  }
+
+  const sellerItemsMap = new Map();
+  (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).forEach(function(item) {
+    const sellerId = item && item.sellerId ? String(item.sellerId) : '';
+    if (!sellerId) return;
+    if (!sellerItemsMap.has(sellerId)) sellerItemsMap.set(sellerId, []);
+    sellerItemsMap.get(sellerId).push(item);
+  });
+
+  for (const [sellerId, sellerItems] of sellerItemsMap.entries()) {
+    try {
+      const shouldSendSellerEmail = forceEmailResend || await claimOrderEmailDispatch(syncedOrder.id, `seller_sale_${sellerId}`);
+      if (!shouldSendSellerEmail) continue;
+      const sellerUser = await db.collection('users').findOne({ _id: new ObjectId(sellerId) }, { projection: { email: 1, firstName: 1 } });
+      const sellerEmail = normalizeEmail(sellerUser && sellerUser.email);
+      if (!sellerEmail) continue;
+      const firstItem = sellerItems[0] || {};
+      const soldItemLink = firstItem.id
+        ? '/product-detail.html?id=' + encodeURIComponent(String(firstItem.id))
+        : '/seller-dashboard.html';
+      await sendEventEmailSafe(
+        sellerEmail,
+        'Your product sold on Zorexium',
+        `<p>Great news${sellerUser && sellerUser.firstName ? ', ' + escapeHtml(sellerUser.firstName) : ''}! Your listing just sold.</p><p>Order <strong>${escapeHtml(syncedOrder.id)}</strong> includes <strong>${sellerItems.length}</strong> item(s) from your shop.</p>`,
+        soldItemLink
+      );
+    } catch (sellerMailErr) {
+      console.error('Failed to send seller sold email:', sellerMailErr.message);
+    }
+  }
+
+  try {
+    const shouldSendAdminEmail = forceEmailResend || await claimOrderEmailDispatch(syncedOrder.id, 'admin_purchase_notice');
+    if (shouldSendAdminEmail) {
+      const buyer = syncedOrder && syncedOrder.buyer ? syncedOrder.buyer : {};
+      const buyerName = [buyer.firstName || '', buyer.lastName || ''].join(' ').trim();
+      const safeBuyerName = escapeHtml(buyerName || 'Unknown buyer');
+      const safeBuyerEmail = escapeHtml(normalizeEmail(syncedOrder.buyerEmail || buyer.email || '') || 'Not provided');
+      const safeOrderId = escapeHtml(syncedOrder.id || '');
+      const sellerSummary = Array.from(sellerItemsMap.entries()).map(function(entry) {
+        const sellerId = entry[0];
+        const items = entry[1] || [];
+        const first = items[0] || {};
+        const sellerName = escapeHtml(first.sellerName || first.sellerUsername || sellerId);
+        return '<li>' + sellerName + ' (' + items.length + ' item' + (items.length === 1 ? '' : 's') + ')</li>';
+      }).join('');
+      const productsSummary = (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).map(function(item) {
+        const itemName = escapeHtml(item && item.name ? item.name : 'Item');
+        const qty = parseInt(item && item.quantity, 10) || 1;
+        const price = Number(item && item.price);
+        const itemPrice = Number.isFinite(price) ? '$' + price.toFixed(2) : 'N/A';
+        const sellerName = escapeHtml(item && (item.sellerName || item.sellerUsername || item.sellerId) ? (item.sellerName || item.sellerUsername || item.sellerId) : 'Unknown seller');
+        return '<li><strong>' + itemName + '</strong> — Qty: ' + qty + ' — Price: ' + itemPrice + ' — Seller: ' + sellerName + '</li>';
+      }).join('');
+      await sendEventEmailSafe(
+        ADMIN_NOTIFICATION_EMAIL,
+        'New purchase completed on Zorexium',
+        '<p>A purchase was completed on checkout.</p>'
+          + '<p><strong>Order ID:</strong> ' + safeOrderId + '<br>'
+          + '<strong>Buyer:</strong> ' + safeBuyerName + '<br>'
+          + '<strong>Buyer Email:</strong> ' + safeBuyerEmail + '<br>'
+          + '<strong>Total:</strong> $' + Number(syncedOrder.total || 0).toFixed(2) + '</p>'
+          + '<p><strong>Sellers in order:</strong></p><ul>' + (sellerSummary || '<li>No seller info</li>') + '</ul>'
+          + '<p><strong>Products:</strong></p><ul>' + (productsSummary || '<li>No product details</li>') + '</ul>',
+        '/order-history.html'
+      );
+    }
+  } catch (adminMailErr) {
+    console.error('Failed to send admin purchase email:', adminMailErr.message);
+  }
+
+  return { order: syncedOrder, payoutResult };
 }
 
 async function reserveInventoryForOrder(order) {
@@ -3430,132 +3577,18 @@ app.post('/api/orders/:orderId/capture', publicApiRateLimit, async function(req,
     }
     captureCommitted = true;
 
-    // Synchronize every persistent post-purchase record once the payment is captured.
-    // This keeps buyer history, receipts, seller analytics, notifications, and inventory in sync.
+    // Synchronize post-purchase records, payout state, and transactional emails.
     const completedOrder = await db.collection('orders').findOne({ id: orderId });
-    const syncedOrder = await syncCompletedOrderRecords(completedOrder || {
-      ...order,
-      status: 'completed',
-      paypalCaptureId: captureData.id,
-      completedAt: new Date()
-    });
-
-    // Auto-create and send seller payout for this order
-    let payoutResult = null;
-    try {
-      payoutResult = await sendStripeSellerPayout(syncedOrder, { triggerSource: 'capture' });
-      if (!payoutResult.ok) {
-        console.error('Automatic payout failed for order', syncedOrder.id, '-', payoutResult.error);
-      } else if (payoutResult.deferred) {
-        console.log('Payout queued for order', syncedOrder.id, '-', payoutResult.reason);
-      } else if (payoutResult.alreadyPaid) {
-        console.log('Automatic payout skipped (already paid) for order', syncedOrder.id);
-      } else {
-        console.log('Automatic payout sent for order', syncedOrder.id);
-      }
-    } catch (payoutErr) {
-      console.error('Failed to process automatic payout:', payoutErr.message);
-    }
-
-    const payoutSeller = getOrderSellerInfo(syncedOrder);
-    if (payoutSeller.sellerId) {
-      const payoutSent = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && !payoutResult.processing);
-      const payoutProcessing = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && payoutResult.processing);
-      await upsertOrderNotification(
-        { userId: payoutSeller.sellerId, type: 'payout_update', orderId: syncedOrder.id },
-        {
-          userId: payoutSeller.sellerId,
-          type: 'payout_update',
-          orderId: syncedOrder.id,
-          title: payoutSent ? 'Payout sent' : (payoutProcessing ? 'Payout processing' : 'Payout status updated'),
-          body: payoutSent
-            ? `Your payout for order ${syncedOrder.id} was sent.`
-            : payoutProcessing
-              ? `Your payout for order ${syncedOrder.id} is being processed via Stripe.`
-            : `Order ${syncedOrder.id} payout is currently ${payoutResult && payoutResult.reason ? payoutResult.reason.toLowerCase() : 'pending review'}.`,
-          linkUrl: '/seller-payouts.html'
-        }
-      );
-    }
-
-    // Send transactional purchase emails (buyer thank-you + seller sold notification).
-    const buyerEmail = normalizeEmail(syncedOrder.buyerEmail || (syncedOrder.buyer && syncedOrder.buyer.email) || '');
-    if (buyerEmail) {
-      const buyerFirstName = escapeHtml(syncedOrder.buyer && syncedOrder.buyer.firstName ? syncedOrder.buyer.firstName : '');
-      const safeOrderId = escapeHtml(syncedOrder.id);
-      const safeReceiptId = escapeHtml(syncedOrder.receiptId || 'pending');
-      await sendEventEmailSafe(
-        buyerEmail,
-        'Thank you for your purchase on Zorexium',
-        `<p>Thanks for your order${buyerFirstName ? ', ' + buyerFirstName : ''}!</p><p>Your order <strong>${safeOrderId}</strong> has been confirmed.</p><p>Your receipt ID is <strong>${safeReceiptId}</strong>.</p>`,
-        '/payment-success.html?orderId=' + encodeURIComponent(syncedOrder.id)
-      );
-    }
-
-    const sellerItemsMap = new Map();
-    (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).forEach(function(item) {
-      const sellerId = item && item.sellerId ? String(item.sellerId) : '';
-      if (!sellerId) return;
-      if (!sellerItemsMap.has(sellerId)) sellerItemsMap.set(sellerId, []);
-      sellerItemsMap.get(sellerId).push(item);
-    });
-
-    for (const [sellerId, sellerItems] of sellerItemsMap.entries()) {
-      try {
-        const sellerUser = await db.collection('users').findOne({ _id: new ObjectId(sellerId) }, { projection: { email: 1, firstName: 1 } });
-        const sellerEmail = normalizeEmail(sellerUser && sellerUser.email);
-        if (!sellerEmail) continue;
-        const firstItem = sellerItems[0] || {};
-        const soldItemLink = firstItem.id
-          ? '/product-detail.html?id=' + encodeURIComponent(String(firstItem.id))
-          : '/seller-dashboard.html';
-        await sendEventEmailSafe(
-          sellerEmail,
-          'Your product sold on Zorexium',
-          `<p>Great news${sellerUser && sellerUser.firstName ? ', ' + escapeHtml(sellerUser.firstName) : ''}! Your listing just sold.</p><p>Order <strong>${escapeHtml(syncedOrder.id)}</strong> includes <strong>${sellerItems.length}</strong> item(s) from your shop.</p>`,
-          soldItemLink
-        );
-      } catch (sellerMailErr) {
-        console.error('Failed to send seller sold email:', sellerMailErr.message);
-      }
-    }
-
-    try {
-      const buyer = syncedOrder && syncedOrder.buyer ? syncedOrder.buyer : {};
-      const buyerName = [buyer.firstName || '', buyer.lastName || ''].join(' ').trim();
-      const safeBuyerName = escapeHtml(buyerName || 'Unknown buyer');
-      const safeBuyerEmail = escapeHtml(normalizeEmail(syncedOrder.buyerEmail || buyer.email || '') || 'Not provided');
-      const safeOrderId = escapeHtml(syncedOrder.id || '');
-      const sellerSummary = Array.from(sellerItemsMap.entries()).map(function(entry) {
-        const sellerId = entry[0];
-        const items = entry[1] || [];
-        const first = items[0] || {};
-        const sellerName = escapeHtml(first.sellerName || first.sellerUsername || sellerId);
-        return '<li>' + sellerName + ' (' + items.length + ' item' + (items.length === 1 ? '' : 's') + ')</li>';
-      }).join('');
-      const productsSummary = (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).map(function(item) {
-        const itemName = escapeHtml(item && item.name ? item.name : 'Item');
-        const qty = parseInt(item && item.quantity, 10) || 1;
-        const price = Number(item && item.price);
-        const itemPrice = Number.isFinite(price) ? '$' + price.toFixed(2) : 'N/A';
-        const sellerName = escapeHtml(item && (item.sellerName || item.sellerUsername || item.sellerId) ? (item.sellerName || item.sellerUsername || item.sellerId) : 'Unknown seller');
-        return '<li><strong>' + itemName + '</strong> — Qty: ' + qty + ' — Price: ' + itemPrice + ' — Seller: ' + sellerName + '</li>';
-      }).join('');
-      await sendEventEmailSafe(
-        ADMIN_NOTIFICATION_EMAIL,
-        'New purchase completed on Zorexium',
-        '<p>A purchase was completed on checkout.</p>'
-          + '<p><strong>Order ID:</strong> ' + safeOrderId + '<br>'
-          + '<strong>Buyer:</strong> ' + safeBuyerName + '<br>'
-          + '<strong>Buyer Email:</strong> ' + safeBuyerEmail + '<br>'
-          + '<strong>Total:</strong> $' + Number(syncedOrder.total || 0).toFixed(2) + '</p>'
-          + '<p><strong>Sellers in order:</strong></p><ul>' + (sellerSummary || '<li>No seller info</li>') + '</ul>'
-          + '<p><strong>Products:</strong></p><ul>' + (productsSummary || '<li>No product details</li>') + '</ul>',
-        '/order-history.html'
-      );
-    } catch (adminMailErr) {
-      console.error('Failed to send admin purchase email:', adminMailErr.message);
-    }
+    const completionResult = await processCompletedOrderAutomation(
+      completedOrder || {
+        ...order,
+        status: 'completed',
+        paypalCaptureId: captureData.id,
+        completedAt: new Date()
+      },
+      { triggerSource: 'capture' }
+    );
+    const syncedOrder = completionResult.order;
 
     res.json({
       orderId,
@@ -3638,6 +3671,136 @@ async function completeStripeCheckoutOrder(orderId, checkoutSession) {
   }
 }
 
+const RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY = 'retroactive_legacy_order_repair_v1';
+
+async function findCompletedLegacyOrdersForRepair(limit) {
+  const cappedLimit = Math.max(1, Math.min(50, parseInt(limit, 10) || 10));
+  const sellerUserIds = new Set();
+  const adafaUsers = await db.collection('users').find(
+    {
+      $or: [
+        { email: { $regex: /^adafa(\+[^@]+)?@.+/i } },
+        { firstName: { $regex: /^adafa$/i } },
+        { username: { $regex: /^adafa$/i } }
+      ]
+    },
+    { projection: { _id: 1 } }
+  ).toArray();
+  adafaUsers.forEach(function(user) {
+    if (user && user._id) sellerUserIds.add(String(user._id));
+  });
+
+  const adafaSellers = await db.collection('sellers').find(
+    {
+      $or: [
+        { userId: { $in: Array.from(sellerUserIds) } },
+        { shopName: { $regex: /adafa/i } },
+        { sellerName: { $regex: /^adafa$/i } },
+        { sellerUsername: { $regex: /^adafa$/i } }
+      ]
+    },
+    { projection: { userId: 1 } }
+  ).toArray();
+  adafaSellers.forEach(function(seller) {
+    if (seller && seller.userId) sellerUserIds.add(String(seller.userId));
+  });
+
+  const sellerClauses = [
+    { 'items.sellerName': { $regex: /adafa/i } },
+    { 'items.sellerUsername': { $regex: /adafa/i } }
+  ];
+  if (sellerUserIds.size > 0) {
+    sellerClauses.push({ 'items.sellerId': { $in: Array.from(sellerUserIds) } });
+  }
+
+  const buyerClauses = [
+    { buyerEmail: { $regex: /^steve(\+[^@]+)?@.+/i } },
+    { 'buyer.email': { $regex: /^steve(\+[^@]+)?@.+/i } },
+    { 'buyer.firstName': { $regex: /^steve$/i } },
+    { 'buyer.username': { $regex: /^steve$/i } }
+  ];
+
+  return db.collection('orders')
+    .find({
+      status: 'completed',
+      $and: [
+        { $or: buyerClauses },
+        { $or: sellerClauses }
+      ]
+    })
+    .sort({ completedAt: 1, createdAt: 1 })
+    .limit(cappedLimit)
+    .toArray();
+}
+
+async function repairCompletedLegacyOrders(options) {
+  const opts = options || {};
+  const forceEmailResend = opts.forceEmailResend === true;
+  const matchedOrders = await findCompletedLegacyOrdersForRepair(opts.limit);
+  const repairedOrderIds = [];
+  for (const order of matchedOrders) {
+    const repaired = await processCompletedOrderAutomation(order, {
+      triggerSource: 'retroactive_steve_adafa_repair',
+      forceEmailResend: forceEmailResend
+    });
+    await db.collection('orders').updateOne(
+      { id: order.id },
+      {
+        $set: {
+          retroactiveRepair: {
+            key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY,
+            repairedAt: new Date(),
+            triggerSource: 'retroactive_legacy_order_repair'
+          },
+          updatedAt: new Date()
+        }
+      }
+    );
+    repairedOrderIds.push({
+      orderId: String(order && order.id ? order.id : ''),
+      receiptId: repaired && repaired.order ? String(repaired.order.receiptId || '') : '',
+      payoutStatus: repaired && repaired.payoutResult
+        ? (
+          repaired.payoutResult.ok
+            ? (repaired.payoutResult.deferred ? 'deferred' : (repaired.payoutResult.processing ? 'processing' : 'paid'))
+            : 'failed'
+        )
+        : 'pending'
+    });
+  }
+  return {
+    matchedCount: matchedOrders.length,
+    repairedCount: repairedOrderIds.length,
+    repairedOrders: repairedOrderIds
+  };
+}
+
+async function runRetroactiveLegacyOrderRepairMigration() {
+  if (!mongoConnected) return;
+  try {
+    const existing = await db.collection('appMigrations').findOne({ key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY });
+    if (existing && existing.appliedAt) return;
+    const repairSummary = await repairCompletedLegacyOrders({
+      limit: RETROACTIVE_LEGACY_ORDER_REPAIR_LIMIT,
+      forceEmailResend: RETROACTIVE_LEGACY_ORDER_REPAIR_FORCE_EMAIL_RESEND
+    });
+    await db.collection('appMigrations').updateOne(
+      { key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY },
+      {
+        $set: {
+          key: RETROACTIVE_LEGACY_ORDER_REPAIR_MIGRATION_KEY,
+          appliedAt: new Date(),
+          summary: repairSummary
+        }
+      },
+      { upsert: true }
+    );
+    console.log(`✅ Retroactive legacy order repair complete: ${repairSummary.repairedCount} order(s) repaired`);
+  } catch (error) {
+    console.error('⚠️  Retroactive legacy order repair failed:', error.message);
+  }
+}
+
 // POST /api/stripe/webhook – verify Stripe webhook signatures and finalize completed checkout sessions
 app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
   if (!stripe || !STRIPE_WEBHOOK_SECRET) {
@@ -3669,6 +3832,9 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
         if (!completion.ok) {
           console.error('Stripe checkout completion failed:', completion.error);
           return res.status(500).json({ error: 'Failed to finalize Stripe checkout order' });
+        }
+        if (completion.order) {
+          await processCompletedOrderAutomation(completion.order, { triggerSource: 'stripe_webhook' });
         }
       }
     }
@@ -3705,6 +3871,37 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
   }
 
   res.json({ received: true });
+});
+
+// POST /api/admin/orders/repair-legacy – rerun the retroactive legacy order repair flow
+app.post('/api/admin/orders/repair-legacy', publicApiRateLimit, verifyToken, requireAdmin, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const dryRun = req.body && req.body.dryRun === true;
+    const limit = Math.max(1, Math.min(50, parseInt(req.body && req.body.limit, 10) || 20));
+    const forceEmailResend = req.body && req.body.forceEmailResend === true;
+    if (dryRun) {
+      const matchedOrders = await findCompletedLegacyOrdersForRepair(limit);
+      return res.json({
+        dryRun: true,
+        matchedCount: matchedOrders.length,
+        orders: matchedOrders.map(function(order) {
+          return {
+            orderId: String(order && order.id ? order.id : ''),
+            status: String(order && order.status ? order.status : ''),
+            shippingStatus: String(order && order.shippingStatus ? order.shippingStatus : ''),
+            completedAt: order && order.completedAt ? order.completedAt : null,
+            buyerEmail: normalizeEmail(order && order.buyerEmail ? order.buyerEmail : '')
+          };
+        })
+      });
+    }
+    const repairSummary = await repairCompletedLegacyOrders({ limit: limit, forceEmailResend: forceEmailResend });
+    res.json({ success: true, ...repairSummary });
+  } catch (error) {
+    console.error('Error repairing legacy orders:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ── GET USER ORDERS ────────────────────────────────────────────────────────────
@@ -7341,6 +7538,7 @@ async function start() {
       await assignStarterTierToExistingSellers();
       await downgradeProSellersToStarter();
       await activateAllProducts();
+      await runRetroactiveLegacyOrderRepairMigration();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');
     }
