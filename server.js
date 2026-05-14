@@ -1600,7 +1600,7 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
 });
 
 // ── GET /api/products/seller/:sellerId – products by seller (public) ───────────
-app.get('/api/products/seller/:sellerId', async function(req, res) {
+app.get('/api/products/seller/:sellerId', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const { sellerId } = req.params;
@@ -1624,7 +1624,6 @@ app.get('/api/products/seller/:sellerId', async function(req, res) {
       if (sellerRecord) {
         const nameClauses = [];
         if (sellerRecord.shopName) nameClauses.push({ sellerName: sellerRecord.shopName });
-        if (sellerRecord.shopName) nameClauses.push({ sellerUsername: sellerRecord.shopName });
         if (sellerRecord.sellerName) nameClauses.push({ sellerName: sellerRecord.sellerName });
         if (sellerRecord.sellerUsername) nameClauses.push({ sellerUsername: sellerRecord.sellerUsername });
         if (nameClauses.length > 0) {
@@ -3778,7 +3777,9 @@ async function repairCompletedLegacyOrders(options) {
       let itemsPatched = false;
       const patchedItems = order.items.map(function(item) {
         if (!item) return item;
-        const hasSellerId = !!(item.sellerId && sellerUserIds.has(String(item.sellerId)));
+        // Only stamp the adafa userId when the item has no sellerId at all.
+        // If a sellerId is already present (even a different one), leave it unchanged.
+        const hasSellerId = !!item.sellerId;
         const nameMatchesAdafa = (
           adafaNamePattern.test(String(item.sellerName || '')) ||
           adafaNamePattern.test(String(item.sellerUsername || ''))
