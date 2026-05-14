@@ -6307,7 +6307,7 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
     if (!activation.activated && activation.reason === 'seller_profile_not_found') {
       return res.status(404).json({ error: 'Seller profile not found' });
     }
-    res.json(activation.seller || seller);
+    res.json(activation.seller);
   } catch (error) {
     console.error('Error upgrading seller to Pro:', error);
     res.status(500).json({ error: error.message });
