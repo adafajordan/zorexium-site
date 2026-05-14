@@ -1794,6 +1794,21 @@
       var nextQuery = params.toString();
       window.history.replaceState({}, document.title, window.location.pathname + (nextQuery ? ('?' + nextQuery) : '') + window.location.hash);
     } catch (err) {
+      try {
+        var fallbackRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', { credentials: 'include' });
+        if (fallbackRes.ok) {
+          var fallbackSeller = await fallbackRes.json().catch(function() { return {}; });
+          if (String(fallbackSeller && fallbackSeller.tier ? fallbackSeller.tier : '').toLowerCase() === 'pro') {
+            sellerData = Object.assign(sellerData, fallbackSeller);
+            params.delete('tierUpgrade');
+            params.delete('session_id');
+            var fallbackQuery = params.toString();
+            window.history.replaceState({}, document.title, window.location.pathname + (fallbackQuery ? ('?' + fallbackQuery) : '') + window.location.hash);
+            ZrxNotify.showNotification('Your Pro Seller subscription is active.', 'success');
+            return;
+          }
+        }
+      } catch (_) {}
       var errBox = document.getElementById('dashPaypalError');
       var msgEl = document.getElementById('dashPaypalErrorMsg');
       if (msgEl) msgEl.textContent = err.message || 'Unable to verify Stripe checkout.';
