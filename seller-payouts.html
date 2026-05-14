@@ -526,7 +526,7 @@
             </div>
             <p class="text-sm text-gray-600 mb-4">Connect Stripe Express, complete Stripe onboarding, then refresh here to unlock payouts.</p>
             <div class="flex flex-col sm:flex-row gap-3">
-              <button onclick="openPayoutsPaypalModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm transition-colors">
+              <button onclick="openPayoutsStripeModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm transition-colors">
                 <i class="fas fa-university"></i> Manage Bank Payout Setup
               </button>
               <a href="account-details.html" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 rounded-lg font-semibold text-sm transition-colors">
@@ -551,21 +551,21 @@
 </main>
 
 <!-- Stripe Payout Setup Modal -->
-<div id="payoutsPaypalModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+<div id="payoutsStripeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
   <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
         <i class="fas fa-university text-blue-600"></i> Stripe Connect Payout Setup
       </h3>
-      <button onclick="closePayoutsPaypalModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
+      <button onclick="closePayoutsStripeModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>
     </div>
     <p class="text-sm text-gray-600 mb-4">Open Stripe Connect onboarding, complete bank/KYC steps, then refresh verification status.</p>
     <div class="mb-4">
       <label class="block text-sm font-medium text-gray-700 mb-1">Connected Stripe Account ID</label>
-      <input type="text" id="payoutsPaypalEmailInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="acct_..." autocomplete="off" readonly>
+      <input type="text" id="payoutsStripeAccountInput" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400" placeholder="acct_..." autocomplete="off" readonly>
     </div>
     <div class="mb-4 flex gap-2">
-      <button onclick="openPayoutsPayPalBankOnboarding()" id="openPayoutsPayPalBankOnboardingBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 flex-1" disabled>
+      <button onclick="openPayoutsStripeBankOnboarding()" id="openPayoutsStripeBankOnboardingBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 flex-1" disabled>
         <i class="fas fa-link"></i> Open Stripe Onboarding
       </button>
       <button onclick="confirmPayoutsBankLinked()" id="confirmPayoutsBankLinkedBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 flex-1">
@@ -573,13 +573,13 @@
       </button>
     </div>
     <div class="flex gap-3">
-      <button onclick="savePayoutsPaypalAccount()" id="savePayoutsPaypalBtn" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm">
+      <button onclick="savePayoutsStripeAccount()" id="savePayoutsStripeBtn" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm">
         <i class="fas fa-save"></i> Start Setup
       </button>
-      <button onclick="verifyPayoutsPaypalAccount()" id="verifyPayoutsPaypalBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">
+      <button onclick="verifyPayoutsStripeAccount()" id="verifyPayoutsStripeBtn" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">
         Verify
       </button>
-      <button onclick="closePayoutsPaypalModal()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">Cancel</button>
+      <button onclick="closePayoutsStripeModal()" class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50">Cancel</button>
     </div>
   </div>
 </div>
@@ -676,9 +676,9 @@
         'Earnings for ' + escHtml(seller.shopName || 'your shop') + ' · Starter keeps 90% and Pro keeps 95% of item subtotal.';
 
       renderPayoutAccountState();
-      var input = document.getElementById('payoutsPaypalEmailInput');
+      var input = document.getElementById('payoutsStripeAccountInput');
       if (input && seller.payoutAccountId) input.value = seller.payoutAccountId;
-      var openBtn = document.getElementById('openPayoutsPayPalBankOnboardingBtn');
+      var openBtn = document.getElementById('openPayoutsStripeBankOnboardingBtn');
       if (openBtn) openBtn.disabled = !payoutsOnboardingUrl;
     } catch (_) {}
 
@@ -716,22 +716,22 @@
     updateStats();
   }
 
-  function openPayoutsPaypalModal() {
-    document.getElementById('payoutsPaypalModal').classList.remove('hidden');
-    var input = document.getElementById('payoutsPaypalEmailInput');
+  function openPayoutsStripeModal() {
+    document.getElementById('payoutsStripeModal').classList.remove('hidden');
+    var input = document.getElementById('payoutsStripeAccountInput');
     var codeInput = document.getElementById('payoutsVerificationCodeInput');
     if (codeInput) codeInput.value = '';
     payoutsOnboardingUrl = (sellerProfile && sellerProfile.payoutProviderBankOnboardingUrl) || payoutsOnboardingUrl || '';
-    var openBtn = document.getElementById('openPayoutsPayPalBankOnboardingBtn');
+    var openBtn = document.getElementById('openPayoutsStripeBankOnboardingBtn');
     if (openBtn) openBtn.disabled = !payoutsOnboardingUrl;
     if (input) input.focus();
   }
 
-  function closePayoutsPaypalModal() {
-    document.getElementById('payoutsPaypalModal').classList.add('hidden');
+  function closePayoutsStripeModal() {
+    document.getElementById('payoutsStripeModal').classList.add('hidden');
   }
 
-  function openPayoutsPayPalBankOnboarding() {
+  function openPayoutsStripeBankOnboarding() {
     if (!payoutsOnboardingUrl) {
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Start Stripe payout setup first.', 'error');
       return;
@@ -761,8 +761,8 @@
     }
   }
 
-  async function savePayoutsPaypalAccount() {
-    var btn = document.getElementById('savePayoutsPaypalBtn');
+  async function savePayoutsStripeAccount() {
+    var btn = document.getElementById('savePayoutsStripeBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/start', {
@@ -782,10 +782,10 @@
       sellerProfile.payoutProviderBankStatus = data.providerBankStatus || 'pending_provider';
       sellerProfile.payoutProviderBankOnboardingUrl = data.onboardingUrl || '';
       payoutsOnboardingUrl = sellerProfile.payoutProviderBankOnboardingUrl;
-      var openBtn = document.getElementById('openPayoutsPayPalBankOnboardingBtn');
+      var openBtn = document.getElementById('openPayoutsStripeBankOnboardingBtn');
       if (openBtn) openBtn.disabled = !payoutsOnboardingUrl;
       renderPayoutAccountState();
-      var input = document.getElementById('payoutsPaypalEmailInput');
+      var input = document.getElementById('payoutsStripeAccountInput');
       if (input) input.value = sellerProfile.payoutAccountId || '';
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Stripe setup started. Complete onboarding in Stripe, then click “Refresh Status”.', 'success');
     } catch (err) {
@@ -795,8 +795,8 @@
     }
   }
 
-  async function verifyPayoutsPaypalAccount() {
-    var btn = document.getElementById('verifyPayoutsPaypalBtn');
+  async function verifyPayoutsStripeAccount() {
+    var btn = document.getElementById('verifyPayoutsStripeBtn');
     if (btn) { btn.disabled = true; btn.innerHTML = 'Verifying…'; }
     try {
       const res = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me/payout-account/verify', {
@@ -815,7 +815,7 @@
       sellerProfile.payoutProviderBankStatus = data.providerBankStatus || 'connected';
       sellerProfile.payoutAccountId = data.payoutAccountId || sellerProfile.payoutAccountId;
       renderPayoutAccountState();
-      closePayoutsPaypalModal();
+      closePayoutsStripeModal();
       await loadEarnings();
       if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Stripe payout account verified. Eligible shipped orders can now be paid.', 'success');
     } catch (err) {
@@ -826,8 +826,8 @@
   }
 
   document.addEventListener('click', function(e) {
-    var modal = document.getElementById('payoutsPaypalModal');
-    if (modal && e.target === modal) closePayoutsPaypalModal();
+    var modal = document.getElementById('payoutsStripeModal');
+    if (modal && e.target === modal) closePayoutsStripeModal();
   });
 
   function renderEarnings() {

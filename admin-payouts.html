@@ -468,8 +468,8 @@
     tbody.innerHTML = filtered.map(function(payout) {
       const payoutId = payout._id ? String(payout._id) : (payout.id || '');
       const isFailed = payout.status === 'failed';
-      const paypalEmailHtml = isFailed && payout.payoutAccountId
-        ? '<p class="text-xs text-amber-400 mt-0.5 break-all">PayPal: ' + escHtml(payout.payoutAccountId) + '</p>'
+      const payoutAccountHtml = isFailed && payout.payoutAccountId
+        ? '<p class="text-xs text-amber-400 mt-0.5 break-all">Payout account: ' + escHtml(payout.payoutAccountId) + '</p>'
         : '';
       const errorHtml = isFailed && payout.error
         ? '<p class="text-xs text-red-400 mt-1 max-w-xs">' + escHtml(payout.error.length > 120 ? payout.error.slice(0, 120) + '…' : payout.error) + '</p>'
@@ -479,7 +479,7 @@
         '<td class="px-8 py-3">' +
           '<p class="font-semibold text-white">' + escHtml(payout.sellerName || payout.sellerUsername) + '</p>' +
           '<p class="text-sm text-gray-400">@' + escHtml(payout.sellerUsername) + '</p>' +
-          paypalEmailHtml +
+          payoutAccountHtml +
           errorHtml +
         '</td>' +
         '<td class="px-8 py-3 font-bold text-green-400">$' + Number(payout.amount).toFixed(2) + '</td>' +
@@ -585,7 +585,7 @@
             ZrxNotify.showNotification(data.error || 'Failed to send payout', 'error');
             return;
           }
-          ZrxNotify.showNotification('Payout request sent to PayPal. Status will update after provider confirmation.', 'success');
+          ZrxNotify.showNotification('Payout request sent to the payout provider. Status will update after provider confirmation.', 'success');
           await loadPayouts();
         } catch (_) {
           ZrxNotify.showNotification('Network error. Please try again.', 'error');
@@ -594,9 +594,9 @@
     );
   }
 
-  async function markManuallyPaid(payoutId, sellerPaypalEmail, amount) {
+  async function markManuallyPaid(payoutId, sellerPayoutAccount, amount) {
     var msg = 'Confirm you have manually sent $' + Number(amount).toFixed(2) + ' to the seller';
-    if (sellerPaypalEmail) msg += ' at PayPal email: ' + sellerPaypalEmail;
+    if (sellerPayoutAccount) msg += '  at payout account: ' + sellerPayoutAccount;
     msg += '.\n\nThis will mark the payout as paid in the system.';
     ZrxNotify.showConfirm(msg, async function() {
       try {
@@ -604,7 +604,7 @@
           method: 'PUT',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'paid', note: 'Manually paid by admin via PayPal web transfer' })
+          body: JSON.stringify({ status: 'paid', note: 'Manually paid by admin outside the payout provider flow' })
         });
         if (!res.ok) {
           const data = await res.json();
