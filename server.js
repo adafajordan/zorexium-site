@@ -1962,6 +1962,10 @@ function toStripeAmountCents(value) {
   return Math.max(0, normalized);
 }
 
+function isStripeCheckoutSessionId(value) {
+  return /^cs_[A-Za-z0-9_]+$/.test(String(value || '').trim());
+}
+
 function normalizePayoutAccountId(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -2100,27 +2104,38 @@ function getPayPalPayoutWebhookIds(resource) {
   return { senderItemId, batchId };
 }
 
-function getOrderSellerInfo(order) {
+function getOrderSellerInfos(order) {
   const items = Array.isArray(order && order.items) ? order.items : [];
-  if (items.length === 0) return { error: 'Order has no items' };
+  if (items.length === 0) return [];
 
-  const sellerIds = Array.from(new Set(items.map(function(item) {
-    return String((item && item.sellerId) || '').trim();
-  }).filter(Boolean)));
+  const sellerMap = new Map();
+  items.forEach(function(item) {
+    const sellerId = String(item && item.sellerId ? item.sellerId : '').trim();
+    if (!sellerId) return;
+    if (!sellerMap.has(sellerId)) {
+      sellerMap.set(sellerId, {
+        sellerId: sellerId,
+        sellerUsername: String(item && item.sellerUsername ? item.sellerUsername : '').trim(),
+        sellerName: String(item && (item.sellerName || item.sellerUsername) ? (item.sellerName || item.sellerUsername) : '').trim()
+      });
+    } else {
+      // Keep the first seller metadata encountered for a sellerId.
+      // If later line items for the same sellerId contain different sellerName/sellerUsername values,
+      // the earliest values win for payout/notification labeling on this order.
+    }
+  });
+  return Array.from(sellerMap.values());
+}
 
-  if (sellerIds.length === 0) {
+function getOrderSellerInfo(order) {
+  const sellerInfos = getOrderSellerInfos(order);
+  if (sellerInfos.length === 0) {
     return { error: 'Seller ID missing on order item' };
   }
-  if (sellerIds.length > 1) {
-    return { error: 'Orders with multiple sellers are not supported for automatic payouts' };
+  if (sellerInfos.length > 1) {
+    return { error: 'Order includes multiple sellers; use the sellerId parameter to target a specific seller payout.' };
   }
-
-  const firstItem = items[0] || {};
-  return {
-    sellerId: sellerIds[0],
-    sellerUsername: String(firstItem.sellerUsername || '').trim(),
-    sellerName: String(firstItem.sellerName || firstItem.sellerUsername || '').trim()
-  };
+  return sellerInfos[0];
 }
 
 function getSellerFinancials(order, sellerId) {
@@ -2208,7 +2223,11 @@ function sanitizeSellerForClient(seller) {
 async function buildPayoutSnapshot(order, options) {
   const payoutMeta = options || {};
   const orderId = String(order && order.id ? order.id : '').trim();
-  const sellerInfo = getOrderSellerInfo(order);
+  const targetSellerId = String(payoutMeta.sellerId || '').trim();
+  const sellerInfos = getOrderSellerInfos(order);
+  const sellerInfo = targetSellerId
+    ? (sellerInfos.find(function(info) { return String(info && info.sellerId ? info.sellerId : '') === targetSellerId; }) || { sellerId: targetSellerId, sellerUsername: '', sellerName: '' })
+    : getOrderSellerInfo(order);
   // Seller payouts are calculated from seller-eligible item totals only (not order-level shipping/tax).
   const sellerFinancials = getSellerFinancials(order, sellerInfo.sellerId);
   const grossAmount = sellerFinancials.grossAmount;
@@ -2485,29 +2504,48 @@ async function processCompletedOrderAutomation(order, options) {
   const forceEmailResend = opts.forceEmailResend === true;
 
   let payoutResult = null;
+  let payoutResults = [];
   try {
-    payoutResult = await sendStripeSellerPayout(syncedOrder, { triggerSource: triggerSource });
-    if (!payoutResult.ok) {
-      console.error('Automatic payout failed for order', syncedOrder.id, '-', payoutResult.error);
-    } else if (payoutResult.deferred) {
-      console.log('Payout queued for order', syncedOrder.id, '-', payoutResult.reason);
-    } else if (payoutResult.alreadyPaid) {
-      console.log('Automatic payout skipped (already paid) for order', syncedOrder.id);
+    const payoutBatchResult = await sendStripeSellerPayoutsForOrder(syncedOrder, { triggerSource: triggerSource });
+    payoutResult = payoutBatchResult;
+    payoutResults = Array.isArray(payoutBatchResult && payoutBatchResult.results) ? payoutBatchResult.results : [];
+    if (!payoutBatchResult.ok) {
+      console.error('Automatic payout failed for order', syncedOrder.id, '-', payoutBatchResult.error);
     } else {
-      console.log('Automatic payout sent for order', syncedOrder.id);
+      for (const sellerPayout of payoutResults) {
+        if (!sellerPayout.ok) {
+          console.error('Automatic payout failed for order', syncedOrder.id, 'seller', sellerPayout.sellerId, '-', sellerPayout.error);
+        } else if (sellerPayout.deferred) {
+          console.log('Payout queued for order', syncedOrder.id, 'seller', sellerPayout.sellerId, '-', sellerPayout.reason);
+        } else if (sellerPayout.alreadyPaid) {
+          console.log('Automatic payout skipped (already paid) for order', syncedOrder.id, 'seller', sellerPayout.sellerId);
+        } else {
+          console.log('Automatic payout sent for order', syncedOrder.id, 'seller', sellerPayout.sellerId);
+        }
+      }
     }
   } catch (payoutErr) {
     console.error('Failed to process automatic payout:', payoutErr.message);
   }
 
-  const payoutSeller = getOrderSellerInfo(syncedOrder);
-  if (payoutSeller.sellerId) {
-    const payoutSent = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && !payoutResult.processing);
-    const payoutProcessing = !!(payoutResult && payoutResult.ok && !payoutResult.deferred && payoutResult.processing);
+  const sellerItemsMap = new Map();
+  (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).forEach(function(item) {
+    const sellerId = item && item.sellerId ? String(item.sellerId) : '';
+    if (!sellerId) return;
+    if (!sellerItemsMap.has(sellerId)) sellerItemsMap.set(sellerId, []);
+    sellerItemsMap.get(sellerId).push(item);
+  });
+  const payoutResultBySeller = new Map(payoutResults.map(function(result) {
+    return [String(result && result.sellerId ? result.sellerId : ''), result];
+  }));
+  for (const sellerId of sellerItemsMap.keys()) {
+    const currentSellerPayoutResult = payoutResultBySeller.get(String(sellerId)) || null;
+    const payoutSent = !!(currentSellerPayoutResult && currentSellerPayoutResult.ok && !currentSellerPayoutResult.deferred && !currentSellerPayoutResult.processing);
+    const payoutProcessing = !!(currentSellerPayoutResult && currentSellerPayoutResult.ok && !currentSellerPayoutResult.deferred && currentSellerPayoutResult.processing);
     await upsertOrderNotification(
-      { userId: payoutSeller.sellerId, type: 'payout_update', orderId: syncedOrder.id },
+      { userId: sellerId, type: 'payout_update', orderId: syncedOrder.id },
       {
-        userId: payoutSeller.sellerId,
+        userId: sellerId,
         type: 'payout_update',
         orderId: syncedOrder.id,
         title: payoutSent ? 'Payout sent' : (payoutProcessing ? 'Payout processing' : 'Payout status updated'),
@@ -2515,7 +2553,7 @@ async function processCompletedOrderAutomation(order, options) {
           ? `Your payout for order ${syncedOrder.id} was sent.`
           : payoutProcessing
             ? `Your payout for order ${syncedOrder.id} is being processed via Stripe.`
-          : `Order ${syncedOrder.id} payout is currently ${payoutResult && payoutResult.reason ? payoutResult.reason.toLowerCase() : 'pending review'}.`,
+          : `Order ${syncedOrder.id} payout is currently ${currentSellerPayoutResult && currentSellerPayoutResult.reason ? String(currentSellerPayoutResult.reason).toLowerCase() : 'pending review'}.`,
         linkUrl: '/seller-payouts.html'
       }
     );
@@ -2536,14 +2574,6 @@ async function processCompletedOrderAutomation(order, options) {
       );
     }
   }
-
-  const sellerItemsMap = new Map();
-  (Array.isArray(syncedOrder.items) ? syncedOrder.items : []).forEach(function(item) {
-    const sellerId = item && item.sellerId ? String(item.sellerId) : '';
-    if (!sellerId) return;
-    if (!sellerItemsMap.has(sellerId)) sellerItemsMap.set(sellerId, []);
-    sellerItemsMap.get(sellerId).push(item);
-  });
 
   for (const [sellerId, sellerItems] of sellerItemsMap.entries()) {
     try {
@@ -2607,7 +2637,7 @@ async function processCompletedOrderAutomation(order, options) {
     console.error('Failed to send admin purchase email:', adminMailErr.message);
   }
 
-  return { order: syncedOrder, payoutResult };
+  return { order: syncedOrder, payoutResult, payoutResults };
 }
 
 async function reserveInventoryForOrder(order) {
@@ -2906,7 +2936,7 @@ async function sendStripeSellerPayout(order, options) {
   }
   const pb = snapshot.payoutBase;
   await db.collection('payouts').updateOne(
-    { orderId: orderId },
+    { orderId: orderId, sellerId: pb.sellerId },
     {
       $setOnInsert: {
         orderId: orderId,
@@ -2938,9 +2968,10 @@ async function sendStripeSellerPayout(order, options) {
     { upsert: true }
   );
 
-  const payoutDoc = await db.collection('payouts').findOne({ orderId: orderId });
-  if (payoutDoc && payoutDoc.status === 'paid') {
-    return { ok: true, alreadyPaid: true, payout: payoutDoc };
+  const payoutDocQuery = { orderId: orderId, sellerId: pb.sellerId };
+  const payoutDocScoped = await db.collection('payouts').findOne(payoutDocQuery);
+  if (payoutDocScoped && payoutDocScoped.status === 'paid') {
+    return { ok: true, alreadyPaid: true, payout: payoutDocScoped, sellerId: pb.sellerId };
   }
   if (snapshot.status === 'pending_delivery') {
     return { ok: true, deferred: true, reason: 'Order is not yet marked as shipped' };
@@ -2955,7 +2986,7 @@ async function sendStripeSellerPayout(order, options) {
   if (!stripe || !STRIPE_SECRET_KEY) {
     const reason = 'Stripe is not configured on the server';
     await db.collection('payouts').updateOne(
-      { orderId: orderId },
+      payoutDocQuery,
       { $set: { status: 'failed', error: reason, onboardingRequired: false, updatedAt: new Date() } }
     );
     return { ok: false, error: reason };
@@ -2964,7 +2995,7 @@ async function sendStripeSellerPayout(order, options) {
   if (!snapshot.sellerInfo.sellerId) {
     const reason = snapshot.sellerInfo.error || 'Seller ID missing on order item';
     await db.collection('payouts').updateOne(
-      { orderId: orderId },
+      payoutDocQuery,
       { $set: { status: 'failed', error: reason, onboardingRequired: false, updatedAt: new Date() } }
     );
     return { ok: false, error: reason };
@@ -2973,7 +3004,7 @@ async function sendStripeSellerPayout(order, options) {
   if (!(snapshot.payoutAmount > 0)) {
     const reason = 'Calculated payout amount must be greater than 0';
     await db.collection('payouts').updateOne(
-      { orderId: orderId },
+      payoutDocQuery,
       { $set: { status: 'failed', error: reason, onboardingRequired: false, updatedAt: new Date() } }
     );
     return { ok: false, error: reason };
@@ -2981,7 +3012,7 @@ async function sendStripeSellerPayout(order, options) {
   if (!snapshot.receiverEmail) {
     const reason = 'Seller payout destination is missing';
     await db.collection('payouts').updateOne(
-      { orderId: orderId },
+      payoutDocQuery,
       { $set: { status: 'failed', error: reason, onboardingRequired: true, updatedAt: new Date() } }
     );
     return { ok: false, error: reason };
@@ -2989,14 +3020,14 @@ async function sendStripeSellerPayout(order, options) {
   if (!/^acct_[A-Za-z0-9]+$/.test(String(snapshot.receiverEmail || '').trim())) {
     const reason = 'Seller payout destination must be a Stripe Connect account ID';
     await db.collection('payouts').updateOne(
-      { orderId: orderId },
+      payoutDocQuery,
       { $set: { status: 'failed', error: reason, onboardingRequired: true, updatedAt: new Date() } }
     );
     return { ok: false, error: reason };
   }
 
   await db.collection('payouts').updateOne(
-    { orderId: orderId },
+    payoutDocQuery,
     { $set: { status: 'processing', onboardingRequired: false, lastAttemptAt: new Date(), updatedAt: new Date(), error: null } }
   );
 
@@ -3022,21 +3053,55 @@ async function sendStripeSellerPayout(order, options) {
       paidAt: new Date()
     };
     await db.collection('payouts').updateOne(
-      { orderId: orderId },
+      payoutDocQuery,
       {
         $set: payoutUpdates
       }
     );
-    const paidPayout = await db.collection('payouts').findOne({ orderId: orderId });
+    const paidPayout = await db.collection('payouts').findOne(payoutDocQuery);
     await notifyAdminPayoutPaidIfNeeded(paidPayout, 'stripe_transfer');
-    return { ok: true, payout: transfer, processing: false };
+    return { ok: true, payout: transfer, processing: false, sellerId: pb.sellerId };
   } catch (error) {
     await db.collection('payouts').updateOne(
-      { orderId: orderId },
+      payoutDocQuery,
       { $set: { status: 'failed', error: error.message, onboardingRequired: false, updatedAt: new Date() } }
     );
-    return { ok: false, error: error.message };
+    return { ok: false, error: error.message, sellerId: pb.sellerId };
   }
+}
+
+async function sendStripeSellerPayoutsForOrder(order, options) {
+  const payoutMeta = options || {};
+  const sellers = getOrderSellerInfos(order);
+  if (!sellers.length) {
+    return { ok: false, error: 'Seller ID missing on order item', results: [] };
+  }
+  const results = [];
+  for (const seller of sellers) {
+    const result = await sendStripeSellerPayout(order, {
+      ...payoutMeta,
+      sellerId: seller.sellerId
+    });
+    results.push({ sellerId: seller.sellerId, ...result });
+  }
+  const failed = results.find(function(result) { return !result.ok; });
+  if (failed) {
+    // Partial successes are preserved in `results` so callers/admin tooling can see
+    // which sellers were paid and which sellers still require retry/remediation.
+    // Each results entry includes { sellerId, ok, ... }.
+    return { ok: false, error: failed.error || 'One or more seller payouts failed', results: results };
+  }
+  const allDeferred = results.length > 0 && results.every(function(result) { return result.deferred; });
+  const anyProcessing = results.some(function(result) { return result.processing; });
+  const anyAlreadyPaid = results.some(function(result) { return result.alreadyPaid; });
+  return {
+    ok: true,
+    deferred: allDeferred,
+    processing: anyProcessing,
+    alreadyPaid: anyAlreadyPaid,
+    reason: allDeferred ? 'All seller payouts are currently deferred' : '',
+    results: results
+  };
 }
 
 async function sendPayPalSellerPayout(order, options) {
@@ -3058,7 +3123,10 @@ async function retryEligibleBlockedPayoutsForSeller(sellerId, triggerSource) {
     if (String(order.shippingStatus || '').toLowerCase() !== 'shipped') continue;
     summary.attempted++;
     try {
-      const result = await sendStripeSellerPayout(order, { triggerSource: triggerSource || 'onboarding_verified' });
+      const result = await sendStripeSellerPayout(order, {
+        triggerSource: triggerSource || 'onboarding_verified',
+        sellerId: String(sellerId || '')
+      });
       if (!result.ok) summary.failed++;
       else if (result.deferred) summary.deferred++;
       else if (result.processing) summary.processing++;
@@ -3827,6 +3895,29 @@ async function getPaidStripeCheckoutSessionForRepair(order) {
   }
 }
 
+async function getPaidStripeCheckoutSessionForOrder(order, explicitSessionId) {
+  const orderId = String(order && order.id ? order.id : '').trim();
+  const sessionId = String(explicitSessionId || (order && order.stripeCheckoutSessionId ? order.stripeCheckoutSessionId : '')).trim();
+  if (!orderId || !sessionId || !stripe || !STRIPE_SECRET_KEY) return null;
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (!session || !session.id) return null;
+    const mappedOrderId = String(
+      (session && session.metadata && session.metadata.orderId)
+        || (session && session.client_reference_id)
+        || ''
+    ).trim();
+    if (mappedOrderId && mappedOrderId !== orderId) return null;
+    const paymentStatus = String(session && session.payment_status ? session.payment_status : '').toLowerCase();
+    const checkoutStatus = String(session && session.status ? session.status : '').toLowerCase();
+    const isPaid = paymentStatus === 'paid' || paymentStatus === 'no_payment_required' || checkoutStatus === 'complete';
+    return isPaid ? session : null;
+  } catch (error) {
+    console.error('Failed to retrieve Stripe Checkout session:', error && error.message ? error.message : error);
+    return null;
+  }
+}
+
 async function repairCompletedLegacyOrders(options) {
   const opts = options || {};
   const forceEmailResend = opts.forceEmailResend === true;
@@ -4097,6 +4188,70 @@ app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, r
   }
 });
 
+// GET /api/orders/digital – completed digital orders for current user (auth required)
+app.get('/api/orders/digital', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const orders = await db.collection('orders')
+      .find({ status: 'completed', $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
+      .sort({ createdAt: -1 })
+      .toArray();
+    const digitalOrders = (Array.isArray(orders) ? orders : []).filter(function(order) {
+      if (String(order && order.type ? order.type : '').toLowerCase() === 'digital') return true;
+      return (Array.isArray(order && order.items ? order.items : [])).some(function(item) {
+        return item && (item.digital === true || String(item.type || '').toLowerCase() === 'digital');
+      });
+    });
+    res.json(digitalOrders);
+  } catch (error) {
+    console.error('Error fetching digital orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/orders/subscriptions – completed subscription orders for current user (auth required)
+app.get('/api/orders/subscriptions', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const orders = await db.collection('orders')
+      .find({ status: 'completed', $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
+      .sort({ createdAt: -1 })
+      .toArray();
+    const subscriptionOrders = (Array.isArray(orders) ? orders : []).filter(function(order) {
+      return String(order && order.type ? order.type : '').toLowerCase() === 'subscription' || !!(order && order.subscriptionId);
+    });
+    res.json(subscriptionOrders);
+  } catch (error) {
+    console.error('Error fetching subscription orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/orders/trade-ins – trade-in history for current user (auth required)
+app.get('/api/orders/trade-ins', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const tradeIns = await db.collection('tradeIns')
+      .find({ userId: req.userId })
+      .sort({ submittedAt: -1, createdAt: -1 })
+      .toArray();
+    if (tradeIns && tradeIns.length > 0) {
+      return res.json(tradeIns);
+    }
+    const userPrefs = await db.collection('userPreferences').findOne(
+      { userId: req.userId },
+      { projection: { tradeIns: 1 } }
+    );
+    const fallbackTradeIns = Array.isArray(userPrefs && userPrefs.tradeIns ? userPrefs.tradeIns : [])
+      ? userPrefs.tradeIns
+      : [];
+    res.json(fallbackTradeIns);
+  } catch (error) {
+    console.error('Error fetching trade-in orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/orders/sold – get completed orders that include the current seller's products.
 app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
@@ -4265,7 +4420,10 @@ app.post('/api/orders/:orderId/ship', publicApiRateLimit, verifyToken, async fun
     let payoutResult = null;
     try {
       const refreshedOrder = await db.collection('orders').findOne({ id: orderId });
-      payoutResult = await sendStripeSellerPayout(refreshedOrder || { ...order, shippingStatus: 'shipped', shippedAt: now }, { triggerSource: 'shipment_verified' });
+      payoutResult = await sendStripeSellerPayout(
+        refreshedOrder || { ...order, shippingStatus: 'shipped', shippedAt: now },
+        { triggerSource: 'shipment_verified', sellerId: String(req.userId || '') }
+      );
       if (!payoutResult.ok) {
         console.error('Failed to process shipment-triggered payout for order', orderId, '-', payoutResult.error);
       }
@@ -4316,6 +4474,121 @@ app.get('/api/orders/:orderId', publicApiRateLimit, async function(req, res) {
     res.json(order);
   } catch (error) {
     console.error('Error fetching order:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/orders/:orderId/reconcile-stripe – finalize a pending Stripe order by checking Stripe directly
+// sessionId is optional; when omitted the server uses order.stripeCheckoutSessionId.
+app.post('/api/orders/:orderId/reconcile-stripe', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  if (!stripe || !STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Stripe is not configured on the server' });
+  const orderId = String(req.params && req.params.orderId ? req.params.orderId : '').trim();
+  if (!orderId || orderId.length > MAX_ORDER_ID_LENGTH) {
+    return res.status(400).json({ error: `Invalid orderId (max ${MAX_ORDER_ID_LENGTH} characters)` });
+  }
+  const sessionId = String(req.body && req.body.sessionId ? req.body.sessionId : '').trim();
+  if (sessionId && !isStripeCheckoutSessionId(sessionId)) {
+    return res.status(400).json({ error: 'Invalid Stripe sessionId' });
+  }
+  try {
+    let order = await db.collection('pendingOrders').findOne({ id: orderId });
+    if (!order) order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (String(order.status || '').toLowerCase() === 'completed') {
+      return res.json({ success: true, orderId: orderId, status: 'completed', alreadyCompleted: true });
+    }
+    const paidSession = await getPaidStripeCheckoutSessionForOrder(order, sessionId);
+    if (!paidSession) {
+      return res.status(409).json({ error: 'Stripe checkout session is not paid yet' });
+    }
+    const completion = await completeStripeCheckoutOrder(orderId, paidSession, { triggerSource: 'stripe_reconcile_endpoint' });
+    if (!completion.ok) {
+      return res.status(500).json({ error: completion.error || 'Failed to reconcile Stripe order' });
+    }
+    const finalizedOrder = completion.order || await db.collection('orders').findOne({ id: orderId });
+    res.json({
+      success: true,
+      orderId: orderId,
+      status: finalizedOrder && finalizedOrder.status ? finalizedOrder.status : 'completed',
+      receiptId: finalizedOrder && finalizedOrder.receiptId ? finalizedOrder.receiptId : null
+    });
+  } catch (error) {
+    console.error('Error reconciling Stripe order:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/orders/reconcile-stripe – admin reconciliation for a specific Stripe order/session
+app.post('/api/admin/orders/reconcile-stripe', publicApiRateLimit, verifyToken, requireAdmin, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  if (!stripe || !STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Stripe is not configured on the server' });
+  let orderId = String(req.body && req.body.orderId ? req.body.orderId : '').trim();
+  const sessionId = String(req.body && req.body.sessionId ? req.body.sessionId : '').trim();
+  const forceEmailResend = req.body && req.body.forceEmailResend === true;
+  if (!orderId && !sessionId) {
+    return res.status(400).json({ error: 'orderId or sessionId is required' });
+  }
+  if (sessionId && !isStripeCheckoutSessionId(sessionId)) {
+    return res.status(400).json({ error: 'Invalid Stripe sessionId' });
+  }
+  try {
+    let paidSession = null;
+    if (sessionId) {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session && session.id) {
+        const mappedOrderId = String(
+          (session && session.metadata && session.metadata.orderId)
+            || (session && session.client_reference_id)
+            || ''
+        ).trim();
+        if (mappedOrderId) orderId = mappedOrderId;
+        const paymentStatus = String(session && session.payment_status ? session.payment_status : '').toLowerCase();
+        const checkoutStatus = String(session && session.status ? session.status : '').toLowerCase();
+        if (paymentStatus === 'paid' || paymentStatus === 'no_payment_required' || checkoutStatus === 'complete') {
+          paidSession = session;
+        }
+      }
+    }
+    if (!orderId || orderId.length > MAX_ORDER_ID_LENGTH) {
+      return res.status(400).json({ error: `Invalid orderId (max ${MAX_ORDER_ID_LENGTH} characters)` });
+    }
+    let order = await db.collection('pendingOrders').findOne({ id: orderId });
+    if (!order) order = await db.collection('orders').findOne({ id: orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (String(order.status || '').toLowerCase() === 'completed') {
+      const automation = await processCompletedOrderAutomation(order, {
+        triggerSource: 'admin_reconcile_stripe',
+        forceEmailResend: forceEmailResend
+      });
+      return res.json({
+        success: true,
+        orderId: orderId,
+        alreadyCompleted: true,
+        receiptId: automation && automation.order && automation.order.receiptId ? automation.order.receiptId : null
+      });
+    }
+    if (!paidSession) {
+      paidSession = await getPaidStripeCheckoutSessionForOrder(order, sessionId);
+    }
+    if (!paidSession) {
+      return res.status(409).json({ error: 'Stripe checkout session is not paid yet' });
+    }
+    const completion = await completeStripeCheckoutOrder(orderId, paidSession, {
+      triggerSource: 'admin_reconcile_stripe',
+      forceEmailResend: forceEmailResend
+    });
+    if (!completion.ok) {
+      return res.status(500).json({ error: completion.error || 'Failed to reconcile Stripe order' });
+    }
+    res.json({
+      success: true,
+      orderId: orderId,
+      status: completion.order && completion.order.status ? completion.order.status : 'completed',
+      receiptId: completion.order && completion.order.receiptId ? completion.order.receiptId : null
+    });
+  } catch (error) {
+    console.error('Error running admin Stripe order reconciliation:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -6020,13 +6293,15 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
       return res.status(400).json({ error: 'Payouts become eligible only after the seller marks the order as shipped' });
     }
 
-    const sellerInfo = getOrderSellerInfo(order);
-    if (!sellerInfo.sellerId) {
-      return res.status(400).json({ error: sellerInfo.error || 'Order does not include a seller payout target' });
+    const sellerInfos = getOrderSellerInfos(order);
+    if (!sellerInfos.length) {
+      return res.status(400).json({ error: 'Order does not include a seller payout target' });
     }
-
-    if (String(sellerInfo.sellerId) !== String(req.userId)) {
-      return res.status(403).json({ error: 'Forbidden: you can only trigger payouts for orders sold by your seller account' });
+    const sellerOwnedOrder = sellerInfos.some(function(info) {
+      return String(info && info.sellerId ? info.sellerId : '') === String(req.userId);
+    });
+    if (!sellerOwnedOrder) {
+      return res.status(403).json({ error: 'Forbidden: you can only trigger payouts for your own seller items in this order' });
     }
     const seller = await db.collection('sellers').findOne(
       { userId: req.userId },
@@ -6037,7 +6312,7 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
       return res.status(409).json({ error: 'Complete and verify your Stripe payout onboarding before pushing payouts' });
     }
 
-    const payoutResult = await sendStripeSellerPayout(order, { triggerSource: 'api' });
+    const payoutResult = await sendStripeSellerPayout(order, { triggerSource: 'api', sellerId: req.userId });
     if (!payoutResult.ok) {
       console.error('Manual payout trigger failed for order', orderId, '-', payoutResult.error);
       return res.status(502).json({ error: payoutResult.error || 'Payout failed' });
@@ -6046,7 +6321,7 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
       return res.status(409).json({ error: payoutResult.reason || 'Payout account setup is incomplete' });
     }
 
-    const payout = await db.collection('payouts').findOne({ orderId: order.id });
+    const payout = await db.collection('payouts').findOne({ orderId: order.id, sellerId: req.userId });
     res.json({
       success: true,
       alreadyPaid: !!payoutResult.alreadyPaid,
@@ -6207,7 +6482,10 @@ app.post('/api/payouts/:id/send', publicApiRateLimit, verifyToken, async functio
       return res.status(409).json({ error: 'Payouts become eligible after the seller marks the order as shipped' });
     }
 
-    const payoutResult = await sendStripeSellerPayout(order, { triggerSource: req.isAdmin ? 'admin_manual' : 'api' });
+    const payoutResult = await sendStripeSellerPayout(order, {
+      triggerSource: req.isAdmin ? 'admin_manual' : 'api',
+      sellerId: String(payout.sellerId || req.userId || '')
+    });
     if (!payoutResult.ok) {
       return res.status(502).json({ error: payoutResult.error || 'Failed to send payout' });
     }
@@ -7660,6 +7938,18 @@ async function activateAllProducts() {
   }
 }
 
+async function ensurePayoutIndexes() {
+  if (!mongoConnected) return;
+  try {
+    await db.collection('payouts').createIndex(
+      { orderId: 1, sellerId: 1 },
+      { name: 'orderId_sellerId_idx' }
+    );
+  } catch (err) {
+    console.error('⚠️  Failed to ensure operational indexes:', err.message);
+  }
+}
+
 // ── SendGrid test route ───────────────────────────────────────────────────────
 // POST /api/send-test-email  { "email": "recipient@example.com" }
 // Use this route to verify your SendGrid integration is working on Render.
@@ -7712,7 +8002,7 @@ async function start() {
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
       await downgradeProSellersToStarter();
-      await activateAllProducts();
+      await ensurePayoutIndexes();
       await runRetroactiveLegacyOrderRepairMigration();
     } else {
       console.error('⚠️  Database NOT connected — starting HTTP server anyway (endpoints will return 503)');

@@ -117,6 +117,7 @@
       const BACKEND_URL = 'https://zorexium-backend.onrender.com';
       const params = new URLSearchParams(window.location.search);
       const orderId = params.get('orderId');
+      const stripeSessionId = params.get('session_id');
       let currentOrder = null;
       try { localStorage.removeItem('guestCart'); } catch (_) {}
 
@@ -218,9 +219,20 @@
 
       // Fetch order details from backend
       try {
-        const res = await fetch(BACKEND_URL + '/api/orders/' + encodeURIComponent(orderId));
+        let res = await fetch(BACKEND_URL + '/api/orders/' + encodeURIComponent(orderId));
         if (!res.ok) return;
-        const order = await res.json();
+        let order = await res.json();
+        if (order && String(order.status || '').toLowerCase() === 'pending' && stripeSessionId) {
+          try {
+            await fetch(BACKEND_URL + '/api/orders/' + encodeURIComponent(orderId) + '/reconcile-stripe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: stripeSessionId })
+            });
+            res = await fetch(BACKEND_URL + '/api/orders/' + encodeURIComponent(orderId));
+            if (res.ok) order = await res.json();
+          } catch (_) {}
+        }
         currentOrder = order;
         if (order && String(order.status || '').toLowerCase() === 'completed') {
           try {

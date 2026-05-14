@@ -813,6 +813,8 @@
       `<div class="spec-row"><span class="spec-label">${escHtml(k)}:</span><span>${escHtml(String(v))}</span></div>`
     ).join('');
     const productId = String(p._id || p.id || '');
+    const parsedQty = parseInt(p.quantity, 10);
+    const isOutOfStock = !isNaN(parsedQty) && parsedQty <= 0;
 
     return `<div class="product-card overflow-hidden cursor-pointer js-card-view" data-id="${escHtml(productId)}">
   <!-- Make the product image fill the card's top media half for stronger visual hierarchy. -->
@@ -837,12 +839,13 @@
         onclick="event.stopPropagation()">
         Details
       </a>
-      <button class="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white text-xs font-semibold py-2 rounded transition-colors js-add-cart"
+      <button class="flex-1 ${isOutOfStock ? 'bg-gray-400 cursor-not-allowed opacity-70' : 'bg-cyan-500 hover:bg-cyan-600'} text-white text-xs font-semibold py-2 rounded transition-colors js-add-cart"
+        ${isOutOfStock ? 'disabled' : ''}
         data-id="${escHtml(productId)}"
         data-name="${escHtml(p.name || '')}"
         data-price="${price}"
         data-image="${escHtml(p.image || '')}">
-        Add to Cart
+        ${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
       </button>
     </div>
   </div>

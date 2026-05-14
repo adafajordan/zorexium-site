@@ -589,12 +589,10 @@
 
   var BACKEND = 'https://zorexium-backend.onrender.com';
   var doListEl = document.getElementById('doOrderList');
-  ZrxSession.fetch(BACKEND + '/api/orders/my', { credentials: 'include' })
+  ZrxSession.fetch(BACKEND + '/api/orders/digital', { credentials: 'include' })
     .then(function(r){ return r.ok ? r.json() : []; })
-    .then(function(orders){
-      var digital = (orders || []).filter(function(o){
-        return (o.type === 'digital') || (o.items || []).some(function(i){ return i.digital || i.type === 'digital'; });
-      });
+    .then(function(digital){
+      digital = Array.isArray(digital) ? digital : [];
       if (digital.length === 0) {
         doListEl.innerHTML = '<div class="bg-white border border-gray-200 rounded-lg text-center py-14"><i class="fas fa-file-alt text-5xl text-gray-200 mb-3 block"></i><p class="font-semibold text-gray-600 mb-1">No digital orders</p><p class="text-sm text-gray-400 mb-4">Digital products you purchase will appear here with download links.</p><a href="index.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white text-sm font-semibold px-5 py-2 rounded-md">Browse Marketplace</a></div>';
         return;
