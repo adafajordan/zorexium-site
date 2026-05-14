@@ -344,7 +344,7 @@
       <h1 class="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">Sell on <span class="text-cyan-400">Zorexium</span></h1>
       <p class="text-gray-300 text-xl mb-8 max-w-3xl mx-auto">Reach thousands of PC enthusiasts, gamers, and hardware professionals. List your tech products on Zorexium's marketplace and grow your business.</p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="seller-signup.html" class="bg-cyan-500 hover:bg-cyan-400 text-white font-bold px-8 py-4 rounded-xl text-base transition-colors flex items-center justify-center gap-2">
+        <a href="seller-signup.html" class="seller-signup-cta bg-cyan-500 hover:bg-cyan-400 text-white font-bold px-8 py-4 rounded-xl text-base transition-colors flex items-center justify-center gap-2">
           <i class="fas fa-rocket"></i> Start Selling Today
         </a>
         <a href="seller-dashboard.html" class="bg-white/10 hover:bg-white/20 text-white border border-white/30 font-semibold px-8 py-4 rounded-xl text-base transition-colors flex items-center justify-center gap-2">
@@ -439,7 +439,7 @@
         </div>
       </div>
       <div class="text-center mt-10">
-        <a href="seller-signup.html" class="inline-block bg-cyan-500 hover:bg-cyan-600 text-white font-bold px-8 py-4 rounded-xl text-base transition-colors">
+        <a href="seller-signup.html" class="seller-signup-cta inline-block bg-cyan-500 hover:bg-cyan-600 text-white font-bold px-8 py-4 rounded-xl text-base transition-colors">
           Apply to Become a Seller <i class="fas fa-arrow-right ml-2"></i>
         </a>
       </div>
@@ -466,7 +466,7 @@
             <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Standard payout (3–5 days)</li>
             <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Community support</li>
           </ul>
-          <a href="seller-signup.html?tier=starter" class="block text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 rounded-lg text-sm transition-colors">Get Started Free</a>
+          <a href="seller-signup.html?tier=starter" data-tier="starter" class="seller-signup-cta block text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2.5 rounded-lg text-sm transition-colors">Get Started Free</a>
         </div>
         <!-- Pro -->
         <div class="bg-gray-900 rounded-2xl border border-cyan-500 p-7 shadow-xl relative">
@@ -476,7 +476,7 @@
           <h3 class="font-bold text-white text-lg mb-1">Pro Seller</h3>
           <p class="text-gray-400 text-sm mb-4">For growing stores &amp; established resellers</p>
           <p class="text-4xl font-extrabold text-white mb-1">$1<span class="text-xl font-normal text-gray-400">/mo</span></p>
-          <p class="text-sm text-gray-400 mb-6">+ 10% transaction fee per sale</p>
+          <p class="text-sm text-gray-400 mb-6">+ 5% transaction fee per sale</p>
           <ul class="space-y-2 text-sm text-gray-300 mb-6">
             <li class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> Unlimited active listings</li>
             <li class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> Advanced analytics &amp; insights</li>
@@ -484,7 +484,7 @@
             <li class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> Priority seller support</li>
             <li class="flex items-center gap-2"><i class="fas fa-check text-cyan-400"></i> Featured listing badges</li>
           </ul>
-          <a href="seller-signup.html?tier=pro" class="block text-center bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">Get Started with Pro</a>
+          <a href="seller-signup.html?tier=pro" data-tier="pro" class="seller-signup-cta block text-center bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-2.5 rounded-lg text-sm transition-colors">Get Started with Pro</a>
         </div>
         <!-- Brand -->
         <div class="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm opacity-60 relative">
@@ -642,7 +642,7 @@
             <i class="fas fa-chevron-down text-gray-400 transition-transform"></i>
           </button>
           <div class="faq-answer hidden px-5 pb-4 text-gray-500 text-sm border-t border-gray-100 pt-3">
-            Payouts are processed securely. Starter sellers receive payouts within 3–5 business days after a sale is marked as delivered. Pro Sellers receive payouts within 1–2 business days. You can view all payout history in your Seller Dashboard.
+            Payouts are processed securely. Starter and Pro sellers currently receive payouts after a 5-day hold once a sale is marked as shipped. You can view all payout history in your Seller Dashboard.
           </div>
         </div>
 
@@ -685,7 +685,7 @@
     <div class="max-w-3xl mx-auto text-center">
       <h2 class="text-3xl font-bold mb-4">Ready to Start Selling?</h2>
       <p class="text-cyan-100 text-base mb-8 max-w-xl mx-auto">Join over 1,200 trusted sellers on Zorexium and reach a growing community of hardware enthusiasts today.</p>
-      <a href="seller-signup.html" class="inline-block bg-white text-cyan-700 font-bold px-10 py-4 rounded-xl text-base hover:bg-cyan-50 transition-colors">
+      <a href="seller-signup.html" class="seller-signup-cta inline-block bg-white text-cyan-700 font-bold px-10 py-4 rounded-xl text-base hover:bg-cyan-50 transition-colors">
         <i class="fas fa-store mr-2"></i> Apply as a Seller
       </a>
       <p class="text-cyan-200 text-sm mt-4">Questions? <a href="contact-support.html" class="underline">Contact our Seller Support team</a></p>
@@ -828,6 +828,37 @@
             if(loginBtn) loginBtn.addEventListener('click', doHeaderLogin);
             var pwdInput = document.getElementById('headerLoginPassword');
             if(pwdInput) pwdInput.addEventListener('keypress', function(e){ if(e.key === 'Enter') doHeaderLogin(); });
+
+            // Seller signup CTAs:
+            // - guests: login/register first
+            // - existing sellers: route to Seller Dashboard Upgrade Tier option
+            var sellerSignupCtas = document.querySelectorAll('.seller-signup-cta');
+            function getSellerSignupTarget(tier, isSeller, isLoggedIn) {
+                if (!isLoggedIn) {
+                    return 'login-register.html';
+                }
+                if (isSeller) return 'seller-dashboard.html?openUpgradeTier=1';
+                return 'seller-signup.html' + (tier ? ('?tier=' + encodeURIComponent(tier)) : '');
+            }
+            if(sellerSignupCtas.length){
+                if(!loggedIn){
+                    sellerSignupCtas.forEach(function(cta){
+                        var tier = cta.getAttribute('data-tier') || '';
+                        cta.setAttribute('href', getSellerSignupTarget(tier, false, false));
+                    });
+                } else {
+                    ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller', { credentials: 'include' })
+                        .then(function(r){ return r.ok ? r.json() : { isSeller: false }; })
+                        .then(function(data){
+                            var isSeller = !!(data && data.isSeller);
+                            sellerSignupCtas.forEach(function(cta){
+                                var tier = cta.getAttribute('data-tier') || '';
+                                cta.setAttribute('href', getSellerSignupTarget(tier, isSeller, true));
+                            });
+                        })
+                        .catch(function(){});
+                }
+            }
         })();
     </script>
 
@@ -836,4 +867,3 @@
 <script src="voice-search.js"></script>
 </body>
 </html>
-

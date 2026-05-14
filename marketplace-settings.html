@@ -362,7 +362,6 @@
           <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 pl-2">Account</p>
           <ul class="space-y-0.5">
             <li class="sub-menu-item" data-panel="account-settings" onclick="showPanel('account-settings')"><i class="fas fa-user-cog text-cyan-500 w-4 text-center text-xs"></i>Account Settings</li>
-            <li class="sub-menu-item" data-panel="payment-options" onclick="showPanel('payment-options')"><i class="fas fa-credit-card text-cyan-500 w-4 text-center text-xs"></i>Payment Options</li>
             <li class="sub-menu-item" data-panel="manage-reviews" onclick="showPanel('manage-reviews')"><i class="fas fa-star text-cyan-500 w-4 text-center text-xs"></i>Manage Reviews</li>
             <li class="sub-menu-item" data-panel="security" onclick="showPanel('security')"><i class="fas fa-lock text-cyan-500 w-4 text-center text-xs"></i>Security &amp; Privacy</li>
           </ul>
@@ -567,26 +566,6 @@
               <button id="msSaveBtn" class="px-6 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Save Changes</button>
               <a href="account-details.html" class="px-6 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg font-semibold text-sm transition-colors">Full Profile Settings</a>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Payment Options -->
-      <div id="panel-payment-options" class="settings-panel">
-        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-          <h2 class="text-xl font-bold text-gray-900 mb-1">Payment Options</h2>
-          <p class="text-sm text-gray-500 mb-5">Manage saved payment methods used at checkout</p>
-          <div id="msPaymentList" class="space-y-3 max-w-lg mb-5">
-            <div class="text-center py-6 text-gray-400 text-sm">
-              <i class="fas fa-credit-card text-2xl mb-2 block"></i>
-              No payment methods saved yet.
-            </div>
-          </div>
-          <button class="px-5 py-2.5 border border-dashed border-gray-300 hover:border-cyan-400 text-gray-500 hover:text-cyan-600 rounded-lg text-sm transition-colors flex items-center gap-2 max-w-lg w-full justify-center">
-            <i class="fas fa-plus text-xs"></i>Add Payment Method
-          </button>
-          <div class="mt-4 bg-blue-50 border border-blue-100 rounded-lg p-3 max-w-lg">
-            <p class="text-xs text-blue-700"><i class="fas fa-lock mr-1"></i>Your payment information is encrypted and secured by our PCI-DSS Level 1 compliant payment processors. We never store your full card number.</p>
           </div>
         </div>
       </div>
@@ -925,9 +904,9 @@
           <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 max-w-xl">
             <p class="text-sm font-semibold text-gray-800 mb-3">Add a New Price Alert</p>
             <div class="flex gap-2 flex-wrap">
-              <input type="text" placeholder="Product name or listing URL" class="flex-1 min-w-48 bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
-              <input type="number" placeholder="Target $ price" class="w-36 bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
-              <button class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Add Alert</button>
+              <input id="msPriceAlertProductInput" type="text" placeholder="Product name or listing URL" class="flex-1 min-w-48 bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+              <input id="msPriceAlertTargetInput" type="number" placeholder="Target $ price" class="w-36 bg-white border border-gray-300 text-gray-900 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 text-sm">
+              <button id="msPriceAlertAddBtn" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors">Add Alert</button>
             </div>
           </div>
           <p class="text-xs text-gray-400 mt-3">Price alerts are triggered when any seller lists a matching item at or below your target price. You'll receive one notification per trigger event.</p>
@@ -985,6 +964,10 @@
     if (panelId === 'claim-history' && !window._msClaimsLoaded) {
       window._msClaimsLoaded = true;
       msLoadClaimHistory();
+    }
+    if (panelId === 'price-alerts' && !window._msPriceAlertsLoaded) {
+      window._msPriceAlertsLoaded = true;
+      msLoadPriceAlerts();
     }
   }
 
@@ -1110,6 +1093,121 @@
       });
   }
 
+  function msEscAttr(value) {
+    return String(value || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+  }
+
+  function msParsePriceAlertProduct(inputValue) {
+    var raw = String(inputValue || '').trim();
+    var parsed = { productId: '', productName: raw, productUrl: raw };
+    if (!raw) return parsed;
+    try {
+      var url = new URL(raw, window.location.origin);
+      var fromQuery = url.searchParams.get('id') || url.searchParams.get('productId') || url.searchParams.get('listingId') || '';
+      if (fromQuery) parsed.productId = fromQuery.trim();
+      parsed.productUrl = raw;
+      if (!/^https?:\/\//i.test(raw)) {
+        parsed.productName = raw;
+      }
+    } catch (_) {
+      parsed.productName = raw;
+      parsed.productUrl = raw;
+    }
+    var idMatch = raw.match(/([a-f\d]{24})/i);
+    if (!parsed.productId && idMatch && idMatch[1]) parsed.productId = idMatch[1];
+    return parsed;
+  }
+
+  function msRenderPriceAlerts(alerts) {
+    var tbody = document.getElementById('msPriceAlertsBody');
+    var emptyRow = document.getElementById('msPriceAlertsEmpty');
+    if (!tbody) return;
+    var list = Array.isArray(alerts) ? alerts : [];
+    if (!list.length) {
+      if (emptyRow) emptyRow.style.display = '';
+      return;
+    }
+    if (emptyRow) emptyRow.style.display = 'none';
+    var rows = list.map(function(alert) {
+      var title = msEsc(alert.productName || alert.productUrl || 'Tracked product');
+      var target = Number(alert.targetPrice);
+      var current = Number(alert.currentPrice);
+      var hasCurrent = Number.isFinite(current) && current > 0;
+      var alertId = msEscAttr(alert.id || '');
+      var via = '<span class="text-xs px-2 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-100">Email</span>';
+      return '<tr>'
+        + '<td class="px-4 py-3 text-gray-700 max-w-xs truncate">' + title + '</td>'
+        + '<td class="px-4 py-3 font-semibold text-emerald-600">$' + (Number.isFinite(target) ? target.toFixed(2) : '0.00') + '</td>'
+        + '<td class="px-4 py-3 text-gray-600">' + (hasCurrent ? ('$' + current.toFixed(2)) : '—') + '</td>'
+        + '<td class="px-4 py-3">' + via + '</td>'
+        + '<td class="px-4 py-3"><button type="button" onclick="msDeletePriceAlert(\'' + alertId + '\')" class="text-xs text-red-600 hover:text-red-700 font-medium">Remove</button></td>'
+        + '</tr>';
+    }).join('');
+    tbody.innerHTML = rows + (emptyRow ? emptyRow.outerHTML : '');
+    var nextEmpty = document.getElementById('msPriceAlertsEmpty');
+    if (nextEmpty) nextEmpty.style.display = 'none';
+  }
+
+  function msLoadPriceAlerts() {
+    if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
+    ZrxSession.fetch(MS_BACKEND + '/api/user/price-alerts', { credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : []; })
+      .catch(function() { return []; })
+      .then(function(alerts) { msRenderPriceAlerts(alerts); });
+  }
+
+  window.msDeletePriceAlert = function(id) {
+    if (!id) return;
+    if (!confirm('Remove this price alert?')) return;
+    ZrxSession.fetch(MS_BACKEND + '/api/user/price-alerts/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' })
+      .then(function(r) { return r.ok ? r.json() : r.json().then(function(d){ throw new Error(d.error || 'Unable to remove alert'); }); })
+      .then(function() {
+        msLoadPriceAlerts();
+        ZrxNotify.showNotification('Price alert removed.', 'success');
+      })
+      .catch(function(err) {
+        ZrxNotify.showNotification(err.message || 'Could not remove alert.', 'error');
+      });
+  };
+
+  function msCreatePriceAlert() {
+    var productInput = document.getElementById('msPriceAlertProductInput');
+    var targetInput = document.getElementById('msPriceAlertTargetInput');
+    var addBtn = document.getElementById('msPriceAlertAddBtn');
+    if (!productInput || !targetInput || !addBtn) return;
+    var parsed = msParsePriceAlertProduct(productInput.value);
+    var targetPrice = parseFloat(targetInput.value);
+    if (!parsed.productName || !Number.isFinite(targetPrice) || targetPrice <= 0) {
+      ZrxNotify.showNotification('Enter a valid product and target price.', 'error');
+      return;
+    }
+    addBtn.disabled = true;
+    addBtn.textContent = 'Adding…';
+    ZrxSession.fetch(MS_BACKEND + '/api/user/price-alerts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        productId: parsed.productId || undefined,
+        productName: parsed.productName,
+        productUrl: parsed.productUrl,
+        targetPrice: targetPrice
+      })
+    }).then(function(r) {
+      return r.ok ? r.json() : r.json().then(function(d) { throw new Error(d.error || 'Unable to add alert'); });
+    }).then(function() {
+      productInput.value = '';
+      targetInput.value = '';
+      msLoadPriceAlerts();
+      ZrxNotify.showNotification('Price alert added.', 'success');
+    }).catch(function(err) {
+      ZrxNotify.showNotification(err.message || 'Could not add alert.', 'error');
+    }).finally(function() {
+      addBtn.disabled = false;
+      addBtn.textContent = 'Add Alert';
+    });
+  }
+
   // Load eligible orders into the return order selector
   function msLoadReturnOrders() {
     if (typeof ZrxSession === 'undefined' || !ZrxSession.isLoggedIn()) return;
@@ -1218,6 +1316,29 @@
       .catch(function() {
         if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Network error.', 'error');
       });
+  }
+
+  var msPriceAlertAddBtn = document.getElementById('msPriceAlertAddBtn');
+  if (msPriceAlertAddBtn) {
+    msPriceAlertAddBtn.addEventListener('click', msCreatePriceAlert);
+  }
+  var msPriceAlertTargetInput = document.getElementById('msPriceAlertTargetInput');
+  if (msPriceAlertTargetInput) {
+    msPriceAlertTargetInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        msCreatePriceAlert();
+      }
+    });
+  }
+  var msPriceAlertProductInput = document.getElementById('msPriceAlertProductInput');
+  if (msPriceAlertProductInput) {
+    msPriceAlertProductInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        msCreatePriceAlert();
+      }
+    });
   }
 
   // Toggle switches
