@@ -1075,7 +1075,6 @@
             };
 
             async function resolveFirstPurchaseFreeShippingEligibility() {
-                firstPurchaseFreeShippingEligible = true;
                 if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) return;
                 try {
                     var res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });

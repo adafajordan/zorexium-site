@@ -855,6 +855,18 @@
     return '/index.html';
   }
 
+  function lrNormalizeRelativePath(path, fallback) {
+    var safeFallback = (typeof fallback === 'string' && fallback.charAt(0) === '/' && fallback.charAt(1) !== '/')
+      ? fallback
+      : '/index.html';
+    var value = String(path || '').trim();
+    if (!value) return safeFallback;
+    if (value.charAt(0) !== '/' || value.charAt(1) === '/') return safeFallback;
+    if (/[\r\n\\]/.test(value)) return safeFallback;
+    if (/^[\/A-Za-z0-9\-._~!$&'()*+,;=:@?%]*$/.test(value)) return value;
+    return safeFallback;
+  }
+
   function lrGoogleErrorMessage(code) {
     var messages = {
       cancelled: 'Google sign-in was cancelled.',
@@ -917,13 +929,13 @@
         var existing = merged.find(function(item) { return String(item.id) === String(guestItem.id); });
         var qty = Math.max(1, parseInt(guestItem.quantity, 10) || 1);
         if (existing) {
-          existing.quantity = Math.max(1, parseInt(existing.quantity, 10) || 1) + qty;
+          existing.quantity = Math.min(99, Math.max(1, parseInt(existing.quantity, 10) || 1) + qty);
         } else {
           merged.push({
             id: String(guestItem.id),
             name: String(guestItem.name || ''),
             price: parseFloat(guestItem.price) || 0,
-            quantity: qty,
+            quantity: Math.min(99, qty),
             image: String(guestItem.image || ''),
             sellerId: String(guestItem.sellerId || ''),
             sellerName: String(guestItem.sellerName || '')
@@ -942,14 +954,12 @@
 
   async function lrFinalizePostAuth(defaultPath) {
     await lrSyncGuestCartToAccount();
-    var destination = lrResolveReturnToPath();
-    if (!destination || destination === '/index.html') {
-      destination = (defaultPath && defaultPath.charAt(0) === '/' && defaultPath.charAt(1) !== '/')
-        ? defaultPath
-        : '/index.html';
+    var destination = lrNormalizeRelativePath(lrResolveReturnToPath(), '/index.html');
+    if (destination === '/index.html') {
+      destination = lrNormalizeRelativePath(defaultPath, '/index.html');
     }
     try { localStorage.removeItem('postAuthRedirectPath'); } catch (_) {}
-    window.location.href = destination;
+    window.location.assign(destination);
   }
 
   function lrEnsureGoogleTokenClient() {

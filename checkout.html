@@ -801,7 +801,6 @@
 
   function promptCheckoutLoginRequired() {
     try { localStorage.setItem('guestCart', JSON.stringify(cart || [])); } catch (_) {}
-    try { localStorage.setItem('postAuthRedirectPath', '/checkout.html'); } catch (_) {}
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 z-[10050] flex items-center justify-center bg-black/70 px-4';
     overlay.innerHTML = `
@@ -914,18 +913,6 @@
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
     await loadCart();
-    if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn()) && cart.length > 0) {
-      const btn = document.getElementById('stripeCheckoutBtn');
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Log In or Create Account to Checkout';
-      }
-      const note = document.getElementById('stripeNote');
-      if (note) {
-        note.classList.remove('hidden');
-        note.innerHTML = '<i class="fas fa-user-lock mr-1"></i>Please sign in before completing payment.';
-      }
-    }
     await loadFirstOrderFreeShippingEligibility();
     if (cart.length === 0) {
       document.getElementById('checkoutContent').classList.add('hidden');

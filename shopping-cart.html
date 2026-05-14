@@ -663,11 +663,9 @@
     overlay.querySelector('[data-auth-close]').addEventListener('click', closeModal);
     overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
     overlay.querySelector('[data-auth-login]').addEventListener('click', function() {
-      try { localStorage.setItem('postAuthRedirectPath', '/checkout.html'); } catch (_) {}
       window.location.href = 'login-register.html?next=/checkout.html';
     });
     overlay.querySelector('[data-auth-register]').addEventListener('click', function() {
-      try { localStorage.setItem('postAuthRedirectPath', '/checkout.html'); } catch (_) {}
       window.location.href = 'login-register.html?register=1&next=/checkout.html';
     });
     document.body.appendChild(overlay);
