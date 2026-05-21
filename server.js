@@ -4082,11 +4082,16 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     subtotal = parseFloat(subtotal.toFixed(2));
     let firstOrderFreeShippingApplied = false;
     if (checkoutUser && checkoutUser.userId) {
-      const existingCompletedOrders = await db.collection('orders').countDocuments({
-        status: 'completed',
-        $or: [{ userId: String(checkoutUser.userId) }, { buyerEmail: normalizeEmail(buyer && buyer.email) }]
-      }, { limit: 1 });
-      firstOrderFreeShippingApplied = existingCompletedOrders === 0;
+      const userId = String(checkoutUser.userId);
+      const email = normalizeEmail(buyer && buyer.email);
+      const userFilter = email
+        ? { $or: [{ userId }, { buyerEmail: email }] }
+        : { userId };
+      const [completedCount, pendingCount] = await Promise.all([
+        db.collection('orders').countDocuments({ status: 'completed', ...userFilter }, { limit: 1 }),
+        db.collection('pendingOrders').countDocuments(userFilter, { limit: 1 })
+      ]);
+      firstOrderFreeShippingApplied = completedCount === 0 && pendingCount === 0;
     }
     const shipping = firstOrderFreeShippingApplied
       ? 0
@@ -4980,6 +4985,24 @@ app.get('/api/orders', publicApiRateLimit, verifyToken, async function(req, res)
     const orders = await db.collection('orders').find(query).sort({ createdAt: -1 }).toArray();
     res.json(orders);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/orders/free-shipping-eligible – returns whether the current user qualifies for first-order free shipping
+// A user qualifies only if they have never had a completed order AND have no existing pending orders.
+// Must be defined before /api/orders/:orderId to avoid Express capturing the path as a param.
+app.get('/api/orders/free-shipping-eligible', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const userFilter = { $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] };
+    const [completedCount, pendingCount] = await Promise.all([
+      db.collection('orders').countDocuments({ status: 'completed', ...userFilter }, { limit: 1 }),
+      db.collection('pendingOrders').countDocuments(userFilter, { limit: 1 })
+    ]);
+    res.json({ eligible: completedCount === 0 && pendingCount === 0 });
+  } catch (error) {
+    console.error('Error checking free shipping eligibility:', error);
     res.status(500).json({ error: error.message });
   }
 });

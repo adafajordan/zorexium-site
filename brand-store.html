@@ -514,7 +514,7 @@
   let brandName = '';
   let brandSlug = '';
   let brandSellerTotalSales = null;
-  let firstPurchaseFreeShippingEligible = true;
+  let firstPurchaseFreeShippingEligible = false;
 
   // ── Init ────────────────────────────────────────────────────────────────────
   function updateBrandPageTitle(name) {
@@ -549,12 +549,15 @@
   }
 
   async function loadFirstPurchaseFreeShippingEligibility() {
-    if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) return;
+    if (!(typeof ZrxSession !== 'undefined' && ZrxSession.isLoggedIn())) {
+      firstPurchaseFreeShippingEligible = true;
+      return;
+    }
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/free-shipping-eligible', { credentials: 'include' });
       if (!res.ok) return;
-      const orders = await res.json();
-      firstPurchaseFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+      const data = await res.json();
+      firstPurchaseFreeShippingEligible = data.eligible === true;
     } catch (_) {}
   }
 

@@ -1084,10 +1084,10 @@
                     return;
                 }
                 try {
-                    var res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+                    var res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/free-shipping-eligible', { credentials: 'include' });
                     if (!res.ok) return;
-                    var orders = await res.json();
-                    firstPurchaseFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+                    var data = await res.json();
+                    firstPurchaseFreeShippingEligible = data.eligible === true;
                 } catch (_) {} finally {
                     if (homeProductsList.length > 0) {
                         window._renderHomeProducts(homeProductsList);
