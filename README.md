@@ -91,7 +91,7 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 - Buyer checkout uses Stripe Checkout with embedded UI (`ui_mode: embedded_page`) in `checkout.html`.
 - Seller payout onboarding uses Stripe Connect Express.
 - Seller payout release is delayed until shipment confirmation (`/api/orders/:orderId/ship`) plus hold time (Starter: 5 days, Pro: 2 days), then a Stripe transfer is created.
-- Stripe transfers use `source_transaction` when a Stripe charge reference is available, and deferred retry metadata is recorded when the platform balance is temporarily insufficient.
+- Stripe transfers always use the platform's available Stripe balance, and deferred retry metadata is recorded when that balance is temporarily insufficient.
 - Internal payout lifecycle fields now distinguish transfer dispatch from downstream bank settlement (`payoutLifecycleStatus` vs `payoutBankSettlementStatus`).
 - Automatic payout sweeps now re-check `pending_hold`, `ready_to_pay`, onboarding-blocked rows, and `paid` rows missing Stripe transfer evidence so eligible Stripe transfers are attempted continuously after hold windows expire.
 - Seller payout share is subtotal-only: Starter receives 90%, Pro receives 95% (shipping and tax stay with the platform).
@@ -114,14 +114,14 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 | 2. Seller ships | `POST /api/orders/:orderId/ship` sets `shippingStatus: 'shipped'` + `shippedAt`; immediately calls `sendStripeSellerPayout` to create a `pending_hold` payout row | `server.js:5101` |
 | 3. Hold enforced | `buildPayoutSnapshot` computes `payoutReleaseAt = shippedAt + holdDays`; Starter = **5 days**, Pro = **2 days** | `server.js:2595-2596`, `getSellerHoldDaysByTier` |
 | 4. Automatic sweep | `runAutomaticStripePayoutSweep` runs every **15 minutes**; picks up `pending_hold`, `ready_to_pay`, `blocked_onboarding` rows | `server.js:8993`, `setInterval` at startup |
-| 5. Stripe transfer | When hold has expired and seller account is verified: `stripe.transfers.create({ destination: 'acct_...', source_transaction: 'ch_...' })` | `server.js:3510-3521` |
+| 5. Stripe transfer | When hold has expired and seller account is verified: `stripe.transfers.create({ destination: 'acct_...' })` | `server.js:3508-3520` |
 | 6. Result persisted | `stripeTransferId`, `paidAt`, `payoutLifecycleStatus: 'transfer_sent'`, and `payoutBankSettlementStatus` written to `payouts` collection | `server.js:3523-3538` |
 
 ### External prerequisites (cannot be fixed in code)
 
 1. **`STRIPE_SECRET_KEY` is set** in the Render environment — without this, no transfers can be created.
 2. **Seller has completed Stripe Connect onboarding** — their `stripeAccountId` (`acct_...`) must be saved on the seller profile and `payoutVerified: true`. If not, the payout row stays in `blocked_onboarding` and retries automatically each sweep.
-3. **Platform Stripe balance is sufficient** — if `source_transaction` is not available, a transfer requires available platform balance. Insufficient balance defers the payout and retries every sweep.
+3. **Platform Stripe balance is sufficient** — every transfer uses available platform balance. Insufficient balance defers the payout and retries every sweep.
 
 ### Adafa retroactive payout (product gjnb, ~$1.80)
 

@@ -3461,33 +3461,29 @@ async function sendStripeSellerPayout(order, options) {
   const payoutCurrency = String(snapshot.payoutCurrency || 'USD').toLowerCase();
   const payoutCurrencyUpper = payoutCurrency.toUpperCase();
   const payoutAmountCents = toStripeAmountCents(snapshot.payoutAmount);
-  const sourceTransaction = await ensureStripeChargeIdOnOrder(order);
-  const shouldRequireAvailableBalance = !isStripeChargeId(sourceTransaction);
   if (snapshot.holdOverrideApplied && snapshot.holdOverrideReason === 'adafa_immediate_release') {
     console.log('Applying immediate payout hold override for Adafa payout on order', orderId, 'seller', pb.sellerId, 'amount', snapshot.payoutAmount.toFixed(2));
   }
 
-  if (shouldRequireAvailableBalance) {
-    const availableBalanceCents = await getAvailableStripeBalanceAmount(payoutCurrency);
-    if (availableBalanceCents < payoutAmountCents) {
-      const reason = `Stripe available balance is insufficient for immediate transfer (${(availableBalanceCents / 100).toFixed(2)} ${payoutCurrencyUpper} available).`;
-      await db.collection('payouts').updateOne(
-        payoutDocQuery,
-        {
-          $set: {
-            status: 'ready_to_pay',
-            error: reason,
-            onboardingRequired: false,
-            retryCategory: 'insufficient_balance',
-            nextRetryAt: new Date(Date.now() + STRIPE_PAYOUT_BALANCE_RETRY_DELAY_MS),
-            payoutLifecycleStatus: 'queued_for_retry',
-            payoutBankSettlementStatus: 'not_started',
-            updatedAt: new Date()
-          }
+  const availableBalanceCents = await getAvailableStripeBalanceAmount(payoutCurrency);
+  if (availableBalanceCents < payoutAmountCents) {
+    const reason = `Stripe available balance is insufficient for immediate transfer (${(availableBalanceCents / 100).toFixed(2)} ${payoutCurrencyUpper} available).`;
+    await db.collection('payouts').updateOne(
+      payoutDocQuery,
+      {
+        $set: {
+          status: 'ready_to_pay',
+          error: reason,
+          onboardingRequired: false,
+          retryCategory: 'insufficient_balance',
+          nextRetryAt: new Date(Date.now() + STRIPE_PAYOUT_BALANCE_RETRY_DELAY_MS),
+          payoutLifecycleStatus: 'queued_for_retry',
+          payoutBankSettlementStatus: 'not_started',
+          updatedAt: new Date()
         }
-      );
-      return { ok: true, deferred: true, reason: reason, sellerId: pb.sellerId };
-    }
+      }
+    );
+    return { ok: true, deferred: true, reason: reason, sellerId: pb.sellerId };
   }
 
   await db.collection('payouts').updateOne(
@@ -3510,14 +3506,13 @@ async function sendStripeSellerPayout(order, options) {
       amount: toStripeAmountCents(snapshot.payoutAmount),
       currency: payoutCurrency,
       destination: String(snapshot.receiverEmail),
-      metadata: {
-        orderId: orderId,
-        sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
-        triggerSource: String(payoutMeta.triggerSource || ''),
-        payoutFundingSource: isStripeChargeId(sourceTransaction) ? 'source_transaction' : 'platform_available_balance'
-      }
-    };
-    if (isStripeChargeId(sourceTransaction)) transferPayload.source_transaction = sourceTransaction;
+        metadata: {
+          orderId: orderId,
+          sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
+          triggerSource: String(payoutMeta.triggerSource || ''),
+          payoutFundingSource: 'platform_available_balance'
+        }
+      };
     const transfer = await stripe.transfers.create(transferPayload);
     const payoutUpdates = {
       payoutAccountId: snapshot.receiverEmail,
@@ -3529,7 +3524,7 @@ async function sendStripeSellerPayout(order, options) {
       status: 'paid',
       paidAt: new Date(),
       transferSentAt: new Date(),
-      stripeSourceTransactionId: isStripeChargeId(sourceTransaction) ? sourceTransaction : null,
+      stripeSourceTransactionId: null,
       retryCategory: null,
       nextRetryAt: null,
       payoutLifecycleStatus: 'transfer_sent',

@@ -42,7 +42,6 @@ stripe.transfers.create({
   amount: <cents>,
   currency: 'usd',
   destination: 'acct_...',           // seller's connected Stripe account
-  source_transaction: 'ch_...',      // original customer charge (when available)
   metadata: { orderId, sellerId, triggerSource, payoutFundingSource }
 })  (server.js:3510-3521)
   ↓
@@ -73,8 +72,8 @@ Shipping fees and sales tax are retained by the platform.
 
 - **Model:** Separate Charges and Transfers (platform account charges buyer; platform transfers to seller's connected account).
 - **Destination:** Seller's `stripeAccountId` (`acct_...`) loaded from the `sellers` MongoDB collection at transfer time. Never hard-coded.
-- **source_transaction:** Included in the transfer payload when the original Stripe charge ID (`ch_...` or `pi_...`) is available on the order. This ties the transfer to a specific incoming charge, allowing it to succeed even if platform available balance is zero.
-- **Insufficient balance handling:** If `source_transaction` is not available and platform balance is insufficient, the payout row is set to `retryCategory: 'insufficient_balance'` with `nextRetryAt`. The automatic sweep retries after 1 hour.
+- **Funding source:** Transfers always draw from the platform account's available Stripe balance instead of tying the payout to a specific checkout charge.
+- **Insufficient balance handling:** If platform balance is insufficient, the payout row is set to `retryCategory: 'insufficient_balance'` with `nextRetryAt`. The automatic sweep retries after 1 hour.
 - **Secret key:** All Stripe calls use `STRIPE_SECRET_KEY` from the environment. No Stripe secret is ever in code.
 
 ---
@@ -122,7 +121,7 @@ A seller can only receive a Stripe transfer if ALL of the following are true:
 | `STRIPE_SECRET_KEY` is set | Check Render Environment tab | Render Dashboard → Environment |
 | Seller completed Stripe Connect onboarding | Seller's `payoutVerified: true` + `stripeAccountId: 'acct_...'` in DB; or check Stripe Dashboard for the connected account | Seller goes to `seller-dashboard.html` → "Set Up Stripe Payouts" |
 | Connected account has transfers/payouts enabled | `chargesEnabled: true`, `payoutsEnabled: true` on the account | Stripe Dashboard → Connect → Accounts |
-| Platform Stripe balance ≥ payout amount (when `source_transaction` not available) | Stripe Dashboard → Balance | Top up platform balance; or use `source_transaction` |
+| Platform Stripe balance ≥ payout amount | Stripe Dashboard → Balance | Top up platform balance |
 | Order exists with `status: 'completed'` and `shippingStatus: 'shipped'` | MongoDB `orders` collection | Seller marks order shipped |
 
 ---
@@ -168,7 +167,7 @@ If a seller (including adafa) cannot receive their payout, the `payouts` collect
 |---|---|
 | `status: 'blocked_onboarding'` | Seller's Stripe Connect account is missing or not verified |
 | `error: 'Seller payout destination must be a Stripe Connect account ID'` | `stripeAccountId` is not an `acct_...` ID |
-| `status: 'ready_to_pay', retryCategory: 'insufficient_balance'` | Platform balance too low and no `source_transaction` available |
+| `status: 'ready_to_pay', retryCategory: 'insufficient_balance'` | Platform balance is too low for the pending transfer |
 | `status: 'failed', error: <Stripe error message>` | Stripe rejected the transfer — check the Stripe error for the exact reason |
 
 All of these states are persisted and visible in `admin-payouts.html` and via `GET /api/payouts?all=true`.
