@@ -90,9 +90,10 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 
 - Buyer checkout uses Stripe Checkout with embedded UI (`ui_mode: embedded_page`) in `checkout.html`.
 - Seller payout onboarding uses Stripe Connect Express.
-- Seller payout release is delayed until shipment confirmation (`/api/orders/:orderId/ship`) plus hold time (Starter: 5 days, Pro: 5 days), then a Stripe transfer is created.
+- Seller payout release is delayed until shipment confirmation (`/api/orders/:orderId/ship`) plus hold time (Starter: 5 days, Pro: 2 days), then a Stripe transfer is created.
 - Stripe transfers use `source_transaction` when a Stripe charge reference is available, and deferred retry metadata is recorded when the platform balance is temporarily insufficient.
 - Internal payout lifecycle fields now distinguish transfer dispatch from downstream bank settlement (`payoutLifecycleStatus` vs `payoutBankSettlementStatus`).
+- Automatic payout sweeps now re-check `pending_hold`, `ready_to_pay`, and onboarding-blocked payout rows so eligible Stripe transfers are attempted continuously after hold windows expire.
 - Seller payout share is subtotal-only: Starter receives 90%, Pro receives 95% (shipping and tax stay with the platform).
 - Completed purchase automation now runs consistently for both PayPal capture and Stripe webhook flows: order sync, inventory sync/inactivation, payout readiness, and buyer/seller/admin purchase emails.
 - A startup migration repairs the historical `steve` → `adafa` May 14, 2026 flow (including paid Stripe sessions left in `pendingOrders`), and admins can rerun legacy repair with `POST /api/admin/orders/repair-legacy`.
