@@ -890,6 +890,24 @@
       const payload = await res.json().catch(function() { return {}; });
       if (!res.ok) throw new Error(payload.error || 'Failed to start Stripe checkout');
       if (!payload.clientSecret) throw new Error('Stripe client secret was not returned');
+      // Update the order summary with the backend-confirmed totals (including shipping)
+      if (payload.totals) {
+        const t = payload.totals;
+        const subEl = document.getElementById('summarySubtotal');
+        const shipEl = document.getElementById('summaryShipping');
+        const taxEl = document.getElementById('summaryTax');
+        const totEl = document.getElementById('summaryTotal');
+        if (subEl) subEl.textContent = '$' + Number(t.subtotal).toFixed(2);
+        if (taxEl) taxEl.textContent = '$' + Number(t.tax).toFixed(2);
+        if (totEl) totEl.textContent = '$' + Number(t.total).toFixed(2);
+        if (shipEl) {
+          if (payload.firstOrderFreeShippingApplied) {
+            shipEl.innerHTML = '<span class="inline-flex items-center gap-1 text-green-600 font-semibold"><i class="fas fa-shipping-fast"></i> FREE</span>';
+          } else {
+            shipEl.textContent = '$' + Number(t.shipping).toFixed(2);
+          }
+        }
+      }
       const mountWrapper = document.getElementById('embeddedCheckoutMount');
       const mountEl = document.getElementById('stripeEmbeddedCheckout');
       if (!mountWrapper || !mountEl) throw new Error('Embedded checkout container is missing');
