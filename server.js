@@ -1908,8 +1908,8 @@ const DEFAULT_SHIPPING_PER_ITEM_USD = 1.00;
 const DEFAULT_SALES_TAX_RATE = 0.10;
 const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
-const STANDARD_SELLER_HOLD_DAYS = 5;
-const PRO_SELLER_HOLD_DAYS = 2;
+const STANDARD_SELLER_HOLD_DAYS = 0;
+const PRO_SELLER_HOLD_DAYS = 0;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
 const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
 const ADAFA_RETROACTIVE_TARGET_PRODUCT_ID = 'gjnb';
@@ -3461,33 +3461,29 @@ async function sendStripeSellerPayout(order, options) {
   const payoutCurrency = String(snapshot.payoutCurrency || 'USD').toLowerCase();
   const payoutCurrencyUpper = payoutCurrency.toUpperCase();
   const payoutAmountCents = toStripeAmountCents(snapshot.payoutAmount);
-  const sourceTransaction = await ensureStripeChargeIdOnOrder(order);
-  const shouldRequireAvailableBalance = !isStripeChargeId(sourceTransaction);
   if (snapshot.holdOverrideApplied && snapshot.holdOverrideReason === 'adafa_immediate_release') {
     console.log('Applying immediate payout hold override for Adafa payout on order', orderId, 'seller', pb.sellerId, 'amount', snapshot.payoutAmount.toFixed(2));
   }
 
-  if (shouldRequireAvailableBalance) {
-    const availableBalanceCents = await getAvailableStripeBalanceAmount(payoutCurrency);
-    if (availableBalanceCents < payoutAmountCents) {
-      const reason = `Stripe available balance is insufficient for immediate transfer (${(availableBalanceCents / 100).toFixed(2)} ${payoutCurrencyUpper} available).`;
-      await db.collection('payouts').updateOne(
-        payoutDocQuery,
-        {
-          $set: {
-            status: 'ready_to_pay',
-            error: reason,
-            onboardingRequired: false,
-            retryCategory: 'insufficient_balance',
-            nextRetryAt: new Date(Date.now() + STRIPE_PAYOUT_BALANCE_RETRY_DELAY_MS),
-            payoutLifecycleStatus: 'queued_for_retry',
-            payoutBankSettlementStatus: 'not_started',
-            updatedAt: new Date()
-          }
+  const availableBalanceCents = await getAvailableStripeBalanceAmount(payoutCurrency);
+  if (availableBalanceCents < payoutAmountCents) {
+    const reason = `Stripe available balance is insufficient for immediate transfer (${(availableBalanceCents / 100).toFixed(2)} ${payoutCurrencyUpper} available).`;
+    await db.collection('payouts').updateOne(
+      payoutDocQuery,
+      {
+        $set: {
+          status: 'ready_to_pay',
+          error: reason,
+          onboardingRequired: false,
+          retryCategory: 'insufficient_balance',
+          nextRetryAt: new Date(Date.now() + STRIPE_PAYOUT_BALANCE_RETRY_DELAY_MS),
+          payoutLifecycleStatus: 'queued_for_retry',
+          payoutBankSettlementStatus: 'not_started',
+          updatedAt: new Date()
         }
-      );
-      return { ok: true, deferred: true, reason: reason, sellerId: pb.sellerId };
-    }
+      }
+    );
+    return { ok: true, deferred: true, reason: reason, sellerId: pb.sellerId };
   }
 
   await db.collection('payouts').updateOne(
@@ -3514,10 +3510,9 @@ async function sendStripeSellerPayout(order, options) {
         orderId: orderId,
         sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
         triggerSource: String(payoutMeta.triggerSource || ''),
-        payoutFundingSource: isStripeChargeId(sourceTransaction) ? 'source_transaction' : 'platform_available_balance'
+        payoutFundingSource: 'platform_available_balance'
       }
     };
-    if (isStripeChargeId(sourceTransaction)) transferPayload.source_transaction = sourceTransaction;
     const transfer = await stripe.transfers.create(transferPayload);
     const payoutUpdates = {
       payoutAccountId: snapshot.receiverEmail,
@@ -3529,7 +3524,7 @@ async function sendStripeSellerPayout(order, options) {
       status: 'paid',
       paidAt: new Date(),
       transferSentAt: new Date(),
-      stripeSourceTransactionId: isStripeChargeId(sourceTransaction) ? sourceTransaction : null,
+      stripeSourceTransactionId: null,
       retryCategory: null,
       nextRetryAt: null,
       payoutLifecycleStatus: 'transfer_sent',
@@ -4938,9 +4933,7 @@ app.get('/api/admin/payout-system-diagnostics', publicApiRateLimit, verifyToken,
     if (overdueCount > 0) blockers.push(`${overdueCount} payout(s) are ready_to_pay or blocked_onboarding — check seller Stripe onboarding or platform balance`);
 
     const verdict = blockers.length === 0
-      ? 'YES — sellers can receive scheduled payments. Stripe is configured, the automatic sweep is running, and the ' +
-        `${STANDARD_SELLER_HOLD_DAYS}-day (Starter) / ${PRO_SELLER_HOLD_DAYS}-day (Pro) hold logic is in place. ` +
-        'Eligible payouts are sent as real Stripe platform→connected-account transfers.'
+      ? 'YES — sellers can receive shipment-triggered payments. Stripe is configured, the automatic sweep is running, and eligible payouts are sent immediately as real Stripe platform→connected-account transfers when shipment is confirmed.'
       : 'BLOCKED — ' + blockers.join('; ');
 
     res.json({
