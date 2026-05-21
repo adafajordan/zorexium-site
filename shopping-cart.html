@@ -600,9 +600,9 @@
 
   function updateSummary() {
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    // Standard shipping is $1.00 per item; matches backend DEFAULT_SHIPPING_PER_ITEM_USD
+    // Standard shipping is a flat $10.99 per order; matches backend DEFAULT_SHIPPING_FLAT_USD
     const shipping = cart.length > 0
-      ? (firstOrderFreeShippingActive ? 0 : cart.length * 1.00)
+      ? (firstOrderFreeShippingActive ? 0 : 10.99)
       : 0;
     const tax = subtotal * 0.10;
     const discount = subtotal * promoDiscount;

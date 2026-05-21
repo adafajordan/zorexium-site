@@ -491,7 +491,7 @@
           </div>
           <div class="flex justify-between text-gray-400 text-base">
             <span>Shipping</span>
-            <span id="summaryShipping">$1.00</span>
+            <span id="summaryShipping">$10.99</span>
           </div>
           <div class="flex justify-between text-gray-400 text-base">
             <span>Tax (10%)</span>
@@ -590,12 +590,12 @@
   }
 
   // ── Totals ────────────────────────────────────────────────────────────────
-  // Standard shipping rate is $1.00 per item; enforced on the backend as well
+  // Standard shipping rate is a flat $10.99 per order; enforced on the backend as well
   function getShippingCost() {
     if (firstOrderFreeShippingEligible) {
       return 0;
     }
-    return cart.length * 1.00;
+    return cart.length > 0 ? 10.99 : 0;
   }
 
   async function loadFirstOrderFreeShippingEligibility(emailOverride) {

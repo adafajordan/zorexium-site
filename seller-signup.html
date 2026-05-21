@@ -386,7 +386,7 @@
                 <ul class="space-y-1 text-xs text-gray-600 flex-1">
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Up to 25 active listings</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Basic analytics dashboard</li>
-                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Payout hold: 5 days after shipment confirmation</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Payout hold: 7 days after shipment confirmation</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-green-500 text-xs"></i> Community support</li>
                 </ul>
               </label>
@@ -395,13 +395,13 @@
                 <input type="radio" name="sellerTier" value="pro" class="sr-only" id="tierProRadio">
                 <div class="flex items-center justify-between mb-2">
                   <span class="font-bold text-gray-900 text-sm">Pro Seller</span>
-                  <span class="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">$1/mo</span>
+                  <span class="text-xs font-bold text-gray-700 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">$7.99/mo</span>
                 </div>
                 <p class="text-xs text-gray-500 mb-3">+ 5% transaction fee per sale</p>
                 <ul class="space-y-1 text-xs text-gray-600 flex-1">
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Unlimited active listings</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Advanced analytics &amp; insights</li>
-                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority payout hold: 2 days after shipment confirmation</li>
+                  <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority payout hold: 4 days after shipment confirmation</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Priority seller support</li>
                   <li class="flex items-center gap-1.5"><i class="fas fa-check text-cyan-500 text-xs"></i> Featured listing badges</li>
                 </ul>
@@ -431,7 +431,7 @@
             <h2 class="text-base font-bold text-gray-900 mb-1 flex items-center">
               <span class="step-badge">3</span>Pro Seller Subscription Payment
             </h2>
-            <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $1/month subscription is required for the Pro Seller tier. Complete payment securely with Stripe to continue your registration.</p>
+            <p class="text-gray-500 text-sm mb-4 ml-9">A recurring $7.99/month subscription is required for the Pro Seller tier. Complete payment securely with Stripe to continue your registration.</p>
             <div class="ml-9">
               <div id="pro-subscription-container" class="min-h-[45px]"></div>
               <div id="proSubError" class="hidden text-red-600 text-sm mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -651,7 +651,7 @@
   function renderProSubscriptionButtons() {
     var container = document.getElementById('pro-subscription-container');
     if (!container) return;
-    container.innerHTML = '<button type="button" onclick="startStripeProCheckout()" class="w-full sm:w-auto px-5 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';
+    container.innerHTML = '<button type="button" onclick="startStripeProCheckout()" class="w-full sm:w-auto px-5 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors"><i class="fas fa-credit-card mr-2"></i>Pay $7.99/month with Stripe</button>';
   }
 
   function retryProSubLoad() {
@@ -802,7 +802,7 @@
     // Pro tier requires a confirmed Stripe subscription
     if (selectedTier === 'pro') {
       if (!proSubscriptionId) {
-        errorAlert.textContent = 'Please complete the $1/month Stripe subscription payment before submitting as a Pro Seller.';
+        errorAlert.textContent = 'Please complete the $7.99/month Stripe subscription payment before submitting as a Pro Seller.';
         errorAlert.classList.remove('hidden');
         document.getElementById('proPaymentSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;

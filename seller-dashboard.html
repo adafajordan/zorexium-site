@@ -351,7 +351,7 @@
     <div id="proDowngradeNotice" class="hidden mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-3">
       <i class="fas fa-info-circle text-amber-500 mt-0.5 flex-shrink-0"></i>
       <div class="flex-1 text-sm text-amber-800">
-        <span class="font-semibold">Your account has been updated:</span> Your seller account has been downgraded from <strong>Pro Seller</strong> to <strong>Starter</strong> tier. Pro Seller subscriptions now require a verified $1/month Stripe subscription. You can upgrade to Pro again from your account settings or by re-registering.
+        <span class="font-semibold">Your account has been updated:</span> Your seller account has been downgraded from <strong>Pro Seller</strong> to <strong>Starter</strong> tier. Pro Seller subscriptions now require a verified $7.99/month Stripe subscription for new subscriptions. Existing Pro subscribers who were already active remain grandfathered at $1/month. You can upgrade to Pro again from your account settings or by re-registering.
       </div>
       <button onclick="dismissDowngradeNotice()" class="text-amber-600 hover:text-amber-800 flex-shrink-0 text-lg leading-none">&times;</button>
     </div>
@@ -594,7 +594,7 @@
             <div class="flex items-center justify-between mb-5">
               <div>
                 <h2 class="text-lg font-semibold text-gray-900">Shipment Verification</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to notify the buyer and instantly release payout to your connected Stripe account</p>
+                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to notify the buyer and start the payout hold timer (7 days Starter, 4 days Pro) before release to your connected Stripe account</p>
               </div>
             </div>
             <div id="shipmentsList">
@@ -655,7 +655,7 @@
                 <p class="text-2xl font-bold text-orange-500" id="pendingPayout">$0.00</p>
               </div>
             </div>
-                <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts are released as soon as you confirm shipment for shipped orders.</p>
+                <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts are released after shipment-confirmation holds (7 days Starter, 4 days Pro).</p>
             <div class="flex items-center justify-between">
               <p class="text-sm text-gray-600">View full earnings history and request payouts</p>
               <a href="seller-payouts.html" class="btn-primary text-sm">
@@ -702,11 +702,11 @@
                 <div class="flex items-start gap-3">
                   <i class="fas fa-rocket text-cyan-500 mt-0.5 flex-shrink-0"></i>
                   <div>
-                    <p class="text-sm font-semibold text-cyan-900 mb-1">Upgrade to Pro Seller – $1/month</p>
+                    <p class="text-sm font-semibold text-cyan-900 mb-1">Upgrade to Pro Seller – $7.99/month</p>
                     <ul class="text-xs text-cyan-800 space-y-0.5 mb-3">
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Unlimited active listings (vs 25 on Starter)</li>
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Advanced analytics &amp; insights</li>
-                      <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority payout handling (instant payout on shipment confirmation)</li>
+                      <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority payout handling (4-day hold after shipment confirmation)</li>
                       <li><i class="fas fa-check mr-1 text-cyan-600"></i> Priority seller support &amp; featured badges</li>
                     </ul>
                     <button id="startUpgradeBtn" onclick="startTierUpgrade()" class="btn-primary text-sm">
@@ -718,7 +718,7 @@
               <!-- Stripe subscription panel (hidden until Upgrade clicked) -->
               <div id="upgradeProPanel" class="hidden border-2 border-cyan-300 rounded-xl p-5 bg-white">
                 <p class="text-sm font-semibold text-gray-800 mb-1">Complete Stripe subscription to activate Pro</p>
-                <p class="text-xs text-gray-500 mb-3">A recurring $1/month subscription is required. Cancel anytime from your Stripe customer portal.</p>
+                <p class="text-xs text-gray-500 mb-3">A recurring subscription is required ($7.99/month for new subscriptions; eligible grandfathered sellers keep $1/month). Cancel anytime from your Stripe customer portal.</p>
                 <div id="dashStripeContainer" class="min-h-[45px]"></div>
                 <p id="dashStripeError" class="hidden text-red-600 text-sm mt-3 flex items-center gap-2">
                   <i class="fas fa-exclamation-circle"></i>
@@ -736,7 +736,7 @@
             <!-- Downgrade to Starter (shown when on Pro) -->
             <div id="downgradeToStarterSection" class="hidden">
               <div class="border border-gray-200 rounded-xl p-4">
-                <p id="downgradeDescriptionText" class="text-sm text-gray-700 mb-2">You are currently on the <strong>Pro Seller</strong> plan ($1/month). Downgrading to Starter will take effect on your next billing date, and Pro benefits remain active until then.</p>
+                <p id="downgradeDescriptionText" class="text-sm text-gray-700 mb-2">You are currently on the <strong>Pro Seller</strong> plan. Downgrading to Starter will take effect on your next billing date, and Pro benefits remain active until then.</p>
                 <p id="downgradeScheduledHint" class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3"></p>
                 <div id="downgradeConfirmBox" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
                   <p class="text-sm text-red-700 font-medium mb-2">Are you sure you want to downgrade to Starter?</p>
@@ -940,7 +940,12 @@
   function getSellerOrderNet(order) {
     var explicitNet = parseFloat(order && order.sellerNetTotal);
     if (Number.isFinite(explicitNet) && explicitNet >= 0) return explicitNet;
-    return parseFloat((getSellerOrderGross(order) * 0.9).toFixed(2));
+    var explicitPayoutRate = parseFloat(order && order.sellerPayoutRate);
+    var tier = String(order && order.sellerTier ? order.sellerTier : 'starter').toLowerCase();
+    var payoutRate = Number.isFinite(explicitPayoutRate) && explicitPayoutRate > 0 && explicitPayoutRate <= 1
+      ? explicitPayoutRate
+      : (tier === 'pro' ? 0.95 : 0.90);
+    return parseFloat((getSellerOrderGross(order) * payoutRate).toFixed(2));
   }
 
   function updateOrderBadges() {
@@ -1816,11 +1821,18 @@
   var _dashPendingPlanId = null;
   var _dashProSubscriptionId = null;
 
+  function getSellerProMonthlyPriceLabel() {
+    var raw = String(sellerData && sellerData.proSubscriptionMonthlyPriceUsd ? sellerData.proSubscriptionMonthlyPriceUsd : '7.99').trim();
+    var numeric = parseFloat(raw);
+    if (!Number.isFinite(numeric) || numeric <= 0) numeric = 7.99;
+    return '$' + numeric.toFixed(2) + '/mo';
+  }
+
   function loadTierSection() {
     var tier = sellerData.tier || 'starter';
     var tierConfig = {
       starter: { label: 'Starter',        badge: 'Free',     badgeCls: 'bg-gray-100 text-gray-600 border-gray-300' },
-      pro:     { label: 'Pro Seller',      badge: '$1/mo',    badgeCls: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
+      pro:     { label: 'Pro Seller',      badge: getSellerProMonthlyPriceLabel(),    badgeCls: 'bg-cyan-50 text-cyan-700 border-cyan-300' },
       brand:   { label: 'Official Brand',  badge: 'Custom',   badgeCls: 'bg-amber-50 text-amber-700 border-amber-300' }
     };
     var cfg = tierConfig[tier] || tierConfig.starter;
@@ -1861,7 +1873,7 @@
       if (descriptionTextEl) {
         descriptionTextEl.innerHTML = hasScheduledDowngrade
           ? ('Your plan is set to downgrade to <strong>Starter</strong> on <strong>' + escHtml(scheduleText) + '</strong>. Your Pro benefits remain active until that date.')
-          : 'You are currently on the <strong>Pro Seller</strong> plan ($1/month). Downgrading to Starter will take effect on your next billing date, and Pro benefits remain active until then.';
+          : ('You are currently on the <strong>Pro Seller</strong> plan (' + escHtml(getSellerProMonthlyPriceLabel()) + '). Downgrading to Starter will take effect on your next billing date, and Pro benefits remain active until then.');
       }
       if (scheduledHintEl) {
         if (hasScheduledDowngrade) {
@@ -1956,7 +1968,7 @@
   function renderDashStripeButtons() {
     var container = document.getElementById('dashStripeContainer');
     if (!container) return;
-    container.innerHTML = '<button type="button" onclick="startDashStripeCheckout()" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm"><i class="fas fa-credit-card mr-2"></i>Pay $1/month with Stripe</button>';
+    container.innerHTML = '<button type="button" onclick="startDashStripeCheckout()" class="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold text-sm"><i class="fas fa-credit-card mr-2"></i>Pay ' + escHtml(getSellerProMonthlyPriceLabel()) + ' with Stripe</button>';
   }
 
   async function startDashStripeCheckout() {
