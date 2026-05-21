@@ -1910,6 +1910,8 @@ const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
 const STANDARD_SELLER_HOLD_DAYS = 5;
 const PRO_SELLER_HOLD_DAYS = 2;
+const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
+const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
 const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
@@ -2035,6 +2037,31 @@ function normalizeCountryCode(value) {
 
 function normalizeSellerTier(value) {
   return String(value || '').trim().toLowerCase() === 'pro' ? 'pro' : 'starter';
+}
+
+function looksLikeAdafaIdentity(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === 'adafa') return true;
+  if (/^adafa(\+[^@]+)?@/.test(normalized)) return true;
+  return /\badafa\b/.test(normalized);
+}
+
+function isAdafaImmediatePayoutOverrideTarget(context) {
+  const details = context || {};
+  const payoutAmount = parseFloat(details.payoutAmount);
+  if (!Number.isFinite(payoutAmount)) return false;
+  if (payoutAmount < ADAFA_IMMEDIATE_PAYOUT_MIN_USD || payoutAmount > ADAFA_IMMEDIATE_PAYOUT_MAX_USD) return false;
+  const sellerInfo = details.sellerInfo || {};
+  const seller = details.seller || {};
+  return (
+    looksLikeAdafaIdentity(sellerInfo.sellerUsername) ||
+    looksLikeAdafaIdentity(sellerInfo.sellerName) ||
+    looksLikeAdafaIdentity(seller && seller.shopName) ||
+    looksLikeAdafaIdentity(seller && seller.sellerUsername) ||
+    looksLikeAdafaIdentity(seller && seller.sellerName) ||
+    looksLikeAdafaIdentity(seller && seller.email)
+  );
 }
 
 function getSellerPayoutRateByTier(value) {
@@ -2564,7 +2591,7 @@ async function buildPayoutSnapshot(order, options) {
     linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
     seller = await db.collection('sellers').findOne(
       { userId: sellerInfo.sellerId },
-      { projection: { payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, stripeChargesEnabled: 1, stripePayoutsEnabled: 1, stripeDetailsSubmitted: 1, stripeRequirementsDue: 1, stripeRequirementsDisabledReason: 1, userId: 1, shopName: 1 } }
+      { projection: { payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, stripeChargesEnabled: 1, stripePayoutsEnabled: 1, stripeDetailsSubmitted: 1, stripeRequirementsDue: 1, stripeRequirementsDisabledReason: 1, userId: 1, shopName: 1, sellerName: 1, sellerUsername: 1, email: 1 } }
     );
     payoutAccountStatus = await refreshSellerStripeConnectStatusForPayout(seller, sellerInfo.sellerId);
     seller = payoutAccountStatus.seller || seller;
@@ -2594,11 +2621,20 @@ async function buildPayoutSnapshot(order, options) {
 
   let status = 'pending_delivery';
   let blockedReason = '';
+  const adafaImmediateOverride = isAdafaImmediatePayoutOverrideTarget({
+    payoutAmount: payoutAmount,
+    sellerInfo: sellerInfo,
+    seller: seller
+  });
+  const holdOverrideApplied = payoutMeta.forceReleaseHold === true || adafaImmediateOverride;
+  const holdOverrideReason = payoutMeta.forceReleaseHold === true
+    ? 'explicit_force_release'
+    : (adafaImmediateOverride ? 'adafa_immediate_release' : '');
   if (String(order && order.shippingStatus ? order.shippingStatus : '').toLowerCase() === 'shipped') {
     if (!payoutReleaseAt) {
       status = 'pending_delivery';
       blockedReason = 'Shipment timestamp is missing. Please refresh this order and try again.';
-    } else if (payoutReleaseAt.getTime() > now.getTime() && payoutMeta.forceReleaseHold !== true) {
+    } else if (payoutReleaseAt.getTime() > now.getTime() && !holdOverrideApplied) {
       status = 'pending_hold';
       blockedReason = `Payout is held for ${holdDays} day${holdDays === 1 ? '' : 's'} after shipment confirmation.`;
     }
@@ -2647,6 +2683,8 @@ async function buildPayoutSnapshot(order, options) {
     payoutAccountId: receiverEmail || null,
     payoutAccountSource: receiverSource || null,
     linkedPayoutAccountId: linkedPayoutDestination.accountId || null,
+    holdReleaseOverrideApplied: holdOverrideApplied,
+    holdReleaseOverrideReason: holdOverrideReason || null,
     updatedAt: now
   };
 
@@ -2664,6 +2702,8 @@ async function buildPayoutSnapshot(order, options) {
     payoutCurrency,
     status,
     blockedReason,
+    holdOverrideApplied,
+    holdOverrideReason,
     payoutAccountStatus,
     payoutBase
   };
@@ -3309,6 +3349,8 @@ async function sendStripeSellerPayout(order, options) {
         linkedPayoutAccountId: pb.linkedPayoutAccountId,
         payoutEligibleAt: pb.payoutReleaseAt || null,
         payoutBlockedReason: snapshot.blockedReason || null,
+        payoutHoldReleaseOverrideApplied: !!snapshot.holdOverrideApplied,
+        payoutHoldReleaseOverrideReason: snapshot.holdOverrideReason || null,
         payoutStatusCheckedAt: new Date(),
         payoutAccountCapabilities: {
           accountId: String(snapshot && snapshot.payoutAccountStatus && snapshot.payoutAccountStatus.accountId ? snapshot.payoutAccountStatus.accountId : ''),
@@ -3401,6 +3443,9 @@ async function sendStripeSellerPayout(order, options) {
   const payoutAmountCents = toStripeAmountCents(snapshot.payoutAmount);
   const sourceTransaction = await ensureStripeChargeIdOnOrder(order);
   const shouldRequireAvailableBalance = !isStripeChargeId(sourceTransaction);
+  if (snapshot.holdOverrideApplied && snapshot.holdOverrideReason === 'adafa_immediate_release') {
+    console.log('Applying immediate payout hold override for Adafa payout on order', orderId, 'seller', pb.sellerId, 'amount', snapshot.payoutAmount.toFixed(2));
+  }
 
   if (shouldRequireAvailableBalance) {
     const availableBalanceCents = await getAvailableStripeBalanceAmount(payoutCurrency);
@@ -8984,7 +9029,7 @@ async function releasePendingHoldPayoutsOnce() {
 
 async function releaseAdafaPendingPayoutsOnce() {
   if (!mongoConnected) return;
-  const migrationKey = 'audit_and_release_adafa_pending_payouts_2026_05_21_v2';
+  const migrationKey = 'audit_and_release_adafa_pending_payouts_2026_05_21_v3';
   try {
     const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
     if (existing) return;
@@ -9043,23 +9088,68 @@ async function releaseAdafaPendingPayoutsOnce() {
             ]
           }
         ],
-        amount: { $gte: 1.79, $lte: 1.81 }
+        amount: { $gte: ADAFA_IMMEDIATE_PAYOUT_MIN_USD, $lte: ADAFA_IMMEDIATE_PAYOUT_MAX_USD }
       })
       .toArray();
+    const payoutCandidatesByKey = new Map();
+    pendingPayouts.forEach(function(payout) {
+      const orderId = String(payout && payout.orderId ? payout.orderId : '').trim();
+      const sellerId = String(payout && payout.sellerId ? payout.sellerId : '').trim();
+      if (!orderId || !sellerId) return;
+      const key = `${orderId}::${sellerId}`;
+      payoutCandidatesByKey.set(key, {
+        orderId: orderId,
+        sellerId: sellerId,
+        amount: parseFloat(payout && payout.amount) || 0,
+        source: 'payout_row'
+      });
+    });
+    const completedAdafaOrders = await db.collection('orders').find({
+      status: 'completed',
+      shippingStatus: 'shipped',
+      'items.sellerId': { $in: Array.from(adafaUserIds) }
+    }).toArray();
+    for (const order of completedAdafaOrders) {
+      const orderId = String(order && order.id ? order.id : '').trim();
+      if (!orderId) continue;
+      const sellerInfos = getOrderSellerInfos(order).filter(function(info) {
+        return info && adafaUserIds.has(String(info.sellerId || '').trim());
+      });
+      for (const sellerInfo of sellerInfos) {
+        const sellerId = String(sellerInfo && sellerInfo.sellerId ? sellerInfo.sellerId : '').trim();
+        if (!sellerId) continue;
+        const sellerFinancials = getSellerFinancials(order, sellerId);
+        const payoutAmount = parseFloat(sellerFinancials && sellerFinancials.payoutAmount);
+        if (!Number.isFinite(payoutAmount)) continue;
+        if (payoutAmount < ADAFA_IMMEDIATE_PAYOUT_MIN_USD || payoutAmount > ADAFA_IMMEDIATE_PAYOUT_MAX_USD) continue;
+        const existingPayout = await db.collection('payouts').findOne({ orderId: orderId, sellerId: sellerId });
+        if (existingPayout && hasRecordedPaidPayout(existingPayout)) continue;
+        const key = `${orderId}::${sellerId}`;
+        if (!payoutCandidatesByKey.has(key)) {
+          payoutCandidatesByKey.set(key, {
+            orderId: orderId,
+            sellerId: sellerId,
+            amount: payoutAmount,
+            source: 'completed_order_scan'
+          });
+        }
+      }
+    }
+    const payoutCandidates = Array.from(payoutCandidatesByKey.values());
     const summary = {
-      scanned: pendingPayouts.length,
+      scanned: payoutCandidates.length,
       audited: 0,
       released: 0,
       failed: 0,
       deferred: 0,
       matchedAmountUsd: parseFloat(
-        pendingPayouts.reduce(function(sum, payout) {
+        payoutCandidates.reduce(function(sum, payout) {
           return sum + (parseFloat(payout && payout.amount) || 0);
         }, 0).toFixed(2)
       )
     };
 
-    for (const payout of pendingPayouts) {
+    for (const payout of payoutCandidates) {
       const orderId = String(payout && payout.orderId ? payout.orderId : '').trim();
       const sellerId = String(payout && payout.sellerId ? payout.sellerId : '').trim();
       if (!orderId || !sellerId) continue;
@@ -9073,7 +9163,7 @@ async function releaseAdafaPendingPayoutsOnce() {
         });
         summary.audited++;
         await db.collection('payouts').updateOne(
-          { _id: payout._id },
+          { orderId: orderId, sellerId: sellerId },
           {
             $set: {
               payoutStatusCheckedAt: new Date(),
@@ -9081,7 +9171,9 @@ async function releaseAdafaPendingPayoutsOnce() {
               payoutEligibleAt: snapshot.payoutReleaseAt || null,
               payoutAuditLastRunAt: new Date(),
               payoutAuditLastSource: 'retroactive_adafa_payout_audit',
-              payoutAuditLastStatus: snapshot.status
+              payoutAuditLastStatus: snapshot.status,
+              payoutAuditMatchedAmount: parseFloat(payout && payout.amount) || 0,
+              payoutAuditMatchedSource: String(payout && payout.source ? payout.source : '')
             }
           }
         );
