@@ -594,7 +594,7 @@
             <div class="flex items-center justify-between mb-5">
               <div>
                 <h2 class="text-lg font-semibold text-gray-900">Shipment Verification</h2>
-                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to start the payout hold window (Starter: 5 days, Pro: 2 days)</p>
+                <p class="text-sm text-gray-500 mt-0.5">Mark sold orders as shipped to notify the buyer and instantly release payout to your connected Stripe account</p>
               </div>
             </div>
             <div id="shipmentsList">
@@ -655,7 +655,7 @@
                 <p class="text-2xl font-bold text-orange-500" id="pendingPayout">$0.00</p>
               </div>
             </div>
-                <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts will show once shipped orders clear the tier hold window (Starter: 5 days, Pro: 2 days).</p>
+                <p id="payoutReadinessHint" class="text-xs text-gray-500 mb-4">Available payouts are released as soon as you confirm shipment for shipped orders.</p>
             <div class="flex items-center justify-between">
               <p class="text-sm text-gray-600">View full earnings history and request payouts</p>
               <a href="seller-payouts.html" class="btn-primary text-sm">
@@ -1148,7 +1148,7 @@
       if (emailDisplay) emailDisplay.textContent = 'Stripe account: ' + escHtml(stripeAccountId) + ' · Payouts enabled';
       if (hint) {
         hint.textContent = hasReadyPayouts
-          ? 'Ready. You have shipped order earnings eligible for payout transfer.'
+          ? 'Ready. Your shipped order earnings can be transferred immediately.'
           : 'Connected. Stripe will handle payout routing and account updates.';
       }
       return;

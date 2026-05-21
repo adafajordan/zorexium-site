@@ -1908,8 +1908,8 @@ const DEFAULT_SHIPPING_PER_ITEM_USD = 1.00;
 const DEFAULT_SALES_TAX_RATE = 0.10;
 const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
-const STANDARD_SELLER_HOLD_DAYS = 5;
-const PRO_SELLER_HOLD_DAYS = 2;
+const STANDARD_SELLER_HOLD_DAYS = 0;
+const PRO_SELLER_HOLD_DAYS = 0;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
 const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
 const ADAFA_RETROACTIVE_TARGET_PRODUCT_ID = 'gjnb';
@@ -4938,9 +4938,7 @@ app.get('/api/admin/payout-system-diagnostics', publicApiRateLimit, verifyToken,
     if (overdueCount > 0) blockers.push(`${overdueCount} payout(s) are ready_to_pay or blocked_onboarding — check seller Stripe onboarding or platform balance`);
 
     const verdict = blockers.length === 0
-      ? 'YES — sellers can receive scheduled payments. Stripe is configured, the automatic sweep is running, and the ' +
-        `${STANDARD_SELLER_HOLD_DAYS}-day (Starter) / ${PRO_SELLER_HOLD_DAYS}-day (Pro) hold logic is in place. ` +
-        'Eligible payouts are sent as real Stripe platform→connected-account transfers.'
+      ? 'YES — sellers can receive shipment-triggered payments. Stripe is configured, the automatic sweep is running, and eligible payouts are sent immediately as real Stripe platform→connected-account transfers when shipment is confirmed.'
       : 'BLOCKED — ' + blockers.join('; ');
 
     res.json({
