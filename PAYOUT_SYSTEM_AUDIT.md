@@ -33,7 +33,7 @@ Automatic payout sweep runs every 15 minutes
   (runAutomaticStripePayoutSweep  server.js:8993)
   Picks up: pending_hold, ready_to_pay, blocked_onboarding rows
   ↓
-Hold window expires (Starter: 5 days, Pro: 2 days)
+Hold window expires (Starter: 0 days, Pro: 0 days — instant payout for all sellers)
   buildPayoutSnapshot returns status: 'ready_to_pay'
   ↓
 Seller Stripe account verified (payoutVerified: true, stripeAccountId: 'acct_...')
@@ -61,8 +61,8 @@ Transfer result persisted to 'payouts' collection:
 
 | Seller tier | Hold after shipment confirmation | Net payout rate |
 |-------------|----------------------------------|-----------------|
-| Starter     | **5 days**                       | 90% of item subtotal |
-| Pro         | **2 days**                       | 95% of item subtotal |
+| Starter     | **0 days (instant)**             | 90% of item subtotal |
+| Pro         | **0 days (instant)**             | 95% of item subtotal |
 
 Shipping fees and sales tax are retained by the platform.
 
