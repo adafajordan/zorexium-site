@@ -378,6 +378,20 @@
     </div>
   </div>
 
+  <!-- Payout System Diagnostics -->
+  <div class="bg-[#20232a] border border-gray-700 rounded-lg p-6 mb-8" id="payoutDiagnosticsCard">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+        <i class="fas fa-stethoscope text-cyan-400"></i> Payout System Diagnostics
+      </h2>
+      <button onclick="loadDiagnostics()" class="text-sm text-cyan-400 hover:text-cyan-300 border border-cyan-700 rounded px-3 py-1.5">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+    </div>
+    <div id="diagVerdict" class="mb-4 px-4 py-3 rounded-lg text-sm font-semibold hidden"></div>
+    <div id="diagBody" class="text-gray-400 text-sm">Loading diagnostics…</div>
+  </div>
+
   <!-- Payouts Table -->
   <div class="bg-[#20232a] border border-gray-700 rounded-lg overflow-hidden">
     <div class="px-8 py-6 border-b border-gray-700 flex justify-between items-center">
@@ -667,8 +681,124 @@
       .replace(/"/g, '&quot;');
   }
 
+  async function loadDiagnostics() {
+    const verdictEl = document.getElementById('diagVerdict');
+    const bodyEl = document.getElementById('diagBody');
+    bodyEl.textContent = 'Loading…';
+    verdictEl.classList.add('hidden');
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/admin/payout-system-diagnostics', { credentials: 'include' });
+      if (!res.ok) { bodyEl.textContent = 'Failed to load diagnostics.'; return; }
+      const d = await res.json();
+
+      // Verdict banner
+      verdictEl.classList.remove('hidden');
+      if (String(d.verdict || '').startsWith('YES')) {
+        verdictEl.className = 'mb-4 px-4 py-3 rounded-lg text-sm font-semibold bg-green-900 text-green-300 border border-green-700';
+      } else {
+        verdictEl.className = 'mb-4 px-4 py-3 rounded-lg text-sm font-semibold bg-red-900 text-red-300 border border-red-700';
+      }
+      verdictEl.innerHTML = '<i class="fas ' + (String(d.verdict || '').startsWith('YES') ? 'fa-check-circle' : 'fa-exclamation-triangle') + ' mr-2"></i>' + escHtml(d.verdict || '');
+
+      // Build details HTML
+      var rules = d.payoutTimingRules || {};
+      var adafaAudit = d.adafaRetroactiveAudit || {};
+      var adafaSummary = adafaAudit.summary || {};
+      var recentTransfers = Array.isArray(d.recentConfirmedTransfers) ? d.recentConfirmedTransfers : [];
+      var html = '';
+
+      // Config row
+      html += '<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">';
+      html += '<div class="bg-[#181b21] rounded p-3"><p class="text-xs text-gray-500 uppercase mb-1">Stripe Configured</p><p class="font-bold ' + (d.stripeConfigured ? 'text-green-400' : 'text-red-400') + '">' + (d.stripeConfigured ? 'YES' : 'NO') + '</p></div>';
+      html += '<div class="bg-[#181b21] rounded p-3"><p class="text-xs text-gray-500 uppercase mb-1">Sweep Active</p><p class="font-bold ' + (d.sweepActive ? 'text-green-400' : 'text-red-400') + '">' + (d.sweepActive ? 'YES (every ' + escHtml(String(rules.sweepIntervalMinutes || '')) + ' min)' : 'NO') + '</p></div>';
+      html += '<div class="bg-[#181b21] rounded p-3"><p class="text-xs text-gray-500 uppercase mb-1">Starter Hold</p><p class="font-bold text-yellow-400">' + escHtml(String(rules.starterHoldDays || '')) + ' days</p></div>';
+      html += '<div class="bg-[#181b21] rounded p-3"><p class="text-xs text-gray-500 uppercase mb-1">Pro Hold</p><p class="font-bold text-cyan-400">' + escHtml(String(rules.proHoldDays || '')) + ' days</p></div>';
+      html += '</div>';
+
+      // Payout counts
+      var statusData = d.payoutSummaryByStatus || {};
+      var statusKeys = ['pending_delivery', 'pending_hold', 'ready_to_pay', 'blocked_onboarding', 'processing', 'paid', 'failed'];
+      html += '<div class="mb-4"><p class="text-xs text-gray-500 uppercase mb-2">Payout Counts by Status</p><div class="flex flex-wrap gap-2">';
+      for (var sk of statusKeys) {
+        var entry = statusData[sk];
+        if (!entry) continue;
+        html += '<span class="px-2 py-1 bg-[#181b21] rounded text-xs">' + escHtml(sk) + ': <strong>' + entry.count + '</strong> ($' + entry.totalAmountUsd.toFixed(2) + ')</span>';
+      }
+      if (d.overduePayoutsCount > 0) {
+        html += '<span class="px-2 py-1 bg-yellow-900 border border-yellow-600 rounded text-xs text-yellow-300">⚠ ' + d.overduePayoutsCount + ' overdue (ready_to_pay or blocked)</span>';
+      }
+      html += '</div></div>';
+
+      // Stripe transfer evidence
+      html += '<div class="mb-4 text-xs"><span class="text-gray-500">Paid with real Stripe transfer ID: </span><span class="text-green-400 font-bold">' + (d.paidWithStripeTransferEvidence || 0) + '</span>';
+      html += '  |  <span class="text-gray-500">Paid without transfer evidence: </span><span class="' + (d.paidWithoutStripeTransferEvidence > 0 ? 'text-yellow-400 font-bold' : 'text-gray-400') + '">' + (d.paidWithoutStripeTransferEvidence || 0) + '</span></div>';
+
+      // Recent transfers
+      if (recentTransfers.length > 0) {
+        html += '<div class="mb-4"><p class="text-xs text-gray-500 uppercase mb-2">Recent Confirmed Stripe Transfers</p><div class="space-y-1">';
+        for (var t of recentTransfers) {
+          html += '<div class="text-xs bg-[#181b21] rounded px-3 py-1.5 flex items-center gap-3">' +
+            '<span class="text-gray-400">Order:</span><span class="text-white">' + escHtml(String(t.orderId || '')) + '</span>' +
+            '<span class="text-gray-400">Amount:</span><span class="text-green-400">$' + parseFloat(t.amount || 0).toFixed(2) + '</span>' +
+            '<span class="text-gray-400">Transfer:</span><span class="text-cyan-400">' + escHtml(String(t.stripeTransferId || '')) + '</span>' +
+            '</div>';
+        }
+        html += '</div></div>';
+      }
+
+      // Adafa audit
+      html += '<div><p class="text-xs text-gray-500 uppercase mb-2">Adafa / gjnb Retroactive Payout Audit</p>';
+      html += '<div class="bg-[#181b21] rounded p-3 text-xs space-y-1">';
+      html += '<p><span class="text-gray-500">Migration key: </span><span class="text-gray-300">' + escHtml(adafaAudit.migrationKey || '') + '</span></p>';
+      html += '<p><span class="text-gray-500">Target product: </span><span class="text-cyan-400">' + escHtml(adafaAudit.targetProductId || '') + '</span></p>';
+      if (adafaAudit.notYetRun) {
+        html += '<p class="text-yellow-400">⚠ Migration has not yet run on this deployment.</p>';
+      } else {
+        html += '<p><span class="text-gray-500">Finalized: </span><span class="' + (adafaAudit.finalized ? 'text-green-400' : 'text-yellow-400') + '">' + (adafaAudit.finalized ? 'YES' : 'NO (will retry on next startup)') + '</span></p>';
+        html += '<p><span class="text-gray-500">Released: </span><span class="text-green-400">' + (adafaSummary.released || 0) + '</span>  |  ';
+        html += '<span class="text-gray-500">Deferred: </span><span class="text-yellow-400">' + (adafaSummary.deferred || 0) + '</span>  |  ';
+        html += '<span class="text-gray-500">Failed: </span><span class="text-red-400">' + (adafaSummary.failed || 0) + '</span>  |  ';
+        html += '<span class="text-gray-500">Scanned: </span><span class="text-gray-300">' + (adafaSummary.scanned || 0) + '</span></p>';
+        if (adafaSummary.retroactivePayoutPossibleNow === false && adafaSummary.scanned === 0) {
+          html += '<p class="text-yellow-300">No matching adafa completed+shipped order found for product gjnb at ~$1.80.</p>';
+        } else if (adafaSummary.retroactivePayoutPossibleNow === true) {
+          html += '<p class="text-green-300">✓ Adafa payout was released successfully.</p>';
+        }
+        if (Array.isArray(adafaSummary.retroactiveBlockers) && adafaSummary.retroactiveBlockers.length > 0) {
+          html += '<p class="text-red-300">Blockers: ' + adafaSummary.retroactiveBlockers.map(function(b) { return escHtml(b); }).join('; ') + '</p>';
+        }
+        html += '<p><span class="text-gray-500">Last run: </span><span class="text-gray-400">' + escHtml(String(adafaAudit.lastRun ? new Date(adafaAudit.lastRun).toISOString() : '—')) + '</span></p>';
+      }
+      html += '<div class="mt-2 flex gap-2">';
+      html += '<a href="' + BACKEND_URL + '/api/admin/payouts/audit/adafa-gjnb" target="_blank" class="text-cyan-400 hover:underline">View raw audit JSON</a>';
+      html += '&nbsp;|&nbsp;<button onclick="rerunAdafaAudit()" class="text-yellow-400 hover:underline">Re-run audit now</button>';
+      html += '</div>';
+      html += '</div></div>';
+
+      bodyEl.innerHTML = html;
+    } catch (err) {
+      bodyEl.textContent = 'Error: ' + err.message;
+    }
+  }
+
+  async function rerunAdafaAudit() {
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/admin/payouts/audit/adafa-gjnb?rerun=true', { credentials: 'include' });
+      const data = await res.json();
+      if (res.ok) {
+        ZrxNotify.showNotification('Adafa audit re-run triggered.', 'success');
+        loadDiagnostics();
+      } else {
+        ZrxNotify.showNotification(data.error || 'Failed to re-run audit', 'error');
+      }
+    } catch (err) {
+      ZrxNotify.showNotification('Network error: ' + err.message, 'error');
+    }
+  }
+
   window.addEventListener('load', function() {
     loadPayouts();
+    loadDiagnostics();
     updateCartBadge();
   });
 </script>

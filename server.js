@@ -1913,7 +1913,7 @@ const PRO_SELLER_HOLD_DAYS = 2;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
 const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
 const ADAFA_RETROACTIVE_TARGET_PRODUCT_ID = 'gjnb';
-const ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY = 'audit_and_release_adafa_pending_payouts_2026_05_21_v4';
+const ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY = 'audit_and_release_adafa_pending_payouts_2026_05_21_v5';
 const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
@@ -4869,6 +4869,102 @@ app.get('/api/admin/payouts/audit/adafa-gjnb', publicApiRateLimit, verifyToken, 
     });
   } catch (error) {
     console.error('Error retrieving adafa/gjnb payout audit diagnostics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/admin/payout-system-diagnostics – comprehensive payout system health (admin only)
+// Returns a machine-readable verdict: whether sellers can currently receive scheduled payments.
+app.get('/api/admin/payout-system-diagnostics', publicApiRateLimit, verifyToken, requireAdmin, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    // 1) Configuration checks
+    const stripeConfigured = !!(stripe && STRIPE_SECRET_KEY);
+    const sweepIntervalMs = STRIPE_AUTOMATIC_PAYOUT_SWEEP_INTERVAL_MS;
+    const sweepActive = automaticPayoutSweepTimer !== null;
+    const payoutTimingRules = {
+      starterHoldDays: STANDARD_SELLER_HOLD_DAYS,
+      proHoldDays: PRO_SELLER_HOLD_DAYS,
+      starterPayoutRate: STARTER_SELLER_PAYOUT_RATE,
+      proPayoutRate: PRO_SELLER_PAYOUT_RATE,
+      sweepIntervalMinutes: Math.round(sweepIntervalMs / 60000)
+    };
+
+    // 2) Recent payout aggregate counts
+    const [payoutCounts, recentPaid] = await Promise.all([
+      db.collection('payouts').aggregate([
+        { $group: { _id: '$status', count: { $sum: 1 }, totalAmount: { $sum: '$amount' } } }
+      ]).toArray(),
+      db.collection('payouts').find(
+        { status: 'paid', stripeTransferId: { $exists: true, $ne: null, $ne: '' } },
+        { projection: { orderId: 1, amount: 1, stripeTransferId: 1, paidAt: 1, sellerId: 1 } }
+      ).sort({ paidAt: -1 }).limit(5).toArray()
+    ]);
+    const payoutSummaryByStatus = {};
+    for (const row of payoutCounts) {
+      payoutSummaryByStatus[String(row._id || 'unknown')] = {
+        count: row.count,
+        totalAmountUsd: parseFloat((row.totalAmount || 0).toFixed(2))
+      };
+    }
+
+    // 3) Count payouts with real Stripe transfer evidence vs. manually-paid
+    const [withTransfer, withoutTransfer] = await Promise.all([
+      db.collection('payouts').countDocuments({ status: 'paid', stripeTransferId: { $exists: true, $nin: [null, ''] } }),
+      db.collection('payouts').countDocuments({ status: 'paid', $or: [{ stripeTransferId: { $exists: false } }, { stripeTransferId: null }, { stripeTransferId: '' }] })
+    ]);
+
+    // 4) Adafa retroactive audit status
+    const adafaAuditDoc = await db.collection('runtimeMigrations').findOne({ key: ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY });
+    const adafaAudit = adafaAuditDoc
+      ? {
+          migrationKey: ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY,
+          targetProductId: ADAFA_RETROACTIVE_TARGET_PRODUCT_ID,
+          finalized: adafaAuditDoc.finalized === true,
+          summary: adafaAuditDoc.summary || {},
+          lastRun: adafaAuditDoc.updatedAt || adafaAuditDoc.createdAt || null
+        }
+      : { migrationKey: ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY, targetProductId: ADAFA_RETROACTIVE_TARGET_PRODUCT_ID, notYetRun: true };
+
+    // 5) Blocked/overdue payouts that are ready_to_pay or blocked_onboarding
+    const overdueCount = await db.collection('payouts').countDocuments({
+      status: { $in: ['ready_to_pay', 'blocked_onboarding'] }
+    });
+
+    // 6) Build system verdict
+    const blockers = [];
+    if (!stripeConfigured) blockers.push('STRIPE_SECRET_KEY is not configured — no transfers can be sent');
+    if (!sweepActive) blockers.push('Automatic payout sweep timer is not running — payouts will not be sent automatically');
+    if (overdueCount > 0) blockers.push(`${overdueCount} payout(s) are ready_to_pay or blocked_onboarding — check seller Stripe onboarding or platform balance`);
+
+    const verdict = blockers.length === 0
+      ? 'YES — sellers can receive scheduled payments. Stripe is configured, the automatic sweep is running, and the ' +
+        `${STANDARD_SELLER_HOLD_DAYS}-day (Starter) / ${PRO_SELLER_HOLD_DAYS}-day (Pro) hold logic is in place. ` +
+        'Eligible payouts are sent as real Stripe platform→connected-account transfers.'
+      : 'BLOCKED — ' + blockers.join('; ');
+
+    res.json({
+      verdict,
+      stripeConfigured,
+      sweepActive,
+      payoutTimingRules,
+      payoutSummaryByStatus,
+      paidWithStripeTransferEvidence: withTransfer,
+      paidWithoutStripeTransferEvidence: withoutTransfer,
+      overduePayoutsCount: overdueCount,
+      recentConfirmedTransfers: recentPaid.map(function(p) {
+        return {
+          orderId: p.orderId,
+          amount: p.amount,
+          stripeTransferId: p.stripeTransferId,
+          paidAt: p.paidAt
+        };
+      }),
+      adafaRetroactiveAudit: adafaAudit,
+      systemTimestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching payout system diagnostics:', error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -102,6 +102,48 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 
 ---
 
+## Payout System Audit — Can Sellers Receive Scheduled Payments?
+
+**Short answer: YES** — provided the three external prerequisites below are satisfied.
+
+### What the code does (verified end-to-end)
+
+| Step | What happens | Where |
+|------|-------------|-------|
+| 1. Customer pays | Stripe Checkout session completes; order written to `orders` collection with `status: 'completed'` | `server.js` Stripe webhook / `completeStripeCheckoutOrder` |
+| 2. Seller ships | `POST /api/orders/:orderId/ship` sets `shippingStatus: 'shipped'` + `shippedAt`; immediately calls `sendStripeSellerPayout` to create a `pending_hold` payout row | `server.js:5101` |
+| 3. Hold enforced | `buildPayoutSnapshot` computes `payoutReleaseAt = shippedAt + holdDays`; Starter = **5 days**, Pro = **2 days** | `server.js:2595-2596`, `getSellerHoldDaysByTier` |
+| 4. Automatic sweep | `runAutomaticStripePayoutSweep` runs every **15 minutes**; picks up `pending_hold`, `ready_to_pay`, `blocked_onboarding` rows | `server.js:8993`, `setInterval` at startup |
+| 5. Stripe transfer | When hold has expired and seller account is verified: `stripe.transfers.create({ destination: 'acct_...', source_transaction: 'ch_...' })` | `server.js:3510-3521` |
+| 6. Result persisted | `stripeTransferId`, `paidAt`, `payoutLifecycleStatus: 'transfer_sent'`, and `payoutBankSettlementStatus` written to `payouts` collection | `server.js:3523-3538` |
+
+### External prerequisites (cannot be fixed in code)
+
+1. **`STRIPE_SECRET_KEY` is set** in the Render environment — without this, no transfers can be created.
+2. **Seller has completed Stripe Connect onboarding** — their `stripeAccountId` (`acct_...`) must be saved on the seller profile and `payoutVerified: true`. If not, the payout row stays in `blocked_onboarding` and retries automatically each sweep.
+3. **Platform Stripe balance is sufficient** — if `source_transaction` is not available, a transfer requires available platform balance. Insufficient balance defers the payout and retries every sweep.
+
+### Adafa retroactive payout (product gjnb, ~$1.80)
+
+The `releaseAdafaPendingPayoutsOnce` migration runs on every server startup until it finalizes with no errors:
+- Scans the `users` and `sellers` collections for any adafa identity.
+- Finds completed + shipped orders containing product `gjnb` (matched by `item.id`, `item.productId`, `item.productSlug`, or `item.slug`).
+- Filters for payout amount between **$1.79 – $1.81 USD**.
+- Bypasses the normal hold window (`forceReleaseHold: true`).
+- Calls `sendStripeSellerPayout` to attempt a real Stripe transfer immediately.
+- Audit results are stored in `runtimeMigrations` under key `audit_and_release_adafa_pending_payouts_2026_05_21_v5`.
+- Admins can view results and force a re-run via `GET /api/admin/payouts/audit/adafa-gjnb?rerun=true`.
+
+If no matching order is found, the migration finalizes and the standard automatic sweep takes over. Any future adafa order that ships will go through the normal payout flow with the hold bypassed automatically (amount + identity match detected at sweep time).
+
+### Admin diagnostics
+
+- **`GET /api/admin/payout-system-diagnostics`** — returns a machine-readable verdict, per-status payout counts, recent Stripe transfer IDs, sweep/config state, and the adafa audit status. The `verdict` field starts with `YES` when the system is healthy or `BLOCKED` when external prerequisites are unmet.
+- **`admin-payouts.html`** — now includes a "Payout System Diagnostics" panel that renders the above in a human-readable form.
+- **`GET /api/admin/payouts/audit/adafa-gjnb`** — raw JSON of the adafa retroactive audit migration record.
+
+---
+
 ## Admin Access
 
 To grant a user admin privileges, set `isAdmin: true` on their MongoDB user document:
