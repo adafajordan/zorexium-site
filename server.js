@@ -1912,6 +1912,8 @@ const STANDARD_SELLER_HOLD_DAYS = 5;
 const PRO_SELLER_HOLD_DAYS = 2;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
 const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
+const ADAFA_RETROACTIVE_TARGET_PRODUCT_ID = 'gjnb';
+const ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY = 'audit_and_release_adafa_pending_payouts_2026_05_21_v4';
 const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
@@ -2021,6 +2023,28 @@ function hasRecordedPaidPayout(payoutDoc) {
   if (String(payoutDoc.status || '').trim().toLowerCase() !== 'paid') return false;
   if (payoutDoc.manuallyPaid === true) return true;
   return hasVerifiedStripeTransferEvidence(payoutDoc) || hasVerifiedPayPalPayoutEvidence(payoutDoc);
+}
+
+function isPayoutMarkedPaidWithoutTransferEvidence(payoutDoc) {
+  return !!(
+    payoutDoc
+    && String(payoutDoc.status || '').trim().toLowerCase() === 'paid'
+    && !hasRecordedPaidPayout(payoutDoc)
+  );
+}
+
+function doesOrderItemMatchAdafaRetroProduct(item) {
+  const targetProductId = String(ADAFA_RETROACTIVE_TARGET_PRODUCT_ID || '').trim().toLowerCase();
+  if (!targetProductId) return false;
+  const candidates = [
+    item && item.id,
+    item && item.productId,
+    item && item.productSlug,
+    item && item.slug
+  ];
+  return candidates.some(function(candidate) {
+    return String(candidate || '').trim().toLowerCase() === targetProductId;
+  });
 }
 
 function normalizePayoutAccountId(value) {
@@ -3296,11 +3320,7 @@ async function sendStripeSellerPayout(order, options) {
   const payoutDocQuery = { orderId: orderId, sellerId: pb.sellerId };
   const existingPayoutDoc = await db.collection('payouts').findOne(payoutDocQuery);
   const existingPayoutIsSettled = hasRecordedPaidPayout(existingPayoutDoc);
-  const markedPaidWithoutTransferEvidence = !!(
-    existingPayoutDoc
-    && String(existingPayoutDoc.status || '').trim().toLowerCase() === 'paid'
-    && !existingPayoutIsSettled
-  );
+  const markedPaidWithoutTransferEvidence = isPayoutMarkedPaidWithoutTransferEvidence(existingPayoutDoc);
   if (markedPaidWithoutTransferEvidence) {
     console.warn('Payout row was marked paid without Stripe/PayPal transfer evidence; retrying real payout transfer for order', orderId, 'seller', pb.sellerId);
   }
@@ -4817,6 +4837,38 @@ app.post('/api/admin/orders/repair-legacy', publicApiRateLimit, verifyToken, req
     res.json({ success: true, ...repairSummary });
   } catch (error) {
     console.error('Error repairing legacy orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/admin/payouts/audit/adafa-gjnb – view or rerun retroactive payout audit diagnostics
+app.get('/api/admin/payouts/audit/adafa-gjnb', publicApiRateLimit, verifyToken, requireAdmin, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const rerun = String(req.query && req.query.rerun ? req.query.rerun : '').toLowerCase() === 'true';
+    if (rerun) {
+      await db.collection('runtimeMigrations').deleteOne({ key: ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY });
+      await releaseAdafaPendingPayoutsOnce();
+    }
+    const auditDoc = await db.collection('runtimeMigrations').findOne({ key: ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY });
+    const safeAuditDoc = auditDoc
+      ? {
+          key: String(auditDoc.key || ''),
+          createdAt: auditDoc.createdAt || null,
+          updatedAt: auditDoc.updatedAt || null,
+          finalized: auditDoc.finalized === true,
+          summary: auditDoc.summary || {},
+          auditRows: Array.isArray(auditDoc.auditRows) ? auditDoc.auditRows : []
+        }
+      : null;
+    res.json({
+      success: true,
+      migrationKey: ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY,
+      targetProductId: ADAFA_RETROACTIVE_TARGET_PRODUCT_ID,
+      audit: safeAuditDoc
+    });
+  } catch (error) {
+    console.error('Error retrieving adafa/gjnb payout audit diagnostics:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -7237,7 +7289,7 @@ app.post('/api/payouts/:id/send', publicApiRateLimit, verifyToken, async functio
     if (!req.isAdmin && String(payout.sellerId || '') !== String(req.userId || '')) {
       return res.status(403).json({ error: 'Forbidden: you do not own this payout' });
     }
-    if (String(payout.status || '').toLowerCase() === 'paid') {
+    if (String(payout.status || '').toLowerCase() === 'paid' && !isPayoutMarkedPaidWithoutTransferEvidence(payout)) {
       return res.status(409).json({ error: 'Payout has already been sent' });
     }
 
@@ -8947,7 +8999,18 @@ async function runAutomaticStripePayoutSweep(triggerSource, options) {
   try {
     const payouts = await db.collection('payouts')
       .find({
-        status: { $in: ['pending_hold', 'ready_to_pay', 'blocked_onboarding'] }
+        $or: [
+          { status: { $in: ['pending_hold', 'ready_to_pay', 'blocked_onboarding'] } },
+          {
+            status: 'paid',
+            manuallyPaid: { $ne: true },
+            $or: [
+              { stripeTransferId: { $exists: false } },
+              { stripeTransferId: null },
+              { stripeTransferId: '' }
+            ]
+          }
+        ]
       })
       .sort({ updatedAt: 1, createdAt: 1 })
       .limit(batchLimit)
@@ -9029,10 +9092,10 @@ async function releasePendingHoldPayoutsOnce() {
 
 async function releaseAdafaPendingPayoutsOnce() {
   if (!mongoConnected) return;
-  const migrationKey = 'audit_and_release_adafa_pending_payouts_2026_05_21_v3';
+  const migrationKey = ADAFA_RETROACTIVE_AUDIT_MIGRATION_KEY;
   try {
     const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
-    if (existing) return;
+    if (existing && existing.finalized === true) return;
 
     const adafaUserIds = new Set();
     const adafaUsers = await db.collection('users').find(
@@ -9065,11 +9128,29 @@ async function releaseAdafaPendingPayoutsOnce() {
     });
 
     if (adafaUserIds.size === 0) {
-      await db.collection('runtimeMigrations').insertOne({
-        key: migrationKey,
-        createdAt: new Date(),
-        summary: { scanned: 0, released: 0, failed: 0, deferred: 0, matchedAmountUsd: 0 }
-      });
+      await db.collection('runtimeMigrations').updateOne(
+        { key: migrationKey },
+        {
+          $setOnInsert: { key: migrationKey, createdAt: new Date() },
+          $set: {
+            updatedAt: new Date(),
+            finalized: true,
+            summary: {
+              scanned: 0,
+              audited: 0,
+              released: 0,
+              failed: 0,
+              deferred: 0,
+              matchedAmountUsd: 0,
+              targetProductId: ADAFA_RETROACTIVE_TARGET_PRODUCT_ID,
+              retroactivePayoutPossibleNow: false,
+              retroactiveBlockers: ['No adafa seller identity found in users/sellers collections.']
+            },
+            auditRows: []
+          }
+        },
+        { upsert: true }
+      );
       return;
     }
 
@@ -9109,6 +9190,7 @@ async function releaseAdafaPendingPayoutsOnce() {
       shippingStatus: 'shipped',
       'items.sellerId': { $in: Array.from(adafaUserIds) }
     }).toArray();
+    const gjnbOrderKeys = new Set();
     for (const order of completedAdafaOrders) {
       const orderId = String(order && order.id ? order.id : '').trim();
       if (!orderId) continue;
@@ -9118,6 +9200,11 @@ async function releaseAdafaPendingPayoutsOnce() {
       for (const sellerInfo of sellerInfos) {
         const sellerId = String(sellerInfo && sellerInfo.sellerId ? sellerInfo.sellerId : '').trim();
         if (!sellerId) continue;
+        const sellerItems = (Array.isArray(order && order.items) ? order.items : []).filter(function(item) {
+          return String(item && item.sellerId ? item.sellerId : '').trim() === sellerId;
+        });
+        const matchesGjnb = sellerItems.some(function(item) { return doesOrderItemMatchAdafaRetroProduct(item); });
+        if (!matchesGjnb) continue;
         const sellerFinancials = getSellerFinancials(order, sellerId);
         const payoutAmount = parseFloat(sellerFinancials && sellerFinancials.payoutAmount);
         if (!Number.isFinite(payoutAmount)) continue;
@@ -9125,23 +9212,35 @@ async function releaseAdafaPendingPayoutsOnce() {
         const existingPayout = await db.collection('payouts').findOne({ orderId: orderId, sellerId: sellerId });
         if (existingPayout && hasRecordedPaidPayout(existingPayout)) continue;
         const key = `${orderId}::${sellerId}`;
+        gjnbOrderKeys.add(key);
         if (!payoutCandidatesByKey.has(key)) {
           payoutCandidatesByKey.set(key, {
             orderId: orderId,
             sellerId: sellerId,
             amount: payoutAmount,
-            source: 'completed_order_scan'
+            source: 'completed_order_scan',
+            targetProductMatched: true
+          });
+        } else {
+          payoutCandidatesByKey.set(key, {
+            ...payoutCandidatesByKey.get(key),
+            targetProductMatched: true
           });
         }
       }
     }
     const payoutCandidates = Array.from(payoutCandidatesByKey.values());
+    const auditRows = [];
     const summary = {
       scanned: payoutCandidates.length,
       audited: 0,
       released: 0,
       failed: 0,
       deferred: 0,
+      targetProductId: ADAFA_RETROACTIVE_TARGET_PRODUCT_ID,
+      targetProductMatchedCount: gjnbOrderKeys.size,
+      retroactivePayoutPossibleNow: false,
+      retroactiveBlockers: [],
       matchedAmountUsd: parseFloat(
         payoutCandidates.reduce(function(sum, payout) {
           return sum + (parseFloat(payout && payout.amount) || 0);
@@ -9173,7 +9272,9 @@ async function releaseAdafaPendingPayoutsOnce() {
               payoutAuditLastSource: 'retroactive_adafa_payout_audit',
               payoutAuditLastStatus: snapshot.status,
               payoutAuditMatchedAmount: parseFloat(payout && payout.amount) || 0,
-              payoutAuditMatchedSource: String(payout && payout.source ? payout.source : '')
+              payoutAuditMatchedSource: String(payout && payout.source ? payout.source : ''),
+              payoutAuditTargetProductId: ADAFA_RETROACTIVE_TARGET_PRODUCT_ID,
+              payoutAuditTargetProductMatched: !!(payout && payout.targetProductMatched)
             }
           }
         );
@@ -9182,25 +9283,74 @@ async function releaseAdafaPendingPayoutsOnce() {
           sellerId: sellerId,
           forceReleaseHold: true
         });
-        if (!result.ok) summary.failed++;
-        else if (result.deferred) summary.deferred++;
-        else summary.released++;
+        const auditRow = {
+          orderId: orderId,
+          sellerId: sellerId,
+          matchedAmountUsd: parseFloat(payout && payout.amount) || 0,
+          matchedSource: String(payout && payout.source ? payout.source : ''),
+          targetProductMatched: !!(payout && payout.targetProductMatched),
+          payoutSnapshotStatus: snapshot.status,
+          payoutBlockedReason: snapshot.blockedReason || '',
+          payoutAccountId: String(snapshot && snapshot.receiverEmail ? snapshot.receiverEmail : ''),
+          payoutEligibleAt: snapshot && snapshot.payoutReleaseAt ? snapshot.payoutReleaseAt : null
+        };
+        if (!result.ok) {
+          summary.failed++;
+          auditRow.outcome = 'failed';
+          auditRow.outcomeReason = String(result.error || 'transfer_failed');
+          if (auditRow.outcomeReason) summary.retroactiveBlockers.push(auditRow.outcomeReason);
+        } else if (result.deferred) {
+          summary.deferred++;
+          auditRow.outcome = 'deferred';
+          auditRow.outcomeReason = String(result.reason || snapshot.blockedReason || 'deferred');
+          if (auditRow.outcomeReason) summary.retroactiveBlockers.push(auditRow.outcomeReason);
+        } else {
+          summary.released++;
+          summary.retroactivePayoutPossibleNow = true;
+          auditRow.outcome = result.alreadyPaid ? 'already_paid' : 'released';
+          auditRow.outcomeReason = result.alreadyPaid ? 'Payout already had verified transfer evidence.' : 'Stripe transfer sent.';
+        }
+        auditRows.push(auditRow);
       } catch (err) {
         summary.failed++;
+        summary.retroactiveBlockers.push(String(err && err.message ? err.message : 'unknown_error'));
+        auditRows.push({
+          orderId: orderId,
+          sellerId: sellerId,
+          matchedAmountUsd: parseFloat(payout && payout.amount) || 0,
+          matchedSource: String(payout && payout.source ? payout.source : ''),
+          targetProductMatched: !!(payout && payout.targetProductMatched),
+          outcome: 'failed',
+          outcomeReason: String(err && err.message ? err.message : 'unknown_error')
+        });
         console.error('Failed retroactive Adafa payout audit/push for order', orderId, '-', err.message);
       }
     }
-
-    if (summary.failed > 0 || summary.deferred > 0) {
-      console.log(`ℹ️  Retroactive Adafa payout audit not finalized: ${summary.released} released, ${summary.failed} failed, ${summary.deferred} deferred (will retry on next startup)`);
-      return;
+    if (!summary.retroactivePayoutPossibleNow && payoutCandidates.length === 0) {
+      summary.retroactiveBlockers.push(
+        `No completed shipped adafa payout candidate matched product ${ADAFA_RETROACTIVE_TARGET_PRODUCT_ID} and payout amount ${ADAFA_IMMEDIATE_PAYOUT_MIN_USD.toFixed(2)}-${ADAFA_IMMEDIATE_PAYOUT_MAX_USD.toFixed(2)} USD.`
+      );
     }
-    await db.collection('runtimeMigrations').insertOne({
-      key: migrationKey,
-      createdAt: new Date(),
-      summary: summary
-    });
-    console.log(`✅ Retroactive Adafa payout audit complete: ${summary.audited} audited, ${summary.released} released (${summary.matchedAmountUsd.toFixed(2)} USD matched)`);
+    summary.retroactiveBlockers = Array.from(new Set(summary.retroactiveBlockers.filter(Boolean))).slice(0, 20);
+    const finalized = summary.failed === 0 && summary.deferred === 0;
+    await db.collection('runtimeMigrations').updateOne(
+      { key: migrationKey },
+      {
+        $setOnInsert: { key: migrationKey, createdAt: new Date() },
+        $set: {
+          updatedAt: new Date(),
+          finalized: finalized,
+          summary: summary,
+          auditRows: auditRows.slice(0, 50)
+        }
+      },
+      { upsert: true }
+    );
+    if (finalized) {
+      console.log(`✅ Retroactive Adafa payout audit complete: ${summary.audited} audited, ${summary.released} released (${summary.matchedAmountUsd.toFixed(2)} USD matched)`);
+    } else {
+      console.log(`ℹ️  Retroactive Adafa payout audit not finalized: ${summary.released} released, ${summary.failed} failed, ${summary.deferred} deferred (will retry on next startup)`);
+    }
   } catch (err) {
     console.error('⚠️  Retroactive Adafa payout audit migration error:', err.message);
   }
