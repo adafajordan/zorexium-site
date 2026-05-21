@@ -1909,7 +1909,7 @@ const DEFAULT_SALES_TAX_RATE = 0.10;
 const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
 const STANDARD_SELLER_HOLD_DAYS = 5;
-const PRO_SELLER_HOLD_DAYS = 5;
+const PRO_SELLER_HOLD_DAYS = 2;
 const PAYOUT_BRAND_NAME = process.env.PAYOUT_BRAND_NAME || 'Zorexium';
 const MAX_ORDER_ID_LENGTH = 64;
 const PAYOUT_BATCH_ORDER_ID_SLICE = 40;
@@ -8723,6 +8723,107 @@ async function releasePendingHoldPayoutsOnce() {
   }
 }
 
+async function releaseAdafaPendingPayoutsOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'release_adafa_pending_payouts_2026_05_21';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const adafaUserIds = new Set();
+    const adafaUsers = await db.collection('users').find(
+      {
+        $or: [
+          { email: { $regex: /^adafa(\+[^@]+)?@.+/i } },
+          { firstName: { $regex: /^adafa$/i } },
+          { username: { $regex: /^adafa$/i } }
+        ]
+      },
+      { projection: { _id: 1 } }
+    ).toArray();
+    adafaUsers.forEach(function(user) {
+      if (user && user._id) adafaUserIds.add(String(user._id));
+    });
+
+    const adafaSellers = await db.collection('sellers').find(
+      {
+        $or: [
+          { userId: { $in: Array.from(adafaUserIds) } },
+          { shopName: { $regex: /adafa/i } },
+          { sellerName: { $regex: /^adafa$/i } },
+          { sellerUsername: { $regex: /^adafa$/i } }
+        ]
+      },
+      { projection: { userId: 1 } }
+    ).toArray();
+    adafaSellers.forEach(function(seller) {
+      if (seller && seller.userId) adafaUserIds.add(String(seller.userId));
+    });
+
+    if (adafaUserIds.size === 0) {
+      await db.collection('runtimeMigrations').insertOne({
+        key: migrationKey,
+        createdAt: new Date(),
+        summary: { scanned: 0, released: 0, failed: 0, deferred: 0, matchedAmountUsd: 0 }
+      });
+      return;
+    }
+
+    const pendingPayouts = await db.collection('payouts')
+      .find({
+        sellerId: { $in: Array.from(adafaUserIds) },
+        status: { $in: ['pending_hold', 'ready_to_pay'] },
+        amount: { $gte: 1.79, $lte: 1.81 }
+      })
+      .toArray();
+    const summary = {
+      scanned: pendingPayouts.length,
+      released: 0,
+      failed: 0,
+      deferred: 0,
+      matchedAmountUsd: parseFloat(
+        pendingPayouts.reduce(function(sum, payout) {
+          return sum + (parseFloat(payout && payout.amount) || 0);
+        }, 0).toFixed(2)
+      )
+    };
+
+    for (const payout of pendingPayouts) {
+      const orderId = String(payout && payout.orderId ? payout.orderId : '').trim();
+      const sellerId = String(payout && payout.sellerId ? payout.sellerId : '').trim();
+      if (!orderId || !sellerId) continue;
+      const order = await db.collection('orders').findOne({ id: orderId });
+      if (!order) continue;
+      try {
+        const result = await sendStripeSellerPayout(order, {
+          triggerSource: 'one_time_adafa_pending_payout_push',
+          sellerId: sellerId,
+          forceReleaseHold: true
+        });
+        if (!result.ok) summary.failed++;
+        else if (result.deferred) summary.deferred++;
+        else summary.released++;
+      } catch (err) {
+        summary.failed++;
+        console.error('Failed one-time Adafa pending payout push for order', orderId, '-', err.message);
+      }
+    }
+
+    if (summary.failed > 0 || summary.deferred > 0) {
+      console.log(`ℹ️  One-time Adafa pending payout push not finalized: ${summary.released} released, ${summary.failed} failed, ${summary.deferred} deferred (will retry on next startup)`);
+      return;
+    }
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: new Date(),
+      summary: summary
+    });
+    console.log(`✅ One-time Adafa pending payout push complete: ${summary.released} released (${summary.matchedAmountUsd.toFixed(2)} USD matched)`);
+  } catch (err) {
+    console.error('⚠️  One-time Adafa pending payout push migration error:', err.message);
+  }
+}
+
 async function activateAllProducts() {
   if (!mongoConnected) return;
   try {
@@ -8807,6 +8908,7 @@ async function start() {
       await ensurePayoutIndexes();
       await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();
+      await releaseAdafaPendingPayoutsOnce();
       await releasePendingHoldPayoutsOnce();
       await retryDeferredInsufficientBalancePayouts();
     } else {
