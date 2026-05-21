@@ -43,7 +43,7 @@ stripe.transfers.create({
   currency: 'usd',
   destination: 'acct_...',           // seller's connected Stripe account
   metadata: { orderId, sellerId, triggerSource, payoutFundingSource }
-})  (server.js:3510-3521)
+})  (server.js:3505-3516)
   ↓
 Transfer result persisted to 'payouts' collection:
   {

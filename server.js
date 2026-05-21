@@ -3506,13 +3506,13 @@ async function sendStripeSellerPayout(order, options) {
       amount: toStripeAmountCents(snapshot.payoutAmount),
       currency: payoutCurrency,
       destination: String(snapshot.receiverEmail),
-        metadata: {
-          orderId: orderId,
-          sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
-          triggerSource: String(payoutMeta.triggerSource || ''),
-          payoutFundingSource: 'platform_available_balance'
-        }
-      };
+      metadata: {
+        orderId: orderId,
+        sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
+        triggerSource: String(payoutMeta.triggerSource || ''),
+        payoutFundingSource: 'platform_available_balance'
+      }
+    };
     const transfer = await stripe.transfers.create(transferPayload);
     const payoutUpdates = {
       payoutAccountId: snapshot.receiverEmail,
