@@ -602,10 +602,10 @@
     firstOrderFreeShippingEligible = false;
     if (!ZrxSession.isLoggedIn()) return;
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/free-shipping-eligible', { credentials: 'include' });
       if (!res.ok) return;
-      const orders = await res.json();
-      firstOrderFreeShippingEligible = Array.isArray(orders) && orders.length === 0;
+      const data = await res.json();
+      firstOrderFreeShippingEligible = data.eligible === true;
     } catch (_) {}
   }
 

@@ -444,10 +444,10 @@
     firstOrderFreeShippingActive = false;
     if (!ZrxSession.isLoggedIn()) return;
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/my', { credentials: 'include' });
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/free-shipping-eligible', { credentials: 'include' });
       if (!res.ok) return;
-      const orders = await res.json();
-      firstOrderFreeShippingActive = Array.isArray(orders) && orders.length === 0;
+      const data = await res.json();
+      firstOrderFreeShippingActive = data.eligible === true;
     } catch (err) {
       console.warn('Unable to load first-order free-shipping eligibility:', err);
     }
