@@ -1969,15 +1969,17 @@ const STRIPE_CANCEL_URL = process.env.STRIPE_CANCEL_URL || '';
 const STRIPE_CONNECT_REFRESH_URL = process.env.STRIPE_CONNECT_REFRESH_URL || '';
 const STRIPE_CONNECT_RETURN_URL = process.env.STRIPE_CONNECT_RETURN_URL || '';
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
-// Pro Seller monthly subscription price (USD) — $1/month
-const PRO_SELLER_MONTHLY_PRICE_USD = '1.00';
-// Standard shipping rate per item (USD) — $1.00 per item
-const DEFAULT_SHIPPING_PER_ITEM_USD = 1.00;
+// Pro Seller monthly subscription price (USD) for new subscriptions.
+const PRO_SELLER_MONTHLY_PRICE_USD = '7.99';
+// Legacy Pro Seller monthly subscription price (USD) for grandfathered sellers.
+const PRO_SELLER_GRANDFATHERED_MONTHLY_PRICE_USD = '1.00';
+// Standard flat shipping rate per order (USD)
+const DEFAULT_SHIPPING_FLAT_USD = 10.99;
 const DEFAULT_SALES_TAX_RATE = 0.10;
 const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
-const STANDARD_SELLER_HOLD_DAYS = 0;
-const PRO_SELLER_HOLD_DAYS = 0;
+const STANDARD_SELLER_HOLD_DAYS = 7;
+const PRO_SELLER_HOLD_DAYS = 4;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
 const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
 const ADAFA_RETROACTIVE_TARGET_PRODUCT_ID = 'gjnb';
@@ -2166,6 +2168,20 @@ function getSellerHoldDaysByTier(value) {
   return normalizeSellerTier(value) === 'pro'
     ? PRO_SELLER_HOLD_DAYS
     : STANDARD_SELLER_HOLD_DAYS;
+}
+
+function hasGrandfatheredProSellerPricing(seller) {
+  if (!seller || typeof seller !== 'object') return false;
+  if (seller.proGrandfatheredPricing === true) return true;
+  const sellerTier = normalizeSellerTier(seller && seller.tier ? seller.tier : 'starter');
+  const hasSubscriptionId = !!String(seller && seller.proSubscriptionId ? seller.proSubscriptionId : '').trim();
+  return sellerTier === 'pro' && hasSubscriptionId;
+}
+
+function getProSellerMonthlyPriceUsdForSeller(seller) {
+  return hasGrandfatheredProSellerPricing(seller)
+    ? PRO_SELLER_GRANDFATHERED_MONTHLY_PRICE_USD
+    : PRO_SELLER_MONTHLY_PRICE_USD;
 }
 
 function addUtcDays(dateValue, dayCount) {
@@ -3720,7 +3736,8 @@ function getStripeProSellerPriceId() {
   return /^price_[A-Za-z0-9]+$/.test(value) ? value : null;
 }
 
-function getStripeProSellerCheckoutLineItems() {
+function getStripeProSellerCheckoutLineItems(monthlyPriceUsd) {
+  const resolvedMonthlyPriceUsd = String(monthlyPriceUsd || PRO_SELLER_MONTHLY_PRICE_USD);
   const configuredPriceId = getStripeProSellerPriceId();
   if (configuredPriceId) {
     return [{ price: configuredPriceId, quantity: 1 }];
@@ -3728,7 +3745,7 @@ function getStripeProSellerCheckoutLineItems() {
   return [{
     price_data: {
       currency: 'usd',
-      unit_amount: toStripeAmountCents(PRO_SELLER_MONTHLY_PRICE_USD),
+      unit_amount: toStripeAmountCents(resolvedMonthlyPriceUsd),
       recurring: { interval: 'month' },
       product_data: { name: PAYOUT_BRAND_NAME + ' Pro Seller Subscription' }
     },
@@ -3798,6 +3815,7 @@ async function activateProSellerTierForUser(userId, subscriptionId, options) {
         proSubscriptionId: resolvedSubscriptionId,
         proSubscriptionStatus: resolvedStatus,
         proSubscriptionProvider: 'stripe',
+        proGrandfatheredPricing: hasGrandfatheredProSellerPricing(existingSeller),
         proSubscriptionCancelAtPeriodEnd: false,
         proTierDowngraded: false,
         updatedAt: new Date()
@@ -3862,6 +3880,7 @@ app.get('/api/sellers/pro-plan', async function(req, res) {
       planId: priceId,
       provider: 'stripe',
       monthlyPriceUsd: PRO_SELLER_MONTHLY_PRICE_USD,
+      grandfatheredMonthlyPriceUsd: PRO_SELLER_GRANDFATHERED_MONTHLY_PRICE_USD,
       fallbackCheckoutPriceData: !priceId
     });
   } catch (err) {
@@ -3875,8 +3894,12 @@ app.post('/api/stripe/pro-subscription/session', publicApiRateLimit, verifyToken
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     ensureStripeConfigured();
-    const seller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { userId: 1, tier: 1 } });
+    const seller = await db.collection('sellers').findOne(
+      { userId: req.userId },
+      { projection: { userId: 1, tier: 1, proSubscriptionId: 1, proGrandfatheredPricing: 1 } }
+    );
     const mode = String(req.body && req.body.mode ? req.body.mode : 'signup').trim().toLowerCase();
+    const monthlyPriceUsd = getProSellerMonthlyPriceUsdForSeller(seller);
     if (seller && seller.tier === 'pro' && mode === 'upgrade') {
       return res.status(409).json({ error: 'Already on Pro tier' });
     }
@@ -3888,12 +3911,14 @@ app.post('/api/stripe/pro-subscription/session', publicApiRateLimit, verifyToken
       : makeAbsoluteUrl('/seller-signup.html?proCheckout=cancelled');
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: getStripeProSellerCheckoutLineItems(),
+      line_items: getStripeProSellerCheckoutLineItems(monthlyPriceUsd),
       success_url: successBase + '&session_id={CHECKOUT_SESSION_ID}',
       cancel_url: cancelBase,
       metadata: {
         userId: String(req.userId),
-        flow: mode === 'upgrade' ? 'pro_upgrade' : 'pro_signup'
+        flow: mode === 'upgrade' ? 'pro_upgrade' : 'pro_signup',
+        proMonthlyPriceUsd: monthlyPriceUsd,
+        proGrandfatheredPricing: hasGrandfatheredProSellerPricing(seller) ? 'true' : 'false'
       }
     });
     res.json({ sessionId: session.id, checkoutUrl: session.url });
@@ -3979,6 +4004,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
       proSubscriptionId: subscriptionId,
       proSubscriptionStatus: String(subscription && subscription.status ? subscription.status : 'active'),
       proSubscriptionProvider: 'stripe',
+      proGrandfatheredPricing: false,
       createdAt: new Date()
     };
 
@@ -4002,7 +4028,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
         await sendEventEmailSafe(
           to,
           'Thanks for purchasing Pro Seller status',
-          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>5%</strong> platform fee per sale and <strong>$1/month</strong> subscription.</p>`,
+          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>5%</strong> platform fee per sale and <strong>$${escapeHtml(PRO_SELLER_MONTHLY_PRICE_USD)}/month</strong> subscription for new subscriptions.</p>`,
           '/seller-dashboard.html#tier'
         );
       }
@@ -4158,7 +4184,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     }
     const shipping = firstOrderFreeShippingApplied
       ? 0
-      : parseFloat((normalizedOrderItems.length * DEFAULT_SHIPPING_PER_ITEM_USD).toFixed(2));
+      : parseFloat(DEFAULT_SHIPPING_FLAT_USD.toFixed(2));
     const tax = parseFloat((subtotal * DEFAULT_SALES_TAX_RATE).toFixed(2));
     const total = parseFloat((subtotal + shipping + tax).toFixed(2));
     if (!(total > 0)) {
@@ -4809,6 +4835,7 @@ app.post('/api/stripe/webhook', publicApiRateLimit, async function(req, res) {
               $set: {
                 tier: 'starter',
                 proTierDowngraded: true,
+                proGrandfatheredPricing: true,
                 proTierDowngradedAt: new Date(),
                 updatedAt: new Date()
               },
@@ -5205,6 +5232,13 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
         return String(item && item.sellerId ? item.sellerId : '') === String(req.userId);
       });
       const sellerFinancialsFallback = sellerSummary ? null : getSellerFinancials(order, req.userId);
+      const sellerTier = sellerSummary
+        ? normalizeSellerTier(sellerSummary.sellerTier || sellerSummary.tier || 'starter')
+        : normalizeSellerTier(
+            sellerFinancialsFallback && sellerFinancialsFallback.sellerTier
+              ? sellerFinancialsFallback.sellerTier
+              : (sellerItems[0] && sellerItems[0].sellerTier ? sellerItems[0].sellerTier : 'starter')
+          );
       return {
         ...order,
         sellerItems: sellerItems,
@@ -5217,9 +5251,8 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
           return sum + parseFloat((unitPrice * quantity).toFixed(2));
         }, 0),
         sellerNetTotal: sellerSummary ? sellerSummary.netTotal : (sellerFinancialsFallback ? sellerFinancialsFallback.payoutAmount : 0),
-        sellerTier: sellerSummary
-          ? normalizeSellerTier(sellerSummary.sellerTier || sellerSummary.tier || 'starter')
-          : normalizeSellerTier(sellerFinancialsFallback && sellerFinancialsFallback.sellerTier ? sellerFinancialsFallback.sellerTier : (sellerItems[0] && sellerItems[0].sellerTier ? sellerItems[0].sellerTier : 'starter')),
+        sellerTier: sellerTier,
+        sellerPayoutRate: getSellerPayoutRateByTier(sellerTier),
         buyerDisplayName: [order && order.buyer ? order.buyer.firstName : '', order && order.buyer ? order.buyer.lastName : ''].filter(Boolean).join(' ').trim()
           || normalizeEmail(order && order.buyerEmail ? order.buyerEmail : '')
           || '—'
@@ -6542,7 +6575,9 @@ app.get('/api/sellers/me', verifyToken, async function(req, res) {
   try {
     const seller = await db.collection('sellers').findOne({ userId: req.userId });
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
-    res.json(sanitizeSellerForClient(seller));
+    const safeSeller = sanitizeSellerForClient(seller);
+    safeSeller.proSubscriptionMonthlyPriceUsd = getProSellerMonthlyPriceUsdForSeller(seller);
+    res.json(safeSeller);
   } catch (error) {
     console.error('Error fetching seller profile:', error);
     res.status(500).json({ error: error.message });
@@ -6945,6 +6980,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
           $set: {
             proSubscriptionStatus: subscriptionStatus || 'active',
             proSubscriptionCancelAtPeriodEnd: true,
+            proGrandfatheredPricing: true,
             proTierDowngradeScheduledFor: effectiveDowngradeAt,
             proSubscriptionCancellationScheduledAt: now,
             updatedAt: now
@@ -6972,6 +7008,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
         $set: {
           tier: 'starter',
           proTierDowngraded: true,
+          proGrandfatheredPricing: true,
           proTierDowngradedAt: now,
           updatedAt: now
         },
