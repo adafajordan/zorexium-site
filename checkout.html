@@ -598,11 +598,15 @@
     return cart.length * 1.00;
   }
 
-  async function loadFirstOrderFreeShippingEligibility() {
+  async function loadFirstOrderFreeShippingEligibility(emailOverride) {
     firstOrderFreeShippingEligible = false;
     if (!ZrxSession.isLoggedIn()) return;
     try {
-      const res = await ZrxSession.fetch(BACKEND_URL + '/api/orders/free-shipping-eligible', { credentials: 'include' });
+      const lookupEmail = (typeof emailOverride === 'string' ? emailOverride : '').trim();
+      const endpoint = lookupEmail
+        ? (BACKEND_URL + '/api/orders/free-shipping-eligible?email=' + encodeURIComponent(lookupEmail))
+        : (BACKEND_URL + '/api/orders/free-shipping-eligible');
+      const res = await ZrxSession.fetch(endpoint, { credentials: 'include' });
       if (!res.ok) return;
       const data = await res.json();
       firstOrderFreeShippingEligible = data.eligible === true;
@@ -931,7 +935,6 @@
   // ── Init ──────────────────────────────────────────────────────────────────
   async function init() {
     await loadCart();
-    await loadFirstOrderFreeShippingEligibility();
     if (cart.length === 0) {
       document.getElementById('checkoutContent').classList.add('hidden');
       document.getElementById('emptyCartMsg').classList.remove('hidden');
@@ -944,10 +947,20 @@
           if (emailEl && !emailEl.value) emailEl.value = user.email;
         }
       }
+      const emailEl = document.getElementById('email');
+      await loadFirstOrderFreeShippingEligibility(emailEl ? emailEl.value : '');
       updateDeliveryDates();
       renderSummary();
       updateCartBadge();
       updateCheckoutState();
+      if (emailEl) {
+        const refreshShippingEligibility = async function() {
+          await loadFirstOrderFreeShippingEligibility(emailEl.value);
+          renderSummary();
+        };
+        emailEl.addEventListener('change', refreshShippingEligibility);
+        emailEl.addEventListener('blur', refreshShippingEligibility);
+      }
       const params = new URLSearchParams(window.location.search);
       if (params.get('cancelled') === '1') {
         ZrxNotify.showNotification('Stripe checkout was cancelled. Your cart is still saved.', 'info');
