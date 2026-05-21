@@ -4992,7 +4992,10 @@ app.get('/api/orders', publicApiRateLimit, verifyToken, async function(req, res)
 app.get('/api/orders/free-shipping-eligible', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const userFilter = { $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] };
+    const normalizedEmail = normalizeEmail(req.userEmail);
+    const userFilter = normalizedEmail
+      ? { $or: [{ userId: req.userId }, { buyerEmail: normalizedEmail }] }
+      : { userId: req.userId };
     const completedCount = await db.collection('orders').countDocuments({ status: 'completed', ...userFilter }, { limit: 1 });
     res.json({ eligible: completedCount === 0 });
   } catch (error) {
@@ -5010,9 +5013,13 @@ app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, r
       { userId: req.userId },
       { projection: { shopName: 1 } }
     );
+    const normalizedEmail = normalizeEmail(req.userEmail);
+    const ordersFilter = normalizedEmail
+      ? { status: 'completed', $or: [{ userId: req.userId }, { buyerEmail: normalizedEmail }] }
+      : { status: 'completed', userId: req.userId };
     const orders = await db.collection('orders')
       // Only return finalized completed orders for buyer purchase history/account views.
-      .find({ status: 'completed', $or: [{ userId: req.userId }, { buyerEmail: req.userEmail }] })
+      .find(ordersFilter)
       .sort({ createdAt: -1 })
       .toArray();
     res.json(orders);
