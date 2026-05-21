@@ -1994,6 +1994,33 @@ function isStripeChargeId(value) {
   return /^ch_[A-Za-z0-9]+$/.test(String(value || '').trim());
 }
 
+function isStripeTransferId(value) {
+  return /^tr_[A-Za-z0-9]+$/.test(String(value || '').trim());
+}
+
+function hasVerifiedStripeTransferEvidence(payoutDoc) {
+  if (!payoutDoc || typeof payoutDoc !== 'object') return false;
+  const transferId = String(
+    payoutDoc.stripeTransferId
+      || (payoutDoc.stripeTransferResponse && payoutDoc.stripeTransferResponse.id)
+      || ''
+  ).trim();
+  return isStripeTransferId(transferId);
+}
+
+function hasVerifiedPayPalPayoutEvidence(payoutDoc) {
+  if (!payoutDoc || typeof payoutDoc !== 'object') return false;
+  const transactionStatus = String(payoutDoc.paypalTransactionStatus || '').trim().toUpperCase();
+  return !!(payoutDoc.paypalPayoutBatchId || transactionStatus === 'SUCCESS');
+}
+
+function hasRecordedPaidPayout(payoutDoc) {
+  if (!payoutDoc || typeof payoutDoc !== 'object') return false;
+  if (String(payoutDoc.status || '').trim().toLowerCase() !== 'paid') return false;
+  if (payoutDoc.manuallyPaid === true) return true;
+  return hasVerifiedStripeTransferEvidence(payoutDoc) || hasVerifiedPayPalPayoutEvidence(payoutDoc);
+}
+
 function normalizePayoutAccountId(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -3226,8 +3253,38 @@ async function sendStripeSellerPayout(order, options) {
     return { ok: false, error: 'Order ID is required for payout processing' };
   }
   const pb = snapshot.payoutBase;
+  const payoutDocQuery = { orderId: orderId, sellerId: pb.sellerId };
+  const existingPayoutDoc = await db.collection('payouts').findOne(payoutDocQuery);
+  const existingPayoutIsSettled = hasRecordedPaidPayout(existingPayoutDoc);
+  const markedPaidWithoutTransferEvidence = !!(
+    existingPayoutDoc
+    && String(existingPayoutDoc.status || '').trim().toLowerCase() === 'paid'
+    && !existingPayoutIsSettled
+  );
+  if (markedPaidWithoutTransferEvidence) {
+    console.warn('Payout row was marked paid without Stripe/PayPal transfer evidence; retrying real payout transfer for order', orderId, 'seller', pb.sellerId);
+  }
+  const persistedStatus = existingPayoutIsSettled ? 'paid' : snapshot.status;
+  const persistedLifecycleStatus = existingPayoutIsSettled
+    ? String(
+      existingPayoutDoc && existingPayoutDoc.payoutLifecycleStatus
+        ? existingPayoutDoc.payoutLifecycleStatus
+        : (hasVerifiedStripeTransferEvidence(existingPayoutDoc) ? 'transfer_sent' : 'bank_paid')
+    )
+    : (
+      snapshot.status === 'ready_to_pay'
+        ? 'ready_to_transfer'
+        : (snapshot.status === 'pending_hold' ? 'on_hold' : (snapshot.status === 'blocked_onboarding' ? 'onboarding_blocked' : 'awaiting_shipment'))
+    );
+  const persistedBankSettlementStatus = existingPayoutIsSettled
+    ? String(
+      existingPayoutDoc && existingPayoutDoc.payoutBankSettlementStatus
+        ? existingPayoutDoc.payoutBankSettlementStatus
+        : (hasVerifiedStripeTransferEvidence(existingPayoutDoc) ? 'pending_external_settlement' : 'bank_paid')
+    )
+    : (snapshot.status === 'ready_to_pay' ? 'not_started' : 'not_applicable');
   await db.collection('payouts').updateOne(
-    { orderId: orderId, sellerId: pb.sellerId },
+    payoutDocQuery,
     {
       $setOnInsert: {
         orderId: orderId,
@@ -3266,21 +3323,24 @@ async function sendStripeSellerPayout(order, options) {
           refreshError: String(snapshot && snapshot.payoutAccountStatus && snapshot.payoutAccountStatus.refreshError ? snapshot.payoutAccountStatus.refreshError : '')
         },
         updatedAt: pb.updatedAt,
-        status: snapshot.status,
-        onboardingRequired: snapshot.status === 'blocked_onboarding',
-        error: snapshot.status === 'blocked_onboarding' ? snapshot.blockedReason : null,
-        payoutLifecycleStatus: snapshot.status === 'ready_to_pay'
-          ? 'ready_to_transfer'
-          : (snapshot.status === 'pending_hold' ? 'on_hold' : (snapshot.status === 'blocked_onboarding' ? 'onboarding_blocked' : 'awaiting_shipment')),
-        payoutBankSettlementStatus: snapshot.status === 'ready_to_pay' ? 'not_started' : 'not_applicable'
+        status: persistedStatus,
+        onboardingRequired: existingPayoutIsSettled ? false : (snapshot.status === 'blocked_onboarding'),
+        error: existingPayoutIsSettled
+          ? null
+          : (
+            markedPaidWithoutTransferEvidence
+              ? 'Previous payout row was marked paid without a recorded Stripe/PayPal transfer. Retrying real payout transfer.'
+              : (snapshot.status === 'blocked_onboarding' ? snapshot.blockedReason : null)
+          ),
+        payoutLifecycleStatus: persistedLifecycleStatus,
+        payoutBankSettlementStatus: persistedBankSettlementStatus
       }
     },
     { upsert: true }
   );
 
-  const payoutDocQuery = { orderId: orderId, sellerId: pb.sellerId };
   const payoutDocScoped = await db.collection('payouts').findOne(payoutDocQuery);
-  if (payoutDocScoped && payoutDocScoped.status === 'paid') {
+  if (payoutDocScoped && hasRecordedPaidPayout(payoutDocScoped)) {
     return { ok: true, alreadyPaid: true, payout: payoutDocScoped, sellerId: pb.sellerId };
   }
   if (snapshot.status === 'pending_delivery') {
@@ -8971,7 +9031,18 @@ async function releaseAdafaPendingPayoutsOnce() {
     const pendingPayouts = await db.collection('payouts')
       .find({
         sellerId: { $in: Array.from(adafaUserIds) },
-        status: { $in: ['pending_hold', 'ready_to_pay', 'blocked_onboarding', 'failed'] },
+        $or: [
+          { status: { $in: ['pending_hold', 'ready_to_pay', 'blocked_onboarding', 'failed'] } },
+          {
+            status: 'paid',
+            manuallyPaid: { $ne: true },
+            $or: [
+              { stripeTransferId: { $exists: false } },
+              { stripeTransferId: null },
+              { stripeTransferId: '' }
+            ]
+          }
+        ],
         amount: { $gte: 1.79, $lte: 1.81 }
       })
       .toArray();
@@ -8997,7 +9068,8 @@ async function releaseAdafaPendingPayoutsOnce() {
       try {
         const snapshot = await buildPayoutSnapshot(order, {
           triggerSource: 'retroactive_adafa_payout_audit',
-          sellerId: sellerId
+          sellerId: sellerId,
+          forceReleaseHold: true
         });
         summary.audited++;
         await db.collection('payouts').updateOne(
@@ -9015,7 +9087,8 @@ async function releaseAdafaPendingPayoutsOnce() {
         );
         const result = await sendStripeSellerPayout(order, {
           triggerSource: 'retroactive_adafa_payout_audit',
-          sellerId: sellerId
+          sellerId: sellerId,
+          forceReleaseHold: true
         });
         if (!result.ok) summary.failed++;
         else if (result.deferred) summary.deferred++;
