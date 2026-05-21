@@ -310,6 +310,74 @@ function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function collectNormalizedPurchaseEmails() {
+  const seen = new Set();
+  const emails = [];
+  for (const value of arguments) {
+    const normalized = normalizeEmail(value);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    emails.push(normalized);
+  }
+  return emails;
+}
+
+function buildSuccessfulPurchaseIdentityFilter(userId, emails) {
+  const clauses = [];
+  const normalizedUserId = String(userId || '').trim();
+  if (normalizedUserId) {
+    clauses.push({ userId: normalizedUserId });
+  }
+  (Array.isArray(emails) ? emails : []).forEach(function(email) {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return;
+    const exactRegex = { $regex: '^' + escapeRegex(normalized) + '$', $options: 'i' };
+    clauses.push({ buyerEmail: normalized });
+    clauses.push({ buyerEmail: exactRegex });
+    clauses.push({ 'buyer.email': normalized });
+    clauses.push({ 'buyer.email': exactRegex });
+  });
+  if (clauses.length === 0) return null;
+  return { $or: clauses };
+}
+
+async function hasSuccessfulPurchaseForFreeShipping(userId, candidateEmails) {
+  const normalizedEmails = collectNormalizedPurchaseEmails.apply(null, candidateEmails || []);
+  const identityFilter = buildSuccessfulPurchaseIdentityFilter(userId, normalizedEmails);
+  if (!identityFilter) return false;
+
+  const completedOrder = await db.collection('orders').findOne(
+    { status: 'completed', ...identityFilter },
+    { projection: { _id: 1 } }
+  );
+  if (completedOrder) return true;
+
+  if (!stripe || !STRIPE_SECRET_KEY) return false;
+  const pendingOrders = await db.collection('pendingOrders')
+    .find(
+      {
+        paymentProvider: 'stripe',
+        stripeCheckoutSessionId: { $exists: true, $ne: '' },
+        ...identityFilter
+      },
+      {
+        projection: { id: 1, stripeCheckoutSessionId: 1, createdAt: 1 }
+      }
+    )
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .toArray();
+  for (const pendingOrder of pendingOrders) {
+    const paidSession = await getPaidStripeCheckoutSessionForOrder(pendingOrder, pendingOrder.stripeCheckoutSessionId);
+    if (paidSession) return true;
+  }
+  return false;
+}
+
 function getAppOrigin() {
   try {
     return new URL(APP_URL).origin;
@@ -4082,13 +4150,11 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
     subtotal = parseFloat(subtotal.toFixed(2));
     let firstOrderFreeShippingApplied = false;
     if (checkoutUser && checkoutUser.userId) {
-      const userId = String(checkoutUser.userId);
-      const email = normalizeEmail(buyer && buyer.email);
-      const userFilter = email
-        ? { $or: [{ userId }, { buyerEmail: email }] }
-        : { userId };
-      const completedCount = await db.collection('orders').countDocuments({ status: 'completed', ...userFilter }, { limit: 1 });
-      firstOrderFreeShippingApplied = completedCount === 0;
+      const hasSuccessfulPurchase = await hasSuccessfulPurchaseForFreeShipping(
+        checkoutUser.userId,
+        [buyer && buyer.email, checkoutUser && checkoutUser.email, req.userEmail]
+      );
+      firstOrderFreeShippingApplied = !hasSuccessfulPurchase;
     }
     const shipping = firstOrderFreeShippingApplied
       ? 0
@@ -4992,12 +5058,12 @@ app.get('/api/orders', publicApiRateLimit, verifyToken, async function(req, res)
 app.get('/api/orders/free-shipping-eligible', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const normalizedEmail = normalizeEmail(req.userEmail);
-    const userFilter = normalizedEmail
-      ? { $or: [{ userId: req.userId }, { buyerEmail: normalizedEmail }] }
-      : { userId: req.userId };
-    const completedCount = await db.collection('orders').countDocuments({ status: 'completed', ...userFilter }, { limit: 1 });
-    res.json({ eligible: completedCount === 0 });
+    const requestedEmail = normalizeEmail(req.query && req.query.email ? req.query.email : '');
+    const hasSuccessfulPurchase = await hasSuccessfulPurchaseForFreeShipping(
+      req.userId,
+      [req.userEmail, requestedEmail]
+    );
+    res.json({ eligible: !hasSuccessfulPurchase });
   } catch (error) {
     console.error('Error checking free shipping eligibility:', error);
     res.status(500).json({ error: error.message });
