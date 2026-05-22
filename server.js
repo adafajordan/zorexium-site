@@ -1741,8 +1741,42 @@ app.get('/api/products/:id', async function(req, res) {
   }
 });
 
+// Verify that userId owns the given product. For legacy products that lack a sellerId
+// field, falls back to matching by seller name (mirroring the GET /api/products/seller/:id
+// fallback). When ownership is confirmed via the name fallback the product's sellerId field
+// is repaired in place so subsequent requests use the fast primary check.
+// Returns true if ownership is confirmed, false otherwise.
+async function verifyProductOwnership(product, userId) {
+  if (product.sellerId === userId) return true;
+  // Fallback for legacy products stored without a sellerId value.
+  if (product.sellerId) return false; // has a different seller – deny immediately
+  try {
+    const sellerRecord = await db.collection('sellers').findOne(
+      { userId: userId },
+      { projection: { shopName: 1, sellerName: 1, sellerUsername: 1 } }
+    );
+    if (!sellerRecord) return false;
+    const matched = (
+      (sellerRecord.shopName && product.sellerName === sellerRecord.shopName) ||
+      (sellerRecord.sellerName && product.sellerName === sellerRecord.sellerName) ||
+      (sellerRecord.sellerUsername && product.sellerUsername === sellerRecord.sellerUsername)
+    );
+    if (matched) {
+      // Repair the missing sellerId so future requests hit the primary path.
+      await db.collection('products').updateOne(
+        { _id: product._id },
+        { $set: { sellerId: userId } }
+      );
+    }
+    return matched;
+  } catch (err) {
+    console.error('Error in verifyProductOwnership fallback:', err.message);
+    return false;
+  }
+}
+
 // ── PUT /api/products/:id – update a product (auth required, owner only) ───────
-app.put('/api/products/:id', verifyToken, async function(req, res) {
+app.put('/api/products/:id', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -1758,7 +1792,7 @@ app.put('/api/products/:id', verifyToken, async function(req, res) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    if (product.sellerId !== req.userId) {
+    if (!(await verifyProductOwnership(product, req.userId))) {
       return res.status(403).json({ error: 'Forbidden: you do not own this product' });
     }
 
@@ -1861,7 +1895,7 @@ app.patch('/api/products/:id/status', publicApiRateLimit, verifyToken, async fun
 
     const product = await db.collection('products').findOne({ _id: objectId });
     if (!product) return res.status(404).json({ error: 'Product not found' });
-    if (product.sellerId !== req.userId) return res.status(403).json({ error: 'Forbidden: you do not own this product' });
+    if (!(await verifyProductOwnership(product, req.userId))) return res.status(403).json({ error: 'Forbidden: you do not own this product' });
 
     const { status } = req.body;
     if (!status || !['active', 'draft'].includes(status)) {
@@ -1878,7 +1912,7 @@ app.patch('/api/products/:id/status', publicApiRateLimit, verifyToken, async fun
 });
 
 // ── DELETE /api/products/:id – delete a product (auth required, owner only) ─────
-app.delete('/api/products/:id', verifyToken, async function(req, res) {
+app.delete('/api/products/:id', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
@@ -1895,7 +1929,7 @@ app.delete('/api/products/:id', verifyToken, async function(req, res) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    if (product.sellerId !== req.userId) {
+    if (!(await verifyProductOwnership(product, req.userId))) {
       return res.status(403).json({ error: 'Forbidden: you do not own this product' });
     }
 
