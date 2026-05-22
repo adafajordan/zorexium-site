@@ -821,7 +821,7 @@ app.use(function(req, res, next) {
     res.header('Access-Control-Allow-Credentials', 'true');
   }
   // Unknown origins or same-origin requests: no CORS headers set
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
