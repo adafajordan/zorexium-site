@@ -1383,7 +1383,7 @@
   }
 
   function toggleProductStatus(productId, currentlyActive) {
-    const newStatus = currentlyActive ? 'draft' : 'active';
+    const newStatus = currentlyActive ? 'inactive' : 'active';
     const actionLabel = currentlyActive ? 'Unlist' : 'List';
     ZrxNotify.showConfirm(actionLabel + ' this product?', function() {
       ZrxSession.fetch(BACKEND_URL + '/api/products/' + encodeURIComponent(productId) + '/status', {
