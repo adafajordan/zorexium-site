@@ -1558,7 +1558,7 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
     }
 
     // Validate status if provided; allow draft on POST
-    const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft'];
+    const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft', 'inactive'];
     const resolvedStatus = (status && validStatuses.includes(status)) ? status : 'pending';
 
     // Enforce Starter tier listing limit (max active listings)
@@ -1857,7 +1857,7 @@ app.put('/api/products/:id', publicApiRateLimit, verifyToken, async function(req
     if (documents !== undefined) updates.documents = Array.isArray(documents) ? documents : [];
     if (compliance !== undefined) updates.compliance = compliance;
     if (status !== undefined) {
-      const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft'];
+      const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft', 'inactive'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
       }
@@ -1898,8 +1898,8 @@ app.patch('/api/products/:id/status', publicApiRateLimit, verifyToken, async fun
     if (!(await verifyProductOwnership(product, req.userId))) return res.status(403).json({ error: 'Forbidden: you do not own this product' });
 
     const { status } = req.body;
-    if (!status || !['active', 'draft'].includes(status)) {
-      return res.status(400).json({ error: 'status must be "active" or "draft"' });
+    if (!status || !['active', 'draft', 'inactive'].includes(status)) {
+      return res.status(400).json({ error: 'status must be "active", "draft", or "inactive"' });
     }
 
     await db.collection('products').updateOne({ _id: objectId }, { $set: { status, updatedAt: new Date() } });
