@@ -1691,9 +1691,13 @@ app.get('/api/products/seller/:sellerId', publicApiRateLimit, async function(req
   }
 
   try {
-    // Primary lookup by sellerId field.
+    // Primary lookup by sellerId field, including legacy ObjectId-typed sellerId values.
+    const sellerIdClauses = [{ sellerId }];
+    if (ObjectId.isValid(sellerId)) {
+      sellerIdClauses.push({ sellerId: new ObjectId(sellerId) });
+    }
     let products = await db.collection('products')
-      .find({ sellerId })
+      .find({ $or: sellerIdClauses })
       .toArray();
 
     // Fallback: if no products found by sellerId, try matching by sellerName/sellerUsername.
@@ -1747,7 +1751,18 @@ app.get('/api/products/:id', async function(req, res) {
 // is repaired in place so subsequent requests use the fast primary check.
 // Returns true if ownership is confirmed, false otherwise.
 async function verifyProductOwnership(product, userId) {
-  if (product.sellerId === userId) return true;
+  const productSellerId = product && product.sellerId != null ? String(product.sellerId) : '';
+  const requestUserId = userId != null ? String(userId) : '';
+  if (product.sellerId === userId || (productSellerId && requestUserId && productSellerId === requestUserId)) {
+    // Repair legacy non-string sellerId storage to normalized string for future checks.
+    if (product.sellerId !== userId) {
+      await db.collection('products').updateOne(
+        { _id: product._id },
+        { $set: { sellerId: userId, updatedAt: new Date() } }
+      );
+    }
+    return true;
+  }
   // Fallback for legacy products stored without a sellerId value.
   if (product.sellerId) return false; // has a different seller – deny immediately
   try {
