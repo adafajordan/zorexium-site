@@ -633,6 +633,18 @@
     return str.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1));
   }
 
+  function isPubliclyVisibleProduct(product) {
+    if (!product || typeof product !== 'object') return false;
+    if (product.deleted === true || product.isDeleted === true) return false;
+    if (product.deletedAt) return false;
+
+    const rawStatus = (product.status == null ? 'active' : String(product.status)).trim().toLowerCase();
+    if (!rawStatus) return true;
+
+    if (['draft', 'inactive', 'deleted', 'unlisted', 'removed', 'archived'].includes(rawStatus)) return false;
+    return ['active', 'approved'].includes(rawStatus);
+  }
+
   // ── Load products from backend ───────────────────────────────────────────────
   async function loadProducts() {
     try {
@@ -649,7 +661,8 @@
       const res = await fetch(url);
       if (!res.ok) throw new Error('fetch error');
       const data = await res.json();
-      allProducts = Array.isArray(data) ? data : [];
+      const products = Array.isArray(data) ? data : [];
+      allProducts = products.filter(isPubliclyVisibleProduct);
 
       // If page title is still generic and we now have products, derive seller name
       if ((brandName === 'Brand' || !brandName) && allProducts.length > 0) {
