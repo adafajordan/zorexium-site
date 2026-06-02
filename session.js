@@ -67,6 +67,19 @@
     return getUser() !== null;
   }
 
+  function hideGuestHeaderDropdownArrows() {
+    if (isLoggedIn()) return;
+    ['marketplaceDropdown', 'communityHubDropdown'].forEach(function (id) {
+      var dropdown = document.getElementById(id);
+      if (!dropdown) return;
+      var toggleBtn = dropdown.querySelector('button[onclick*="toggleDropdown"]');
+      if (!toggleBtn) return;
+      toggleBtn.style.display = 'none';
+      toggleBtn.setAttribute('aria-hidden', 'true');
+      toggleBtn.setAttribute('tabindex', '-1');
+    });
+  }
+
   /**
    * Performs an authenticated fetch. Adds credentials:'include' and an
    * Authorization: Bearer header (from localStorage) so auth works
@@ -114,4 +127,10 @@
     deleteCookie: deleteCookie,
     BACKEND_URL: BACKEND_URL
   };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideGuestHeaderDropdownArrows);
+  } else {
+    hideGuestHeaderDropdownArrows();
+  }
 }());
