@@ -1097,43 +1097,60 @@
 
             resolveFirstPurchaseFreeShippingEligibility();
 
+            var PRODUCTS_CACHE_KEY = 'zrx_products_cache';
+            var PRODUCTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+            function applyProducts(all) {
+                window._allHomeProducts = all;
+                var params = new URLSearchParams(window.location.search);
+                var cat = params.get('category');
+                var sub = params.get('sub');
+                var search = params.get('search');
+                if (search) {
+                    var q = search.toLowerCase();
+                    var filtered = all.filter(function(p) {
+                        return (p.name || '').toLowerCase().includes(q) ||
+                               (p.description || '').toLowerCase().includes(q) ||
+                               (p.category || '').toLowerCase().includes(q);
+                    });
+                    var titleEl = document.getElementById('homePageTitle');
+                    if (titleEl) titleEl.textContent = 'Search: ' + search;
+                    window._renderHomeProducts(filtered);
+                } else if (cat) {
+                    window.filterHomeProducts(cat, sub || '', sub || cat);
+                } else {
+                    window._renderHomeProducts(all);
+                    var countEl = document.getElementById('homeResultCount');
+                    if (countEl) countEl.classList.add('hidden');
+                    if (params.get('all')) {
+                        var titleEl2 = document.getElementById('homePageTitle');
+                        if (titleEl2) titleEl2.textContent = 'All Products';
+                    }
+                }
+            }
+
+            // Render cached products immediately so the grid is populated before the network response arrives
+            try {
+                var cached = JSON.parse(localStorage.getItem(PRODUCTS_CACHE_KEY) || 'null');
+                if (cached && cached.data && Array.isArray(cached.data) && cached.data.length > 0) {
+                    applyProducts(cached.data);
+                }
+            } catch (_) {}
+
             fetch(BACKEND_URL + '/api/products')
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
                     var all = Array.isArray(data) ? data : [];
-                    window._allHomeProducts = all;
-
-                    // Apply URL params if present (category/sub filter or search)
-                    var params = new URLSearchParams(window.location.search);
-                    var cat = params.get('category');
-                    var sub = params.get('sub');
-                    var search = params.get('search');
-                    if (search) {
-                        var q = search.toLowerCase();
-                        var filtered = all.filter(function(p) {
-                            return (p.name || '').toLowerCase().includes(q) ||
-                                   (p.description || '').toLowerCase().includes(q) ||
-                                   (p.category || '').toLowerCase().includes(q);
-                        });
-                        var titleEl = document.getElementById('homePageTitle');
-                        if (titleEl) titleEl.textContent = 'Search: ' + search;
-                        window._renderHomeProducts(filtered);
-                    } else if (cat) {
-                        window.filterHomeProducts(cat, sub || '', sub || cat);
-                    } else {
-                        window._renderHomeProducts(all);
-                        var countEl = document.getElementById('homeResultCount');
-                        if (countEl) countEl.classList.add('hidden');
-                        if (params.get('all')) {
-                            var titleEl = document.getElementById('homePageTitle');
-                            if (titleEl) titleEl.textContent = 'All Products';
-                        }
-                    }
+                    try { localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ data: all, ts: Date.now() })); } catch (_) {}
+                    applyProducts(all);
                 })
                 .catch(function(err) {
                     console.error('Error loading products:', err);
-                    var grid = document.getElementById('homeProductsGrid');
-                    if (grid) grid.innerHTML = '<div class="col-span-4 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4 block"></i><p class="text-red-400">Failed to load products. Please refresh the page.</p></div>';
+                    // Only show error if nothing is currently displayed
+                    if (!window._allHomeProducts || window._allHomeProducts.length === 0) {
+                        var grid = document.getElementById('homeProductsGrid');
+                        if (grid) grid.innerHTML = '<div class="col-span-4 text-center py-12"><i class="fas fa-exclamation-triangle text-5xl text-red-500 mb-4 block"></i><p class="text-red-400">Failed to load products. Please refresh the page.</p></div>';
+                    }
                 });
             // Expose a filter function for subcategory clicks
             window.filterHomeProducts = function(categoryKey, subKey, label) {
