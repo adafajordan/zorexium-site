@@ -437,7 +437,7 @@
                 <input type="text" id="productBrand" class="wiz-input" placeholder="e.g., ASUS, NVIDIA, Corsair">
               </div>
               <div>
-                <label class="wiz-label">Manufacturer Part Number (MPN) <span class="text-red-500">*</span></label>
+                <label class="wiz-label">Manufacturer Part Number (MPN) <span class="text-gray-400 font-normal">(optional)</span></label>
                 <input type="text" id="productModel" class="wiz-input" placeholder="e.g., ROG-STRIX-RTX4090-O24G-GAMING">
                 <p class="wiz-help">Unique alphanumeric code assigned by the manufacturer</p>
               </div>
@@ -629,9 +629,9 @@
                 <p class="wiz-help">Unique internal identifier for inventory tracking</p>
               </div>
               <div>
-                <label class="wiz-label">GTIN / UPC / EAN <span class="text-red-500">*</span></label>
+                <label class="wiz-label">GTIN / UPC / EAN <span class="text-gray-400 font-normal">(optional)</span></label>
                 <input type="text" id="productGtin" class="wiz-input" placeholder="e.g., 195553535213">
-                <p class="wiz-help">12 or 14-digit universal barcode, required for all products</p>
+                <p class="wiz-help">12 or 14-digit universal barcode</p>
               </div>
               <div>
                 <label class="wiz-label">MSRP — Manufacturer's Suggested Retail Price (USD) <span class="text-red-500">*</span></label>
@@ -769,14 +769,6 @@
                   <input type="checkbox" name="carrier" value="DHL" class="w-4 h-4 text-amber-500 rounded border-gray-300">
                   <span class="text-sm text-gray-700 font-medium">DHL</span>
                 </label>
-              </div>
-            </div>
-
-            <div class="flex items-start gap-3 bg-green-50 border border-green-200 rounded-lg p-3">
-              <input type="checkbox" id="freeShipping" class="mt-0.5 w-4 h-4 text-amber-500 rounded border-gray-300 flex-shrink-0">
-              <div>
-                <label for="freeShipping" class="text-sm font-semibold text-gray-700 cursor-pointer block">Offer Free Shipping</label>
-                <p class="text-xs text-gray-500">Free shipping significantly improves conversion rates and search ranking</p>
               </div>
             </div>
 
@@ -1184,7 +1176,6 @@
     if (currentStep === 1) {
       if (!document.getElementById('productName').value.trim())    { show('Product name is required.');           return false; }
       if (!document.getElementById('productBrand').value.trim())   { show('Brand is required.');                  return false; }
-      if (!document.getElementById('productModel').value.trim())   { show('Manufacturer Part Number (MPN) is required.'); return false; }
       if (!document.getElementById('productType').value)           { show('Product type is required.');           return false; }
       if (!document.getElementById('productCondition').value)      { show('Product condition is required.');      return false; }
       if (!document.getElementById('productCategory').value)       { show('Please select a product category.');   return false; }
@@ -1197,7 +1188,6 @@
     }
     if (currentStep === 3) {
       if (!document.getElementById('productSku').value.trim())     { show('SKU is required.'); return false; }
-      if (!document.getElementById('productGtin').value.trim())    { show('GTIN / UPC / EAN barcode is required.'); return false; }
       const price = parseFloat(document.getElementById('productPrice').value);
       if (!price || price <= 0)                                     { show('A valid price greater than $0 is required.'); return false; }
       const msrp = parseFloat(document.getElementById('productMsrp').value);
@@ -1394,7 +1384,7 @@
         items: [
           { label: 'Product Name',   value: val('productName'),       required: true },
           { label: 'Brand',          value: val('productBrand'),      required: true },
-          { label: 'MPN',            value: val('productModel'),      required: true },
+          { label: 'MPN',            value: val('productModel') },
           { label: 'Product Type',   value: val('productType'),       required: true },
           { label: 'Condition',      value: val('productCondition'),  required: true },
           { label: 'Category',       value: val('productCategory'),   required: true },
@@ -1420,7 +1410,7 @@
         title: 'Pricing & Inventory', step: 3, icon: 'fa-dollar-sign',
         items: [
           { label: 'SKU',           value: val('productSku'),                                                     required: true },
-          { label: 'GTIN / UPC / EAN', value: val('productGtin'),                                                 required: true },
+          { label: 'GTIN / UPC / EAN', value: val('productGtin') },
           { label: 'Price',         value: val('productPrice') ? '$' + parseFloat(val('productPrice')).toFixed(2) : '', required: true },
           { label: 'MSRP',         value: val('productMsrp') ? '$' + parseFloat(val('productMsrp')).toFixed(2) : '',   required: true },
           { label: 'Sale Price',    value: val('productSalePrice') ? '$' + parseFloat(val('productSalePrice')).toFixed(2) : '' },
@@ -1435,7 +1425,6 @@
           { label: 'Shipping Class', value: val('shippingClass'),                                                                required: true },
           { label: 'Handling Time',  value: val('handlingTime') + ' business day(s)' },
           { label: 'Carriers',       value: carriers.join(', ') || 'Not specified' },
-          { label: 'Free Shipping',  value: chk('freeShipping') ? 'Yes ✓' : 'No' },
           { label: 'Pkg Dimensions', value: [val('pkgLength'), val('pkgWidth'), val('pkgHeight')].filter(Boolean).join(' × ') + (val('pkgLength') ? ' in' : '') },
           { label: 'Weight',         value: val('pkgWeight') ? val('pkgWeight') + ' lbs' : '' },
           { label: 'Returns',        value: val('returnEligible') === 'yes' ? 'Returnable (' + val('returnWindow') + ' days)' : 'No Returns' },
@@ -1583,7 +1572,6 @@
         shippingClass: val('shippingClass'),
         handlingTime:  parseInt(document.getElementById('handlingTime')?.value) || 1,
         carriers,
-        freeShipping:  document.getElementById('freeShipping')?.checked || false,
         returnEligible:document.getElementById('returnEligible')?.value === 'yes',
         returnWindow:  parseInt(document.getElementById('returnWindow')?.value) || 30,
       },
