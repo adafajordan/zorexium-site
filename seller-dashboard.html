@@ -1340,6 +1340,12 @@
   function productCard(p) {
     const isActive = (p.status || 'active') === 'active';
     const showFeaturedBadge = String(sellerData && sellerData.tier ? sellerData.tier : '').toLowerCase() === 'pro';
+    const mpnValue = p.mpn || p.model || '';
+    const gtinValue = p.gtin || '';
+    const privateIds = []
+      .concat(mpnValue ? ['<span><strong>MPN:</strong> ' + escHtml(String(mpnValue)) + '</span>'] : [])
+      .concat(gtinValue ? ['<span><strong>GTIN/UPC/EAN:</strong> ' + escHtml(String(gtinValue)) + '</span>'] : [])
+      .join(' &bull; ');
     return '<div class="product-card">' +
       '<div class="h-40 bg-gray-50 flex items-center justify-center overflow-hidden">' +
       (p.image ? '<img src="' + escHtml(p.image) + '" alt="' + escHtml(p.name) + '" class="w-full h-full object-contain p-2">' : '<i class="fas fa-image text-gray-300 text-4xl"></i>') +
@@ -1353,6 +1359,7 @@
       + '</div>' +
       '</div>' +
       '<p class="text-xs text-gray-400 mb-2">' + escHtml(p.category || 'Uncategorized') + ' &bull; ' + escHtml(p.condition || 'Used') + '</p>' +
+      (privateIds ? '<p class="text-[11px] text-gray-500 mb-2">' + privateIds + '</p>' : '') +
       '<div class="flex items-center justify-between mb-3">' +
       '<p class="text-cyan-600 font-bold text-base">$' + parseFloat(p.price || 0).toFixed(2) + '</p>' +
       '<a href="product-detail.html?id=' + escHtml(p.id) + '" class="text-xs text-gray-500 hover:text-gray-700">Preview →</a>' +
