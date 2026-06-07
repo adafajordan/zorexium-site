@@ -338,13 +338,11 @@
       <span id="breadcrumbName" class="text-gray-700 truncate max-w-xs">Product</span>
     </nav>
 
-    <!-- Brand + Item# + MPN -->
+    <!-- Brand + Item# -->
     <div class="flex flex-wrap items-center gap-3 mb-1">
       <span id="productBrand" class="text-cyan-600 font-bold text-sm uppercase tracking-wide">Brand</span>
       <span class="text-gray-300">|</span>
       <span class="text-gray-500 text-xs">Item#: <span id="productId" class="font-mono text-gray-700">-</span></span>
-      <span id="productMpnSeparator" class="hidden text-gray-300">|</span>
-      <span id="productMpnLabel" class="hidden text-gray-500 text-xs">MPN: <span id="productMpn" class="font-mono text-gray-700">-</span></span>
     </div>
 
     <!-- Product Title -->
@@ -1292,13 +1290,6 @@
           // Item#
           document.getElementById('productId').innerText = currentProduct.id;
 
-          // MPN
-          if (currentProduct.mpn) {
-            document.getElementById('productMpn').innerText = currentProduct.mpn;
-            document.getElementById('productMpnSeparator').classList.remove('hidden');
-            document.getElementById('productMpnLabel').classList.remove('hidden');
-          }
-
           // Price – show salePrice as current price and originalPrice/price as strike-through
           var displayPrice = currentProduct.salePrice || currentProduct.price;
           var strikePrice = currentProduct.salePrice ? currentProduct.originalPrice || currentProduct.price : null;
@@ -1455,7 +1446,6 @@
 
           // Additional Info section (all listing wizard fields)
           var addlRows = [];
-          if (product.gtin)                             addlRows.push(['GTIN / UPC / EAN', product.gtin]);
           if (product.sku)                              addlRows.push(['Seller SKU', product.sku]);
           if (currentProduct.subcategory)               addlRows.push(['Subcategory', currentProduct.subcategory]);
           if (product.brand)                            addlRows.push(['Brand', product.brand]);

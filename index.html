@@ -1012,7 +1012,6 @@
                     (stars ? '<div class="flex items-center mb-1">' + stars + reviewCount + '</div>' : '') +
                     '<h3 class="text-sm font-medium text-gray-900 line-clamp-2 mb-2 leading-snug">' + escHtml(name) + '</h3>' +
                     (specHtml ? '<div class="space-y-0.5 mb-2">' + specHtml + '</div>' : '') +
-                    (product.model ? '<p class="text-xs text-gray-400 mb-1">Model: ' + escHtml(product.model) + '</p>' : '') +
                     '<div class="flex items-end gap-2 mt-2 mb-1">' +
                     '<span class="text-xl font-bold text-gray-900">$' + price.toFixed(2) + '</span>' +
                     (origPrice && origPrice > price ? '<span class="price-strike text-sm">$' + origPrice.toFixed(2) + '</span>' : '') +
