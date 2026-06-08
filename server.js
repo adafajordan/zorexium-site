@@ -100,9 +100,6 @@ app.use(express.json({
 }));
 // Only serve files from /public – never expose server.js, package.json, .env.example, etc.
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/favicon.png', function(_req, res) {
-  res.sendFile(path.join(__dirname, 'favicon.png'));
-});
 
 // Shared 10 MB per-image limit used by all image upload endpoints.
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
