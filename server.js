@@ -9114,6 +9114,99 @@ async function forceAdafaProSellerTierOnce() {
   }
 }
 
+async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'grant_galaxy_monkee_pro_seller_6_months_2026_06_08';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const user = await db.collection('users').findOne(
+      { username: { $regex: /^galaxy_monkee$/i } },
+      { projection: { _id: 1, firstName: 1, lastName: 1, email: 1, username: 1 } }
+    );
+    if (!user || !user._id) {
+      console.warn('ℹ️  Galaxy_monkee Pro Seller migration skipped: user not found');
+      return;
+    }
+
+    const userId = String(user._id);
+    const now = new Date();
+    const complimentaryEndsAt = new Date(now.getTime());
+    complimentaryEndsAt.setUTCMonth(complimentaryEndsAt.getUTCMonth() + 6);
+    const manualSubscriptionId = `manual_galaxy_monkee_${now.toISOString().slice(0, 10).replace(/-/g, '')}`;
+
+    const seller = await db.collection('sellers').findOne({ userId: userId });
+    let sellerCreated = false;
+    if (!seller) {
+      await db.collection('sellers').insertOne({
+        userId: userId,
+        accountType: 'individual',
+        shopName: resolveSellerName(user),
+        shopDescription: 'Shop',
+        joinDate: now,
+        rating: 5,
+        totalSales: 0,
+        isVerified: false,
+        tier: 'pro',
+        proSubscriptionId: manualSubscriptionId,
+        proSubscriptionStatus: 'complimentary_active',
+        proSubscriptionProvider: 'manual_grant',
+        proSubscriptionCancelAtPeriodEnd: true,
+        proSubscriptionCancellationScheduledAt: now,
+        proTierDowngraded: false,
+        proTierDowngradeScheduledFor: complimentaryEndsAt,
+        proComplimentaryGrantedAt: now,
+        proComplimentaryEndsAt: complimentaryEndsAt,
+        createdAt: now,
+        updatedAt: now
+      });
+      sellerCreated = true;
+    } else {
+      await db.collection('sellers').updateOne(
+        { userId: userId },
+        {
+          $set: {
+            tier: 'pro',
+            proSubscriptionId: manualSubscriptionId,
+            proSubscriptionStatus: 'complimentary_active',
+            proSubscriptionProvider: 'manual_grant',
+            proSubscriptionCancelAtPeriodEnd: true,
+            proSubscriptionCancellationScheduledAt: now,
+            proTierDowngraded: false,
+            proTierDowngradeScheduledFor: complimentaryEndsAt,
+            proComplimentaryGrantedAt: now,
+            proComplimentaryEndsAt: complimentaryEndsAt,
+            updatedAt: now
+          },
+          $unset: { proTierDowngradedAt: 1 }
+        }
+      );
+    }
+
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { isSeller: true, updatedAt: now } }
+    );
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: now,
+      summary: {
+        userId: userId,
+        username: user.username || 'Galaxy_monkee',
+        sellerCreated: sellerCreated,
+        tier: 'pro',
+        complimentaryEndsAt: complimentaryEndsAt
+      }
+    });
+
+    console.log(`✅ Galaxy_monkee Pro Seller migration complete: tier granted until ${complimentaryEndsAt.toISOString()}`);
+  } catch (err) {
+    console.error('⚠️  Galaxy_monkee Pro Seller migration error:', err.message);
+  }
+}
+
 async function cleanupLegacyNonStripePayoutDestinationsOnce() {
   if (!mongoConnected) return;
   const migrationKey = 'cleanup_non_stripe_payout_destinations_2026_05_14';
@@ -9702,6 +9795,7 @@ async function start() {
       await recoverMissingSellers();
       await assignStarterTierToExistingSellers();
       await forceAdafaProSellerTierOnce();
+      await grantGalaxyMonkeeProSellerTierForSixMonthsOnce();
       await ensurePayoutIndexes();
       await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();
