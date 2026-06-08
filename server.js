@@ -9116,13 +9116,24 @@ async function forceAdafaProSellerTierOnce() {
 
 async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
   if (!mongoConnected) return;
-  const migrationKey = 'grant_galaxy_monkee_pro_seller_6_months_2026_06_08';
+  const migrationKey = 'grant_galaxy_monkee_pro_seller_6_months_profile_seed_2026_06_08_v2';
   try {
     const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
     if (existing) return;
 
-    const user = await db.collection('users').findOne(
+    const targetUserId = '6a26e28e83d39f23d199cdb0';
+    const targetUsername = 'Galaxy_monkee';
+    const targetEmail = 'zhenninger9267@gmail.com';
+    const targetName = 'Zac Henninger';
+    const userLookupClauses = [
       { username: { $regex: /^galaxy_monkee$/i } },
+      { email: { $regex: /^zhenninger9267@gmail\.com$/i } }
+    ];
+    if (ObjectId.isValid(targetUserId)) {
+      userLookupClauses.unshift({ _id: new ObjectId(targetUserId) });
+    }
+    const user = await db.collection('users').findOne(
+      { $or: userLookupClauses },
       { projection: { _id: 1, firstName: 1, lastName: 1, email: 1, username: 1 } }
     );
     if (!user || !user._id) {
@@ -9137,17 +9148,39 @@ async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
     const manualSubscriptionId = `manual_galaxy_monkee_${now.toISOString().slice(0, 10).replace(/-/g, '')}`;
 
     const seller = await db.collection('sellers').findOne({ userId: userId });
+    const resolveNonEmptyString = function(value, fallback) {
+      const normalized = String(value || '').trim();
+      return normalized || fallback;
+    };
+    const resolvedEmail = resolveNonEmptyString(normalizeEmail(user.email) || '', targetEmail);
+    const resolvedName = resolveNonEmptyString(((user.firstName || '') + ' ' + (user.lastName || '')).trim(), targetName);
+    const resolvedShopName = resolveNonEmptyString(user.username, targetUsername);
+    const resolvedSignupFields = {
+      accountType: resolveNonEmptyString(seller && seller.accountType, 'individual').slice(0, 20),
+      shopName: resolveNonEmptyString(seller && seller.shopName, resolvedShopName).slice(0, 200),
+      shopDescription: resolveNonEmptyString(seller && seller.shopDescription, 'Trusted Zorexium seller profile.').slice(0, 2000),
+      businessEmail: resolveNonEmptyString(seller && seller.businessEmail, resolvedEmail).slice(0, 200),
+      phoneNumber: resolveNonEmptyString(seller && seller.phoneNumber, '+10000000000').slice(0, 30),
+      businessAddress: resolveNonEmptyString(seller && seller.businessAddress, '123 Seller Lane').slice(0, 200),
+      businessCity: resolveNonEmptyString(seller && seller.businessCity, 'San Diego').slice(0, 100),
+      businessState: resolveNonEmptyString(seller && seller.businessState, 'CA').slice(0, 100),
+      businessZip: resolveNonEmptyString(seller && seller.businessZip, '92101').slice(0, 20),
+      personalName: resolveNonEmptyString(seller && seller.personalName, resolvedName).slice(0, 200),
+      personalEmail: resolveNonEmptyString(seller && seller.personalEmail, resolvedEmail).slice(0, 200),
+      shippingAddress: resolveNonEmptyString(seller && seller.shippingAddress, '123 Seller Lane').slice(0, 200),
+      shippingCity: resolveNonEmptyString(seller && seller.shippingCity, 'San Diego').slice(0, 100),
+      shippingState: resolveNonEmptyString(seller && seller.shippingState, 'CA').slice(0, 100),
+      shippingZip: resolveNonEmptyString(seller && seller.shippingZip, '92101').slice(0, 20),
+      joinDate: seller && seller.joinDate ? seller.joinDate : now,
+      rating: seller && typeof seller.rating === 'number' ? seller.rating : 5,
+      totalSales: seller && typeof seller.totalSales === 'number' ? seller.totalSales : 0,
+      isVerified: seller && typeof seller.isVerified === 'boolean' ? seller.isVerified : false
+    };
     let sellerCreated = false;
     if (!seller) {
       await db.collection('sellers').insertOne({
         userId: userId,
-        accountType: 'individual',
-        shopName: resolveSellerName(user),
-        shopDescription: 'Shop',
-        joinDate: now,
-        rating: 5,
-        totalSales: 0,
-        isVerified: false,
+        ...resolvedSignupFields,
         tier: 'pro',
         proSubscriptionId: manualSubscriptionId,
         proSubscriptionStatus: 'complimentary_active',
@@ -9167,6 +9200,7 @@ async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
         { userId: userId },
         {
           $set: {
+            ...resolvedSignupFields,
             tier: 'pro',
             proSubscriptionId: manualSubscriptionId,
             proSubscriptionStatus: 'complimentary_active',
@@ -9194,7 +9228,8 @@ async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
       createdAt: now,
       summary: {
         userId: userId,
-        username: user.username || 'Galaxy_monkee',
+        username: user.username || targetUsername,
+        email: resolvedEmail,
         sellerCreated: sellerCreated,
         tier: 'pro',
         complimentaryEndsAt: complimentaryEndsAt
