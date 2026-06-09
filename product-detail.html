@@ -245,7 +245,6 @@
                             <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
                             <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
                             <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
-                            <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
                             <!-- Zorexium -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
                             <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
@@ -307,7 +306,6 @@
                             <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
                             <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
                             <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
-                            <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
                             <!-- Zorexium -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
                             <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
@@ -508,6 +506,18 @@
       </div>
     </div><!-- /main 2-col -->
 
+    <!-- ── Related Products ─────────────────────────────────────────────────── -->
+    <div id="similarSection" class="mt-8 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-bold text-gray-900">Related Products</h2>
+        <a href="index.html" class="text-cyan-600 hover:underline text-sm">Shop All Products</a>
+      </div>
+      <div id="similarProductsGrid"
+        class="flex gap-4 overflow-x-auto pb-3 snap-x">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
     <!-- ── Meet Your Seller ────────────────────────────────────────────────── -->
     <div id="meetSellerSection" class="mt-8 border border-gray-200 rounded-lg p-5 hidden">
       <h3 class="text-base font-bold text-gray-900 mb-3">Meet Your Seller</h3>
@@ -604,18 +614,6 @@
         </button>
       </div>
       <p class="text-gray-500 text-sm">Have a question? Click "Ask a Question" to message the seller directly.</p>
-    </div>
-
-    <!-- ── Similar Products ──────────────────────────────────────────────── -->
-    <div id="similarSection" class="mt-10 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-base font-bold text-gray-900">Similar Products</h2>
-        <a href="index.html" class="text-cyan-600 hover:underline text-sm">Shop All Products</a>
-      </div>
-      <div id="similarProductsGrid"
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        <!-- filled by JS -->
-      </div>
     </div>
 
     <!-- ── Warranty & Returns ────────────────────────────────────────────── -->
@@ -833,16 +831,20 @@
     return temp.innerHTML;
   }
 
-  // ── Similar products ──────────────────────────────────────────────────────
-  async function loadSimilarProducts(category, excludeId) {
+  // ── Related products (same category + subcategory) ────────────────────────
+  async function loadSimilarProducts(category, subcategory, excludeId) {
     try {
       var res = await fetch(BACKEND_URL + '/api/products');
       if (!res.ok) return;
       var allProducts = await res.json();
+      var subNorm = String(subcategory || '').trim().toLowerCase();
       var similar = allProducts.filter(function(p) {
         var pid = p._id ? String(p._id) : String(p.id || '');
-        return pid !== String(excludeId) && p.category === category;
-      }).slice(0, 10);
+        if (pid === String(excludeId)) return false;
+        if (p.category !== category) return false;
+        if (subNorm) return String(p.subcategory || '').trim().toLowerCase() === subNorm;
+        return true;
+      }).slice(0, 12);
       if (similar.length === 0) return;
 
       var grid = document.getElementById('similarProductsGrid');
@@ -858,7 +860,7 @@
         if (displayName.length > SIMILAR_PRODUCT_NAME_MAX) displayName = displayName.substring(0, SIMILAR_PRODUCT_NAME_MAX) + '...';
         var condition = p.condition || '';
         html += '<a href="product-detail.html?id=' + encodeURIComponent(pid) + '" '
-          + 'class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col bg-white">'
+          + 'class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col bg-white flex-shrink-0 snap-start" style="width:calc((100% - 2rem)/3);min-width:160px;max-width:240px">'
           + '<div class="bg-gray-50 flex items-center justify-center" style="height:120px">'
           + '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(displayName) + '" class="max-h-28 max-w-full object-contain p-2">'
           + '</div>'
@@ -1531,7 +1533,7 @@
           }
 
           // Similar products
-          if (currentProduct.category) loadSimilarProducts(currentProduct.category, currentProduct.id);
+          if (currentProduct.category) loadSimilarProducts(currentProduct.category, currentProduct.subcategory || '', currentProduct.id);
 
           // Load reviews
           loadReviews(currentProductId);

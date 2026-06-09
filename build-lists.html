@@ -248,7 +248,6 @@
                             <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
                             <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
                             <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
-                            <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
                             <!-- Zorexium -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
                             <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
@@ -310,7 +309,6 @@
                             <a href="wish-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-heart text-cyan-600 w-4 text-center"></i>Wish Lists</a>
                             <a href="email-notifications.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-bell text-cyan-600 w-4 text-center"></i>Email Notifications</a>
                             <a href="build-lists.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-list text-cyan-600 w-4 text-center"></i>My Build Lists</a>
-                            <a href="build-showcase.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-award text-cyan-600 w-4 text-center"></i>My Build Showcase</a>
                             <!-- Zorexium -->
                             <div class="px-4 py-2 bg-gray-50 border-t border-gray-200 border-b border-gray-200"><p class="text-xs font-bold text-cyan-600 uppercase tracking-wider">Zorexium</p></div>
                             <a href="about.html" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"><i class="fas fa-info-circle text-cyan-600 w-4 text-center"></i>About Us</a>
@@ -351,7 +349,6 @@
         <a href="returns-history.html" class="panel-nav-link"><i class="fas fa-exchange-alt text-cyan-400 w-4 text-center"></i>Returns History</a>
         <a href="wish-lists.html" class="panel-nav-link"><i class="fas fa-heart text-cyan-400 w-4 text-center"></i>Wish Lists</a>
         <a href="build-lists.html" class="panel-nav-link active"><i class="fas fa-list text-cyan-400 w-4 text-center"></i>My Build Lists</a>
-        <a href="build-showcase.html" class="panel-nav-link"><i class="fas fa-award text-cyan-400 w-4 text-center"></i>Build Showcase</a>
         <a href="email-notifications.html" class="panel-nav-link"><i class="fas fa-bell text-cyan-400 w-4 text-center"></i>Notifications</a>
       </nav>
       <div class="mt-6 pt-4 border-t border-gray-100">
@@ -523,7 +520,8 @@
         '</div>' +
         '<div class="flex gap-2">' +
         '<button onclick="blOpenAddItem(\'' + safeId + '\')" class="text-xs font-semibold text-cyan-600 hover:text-cyan-700 border border-cyan-200 hover:bg-cyan-50 rounded px-3 py-1 transition-colors"><i class="fas fa-plus mr-1"></i>Add Product</button>' +
-        '<a href="build-showcase.html" class="text-xs font-semibold text-gray-500 border border-gray-200 hover:bg-gray-50 rounded px-3 py-1 transition-colors"><i class="fas fa-award mr-1"></i>Showcase</a>' +
+        '<button onclick="blShowcaseBuild(\'' + safeId + '\')" class="text-xs font-semibold text-blue-600 hover:text-blue-700 border border-blue-400 hover:bg-blue-50 rounded px-3 py-1 transition-colors relative overflow-hidden"><span class="absolute inset-0 bg-blue-600 opacity-5 rounded"></span><i class="fas fa-award mr-1"></i>Showcase</button>' +
+        '<button onclick="blShareBuild(\'' + safeId + '\')" class="text-xs font-semibold text-gray-600 hover:text-cyan-700 border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50 rounded px-3 py-1 transition-colors"><i class="fas fa-share-alt mr-1"></i>Share</button>' +
         '<button onclick="blConfirmDelete(\'' + safeId + '\')" class="text-gray-400 hover:text-red-500 transition-colors text-xs border border-gray-200 hover:border-red-300 rounded px-2 py-1" title="Delete list"><i class="fas fa-trash"></i></button>' +
         '</div></div>' +
         (itemCount === 0
@@ -690,10 +688,120 @@
       });
   }
 
-  // Close modals on Escape
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { blCloseModal(); blCloseDeleteModal(); blCloseAddItemModal(); }
-  });
+  // ── Showcase & Share ─────────────────────────────────────────────────────
+
+  async function blShowcaseBuild(listId) {
+    var list = (_blLists || []).find(function(l) { return String(l._id) === listId; });
+    if (!list) { if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build list not found.', 'error'); return; }
+    var itemCount = (list.items || []).length;
+    if (itemCount === 0) { if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Add some products before showcasing.', 'info'); return; }
+    var total = (list.items || []).reduce(function(s, i) { return s + (Number(i.price) || 0); }, 0);
+    var content = 'Check out my build "' + (list.name || 'Build') + '"! It has ' + itemCount + ' component' + (itemCount !== 1 ? 's' : '') + ' with a total estimated cost of $' + total.toFixed(2) + '.';
+    var fetchFn = (typeof ZrxSession !== 'undefined') ? ZrxSession.fetch.bind(ZrxSession) : fetch;
+    try {
+      var res = await fetchFn(BACKEND_BL + '/api/posts', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Build Showcase: ' + (list.name || 'My Build'),
+          content: content,
+          boardType: 'pc-building',
+          buildData: {
+            listId: String(list._id),
+            listName: list.name || '',
+            items: (list.items || []).map(function(i) {
+              return { productId: i.productId || '', productName: i.productName || '', price: i.price || 0, image: i.image || '' };
+            })
+          }
+        })
+      });
+      if (res.ok) {
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build posted to Community Hub!', 'success');
+        setTimeout(function() { window.location.href = 'community-hub.html'; }, 1200);
+      } else {
+        var err = await res.json().catch(function() { return {}; });
+        if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification(err.error || 'Failed to showcase build.', 'error');
+      }
+    } catch (e) {
+      if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Network error. Please try again.', 'error');
+    }
+  }
+
+  function blShareBuild(listId) {
+    var shareUrl = window.location.origin + '/build-lists.html?share=' + encodeURIComponent(listId);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl)
+        .then(function() { if (typeof ZrxNotify !== 'undefined') ZrxNotify.showNotification('Build link copied to clipboard!', 'success'); })
+        .catch(function() { prompt('Copy this link:', shareUrl); });
+    } else {
+      prompt('Copy this link:', shareUrl);
+    }
+  }
+
+  // ── Public share view ─────────────────────────────────────────────────────
+
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var shareId = params.get('share');
+    if (!shareId) return;
+    // Show public view mode regardless of auth
+    var authGate = document.getElementById('blAuthGate');
+    var content = document.getElementById('blContent');
+    var createBtn = document.getElementById('blCreateBtn');
+    if (authGate) authGate.classList.add('hidden');
+    if (content) content.classList.remove('hidden');
+    if (createBtn) createBtn.classList.add('hidden');
+    // Replace lists container with public view
+    var container = document.getElementById('blListsContainer');
+    if (!container) return;
+    container.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-2xl text-cyan-400"></i></div>';
+    fetch(BACKEND_BL + '/api/lists/public/' + encodeURIComponent(shareId))
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(list) {
+        if (!list) { container.innerHTML = '<div class="text-center py-10 bg-white border border-gray-200 rounded-lg"><p class="text-gray-500">Build list not found or no longer available.</p></div>'; return; }
+        var itemCount = (list.items || []).length;
+        var date = list.createdAt ? new Date(list.createdAt).toLocaleDateString() : '';
+        var safeName = String(list.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        var productsHtml = (list.items || []).map(function(item) {
+          var safeImg = item.image && /^https?:\/\//i.test(item.image) ? String(item.image).replace(/"/g,'&quot;') : '';
+          var safeProdId = String(item.productId || '').replace(/"/g,'&quot;');
+          var safeProdName = String(item.productName || 'Product').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          var detailUrl = safeProdId && !/^manual-/i.test(safeProdId) ? 'product-detail.html?id=' + encodeURIComponent(item.productId || '') : '';
+          return '<div class="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">' +
+            '<div class="bg-gray-50 h-36 flex items-center justify-center overflow-hidden">' +
+            (safeImg
+              ? '<img src="' + safeImg + '" alt="' + safeProdName + '" class="max-h-full max-w-full object-contain p-2" onerror="this.src=\'https://placehold.co/200x144/f3f4f6/9ca3af?text=No+Image\'">'
+              : '<img src="https://placehold.co/200x144/f3f4f6/9ca3af?text=No+Image" alt="' + safeProdName + '" class="max-h-full max-w-full object-contain p-2">') +
+            '</div>' +
+            '<div class="p-3 flex flex-col flex-1">' +
+            '<h3 class="text-sm font-medium text-gray-900 line-clamp-2 mb-2 leading-snug">' + safeProdName + '</h3>' +
+            '<div class="mt-auto">' +
+            (item.price ? '<span class="text-lg font-bold text-gray-900">$' + Number(item.price).toFixed(2) + '</span>' : '') +
+            (detailUrl ? '<div class="mt-2"><a href="' + detailUrl + '" class="block border border-gray-300 hover:border-gray-400 text-gray-700 text-xs font-medium py-1.5 rounded text-center transition-colors">View Product</a></div>' : '') +
+            '</div></div></div>';
+        }).join('');
+        var total = (list.items || []).reduce(function(s, i) { return s + (Number(i.price) || 0); }, 0);
+        container.innerHTML =
+          '<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5 flex items-start gap-3">' +
+          '<i class="fas fa-share-alt text-blue-500 mt-0.5"></i>' +
+          '<div><p class="font-semibold text-gray-800 text-sm">Shared Build List</p>' +
+          '<p class="text-xs text-gray-500">You\'re viewing a shared build list. Sign in to create your own!</p></div></div>' +
+          '<div class="mb-6">' +
+          '<div class="flex items-center justify-between mb-3">' +
+          '<div><h2 class="text-base font-semibold text-gray-800">' + safeName + '</h2>' +
+          '<p class="text-xs text-gray-400">' + itemCount + ' item' + (itemCount !== 1 ? 's' : '') + (date ? ' &middot; Created ' + date : '') + (total > 0 ? ' &middot; Est. Total: $' + total.toFixed(2) : '') + '</p></div></div>' +
+          (itemCount === 0
+            ? '<div class="text-center py-10 bg-white border border-gray-200 rounded-lg"><p class="text-sm text-gray-400">No products in this build yet.</p></div>'
+            : '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">' + productsHtml + '</div>') +
+          '</div>';
+      })
+      .catch(function() {
+        container.innerHTML = '<div class="text-center py-10 bg-white border border-gray-200 rounded-lg"><p class="text-gray-500">Failed to load build list.</p></div>';
+      });
+  })();
+
+
 
   // Close modals on backdrop click
   document.getElementById('blCreateModal').addEventListener('click', function(e) { if (e.target === this) blCloseModal(); });
