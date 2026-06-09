@@ -766,7 +766,7 @@
         var productsHtml = (list.items || []).map(function(item) {
           var safeImg = item.image && /^https?:\/\//i.test(item.image) ? String(item.image).replace(/"/g,'&quot;') : '';
           var safeProdId = String(item.productId || '').replace(/"/g,'&quot;');
-          var safeProdName = String(item.productName || 'Product').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          var safeProdName = String(item.productName || 'Product').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
           var detailUrl = safeProdId && !/^manual-/i.test(safeProdId) ? 'product-detail.html?id=' + encodeURIComponent(item.productId || '') : '';
           return '<div class="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">' +
             '<div class="bg-gray-50 h-36 flex items-center justify-center overflow-hidden">' +
