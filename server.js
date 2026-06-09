@@ -5780,7 +5780,7 @@ app.get('/api/media/video/:id', async function(req, res) {
 app.post('/api/posts', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
-  const { title, content, boardType, imageUrl, imageUrls, videoUrl } = req.body;
+  const { title, content, boardType, imageUrl, imageUrls, videoUrl, buildData } = req.body;
   const resolvedBoardType = (boardType && typeof boardType === 'string' && boardType.trim()) ? boardType.trim() : 'general';
   if (!title || !content) {
     return res.status(400).json({ error: 'title and content are required' });
@@ -5905,6 +5905,24 @@ app.post('/api/posts', verifyToken, async function(req, res) {
     }
     if (normalizedVideoUrl) {
       post.videoUrl = normalizedVideoUrl;
+    }
+    // Store build list data for build showcase posts
+    if (buildData && typeof buildData === 'object' && !Array.isArray(buildData)) {
+      try {
+        const safeItems = Array.isArray(buildData.items) ? buildData.items.slice(0, 100).map(function(item) {
+          return {
+            productId: typeof item.productId === 'string' ? item.productId.slice(0, 100) : '',
+            productName: typeof item.productName === 'string' ? item.productName.slice(0, 200) : '',
+            price: typeof item.price === 'number' ? item.price : 0,
+            image: typeof item.image === 'string' && /^https?:\/\//i.test(item.image) ? item.image.slice(0, 2000) : ''
+          };
+        }) : [];
+        post.buildData = {
+          listId: typeof buildData.listId === 'string' ? buildData.listId.slice(0, 100) : '',
+          listName: typeof buildData.listName === 'string' ? buildData.listName.slice(0, 100) : '',
+          items: safeItems
+        };
+      } catch (_) {}
     }
     const result = await db.collection('posts').insertOne(post);
     const createdPost = { ...post, _id: result.insertedId };
@@ -7700,6 +7718,30 @@ app.post('/api/paypal/webhook', publicApiRateLimit, async function(req, res) {
 });
 
 // ── LISTS (Build Lists & Wish Lists) ──────────────────────────────────────────
+
+// GET /api/lists/public/:id – get a single list publicly (no auth required, for share links)
+app.get('/api/lists/public/:id', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  let objectId;
+  try { objectId = new ObjectId(req.params.id); } catch (e) {
+    return res.status(400).json({ error: 'Invalid list ID' });
+  }
+  try {
+    const list = await db.collection('lists').findOne({ _id: objectId });
+    if (!list) return res.status(404).json({ error: 'List not found' });
+    // Return only the publicly safe fields
+    res.json({
+      _id: list._id,
+      name: list.name,
+      type: list.type,
+      items: list.items || [],
+      createdAt: list.createdAt
+    });
+  } catch (error) {
+    console.error('Error fetching public list:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // GET /api/lists – get all lists for the current user (auth required)
 app.get('/api/lists', publicApiRateLimit, verifyToken, async function(req, res) {
