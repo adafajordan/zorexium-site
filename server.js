@@ -1330,16 +1330,64 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
       firstName: firstName || '',
       lastName: lastName || '',
       isAdmin: false,
+      isSeller: true,
       createdAt: new Date()
     });
 
+    const newUserId = result.insertedId.toString();
+
+    // Auto-provision a Pro seller profile for every new user at no cost
+    try {
+      const now = new Date();
+      const resolvedName = ((firstName || '') + ' ' + (lastName || '')).trim() || normalizedEmail.split('@')[0];
+      const resolvedShopName = resolvedName + "'s Shop";
+      const manualSubscriptionId = 'manual_free_tier_grant_' + newUserId + '_' + now.toISOString().slice(0, 10).replace(/-/g, '');
+      const complimentaryEndsAt = new Date(now.getTime());
+      complimentaryEndsAt.setUTCFullYear(complimentaryEndsAt.getUTCFullYear() + 100);
+      await db.collection('sellers').insertOne({
+        userId: newUserId,
+        accountType: 'individual',
+        shopName: resolvedShopName.slice(0, 200),
+        shopDescription: 'Welcome to my shop!',
+        businessEmail: normalizedEmail,
+        phoneNumber: '+10000000000',
+        businessAddress: '123 Seller Lane',
+        businessCity: 'San Diego',
+        businessState: 'CA',
+        businessZip: '92101',
+        personalName: resolvedName.slice(0, 200),
+        personalEmail: normalizedEmail,
+        shippingAddress: '123 Seller Lane',
+        shippingCity: 'San Diego',
+        shippingState: 'CA',
+        shippingZip: '92101',
+        joinDate: now,
+        rating: 5,
+        totalSales: 0,
+        isVerified: false,
+        tier: 'pro',
+        proSubscriptionId: manualSubscriptionId,
+        proSubscriptionStatus: 'complimentary_active',
+        proSubscriptionProvider: 'free_tier_grant',
+        proSubscriptionCancelAtPeriodEnd: false,
+        proGrandfatheredPricing: true,
+        proTierDowngraded: false,
+        proComplimentaryGrantedAt: now,
+        proComplimentaryEndsAt: complimentaryEndsAt,
+        createdAt: now,
+        updatedAt: now
+      });
+    } catch (sellerErr) {
+      console.error('Failed to auto-provision seller profile for new user ' + newUserId + ':', sellerErr.message);
+    }
+
     const token = jwt.sign(
-      { userId: result.insertedId.toString(), email: normalizedEmail, isAdmin: false },
+      { userId: newUserId, email: normalizedEmail, isAdmin: false },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    setAuthCookies(res, token, normalizedEmail, firstName || normalizedEmail, result.insertedId.toString());
+    setAuthCookies(res, token, normalizedEmail, firstName || normalizedEmail, newUserId);
     res.json({ message: 'User created successfully', userId: result.insertedId, token, user: { email: normalizedEmail, firstName: firstName || '' } });
     // Send welcome email asynchronously so registration flow is never blocked by email provider delays.
     sendEventEmailSafe(
@@ -1348,12 +1396,19 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
       `<p>Welcome to Zorexium${firstName ? ', ' + firstName : ''}!</p><p>Your account is ready. Visit your account page to get started.</p>`,
       '/account-details.html'
     );
+    sendEventEmailSafe(
+      normalizedEmail,
+      'Your Pro Seller account is active',
+      `<p>Welcome${firstName ? ', ' + firstName : ''}!</p><p>Your <strong>Pro Seller</strong> account has been automatically activated. You can start listing items and managing sales from your <a href="/seller-dashboard.html">seller dashboard</a>.</p><p>Pro Seller benefits: <strong>5% platform fee</strong> per sale and a <strong>2-day payout hold</strong>.</p>`,
+      '/seller-dashboard.html'
+    );
     sendAdminNotificationSafe(
       'New website user signup',
       `<p>A new user account was created.</p>`
         + `<p><strong>Email:</strong> ${escapeHtml(normalizedEmail)}</p>`
         + `<p><strong>Name:</strong> ${escapeHtml(((firstName || '') + ' ' + (lastName || '')).trim() || 'Not provided')}</p>`
-        + `<p><strong>User ID:</strong> ${escapeHtml(String(result.insertedId))}</p>`,
+        + `<p><strong>User ID:</strong> ${escapeHtml(String(result.insertedId))}</p>`
+        + `<p><strong>Auto-granted:</strong> Pro Seller tier</p>`,
       '/marketplace-settings.html'
     );
   } catch (error) {
@@ -10523,6 +10578,144 @@ app.post('/api/test-sms', publicApiRateLimit, async function(req, res) {
   return res.status(500).json({ success: false, error: 'Failed to send SMS.', detail: result.error });
 });
 
+async function grantAllUsersProSellerTierOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'grant_all_users_pro_seller_tier_on_signup_2026_06_11_v1';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const now = new Date();
+    const complimentaryEndsAt = new Date(now.getTime());
+    complimentaryEndsAt.setUTCFullYear(complimentaryEndsAt.getUTCFullYear() + 100);
+
+    const resolveNonEmptyString = function(value, fallback) {
+      const normalized = String(value || '').trim();
+      return normalized || fallback;
+    };
+
+    // Fetch all users and all existing seller userIds to find gaps
+    const allUsers = await db.collection('users').find({}, { projection: { _id: 1, firstName: 1, lastName: 1, email: 1 } }).toArray();
+    const existingSellers = await db.collection('sellers').find({}, { projection: { userId: 1 } }).toArray();
+    const existingSellerUserIds = new Set(existingSellers.map(function(s) { return String(s.userId || ''); }));
+
+    const usersWithoutSeller = allUsers.filter(function(u) { return !existingSellerUserIds.has(String(u._id)); });
+
+    let sellersCreated = 0;
+    let usersUpdated = 0;
+
+    for (const user of usersWithoutSeller) {
+      const userId = String(user._id);
+      const resolvedEmail = resolveNonEmptyString(normalizeEmail(user.email || ''), 'noreply@zorexium.com');
+      const resolvedName = resolveNonEmptyString(((user.firstName || '') + ' ' + (user.lastName || '')).trim(), resolvedEmail.split('@')[0]);
+      const resolvedShopName = resolvedName + "'s Shop";
+      const manualSubscriptionId = 'manual_free_tier_grant_' + userId + '_' + now.toISOString().slice(0, 10).replace(/-/g, '');
+
+      try {
+        await db.collection('sellers').insertOne({
+          userId: userId,
+          accountType: 'individual',
+          shopName: resolvedShopName.slice(0, 200),
+          shopDescription: 'Welcome to my shop!',
+          businessEmail: resolvedEmail,
+          phoneNumber: '+10000000000',
+          businessAddress: '123 Seller Lane',
+          businessCity: 'San Diego',
+          businessState: 'CA',
+          businessZip: '92101',
+          personalName: resolvedName.slice(0, 200),
+          personalEmail: resolvedEmail,
+          shippingAddress: '123 Seller Lane',
+          shippingCity: 'San Diego',
+          shippingState: 'CA',
+          shippingZip: '92101',
+          joinDate: now,
+          rating: 5,
+          totalSales: 0,
+          isVerified: false,
+          tier: 'pro',
+          proSubscriptionId: manualSubscriptionId,
+          proSubscriptionStatus: 'complimentary_active',
+          proSubscriptionProvider: 'free_tier_grant',
+          proSubscriptionCancelAtPeriodEnd: false,
+          proGrandfatheredPricing: true,
+          proTierDowngraded: false,
+          proComplimentaryGrantedAt: now,
+          proComplimentaryEndsAt: complimentaryEndsAt,
+          createdAt: now,
+          updatedAt: now
+        });
+        sellersCreated++;
+      } catch (insertErr) {
+        console.error('⚠️  grantAllUsersProSellerTierOnce: failed to insert seller for user ' + userId + ':', insertErr.message);
+        continue;
+      }
+
+      try {
+        await db.collection('users').updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { isSeller: true, updatedAt: now } }
+        );
+        usersUpdated++;
+      } catch (updateErr) {
+        console.error('⚠️  grantAllUsersProSellerTierOnce: failed to update isSeller for user ' + userId + ':', updateErr.message);
+      }
+    }
+
+    // Also upgrade any existing sellers who are on Starter tier to Pro
+    const starterSellers = await db.collection('sellers').find({ tier: { $ne: 'pro' } }, { projection: { _id: 1, userId: 1 } }).toArray();
+    let sellersUpgraded = 0;
+    for (const seller of starterSellers) {
+      const userId = String(seller.userId || '');
+      const manualSubscriptionId = 'manual_free_tier_grant_' + userId + '_' + now.toISOString().slice(0, 10).replace(/-/g, '');
+      try {
+        await db.collection('sellers').updateOne(
+          { _id: seller._id },
+          {
+            $set: {
+              tier: 'pro',
+              proSubscriptionId: manualSubscriptionId,
+              proSubscriptionStatus: 'complimentary_active',
+              proSubscriptionProvider: 'free_tier_grant',
+              proSubscriptionCancelAtPeriodEnd: false,
+              proGrandfatheredPricing: true,
+              proTierDowngraded: false,
+              proComplimentaryGrantedAt: now,
+              proComplimentaryEndsAt: complimentaryEndsAt,
+              updatedAt: now
+            },
+            $unset: { proTierDowngradedAt: 1, proTierDowngradeScheduledFor: 1 }
+          }
+        );
+        if (userId) {
+          await db.collection('users').updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { isSeller: true, updatedAt: now } }
+          ).catch(function() {});
+        }
+        sellersUpgraded++;
+      } catch (upgradeErr) {
+        console.error('⚠️  grantAllUsersProSellerTierOnce: failed to upgrade seller ' + String(seller._id) + ':', upgradeErr.message);
+      }
+    }
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: now,
+      summary: {
+        totalUsers: allUsers.length,
+        usersWithoutSeller: usersWithoutSeller.length,
+        sellersCreated: sellersCreated,
+        usersUpdated: usersUpdated,
+        sellersUpgraded: sellersUpgraded
+      }
+    });
+    console.log(`✅ grantAllUsersProSellerTierOnce: ${sellersCreated} seller profile(s) created, ${sellersUpgraded} existing seller(s) upgraded to Pro`);
+  } catch (err) {
+    console.error('⚠️  grantAllUsersProSellerTierOnce error:', err.message);
+  }
+}
+
 async function start() {
   console.log('🚀 Starting server...');
   try {
@@ -10536,6 +10729,7 @@ async function start() {
       await grantChristianLartigueProSellerTierForeverOnce();
       await normalizeSellerUserIdsAndRestoreSellerFlagsOnce();
       await restoreBobSellerProfileOnce();
+      await grantAllUsersProSellerTierOnce();
       await ensurePayoutIndexes();
       await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();
