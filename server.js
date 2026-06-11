@@ -9654,6 +9654,130 @@ async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
   }
 }
 
+async function grantChristianLartigueProSellerTierForeverOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'grant_christian_lartigue_pro_seller_forever_2026_06_11_v1';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const targetUserId = '6a2af46e52bac2831c753cbc';
+    const targetEmail = 'christian.lartigue@icloud.com';
+    const targetName = 'Christian Lartigue';
+    const userLookupClauses = [
+      { email: { $regex: /^christian\.lartigue@icloud\.com$/i } }
+    ];
+    if (ObjectId.isValid(targetUserId)) {
+      userLookupClauses.unshift({ _id: new ObjectId(targetUserId) });
+    }
+    const user = await db.collection('users').findOne(
+      { $or: userLookupClauses },
+      { projection: { _id: 1, firstName: 1, lastName: 1, email: 1, username: 1 } }
+    );
+    if (!user || !user._id) {
+      console.warn('ℹ️  Christian Lartigue Pro Seller migration skipped: user not found');
+      return;
+    }
+
+    const userId = String(user._id);
+    const now = new Date();
+    // Permanent / lifetime grant — end date set 100 years in the future
+    const complimentaryEndsAt = new Date(now.getTime());
+    complimentaryEndsAt.setUTCFullYear(complimentaryEndsAt.getUTCFullYear() + 100);
+    const manualSubscriptionId = `manual_christian_lartigue_${now.toISOString().slice(0, 10).replace(/-/g, '')}`;
+
+    const seller = await findSellerByUserIdWithRepair(userId);
+    const resolveNonEmptyString = function(value, fallback) {
+      const normalized = String(value || '').trim();
+      return normalized || fallback;
+    };
+    const resolvedEmail = resolveNonEmptyString(normalizeEmail(user.email) || '', targetEmail);
+    const resolvedName = resolveNonEmptyString(((user.firstName || '') + ' ' + (user.lastName || '')).trim(), targetName);
+    const resolvedShopName = resolveNonEmptyString(user.username, targetName);
+    const resolvedSignupFields = {
+      accountType: resolveNonEmptyString(seller && seller.accountType, 'individual').slice(0, 20),
+      shopName: resolveNonEmptyString(seller && seller.shopName, resolvedShopName).slice(0, 200),
+      shopDescription: resolveNonEmptyString(seller && seller.shopDescription, 'Trusted Zorexium seller profile.').slice(0, 2000),
+      businessEmail: resolveNonEmptyString(seller && seller.businessEmail, resolvedEmail).slice(0, 200),
+      phoneNumber: resolveNonEmptyString(seller && seller.phoneNumber, '+10000000000').slice(0, 30),
+      businessAddress: resolveNonEmptyString(seller && seller.businessAddress, '123 Seller Lane').slice(0, 200),
+      businessCity: resolveNonEmptyString(seller && seller.businessCity, 'San Diego').slice(0, 100),
+      businessState: resolveNonEmptyString(seller && seller.businessState, 'CA').slice(0, 100),
+      businessZip: resolveNonEmptyString(seller && seller.businessZip, '92101').slice(0, 20),
+      personalName: resolveNonEmptyString(seller && seller.personalName, resolvedName).slice(0, 200),
+      personalEmail: resolveNonEmptyString(seller && seller.personalEmail, resolvedEmail).slice(0, 200),
+      shippingAddress: resolveNonEmptyString(seller && seller.shippingAddress, '123 Seller Lane').slice(0, 200),
+      shippingCity: resolveNonEmptyString(seller && seller.shippingCity, 'San Diego').slice(0, 100),
+      shippingState: resolveNonEmptyString(seller && seller.shippingState, 'CA').slice(0, 100),
+      shippingZip: resolveNonEmptyString(seller && seller.shippingZip, '92101').slice(0, 20),
+      joinDate: seller && seller.joinDate ? seller.joinDate : now,
+      rating: seller && typeof seller.rating === 'number' ? seller.rating : 5,
+      totalSales: seller && typeof seller.totalSales === 'number' ? seller.totalSales : 0,
+      isVerified: seller && typeof seller.isVerified === 'boolean' ? seller.isVerified : false
+    };
+    let sellerCreated = false;
+    if (!seller) {
+      await db.collection('sellers').insertOne({
+        userId: userId,
+        ...resolvedSignupFields,
+        tier: 'pro',
+        proSubscriptionId: manualSubscriptionId,
+        proSubscriptionStatus: 'complimentary_active',
+        proSubscriptionProvider: 'manual_grant',
+        proSubscriptionCancelAtPeriodEnd: false,
+        proTierDowngraded: false,
+        proTierDowngradeScheduledFor: complimentaryEndsAt,
+        proComplimentaryGrantedAt: now,
+        proComplimentaryEndsAt: complimentaryEndsAt,
+        createdAt: now,
+        updatedAt: now
+      });
+      sellerCreated = true;
+    } else {
+      await db.collection('sellers').updateOne(
+        buildSellerLookupQueryByUserId(userId),
+        {
+          $set: {
+            ...resolvedSignupFields,
+            tier: 'pro',
+            proSubscriptionId: manualSubscriptionId,
+            proSubscriptionStatus: 'complimentary_active',
+            proSubscriptionProvider: 'manual_grant',
+            proSubscriptionCancelAtPeriodEnd: false,
+            proTierDowngraded: false,
+            proTierDowngradeScheduledFor: complimentaryEndsAt,
+            proComplimentaryGrantedAt: now,
+            proComplimentaryEndsAt: complimentaryEndsAt,
+            updatedAt: now
+          },
+          $unset: { proTierDowngradedAt: 1 }
+        }
+      );
+    }
+
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { isSeller: true, updatedAt: now } }
+    );
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: now,
+      summary: {
+        userId: userId,
+        email: resolvedEmail,
+        sellerCreated: sellerCreated,
+        tier: 'pro',
+        complimentaryEndsAt: complimentaryEndsAt
+      }
+    });
+
+    console.log(`✅ Christian Lartigue Pro Seller migration complete: tier granted until ${complimentaryEndsAt.toISOString()}`);
+  } catch (err) {
+    console.error('⚠️  Christian Lartigue Pro Seller migration error:', err.message);
+  }
+}
+
 async function normalizeSellerUserIdsAndRestoreSellerFlagsOnce() {
   if (!mongoConnected) return;
   const migrationKey = 'normalize_seller_user_ids_restore_flags_2026_06_11';
@@ -10409,6 +10533,7 @@ async function start() {
       await assignStarterTierToExistingSellers();
       await forceAdafaProSellerTierOnce();
       await grantGalaxyMonkeeProSellerTierForSixMonthsOnce();
+      await grantChristianLartigueProSellerTierForeverOnce();
       await normalizeSellerUserIdsAndRestoreSellerFlagsOnce();
       await restoreBobSellerProfileOnce();
       await ensurePayoutIndexes();
