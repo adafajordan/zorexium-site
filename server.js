@@ -215,6 +215,16 @@ function makeAbsoluteUrl(path) {
   return APP_BASE_URL + (String(path || '').startsWith('/') ? path : '/' + String(path || ''));
 }
 
+function makeFrontendAbsoluteUrl(path) {
+  return APP_URL + (String(path || '').startsWith('/') ? path : '/' + String(path || ''));
+}
+
+function roundCurrencyAmount(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return parseFloat(numeric.toFixed(2));
+}
+
 async function sendEventEmail(to, subject, html, linkPath) {
   if (!to) return;
   const eventLink = makeAbsoluteUrl(linkPath || '/');
@@ -2027,6 +2037,7 @@ const DEFAULT_SHIPPING_FLAT_USD = 10.99;
 const DEFAULT_SALES_TAX_RATE = 0.10;
 const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
+const SELLER_AFFILIATE_BONUS_RATE = 0.05;
 const STANDARD_SELLER_HOLD_DAYS = 7;
 const PRO_SELLER_HOLD_DAYS = 4;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
@@ -2211,6 +2222,57 @@ function getSellerPayoutRateByTier(value) {
   return normalizeSellerTier(value) === 'pro'
     ? PRO_SELLER_PAYOUT_RATE
     : STARTER_SELLER_PAYOUT_RATE;
+}
+
+function normalizeAffiliateTrackingValue(value, maxLength) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  return normalized.slice(0, Math.max(1, parseInt(maxLength, 10) || 128));
+}
+
+function buildSellerAffiliateLink(productId, sellerId) {
+  const normalizedProductId = String(productId || '').trim();
+  const normalizedSellerId = String(sellerId || '').trim();
+  if (!normalizedProductId || !normalizedSellerId) return '';
+  const url = new URL(makeFrontendAbsoluteUrl('/product-detail.html'));
+  url.searchParams.set('id', normalizedProductId);
+  url.searchParams.set('affiliateProductId', normalizedProductId);
+  url.searchParams.set('affiliateSellerId', normalizedSellerId);
+  return url.toString();
+}
+
+function buildAffiliateItemAttribution(rawItem, product, quantity, unitPrice) {
+  const productId = String(product && product._id ? product._id : (rawItem && rawItem.id ? rawItem.id : '')).trim();
+  const sellerId = String(product && product.sellerId ? product.sellerId : '').trim();
+  const affiliateSellerId = normalizeAffiliateTrackingValue(rawItem && rawItem.affiliateSellerId, 128);
+  const affiliateProductId = normalizeAffiliateTrackingValue(rawItem && rawItem.affiliateProductId, 128);
+  const affiliateVisitorId = normalizeAffiliateTrackingValue(rawItem && rawItem.affiliateVisitorId, 128);
+  const affiliateClickId = normalizeAffiliateTrackingValue(rawItem && rawItem.affiliateClickId, 128);
+  const affiliateSource = normalizeAffiliateTrackingValue(rawItem && rawItem.affiliateSource, 64) || 'seller_product_link';
+  const affiliateQualified = !!(
+    productId
+    && sellerId
+    && affiliateSellerId
+    && affiliateProductId
+    && affiliateSellerId === sellerId
+    && affiliateProductId === productId
+  );
+  const lineSubtotal = roundCurrencyAmount((Number(unitPrice) || 0) * (Math.max(1, parseInt(quantity, 10) || 1)));
+  const affiliateCommissionAmount = affiliateQualified
+    ? roundCurrencyAmount(lineSubtotal * SELLER_AFFILIATE_BONUS_RATE)
+    : 0;
+  return {
+    affiliateQualified: affiliateQualified,
+    affiliateSellerId: affiliateQualified ? affiliateSellerId : '',
+    affiliateProductId: affiliateQualified ? affiliateProductId : '',
+    affiliateVisitorId: affiliateQualified ? affiliateVisitorId : '',
+    affiliateClickId: affiliateQualified ? affiliateClickId : '',
+    affiliateSource: affiliateQualified ? affiliateSource : '',
+    affiliateCommissionRate: affiliateQualified ? SELLER_AFFILIATE_BONUS_RATE : 0,
+    affiliateCommissionAmount: affiliateCommissionAmount,
+    affiliateLink: affiliateQualified ? buildSellerAffiliateLink(productId, sellerId) : '',
+    affiliateCapturedAt: affiliateQualified ? new Date() : null
+  };
 }
 
 function getSellerHoldDaysByTier(value) {
@@ -2579,7 +2641,15 @@ function getOrderSellerInfo(order) {
 function getSellerFinancials(order, sellerId) {
   const targetSellerId = String(sellerId || '').trim();
   if (!targetSellerId) {
-    return { grossAmount: 0, payoutAmount: 0, platformFee: 0, sellerTier: 'starter', payoutRate: STARTER_SELLER_PAYOUT_RATE };
+    return {
+      grossAmount: 0,
+      payoutAmount: 0,
+      platformFee: 0,
+      sellerTier: 'starter',
+      payoutRate: STARTER_SELLER_PAYOUT_RATE,
+      basePayoutAmount: 0,
+      affiliateBonusAmount: 0
+    };
   }
 
   const sellerSummaries = Array.isArray(order && order.sellerSummaries) ? order.sellerSummaries : [];
@@ -2591,15 +2661,27 @@ function getSellerFinancials(order, sellerId) {
     const payoutRate = getSellerPayoutRateByTier(sellerTier);
     const summaryGross = parseFloat(sellerSummary.grossTotal);
     const grossAmount = Number.isFinite(summaryGross) ? Number(summaryGross.toFixed(2)) : 0;
+    const summaryBaseNet = parseFloat(
+      sellerSummary.baseNetTotal != null
+        ? sellerSummary.baseNetTotal
+        : sellerSummary.netTotal
+    );
+    const basePayoutAmount = Number.isFinite(summaryBaseNet)
+      ? parseFloat(summaryBaseNet.toFixed(2))
+      : parseFloat((grossAmount * payoutRate).toFixed(2));
+    const summaryAffiliateBonus = parseFloat(sellerSummary.affiliateBonusTotal);
+    const affiliateBonusAmount = Number.isFinite(summaryAffiliateBonus)
+      ? parseFloat(summaryAffiliateBonus.toFixed(2))
+      : 0;
     const summaryNet = parseFloat(sellerSummary.netTotal);
     const payoutAmount = Number.isFinite(summaryNet)
       ? parseFloat(summaryNet.toFixed(2))
-      : parseFloat((grossAmount * payoutRate).toFixed(2));
+      : parseFloat((basePayoutAmount + affiliateBonusAmount).toFixed(2));
     const summaryFee = parseFloat(sellerSummary.platformFee);
     const platformFee = Number.isFinite(summaryFee)
       ? parseFloat(summaryFee.toFixed(2))
-      : parseFloat((grossAmount - payoutAmount).toFixed(2));
-    return { grossAmount, payoutAmount, platformFee, sellerTier, payoutRate };
+      : parseFloat((grossAmount - basePayoutAmount).toFixed(2));
+    return { grossAmount, payoutAmount, platformFee, sellerTier, payoutRate, basePayoutAmount, affiliateBonusAmount };
   }
 
   const sellerItems = (Array.isArray(order && order.items) ? order.items : []).filter(function(item) {
@@ -2616,9 +2698,13 @@ function getSellerFinancials(order, sellerId) {
     return sum + (unitPrice * quantity);
   }, 0);
   const grossAmount = parseFloat(grossAmountRaw.toFixed(2));
-  const payoutAmount = parseFloat((grossAmount * payoutRate).toFixed(2));
-  const platformFee = parseFloat((grossAmount - payoutAmount).toFixed(2));
-  return { grossAmount, payoutAmount, platformFee, sellerTier, payoutRate };
+  const affiliateBonusAmount = roundCurrencyAmount(sellerItems.reduce(function(sum, item) {
+    return sum + (parseFloat(item && item.affiliateCommissionAmount) || 0);
+  }, 0));
+  const basePayoutAmount = parseFloat((grossAmount * payoutRate).toFixed(2));
+  const payoutAmount = roundCurrencyAmount(basePayoutAmount + affiliateBonusAmount);
+  const platformFee = parseFloat((grossAmount - basePayoutAmount).toFixed(2));
+  return { grossAmount, payoutAmount, platformFee, sellerTier, payoutRate, basePayoutAmount, affiliateBonusAmount };
 }
 
 function getLinkedSellerPayoutDestination(order, sellerId) {
@@ -2718,6 +2804,8 @@ async function buildPayoutSnapshot(order, options) {
   const grossAmount = sellerFinancials.grossAmount;
   const payoutAmount = sellerFinancials.payoutAmount;
   const platformFee = sellerFinancials.platformFee;
+  const basePayoutAmount = sellerFinancials.basePayoutAmount || 0;
+  const affiliateBonusAmount = sellerFinancials.affiliateBonusAmount || 0;
   const sellerTier = sellerFinancials.sellerTier || 'starter';
   const payoutRate = sellerFinancials.payoutRate || getSellerPayoutRateByTier(sellerTier);
   const payoutCurrency = /^[A-Z]{3}$/.test(String(order && order.currency ? order.currency : '').toUpperCase())
@@ -2828,6 +2916,8 @@ async function buildPayoutSnapshot(order, options) {
     holdDays: holdDays,
     grossAmount: grossAmount,
     amount: payoutAmount,
+    baseAmount: basePayoutAmount,
+    affiliateBonusAmount: affiliateBonusAmount,
     platformFee: platformFee,
     currency: payoutCurrency,
     items: Array.isArray(order && order.items) ? order.items : [],
@@ -2851,6 +2941,8 @@ async function buildPayoutSnapshot(order, options) {
     seller,
     receiverEmail,
     payoutAmount,
+    basePayoutAmount,
+    affiliateBonusAmount,
     platformFee,
     sellerTier,
     payoutRate,
@@ -2895,32 +2987,45 @@ function buildSellerOrderSummaries(order) {
         sellerTier: normalizeSellerTier(item && item.sellerTier ? item.sellerTier : 'starter'),
         itemCount: 0,
         grossTotal: 0,
+        affiliateBonusTotal: 0,
+        affiliateAttributedItemCount: 0,
         items: []
       });
     }
 
     const summary = sellerMap.get(sellerId);
+    const affiliateBonus = parseFloat(item && item.affiliateCommissionAmount) || 0;
     summary.itemCount += quantity;
     summary.grossTotal = parseFloat((summary.grossTotal + grossTotal).toFixed(2));
+    summary.affiliateBonusTotal = roundCurrencyAmount(summary.affiliateBonusTotal + affiliateBonus);
+    if (item && item.affiliateQualified) {
+      summary.affiliateAttributedItemCount += quantity;
+    }
     summary.items.push({
       id: String(item && item.id ? item.id : ''),
       name: String(item && item.name ? item.name : 'Item'),
       quantity: quantity,
       unitPrice: unitPrice,
-      lineTotal: grossTotal
+      lineTotal: grossTotal,
+      affiliateQualified: !!(item && item.affiliateQualified),
+      affiliateCommissionAmount: affiliateBonus,
+      affiliateSellerId: String(item && item.affiliateSellerId ? item.affiliateSellerId : ''),
+      affiliateProductId: String(item && item.affiliateProductId ? item.affiliateProductId : '')
     });
   });
 
   return Array.from(sellerMap.values()).map(function(summary) {
     const sellerTier = normalizeSellerTier(summary.sellerTier || 'starter');
     const payoutRate = getSellerPayoutRateByTier(sellerTier);
-    const netTotal = parseFloat((summary.grossTotal * payoutRate).toFixed(2));
-    const platformFee = parseFloat((summary.grossTotal - netTotal).toFixed(2));
+    const baseNetTotal = parseFloat((summary.grossTotal * payoutRate).toFixed(2));
+    const netTotal = roundCurrencyAmount(baseNetTotal + summary.affiliateBonusTotal);
+    const platformFee = parseFloat((summary.grossTotal - baseNetTotal).toFixed(2));
     return {
       ...summary,
       sellerTier: sellerTier,
       payoutRate: payoutRate,
       platformFee: platformFee,
+      baseNetTotal: baseNetTotal,
       netTotal: netTotal
     };
   });
@@ -3366,6 +3471,9 @@ async function syncCompletedOrderRecords(order) {
           receiptId: receipt.receiptId,
           itemCount: sellerSummary.itemCount,
           grossTotal: sellerSummary.grossTotal,
+          baseNetTotal: sellerSummary.baseNetTotal,
+          affiliateBonusTotal: sellerSummary.affiliateBonusTotal || 0,
+          affiliateAttributedItemCount: sellerSummary.affiliateAttributedItemCount || 0,
           platformFee: sellerSummary.platformFee,
           netTotal: sellerSummary.netTotal,
           items: sellerSummary.items,
@@ -3399,6 +3507,8 @@ async function syncCompletedOrderRecords(order) {
               buyerEmail: normalizeEmail(order && (order.buyerEmail || (order.buyer && order.buyer.email)) || ''),
               itemCount: sellerSummary.itemCount,
               grossTotal: sellerSummary.grossTotal,
+              baseNetTotal: sellerSummary.baseNetTotal,
+              affiliateBonusTotal: sellerSummary.affiliateBonusTotal || 0,
               netTotal: sellerSummary.netTotal,
               soldAt: completedAt
             }],
@@ -3491,6 +3601,8 @@ async function sendStripeSellerPayout(order, options) {
       $set: {
         grossAmount: pb.grossAmount,
         amount: pb.amount,
+        baseAmount: pb.baseAmount,
+        affiliateBonusAmount: pb.affiliateBonusAmount,
         platformFee: pb.platformFee,
         currency: pb.currency,
         items: pb.items,
@@ -3643,7 +3755,9 @@ async function sendStripeSellerPayout(order, options) {
         orderId: orderId,
         sellerId: String(snapshot.sellerInfo && snapshot.sellerInfo.sellerId ? snapshot.sellerInfo.sellerId : ''),
         triggerSource: String(payoutMeta.triggerSource || ''),
-        payoutFundingSource: 'platform_available_balance'
+        payoutFundingSource: 'platform_available_balance',
+        basePayoutAmount: roundCurrencyAmount(snapshot.basePayoutAmount || pb.baseAmount || 0).toFixed(2),
+        affiliateBonusAmount: roundCurrencyAmount(snapshot.affiliateBonusAmount || pb.affiliateBonusAmount || 0).toFixed(2)
       }
     };
     const transfer = await stripe.transfers.create(transferPayload);
@@ -4186,13 +4300,14 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
         throw new Error('One or more products have invalid pricing. Please refresh and try again.');
       }
-      const lineSubtotal = parseFloat((unitPrice * quantity).toFixed(2));
+      const lineSubtotal = roundCurrencyAmount(unitPrice * quantity);
       subtotal += lineSubtotal;
       const productSellerId = String(product && product.sellerId ? product.sellerId : '');
       const itemSellerId = String(item && item.sellerId ? item.sellerId : '');
       const sellerId = productSellerId || itemSellerId;
       const sellerPayoutProfile = sellerPayoutByUserId.get(sellerId) || null;
       const sellerTier = normalizeSellerTier(sellerPayoutProfile && sellerPayoutProfile.tier ? sellerPayoutProfile.tier : 'starter');
+      const affiliateAttribution = buildAffiliateItemAttribution(item, product, quantity, unitPrice);
       normalizedOrderItems.push({
         id: itemId,
         name: String(product && product.name ? product.name : (item && item.name ? item.name : 'Item')).slice(0, 200),
@@ -4211,7 +4326,17 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
         sellerPayoutOnboardingStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutOnboardingStatus ? sellerPayoutProfile.payoutOnboardingStatus : ''),
         sellerPayoutBankStatus: String(sellerPayoutProfile && sellerPayoutProfile.payoutProviderBankStatus ? sellerPayoutProfile.payoutProviderBankStatus : ''),
         sellerTier: sellerTier,
-        productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html')
+        productLink: itemId ? makeAbsoluteUrl('/product-detail.html?id=' + encodeURIComponent(itemId)) : makeAbsoluteUrl('/marketplace.html'),
+        affiliateQualified: affiliateAttribution.affiliateQualified,
+        affiliateSellerId: affiliateAttribution.affiliateSellerId,
+        affiliateProductId: affiliateAttribution.affiliateProductId,
+        affiliateVisitorId: affiliateAttribution.affiliateVisitorId,
+        affiliateClickId: affiliateAttribution.affiliateClickId,
+        affiliateSource: affiliateAttribution.affiliateSource,
+        affiliateCommissionRate: affiliateAttribution.affiliateCommissionRate,
+        affiliateCommissionAmount: affiliateAttribution.affiliateCommissionAmount,
+        affiliateLink: affiliateAttribution.affiliateLink,
+        affiliateCapturedAt: affiliateAttribution.affiliateCapturedAt
       });
       orderItems.push({
         name: String(product && product.name ? product.name : (item && item.name ? item.name : 'Item')).slice(0, 127),
@@ -4223,6 +4348,14 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       });
     });
     subtotal = parseFloat(subtotal.toFixed(2));
+    const affiliateSummary = {
+      attributedItemCount: normalizedOrderItems.reduce(function(sum, lineItem) {
+        return sum + (lineItem && lineItem.affiliateQualified ? (Math.max(1, parseInt(lineItem.quantity, 10) || 1)) : 0);
+      }, 0),
+      affiliateBonusTotal: roundCurrencyAmount(normalizedOrderItems.reduce(function(sum, lineItem) {
+        return sum + (parseFloat(lineItem && lineItem.affiliateCommissionAmount) || 0);
+      }, 0))
+    };
     let firstOrderFreeShippingApplied = false;
     if (checkoutUser && checkoutUser.userId) {
       const hasSuccessfulPurchase = await hasSuccessfulPurchaseForFreeShipping(
@@ -4318,6 +4451,7 @@ app.post('/api/orders', publicApiRateLimit, async function(req, res) {
       tax,
       total,
       currency: 'USD',
+      affiliateSummary: affiliateSummary,
       status: 'pending',
       createdAt: new Date()
     };
@@ -5299,6 +5433,14 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
           const unitPrice = parseFloat(item && item.price) || 0;
           return sum + parseFloat((unitPrice * quantity).toFixed(2));
         }, 0),
+        sellerBaseNetTotal: sellerSummary
+          ? (parseFloat(sellerSummary.baseNetTotal) || 0)
+          : (sellerFinancialsFallback ? sellerFinancialsFallback.basePayoutAmount : 0),
+        sellerAffiliateBonusTotal: sellerSummary
+          ? (parseFloat(sellerSummary.affiliateBonusTotal) || 0)
+          : roundCurrencyAmount(sellerItems.reduce(function(sum, item) {
+              return sum + (parseFloat(item && item.affiliateCommissionAmount) || 0);
+            }, 0)),
         sellerNetTotal: sellerSummary ? sellerSummary.netTotal : (sellerFinancialsFallback ? sellerFinancialsFallback.payoutAmount : 0),
         sellerTier: sellerTier,
         sellerPayoutRate: getSellerPayoutRateByTier(sellerTier),
@@ -5324,6 +5466,195 @@ app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req,
     res.json(sellerOrders);
   } catch (error) {
     console.error('Error fetching seller orders:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/affiliates/visit', publicApiRateLimit, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const productId = normalizeAffiliateTrackingValue(req.body && req.body.productId, 128);
+    const sellerId = normalizeAffiliateTrackingValue(req.body && req.body.sellerId, 128);
+    const visitorId = normalizeAffiliateTrackingValue(req.body && req.body.visitorId, 128);
+    if (!productId || !sellerId || !visitorId) {
+      return res.status(400).json({ error: 'productId, sellerId, and visitorId are required' });
+    }
+    if (!ObjectId.isValid(productId)) {
+      return res.status(400).json({ error: 'Invalid productId' });
+    }
+    const product = await db.collection('products').findOne(
+      { _id: new ObjectId(productId) },
+      { projection: { _id: 1, sellerId: 1, name: 1 } }
+    );
+    if (!product) return res.status(404).json({ error: 'Product not found' });
+    const resolvedSellerId = String(product && product.sellerId ? product.sellerId : '').trim();
+    if (!resolvedSellerId || resolvedSellerId !== sellerId) {
+      return res.status(400).json({ error: 'Affiliate seller does not match this product' });
+    }
+    const existingClickWindowStart = new Date(Date.now() - (12 * 60 * 60 * 1000));
+    const existingClick = await db.collection('affiliateClicks').findOne(
+      {
+        productId: productId,
+        sellerId: sellerId,
+        visitorId: visitorId,
+        createdAt: { $gte: existingClickWindowStart }
+      },
+      { sort: { createdAt: -1 } }
+    );
+    if (existingClick) {
+      return res.json({
+        success: true,
+        clickId: String(existingClick.clickId || ''),
+        affiliateLink: buildSellerAffiliateLink(productId, sellerId),
+        commissionRate: SELLER_AFFILIATE_BONUS_RATE,
+        reused: true
+      });
+    }
+    const clickId = 'affclk_' + crypto.randomUUID().replace(/-/g, '');
+    await db.collection('affiliateClicks').insertOne({
+      clickId: clickId,
+      productId: productId,
+      sellerId: sellerId,
+      visitorId: visitorId,
+      productName: String(product && product.name ? product.name : ''),
+      source: 'seller_product_link',
+      createdAt: new Date()
+    });
+    res.json({
+      success: true,
+      clickId: clickId,
+      affiliateLink: buildSellerAffiliateLink(productId, sellerId),
+      commissionRate: SELLER_AFFILIATE_BONUS_RATE
+    });
+  } catch (error) {
+    console.error('Error tracking affiliate visit:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/affiliates/me', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const sellerIdClauses = [{ sellerId: String(req.userId || '') }];
+    if (ObjectId.isValid(req.userId)) {
+      sellerIdClauses.push({ sellerId: new ObjectId(req.userId) });
+    }
+    const products = await db.collection('products')
+      .find({ $or: sellerIdClauses })
+      .sort({ createdAt: -1 })
+      .toArray();
+    const productIds = products.map(function(product) {
+      return String(product && product._id ? product._id : '').trim();
+    }).filter(Boolean);
+    const affiliateClicks = productIds.length > 0
+      ? await db.collection('affiliateClicks')
+          .find({ sellerId: String(req.userId || ''), productId: { $in: productIds } })
+          .sort({ createdAt: -1 })
+          .toArray()
+      : [];
+    const affiliateOrders = await db.collection('orders')
+      .find({ status: 'completed', 'items.affiliateSellerId': String(req.userId || '') })
+      .sort({ createdAt: -1 })
+      .toArray();
+    const affiliatePayouts = await db.collection('payouts')
+      .find({ sellerId: String(req.userId || ''), affiliateBonusAmount: { $gt: 0 } })
+      .sort({ createdAt: -1 })
+      .toArray();
+    const payoutByOrderId = new Map(affiliatePayouts.map(function(payout) {
+      return [String(payout && payout.orderId ? payout.orderId : ''), payout];
+    }));
+    const productStats = new Map(products.map(function(product) {
+      const productId = String(product && product._id ? product._id : '').trim();
+      return [productId, {
+        productId: productId,
+        name: String(product && product.name ? product.name : 'Untitled product'),
+        price: roundCurrencyAmount(product && product.price),
+        status: String(product && product.status ? product.status : 'active'),
+        image: String(product && product.image ? product.image : ''),
+        affiliateLink: buildSellerAffiliateLink(productId, req.userId),
+        clickCount: 0,
+        attributedOrders: 0,
+        attributedUnits: 0,
+        affiliateEarnings: 0,
+        paidAffiliateEarnings: 0,
+        pendingAffiliateEarnings: 0,
+        lastClickAt: null,
+        lastAttributedOrderAt: null
+      }];
+    }));
+    affiliateClicks.forEach(function(click) {
+      const productId = String(click && click.productId ? click.productId : '').trim();
+      const stat = productStats.get(productId);
+      if (!stat) return;
+      stat.clickCount += 1;
+      if (!stat.lastClickAt) stat.lastClickAt = click.createdAt || null;
+    });
+    const summaryOrderIds = new Set();
+    const productOrderKeys = new Set();
+    const recentOrders = [];
+    let totalAttributedUnits = 0;
+    let totalAffiliateEarnings = 0;
+    let totalPaidAffiliateEarnings = 0;
+    let totalPendingAffiliateEarnings = 0;
+    affiliateOrders.forEach(function(order) {
+      const orderId = String(order && order.id ? order.id : '').trim();
+      const payout = payoutByOrderId.get(orderId) || null;
+      (Array.isArray(order && order.items) ? order.items : []).forEach(function(item) {
+        if (String(item && item.sellerId ? item.sellerId : '') !== String(req.userId || '')) return;
+        if (!item || item.affiliateQualified !== true) return;
+        if (String(item && item.affiliateSellerId ? item.affiliateSellerId : '') !== String(req.userId || '')) return;
+        const productId = String(item && (item.affiliateProductId || item.id) ? (item.affiliateProductId || item.id) : '').trim();
+        const stat = productStats.get(productId);
+        if (!stat) return;
+        const quantity = Math.max(1, parseInt(item && item.quantity, 10) || 1);
+        const affiliateBonus = roundCurrencyAmount(item && item.affiliateCommissionAmount);
+        const productOrderKey = orderId + ':' + productId;
+        if (!productOrderKeys.has(productOrderKey)) {
+          stat.attributedOrders += 1;
+          productOrderKeys.add(productOrderKey);
+        }
+        summaryOrderIds.add(orderId);
+        stat.attributedUnits += quantity;
+        stat.affiliateEarnings = roundCurrencyAmount(stat.affiliateEarnings + affiliateBonus);
+        stat.lastAttributedOrderAt = stat.lastAttributedOrderAt || order.createdAt || order.completedAt || null;
+        totalAttributedUnits += quantity;
+        totalAffiliateEarnings = roundCurrencyAmount(totalAffiliateEarnings + affiliateBonus);
+        if (String(payout && payout.status ? payout.status : '').toLowerCase() === 'paid') {
+          stat.paidAffiliateEarnings = roundCurrencyAmount(stat.paidAffiliateEarnings + affiliateBonus);
+          totalPaidAffiliateEarnings = roundCurrencyAmount(totalPaidAffiliateEarnings + affiliateBonus);
+        } else {
+          stat.pendingAffiliateEarnings = roundCurrencyAmount(stat.pendingAffiliateEarnings + affiliateBonus);
+          totalPendingAffiliateEarnings = roundCurrencyAmount(totalPendingAffiliateEarnings + affiliateBonus);
+        }
+        if (recentOrders.length < 12) {
+          recentOrders.push({
+            orderId: orderId,
+            productId: productId,
+            productName: String(item && item.name ? item.name : (stat && stat.name ? stat.name : 'Product')),
+            quantity: quantity,
+            affiliateBonusAmount: affiliateBonus,
+            createdAt: order.createdAt || order.completedAt || null,
+            payoutStatus: String(payout && payout.status ? payout.status : ''),
+            stripeTransferId: String(payout && payout.stripeTransferId ? payout.stripeTransferId : '')
+          });
+        }
+      });
+    });
+    res.json({
+      summary: {
+        commissionRate: SELLER_AFFILIATE_BONUS_RATE,
+        clickCount: affiliateClicks.length,
+        attributedOrders: summaryOrderIds.size,
+        attributedUnits: totalAttributedUnits,
+        affiliateEarnings: totalAffiliateEarnings,
+        paidAffiliateEarnings: totalPaidAffiliateEarnings,
+        pendingAffiliateEarnings: totalPendingAffiliateEarnings
+      },
+      products: Array.from(productStats.values()),
+      recentOrders: recentOrders
+    });
+  } catch (error) {
+    console.error('Error fetching affiliate dashboard:', error);
     res.status(500).json({ error: error.message });
   }
 });
