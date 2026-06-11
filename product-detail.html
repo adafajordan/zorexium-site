@@ -42,6 +42,7 @@
     </style>
     <script src="open-links-new-tab.js"></script>
     <script src="cookie-consent.js"></script>
+    <script src="/affiliate.js"></script>
 </head>
 <body class="min-h-screen flex flex-col">
 
@@ -1537,6 +1538,7 @@
 
           // Load reviews
           loadReviews(currentProductId);
+          captureAffiliateReferralIfPresent();
           pdRefreshListStates();
 
           return;
@@ -1580,6 +1582,23 @@
     if (max !== null && !isNaN(max) && parseInt(qty.value) > max) qty.value = max;
   }
 
+  async function captureAffiliateReferralIfPresent() {
+    if (!currentProduct || typeof ZrxAffiliate === 'undefined' || !ZrxAffiliate || typeof ZrxAffiliate.captureVisit !== 'function') return;
+    var params = new URLSearchParams(window.location.search);
+    var affiliateSellerId = (params.get('affiliateSellerId') || '').trim();
+    var affiliateProductId = (params.get('affiliateProductId') || '').trim();
+    if (!affiliateSellerId || !affiliateProductId) return;
+    if (String(currentProduct.id || '') !== affiliateProductId) return;
+    if (String(currentProduct.sellerId || '') !== affiliateSellerId) return;
+    try {
+      await ZrxAffiliate.captureVisit({
+        backendUrl: BACKEND_URL,
+        productId: affiliateProductId,
+        sellerId: affiliateSellerId
+      });
+    } catch (_) {}
+  }
+
   // ── Cart ──────────────────────────────────────────────────────────────────
   async function addToCart() {
     if (!currentProduct) { ZrxNotify.showNotification('Product not loaded yet.', 'error'); return; }
@@ -1599,11 +1618,15 @@
         var cartRes = await ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' });
         var items = [];
         if (cartRes.ok) { var data = await cartRes.json(); items = data.items || []; }
+        var affiliateFields = (typeof ZrxAffiliate !== 'undefined' && ZrxAffiliate && typeof ZrxAffiliate.buildAffiliateFieldsForItem === 'function')
+          ? ZrxAffiliate.buildAffiliateFieldsForItem({ id: currentProductId })
+          : {};
         var existingItem = items.find(function(item) { return String(item.id) === String(currentProductId); });
         if (existingItem) {
           existingItem.quantity += quantity;
+          Object.assign(existingItem, affiliateFields);
         } else {
-          items.push({
+          items.push(Object.assign({
             id: currentProductId,
             name: currentProduct.name,
             price: currentProduct.price,
@@ -1611,7 +1634,7 @@
             image: currentProduct.image || 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product',
             sellerId: currentProduct.sellerId || '',
             sellerName: document.getElementById('sellerName').innerText
-          });
+          }, affiliateFields));
         }
         await ZrxSession.fetch(BACKEND_URL + '/api/cart', {
           method: 'POST',
@@ -1628,11 +1651,15 @@
     } else {
       var guestCart = [];
       try { guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]'); } catch (_) {}
+      var guestAffiliateFields = (typeof ZrxAffiliate !== 'undefined' && ZrxAffiliate && typeof ZrxAffiliate.buildAffiliateFieldsForItem === 'function')
+        ? ZrxAffiliate.buildAffiliateFieldsForItem({ id: currentProductId })
+        : {};
       var existingGuest = guestCart.find(function(item) { return String(item.id) === String(currentProductId); });
       if (existingGuest) {
         existingGuest.quantity += quantity;
+        Object.assign(existingGuest, guestAffiliateFields);
       } else {
-        guestCart.push({
+        guestCart.push(Object.assign({
           id: currentProductId,
           name: currentProduct.name,
           price: currentProduct.price,
@@ -1640,7 +1667,7 @@
           image: currentProduct.image || 'https://placehold.co/400x300/f3f4f6/9ca3af?text=Product',
           sellerId: currentProduct.sellerId || '',
           sellerName: document.getElementById('sellerName').innerText
-        });
+        }, guestAffiliateFields));
       }
       try { localStorage.setItem('guestCart', JSON.stringify(guestCart)); } catch (_) {}
       var badge2 = document.getElementById('cartBadgeHeader');
