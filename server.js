@@ -355,6 +355,45 @@ function buildSuccessfulPurchaseIdentityFilter(userId, emails) {
   return { $or: clauses };
 }
 
+function normalizeUserIdString(userId) {
+  return String(userId || '').trim();
+}
+
+function buildSellerUserIdClauses(userId) {
+  const normalizedUserId = normalizeUserIdString(userId);
+  if (!normalizedUserId) return [];
+  const clauses = [{ userId: normalizedUserId }];
+  if (ObjectId.isValid(normalizedUserId)) {
+    clauses.push({ userId: new ObjectId(normalizedUserId) });
+  }
+  return clauses;
+}
+
+function buildSellerLookupQueryByUserId(userId) {
+  const clauses = buildSellerUserIdClauses(userId);
+  if (clauses.length === 0) return null;
+  if (clauses.length === 1) return clauses[0];
+  return { $or: clauses };
+}
+
+async function findSellerByUserIdWithRepair(userId, options) {
+  const normalizedUserId = normalizeUserIdString(userId);
+  if (!normalizedUserId) return null;
+  const query = buildSellerLookupQueryByUserId(normalizedUserId);
+  if (!query) return null;
+  const seller = await db.collection('sellers').findOne(query, options || {});
+  if (!seller) return null;
+  const sellerUserId = normalizeUserIdString(seller.userId);
+  if (sellerUserId === normalizedUserId && typeof seller.userId !== 'string') {
+    await db.collection('sellers').updateOne(
+      { _id: seller._id },
+      { $set: { userId: normalizedUserId, updatedAt: new Date() } }
+    );
+    return { ...seller, userId: normalizedUserId };
+  }
+  return seller;
+}
+
 async function hasSuccessfulPurchaseForFreeShipping(userId, candidateEmails) {
   const normalizedEmails = collectNormalizedPurchaseEmails.apply(null, candidateEmails || []);
   const identityFilter = buildSuccessfulPurchaseIdentityFilter(userId, normalizedEmails);
@@ -1572,7 +1611,7 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
     const resolvedStatus = (status && validStatuses.includes(status)) ? status : 'pending';
 
     // Enforce Starter tier listing limit (max active listings)
-    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    const seller = await findSellerByUserIdWithRepair(req.userId);
     if (seller && (seller.tier === 'starter' || !seller.tier)) {
       const activeCount = await db.collection('products').countDocuments({
         sellerId: req.userId,
@@ -1713,8 +1752,8 @@ app.get('/api/products/seller/:sellerId', publicApiRateLimit, async function(req
     // Fallback: if no products found by sellerId, try matching by sellerName/sellerUsername.
     // This surfaces listings created before sellerId was consistently populated.
     if (products.length === 0) {
-      const sellerRecord = await db.collection('sellers').findOne(
-        { userId: sellerId },
+      const sellerRecord = await findSellerByUserIdWithRepair(
+        sellerId,
         { projection: { shopName: 1, sellerName: 1, sellerUsername: 1 } }
       );
       if (sellerRecord) {
@@ -1776,8 +1815,8 @@ async function verifyProductOwnership(product, userId) {
   // Fallback for legacy products stored without a sellerId value.
   if (product.sellerId) return false; // has a different seller – deny immediately
   try {
-    const sellerRecord = await db.collection('sellers').findOne(
-      { userId: userId },
+    const sellerRecord = await findSellerByUserIdWithRepair(
+      userId,
       { projection: { shopName: 1, sellerName: 1, sellerUsername: 1 } }
     );
     if (!sellerRecord) return false;
@@ -2834,8 +2873,8 @@ async function buildPayoutSnapshot(order, options) {
   };
   if (sellerInfo.sellerId) {
     linkedPayoutDestination = getLinkedSellerPayoutDestination(order, sellerInfo.sellerId);
-    seller = await db.collection('sellers').findOne(
-      { userId: sellerInfo.sellerId },
+    seller = await findSellerByUserIdWithRepair(
+      sellerInfo.sellerId,
       { projection: { payoutAccountId: 1, stripeAccountId: 1, payoutVerified: 1, payoutProviderBankStatus: 1, stripeChargesEnabled: 1, stripePayoutsEnabled: 1, stripeDetailsSubmitted: 1, stripeRequirementsDue: 1, stripeRequirementsDisabledReason: 1, userId: 1, shopName: 1, sellerName: 1, sellerUsername: 1, email: 1 } }
     );
     payoutAccountStatus = await refreshSellerStripeConnectStatusForPayout(seller, sellerInfo.sellerId);
@@ -3955,7 +3994,7 @@ async function activateProSellerTierForUser(userId, subscriptionId, options) {
   const subscription = await verifyStripeProSellerSubscription(normalizedSubscriptionId);
   const resolvedSubscriptionId = String(subscription && subscription.id ? subscription.id : normalizedSubscriptionId);
   const resolvedStatus = String(subscription && subscription.status ? subscription.status : 'active').toLowerCase();
-  const existingSeller = await db.collection('sellers').findOne({ userId: normalizedUserId });
+  const existingSeller = await findSellerByUserIdWithRepair(normalizedUserId);
   if (!existingSeller) {
     return { activated: false, reason: 'seller_profile_not_found', subscriptionId: resolvedSubscriptionId, status: resolvedStatus };
   }
@@ -3971,7 +4010,7 @@ async function activateProSellerTierForUser(userId, subscriptionId, options) {
   );
 
   await db.collection('sellers').updateOne(
-    { userId: normalizedUserId },
+    buildSellerLookupQueryByUserId(normalizedUserId),
     {
       $set: {
         tier: 'pro',
@@ -3991,7 +4030,7 @@ async function activateProSellerTierForUser(userId, subscriptionId, options) {
     { $set: { isSeller: true, updatedAt: new Date() } }
   );
 
-  const updatedSeller = await db.collection('sellers').findOne({ userId: normalizedUserId });
+  const updatedSeller = await findSellerByUserIdWithRepair(normalizedUserId);
   const user = await db.collection('users').findOne(
     { _id: new ObjectId(normalizedUserId) },
     { projection: { email: 1, firstName: 1 } }
@@ -4057,8 +4096,8 @@ app.post('/api/stripe/pro-subscription/session', publicApiRateLimit, verifyToken
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
     ensureStripeConfigured();
-    const seller = await db.collection('sellers').findOne(
-      { userId: req.userId },
+    const seller = await findSellerByUserIdWithRepair(
+      req.userId,
       { projection: { userId: 1, tier: 1, proSubscriptionId: 1, proGrandfatheredPricing: 1 } }
     );
     const mode = String(req.body && req.body.mode ? req.body.mode : 'signup').trim().toLowerCase();
@@ -4126,7 +4165,7 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const existing = await db.collection('sellers').findOne({ userId: req.userId });
+    const existing = await findSellerByUserIdWithRepair(req.userId);
     if (existing) return res.status(400).json({ error: 'Seller profile already exists' });
 
     const { subscriptionId, accountType, shopName, shopDescription, businessEmail, phoneNumber,
@@ -5285,8 +5324,8 @@ app.get('/api/orders/free-shipping-eligible', publicApiRateLimit, verifyToken, a
 app.get('/api/orders/my', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const sellerProfile = await db.collection('sellers').findOne(
-      { userId: req.userId },
+    const sellerProfile = await findSellerByUserIdWithRepair(
+      req.userId,
       { projection: { shopName: 1 } }
     );
     const normalizedEmail = normalizeEmail(req.userEmail);
@@ -5373,8 +5412,8 @@ app.get('/api/orders/trade-ins', publicApiRateLimit, verifyToken, async function
 app.get('/api/orders/sold', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const sellerProfile = await db.collection('sellers').findOne(
-      { userId: req.userId },
+    const sellerProfile = await findSellerByUserIdWithRepair(
+      req.userId,
       { projection: { shopName: 1 } }
     );
 
@@ -6730,7 +6769,7 @@ app.delete('/api/user/profile', authRateLimit, verifyToken, async function(req, 
 
   try {
     await db.collection('users').deleteOne({ _id: new ObjectId(req.userId) });
-    await db.collection('sellers').deleteOne({ userId: req.userId });
+    await db.collection('sellers').deleteOne(buildSellerLookupQueryByUserId(req.userId));
     await db.collection('carts').deleteOne({ userId: req.userId });
     clearAuthCookies(res);
     res.json({ message: 'Account deleted' });
@@ -6865,7 +6904,7 @@ app.post('/api/auth/change-password', authRateLimit, verifyToken, async function
 app.get('/api/user/is-seller', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    const seller = await findSellerByUserIdWithRepair(req.userId);
     res.json({ isSeller: !!seller });
   } catch (error) {
     console.error('Error checking seller status:', error);
@@ -6880,7 +6919,7 @@ app.post('/api/sellers', publicApiRateLimit, verifyToken, async function(req, re
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const existing = await db.collection('sellers').findOne({ userId: req.userId });
+    const existing = await findSellerByUserIdWithRepair(req.userId);
     if (existing) return res.status(400).json({ error: 'Seller profile already exists' });
 
     const {
@@ -6971,7 +7010,7 @@ app.get('/api/sellers/me', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    const seller = await findSellerByUserIdWithRepair(req.userId);
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
     const safeSeller = sanitizeSellerForClient(seller);
     safeSeller.proSubscriptionMonthlyPriceUsd = getProSellerMonthlyPriceUsdForSeller(seller);
@@ -7018,11 +7057,11 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
 
   try {
     const result = await db.collection('sellers').updateOne(
-      { userId: req.userId },
+      buildSellerLookupQueryByUserId(req.userId),
       { $set: updates }
     );
     if (result.matchedCount === 0) return res.status(404).json({ error: 'Seller profile not found' });
-    const updated = await db.collection('sellers').findOne({ userId: req.userId });
+    const updated = await findSellerByUserIdWithRepair(req.userId);
     res.json(sanitizeSellerForClient(updated));
   } catch (error) {
     console.error('Error updating seller profile:', error);
@@ -7032,7 +7071,7 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
 
 async function getOrCreateStripeConnectAccountForSeller(userId) {
   ensureStripeConfigured();
-  const seller = await db.collection('sellers').findOne({ userId: userId });
+  const seller = await findSellerByUserIdWithRepair(userId);
   if (!seller) return { error: 'Seller profile not found' };
 
   let accountId = String(seller && seller.stripeAccountId ? seller.stripeAccountId : '').trim();
@@ -7049,7 +7088,7 @@ async function getOrCreateStripeConnectAccountForSeller(userId) {
   if (!accountId) return { error: 'Failed to create Stripe Connect account' };
 
   await db.collection('sellers').updateOne(
-    { userId: userId },
+    buildSellerLookupQueryByUserId(userId),
     {
       $set: {
         payoutProvider: 'stripe',
@@ -7072,7 +7111,7 @@ async function getOrCreateStripeConnectAccountForSeller(userId) {
 
 async function getStripeConnectStatusForSeller(userId) {
   ensureStripeConfigured();
-  const seller = await db.collection('sellers').findOne({ userId: userId });
+  const seller = await findSellerByUserIdWithRepair(userId);
   if (!seller) return { error: 'Seller profile not found' };
   const accountId = String(seller && seller.stripeAccountId ? seller.stripeAccountId : '').trim();
   if (!accountId) {
@@ -7093,7 +7132,7 @@ async function getStripeConnectStatusForSeller(userId) {
   const connected = !!(account.payouts_enabled && account.charges_enabled);
   const now = new Date();
   await db.collection('sellers').updateOne(
-    { userId: userId },
+    buildSellerLookupQueryByUserId(userId),
     {
       $set: {
         payoutProvider: 'stripe',
@@ -7276,7 +7315,7 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
     if (!status.connected) {
       return res.status(409).json({ error: 'Complete Stripe Connect onboarding first.' });
     }
-    const updatedSeller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { payoutAccountId: 1, stripeAccountId: 1 } });
+    const updatedSeller = await findSellerByUserIdWithRepair(req.userId, { projection: { payoutAccountId: 1, stripeAccountId: 1 } });
     const retrySummary = await retryEligibleBlockedPayoutsForSeller(req.userId, 'onboarding_verified');
     res.json({
       success: true,
@@ -7312,7 +7351,7 @@ app.post('/api/sellers/assign-starter-tier', publicApiRateLimit, verifyToken, as
 app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    const seller = await findSellerByUserIdWithRepair(req.userId);
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
     if (seller.tier === 'pro') return res.status(400).json({ error: 'Already on Pro tier' });
 
@@ -7340,7 +7379,7 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
 app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const seller = await db.collection('sellers').findOne({ userId: req.userId });
+    const seller = await findSellerByUserIdWithRepair(req.userId);
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
     if (seller.tier === 'starter') return res.status(400).json({ error: 'Already on Starter tier' });
 
@@ -7373,7 +7412,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
 
     if (cancelAtPeriodEndScheduled && effectiveDowngradeAt && effectiveDowngradeAt.getTime() > now.getTime()) {
       await db.collection('sellers').updateOne(
-        { userId: req.userId },
+        buildSellerLookupQueryByUserId(req.userId),
         {
           $set: {
             proSubscriptionStatus: subscriptionStatus || 'active',
@@ -7386,7 +7425,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
           $unset: { proTierDowngradedAt: 1 }
         }
       );
-      const scheduled = await db.collection('sellers').findOne({ userId: req.userId });
+      const scheduled = await findSellerByUserIdWithRepair(req.userId);
       const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
       await sendAdminNotificationSafe(
         'Pro seller downgrade scheduled',
@@ -7401,7 +7440,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
     }
 
     await db.collection('sellers').updateOne(
-      { userId: req.userId },
+      buildSellerLookupQueryByUserId(req.userId),
       {
         $set: {
           tier: 'starter',
@@ -7420,7 +7459,7 @@ app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, a
         }
       }
     );
-    const updated = await db.collection('sellers').findOne({ userId: req.userId });
+    const updated = await findSellerByUserIdWithRepair(req.userId);
     const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
     await sendAdminNotificationSafe(
       'Pro seller subscription cancelled',
@@ -7496,7 +7535,7 @@ app.get('/api/sellers/user/:userId', publicApiRateLimit, async function(req, res
   }
 
   try {
-    const seller = await db.collection('sellers').findOne({ userId });
+    const seller = await findSellerByUserIdWithRepair(userId);
     if (!seller) return res.status(404).json({ error: 'Seller not found' });
     const completedSalesCount = await db.collection('orders').countDocuments({
       status: 'completed',
@@ -7744,8 +7783,8 @@ app.post('/api/payout', publicApiRateLimit, verifyToken, async function(req, res
     if (!sellerOwnedOrder) {
       return res.status(403).json({ error: 'Forbidden: you can only trigger payouts for your own seller items in this order' });
     }
-    const seller = await db.collection('sellers').findOne(
-      { userId: req.userId },
+    const seller = await findSellerByUserIdWithRepair(
+      req.userId,
       { projection: { payoutVerified: 1, payoutProviderBankStatus: 1 } }
     );
     const bankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
@@ -7787,7 +7826,7 @@ app.get('/api/payouts', publicApiRateLimit, verifyToken, async function(req, res
       query = {};
     } else {
       // Look up the seller profile to get sellerUsername for matching legacy payouts
-      const seller = await db.collection('sellers').findOne({ userId: req.userId }, { projection: { shopName: 1 } });
+      const seller = await findSellerByUserIdWithRepair(req.userId, { projection: { shopName: 1 } });
       const sellerUsername = seller ? (seller.shopName || '') : '';
 
       // Return only payouts for this seller (by sellerId or shopName fallback for legacy payouts)
@@ -7911,8 +7950,8 @@ app.post('/api/payouts/:id/send', publicApiRateLimit, verifyToken, async functio
     if (!orderId) return res.status(400).json({ error: 'Payout order ID is missing' });
     const order = await db.collection('orders').findOne({ id: orderId });
     if (!order) return res.status(404).json({ error: 'Order not found for payout' });
-    const seller = await db.collection('sellers').findOne(
-      { userId: String(payout.sellerId || req.userId || '') },
+    const seller = await findSellerByUserIdWithRepair(
+      String(payout.sellerId || req.userId || ''),
       { projection: { payoutVerified: 1, payoutProviderBankStatus: 1 } }
     );
     const bankStatus = String(seller && seller.payoutProviderBankStatus ? seller.payoutProviderBankStatus : '').toLowerCase();
@@ -8446,7 +8485,7 @@ app.post('/api/seller-reviews', publicApiRateLimit, verifyToken, async function(
 
     let sellerName = '';
     try {
-      const seller = await db.collection('sellers').findOne({ userId: String(sellerId) });
+      const seller = await findSellerByUserIdWithRepair(String(sellerId));
       if (seller) sellerName = seller.shopName || '';
     } catch (_) {}
 
@@ -9373,7 +9412,7 @@ async function recoverMissingSellers() {
     // Ensure known business sellers have the correct accountType even if already recovered
     for (const sellerId of BUSINESS_SELLER_IDS) {
       try {
-        const existing = await db.collection('sellers').findOne({ userId: sellerId });
+        const existing = await findSellerByUserIdWithRepair(sellerId);
         if (existing && existing.accountType !== 'business') {
           await db.collection('sellers').updateOne(
             { userId: sellerId },
@@ -9520,7 +9559,7 @@ async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
     complimentaryEndsAt.setUTCMonth(complimentaryEndsAt.getUTCMonth() + 6);
     const manualSubscriptionId = `manual_galaxy_monkee_${now.toISOString().slice(0, 10).replace(/-/g, '')}`;
 
-    const seller = await db.collection('sellers').findOne({ userId: userId });
+    const seller = await findSellerByUserIdWithRepair(userId);
     const resolveNonEmptyString = function(value, fallback) {
       const normalized = String(value || '').trim();
       return normalized || fallback;
@@ -9570,7 +9609,7 @@ async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
       sellerCreated = true;
     } else {
       await db.collection('sellers').updateOne(
-        { userId: userId },
+        buildSellerLookupQueryByUserId(userId),
         {
           $set: {
             ...resolvedSignupFields,
@@ -9612,6 +9651,172 @@ async function grantGalaxyMonkeeProSellerTierForSixMonthsOnce() {
     console.log(`✅ Galaxy_monkee Pro Seller migration complete: tier granted until ${complimentaryEndsAt.toISOString()}`);
   } catch (err) {
     console.error('⚠️  Galaxy_monkee Pro Seller migration error:', err.message);
+  }
+}
+
+async function normalizeSellerUserIdsAndRestoreSellerFlagsOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'normalize_seller_user_ids_restore_flags_2026_06_11';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const sellers = await db.collection('sellers')
+      .find({}, { projection: { _id: 1, userId: 1 } })
+      .toArray();
+    const now = new Date();
+    const normalizedUserIds = new Set();
+    let normalizedSellerIds = 0;
+    for (const seller of sellers) {
+      const normalizedUserId = normalizeUserIdString(seller && seller.userId);
+      if (!normalizedUserId) continue;
+      normalizedUserIds.add(normalizedUserId);
+      if (seller.userId !== normalizedUserId) {
+        await db.collection('sellers').updateOne(
+          { _id: seller._id },
+          { $set: { userId: normalizedUserId, updatedAt: now } }
+        );
+        normalizedSellerIds++;
+      }
+    }
+
+    const userObjectIds = Array.from(normalizedUserIds)
+      .filter(function(userId) { return ObjectId.isValid(userId); })
+      .map(function(userId) { return new ObjectId(userId); });
+    let usersUpdated = 0;
+    if (userObjectIds.length > 0) {
+      const userUpdateResult = await db.collection('users').updateMany(
+        { _id: { $in: userObjectIds }, isSeller: { $ne: true } },
+        { $set: { isSeller: true, updatedAt: now } }
+      );
+      usersUpdated = userUpdateResult.modifiedCount || 0;
+    }
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: now,
+      summary: {
+        sellersScanned: sellers.length,
+        sellerUserIdsNormalized: normalizedSellerIds,
+        usersFlagRestored: usersUpdated
+      }
+    });
+    console.log(`✅ Seller userId normalization complete: ${normalizedSellerIds} seller ID(s), ${usersUpdated} user flag(s) restored`);
+  } catch (err) {
+    console.error('⚠️  Seller userId normalization error:', err.message);
+  }
+}
+
+async function restoreBobSellerProfileOnce() {
+  if (!mongoConnected) return;
+  const migrationKey = 'restore_bob_seller_profile_2026_06_11';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const now = new Date();
+    const bobUsers = await db.collection('users').find(
+      {
+        $or: [
+          { username: { $regex: /^bob$/i } },
+          { firstName: { $regex: /^bob$/i } },
+          { email: { $regex: /^bob@.+/i } }
+        ]
+      },
+      { projection: { _id: 1, username: 1, firstName: 1, lastName: 1, email: 1 } }
+    ).toArray();
+    const bobUserIds = new Set(
+      bobUsers
+        .map(function(user) { return normalizeUserIdString(user && user._id); })
+        .filter(Boolean)
+    );
+
+    const bobSellers = await db.collection('sellers').find(
+      {
+        $or: [
+          { userId: { $in: Array.from(bobUserIds) } },
+          { sellerUsername: { $regex: /^bob$/i } },
+          { sellerName: { $regex: /^bob$/i } },
+          { shopName: { $regex: /\bbob\b/i } },
+          { businessEmail: { $regex: /^bob@.+/i } },
+          { personalEmail: { $regex: /^bob@.+/i } }
+        ]
+      },
+      { projection: { userId: 1 } }
+    ).toArray();
+    bobSellers.forEach(function(seller) {
+      const userId = normalizeUserIdString(seller && seller.userId);
+      if (userId) bobUserIds.add(userId);
+    });
+
+    let sellersRestored = 0;
+    let usersRestored = 0;
+    for (const userId of bobUserIds) {
+      if (!ObjectId.isValid(userId)) continue;
+      const user = await db.collection('users').findOne(
+        { _id: new ObjectId(userId) },
+        { projection: { username: 1, firstName: 1, lastName: 1, email: 1 } }
+      );
+      if (!user) continue;
+      const seller = await findSellerByUserIdWithRepair(userId);
+      const normalizedEmail = normalizeEmail(user.email);
+      const resolvedName = String(((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.username || 'Bob').trim();
+      const resolvedShopName = String(user.username || 'bob').trim();
+      const resolveNonEmptyString = function(value, fallback) {
+        const normalized = String(value || '').trim();
+        return normalized || fallback;
+      };
+
+      const sellerUpdate = {
+        userId: userId,
+        accountType: resolveNonEmptyString(seller && seller.accountType, 'individual').slice(0, 20),
+        shopName: resolveNonEmptyString(seller && seller.shopName, resolvedShopName).slice(0, 200),
+        shopDescription: resolveNonEmptyString(seller && seller.shopDescription, 'Trusted Zorexium seller profile.').slice(0, 2000),
+        businessEmail: resolveNonEmptyString(seller && seller.businessEmail, normalizedEmail).slice(0, 200),
+        phoneNumber: resolveNonEmptyString(seller && seller.phoneNumber, '+10000000000').slice(0, 30),
+        businessAddress: resolveNonEmptyString(seller && seller.businessAddress, '123 Seller Lane').slice(0, 200),
+        businessCity: resolveNonEmptyString(seller && seller.businessCity, 'San Diego').slice(0, 100),
+        businessState: resolveNonEmptyString(seller && seller.businessState, 'CA').slice(0, 100),
+        businessZip: resolveNonEmptyString(seller && seller.businessZip, '92101').slice(0, 20),
+        personalName: resolveNonEmptyString(seller && seller.personalName, resolvedName).slice(0, 200),
+        personalEmail: resolveNonEmptyString(seller && seller.personalEmail, normalizedEmail).slice(0, 200),
+        shippingAddress: resolveNonEmptyString(seller && seller.shippingAddress, '123 Seller Lane').slice(0, 200),
+        shippingCity: resolveNonEmptyString(seller && seller.shippingCity, 'San Diego').slice(0, 100),
+        shippingState: resolveNonEmptyString(seller && seller.shippingState, 'CA').slice(0, 100),
+        shippingZip: resolveNonEmptyString(seller && seller.shippingZip, '92101').slice(0, 20),
+        joinDate: seller && seller.joinDate ? seller.joinDate : now,
+        rating: seller && typeof seller.rating === 'number' ? seller.rating : 5,
+        totalSales: seller && typeof seller.totalSales === 'number' ? seller.totalSales : 0,
+        isVerified: seller && typeof seller.isVerified === 'boolean' ? seller.isVerified : false,
+        tier: normalizeSellerTier(seller && seller.tier ? seller.tier : 'starter'),
+        updatedAt: now
+      };
+      await db.collection('sellers').updateOne(
+        buildSellerLookupQueryByUserId(userId),
+        { $set: sellerUpdate, $setOnInsert: { createdAt: now } },
+        { upsert: true }
+      );
+      sellersRestored++;
+
+      const userResult = await db.collection('users').updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { isSeller: true, updatedAt: now } }
+      );
+      if (userResult.modifiedCount > 0) usersRestored++;
+    }
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: now,
+      summary: {
+        matchedUsers: bobUserIds.size,
+        sellersRestored: sellersRestored,
+        usersRestored: usersRestored
+      }
+    });
+    console.log(`✅ Bob seller restore migration complete: ${sellersRestored} seller profile(s), ${usersRestored} user flag(s) restored`);
+  } catch (err) {
+    console.error('⚠️  Bob seller restore migration error:', err.message);
   }
 }
 
@@ -10204,6 +10409,8 @@ async function start() {
       await assignStarterTierToExistingSellers();
       await forceAdafaProSellerTierOnce();
       await grantGalaxyMonkeeProSellerTierForSixMonthsOnce();
+      await normalizeSellerUserIdsAndRestoreSellerFlagsOnce();
+      await restoreBobSellerProfileOnce();
       await ensurePayoutIndexes();
       await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();
