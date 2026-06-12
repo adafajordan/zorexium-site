@@ -836,8 +836,8 @@
                 if (!isLoggedIn) {
                     return 'login-register.html';
                 }
-                if (isSeller) return 'seller-dashboard.html?openUpgradeTier=1';
-                return 'seller-signup.html' + (tier ? ('?tier=' + encodeURIComponent(tier)) : '');
+                if (isSeller) return 'seller-dashboard.html';
+                return 'seller-signup.html';
             }
             if(sellerSignupCtas.length){
                 if(!loggedIn){
