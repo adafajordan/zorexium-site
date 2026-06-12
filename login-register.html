@@ -784,7 +784,18 @@
       });
       var data = await res.json();
       if (!res.ok) {
-        errMsg.textContent = data.error || 'Registration failed. Please try again.';
+        var errorCode = data.error || '';
+        var friendlyMsg = data.message || '';
+        if (!friendlyMsg) {
+          if (errorCode === 'email_already_in_use' || errorCode === 'User already exists') {
+            friendlyMsg = 'That email address is already registered. Try logging in instead.';
+          } else if (errorCode === 'username_already_in_use') {
+            friendlyMsg = 'That username is already taken. Please choose a different one.';
+          } else {
+            friendlyMsg = errorCode || 'Registration failed. Please try again.';
+          }
+        }
+        errMsg.textContent = friendlyMsg;
         errEl.classList.remove('hidden');
         return;
       }

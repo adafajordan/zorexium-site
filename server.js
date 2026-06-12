@@ -1408,21 +1408,32 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, username } = req.body;
     const normalizedEmail = normalizeEmail(email);
     
     if (!normalizedEmail || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
+
+    // Normalize and validate username if provided
+    const normalizedUsername = String(username || '').trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30);
     
     const existingUser = await db.collection('users').findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+      return res.status(400).json({ error: 'email_already_in_use', message: 'That email address is already registered.' });
+    }
+
+    // Check username uniqueness if a username was provided
+    if (normalizedUsername) {
+      const existingByUsername = await db.collection('users').findOne({ username: normalizedUsername });
+      if (existingByUsername) {
+        return res.status(400).json({ error: 'username_already_in_use', message: 'That username is already taken.' });
+      }
     }
     
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const result = await db.collection('users').insertOne({
+    const userDoc = {
       email: normalizedEmail,
       password: hashedPassword,
       firstName: firstName || '',
@@ -1430,15 +1441,17 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
       isAdmin: false,
       isSeller: true,
       createdAt: new Date()
-    });
+    };
+    if (normalizedUsername) userDoc.username = normalizedUsername;
+    const result = await db.collection('users').insertOne(userDoc);
 
     const newUserId = result.insertedId.toString();
 
     // Auto-provision a Pro seller profile for every new user at no cost
     try {
       const now = new Date();
-      const resolvedName = ((firstName || '') + ' ' + (lastName || '')).trim() || normalizedEmail.split('@')[0];
-      const resolvedShopName = resolvedName + "'s Shop";
+      const resolvedName = ((firstName || '') + ' ' + (lastName || '')).trim() || normalizedUsername || normalizedEmail.split('@')[0];
+      const resolvedShopName = await generateUniqueShopName(resolvedName);
       const manualSubscriptionId = 'manual_free_tier_grant_' + newUserId + '_' + now.toISOString().slice(0, 10).replace(/-/g, '');
       const complimentaryEndsAt = new Date(now.getTime());
       complimentaryEndsAt.setUTCFullYear(complimentaryEndsAt.getUTCFullYear() + 100);
@@ -2234,7 +2247,7 @@ const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
 const SELLER_AFFILIATE_BONUS_RATE = 0.05;
 const STANDARD_SELLER_HOLD_DAYS = 7;
-const PRO_SELLER_HOLD_DAYS = 4;
+const PRO_SELLER_HOLD_DAYS = 2;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
 const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
 const ADAFA_RETROACTIVE_TARGET_PRODUCT_ID = 'gjnb';
@@ -2423,6 +2436,19 @@ function normalizeAffiliateTrackingValue(value, maxLength) {
   const normalized = String(value || '').trim();
   if (!normalized) return '';
   return normalized.slice(0, Math.max(1, parseInt(maxLength, 10) || 128));
+}
+
+async function generateUniqueShopName(baseName) {
+  const base = String(baseName || '').trim() || 'Shop';
+  const candidate = (base + "'s Shop").slice(0, 200);
+  const exists = await db.collection('sellers').findOne({ shopName: candidate }, { projection: { _id: 1 } });
+  if (!exists) return candidate;
+  for (let i = 2; i <= 9999; i++) {
+    const numbered = (base + "'s Shop " + i).slice(0, 200);
+    const dup = await db.collection('sellers').findOne({ shopName: numbered }, { projection: { _id: 1 } });
+    if (!dup) return numbered;
+  }
+  return candidate;
 }
 
 function buildSellerAffiliateLink(productId, sellerId) {
@@ -7004,7 +7030,7 @@ app.get('/api/sellers/me', verifyToken, async function(req, res) {
 });
 
 // PUT /api/sellers/me – update current user's seller profile (auth required)
-app.put('/api/sellers/me', verifyToken, async function(req, res) {
+app.put('/api/sellers/me', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   const allowedFields = [
@@ -7036,6 +7062,25 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
 
   try {
     await ensureComplimentaryProSellerForUser(req.userId);
+
+    // Enforce shop name uniqueness: reject if the proposed name is already used by another seller
+    if (req.body.shopName !== undefined) {
+      const proposedShopName = String(req.body.shopName).slice(0, 200).trim();
+      if (proposedShopName) {
+        const conflictingSeller = await db.collection('sellers').findOne(
+          { shopName: proposedShopName },
+          { projection: { _id: 1, userId: 1 } }
+        );
+        if (conflictingSeller) {
+          const conflictUserId = String(conflictingSeller.userId || '').trim();
+          const currentUserId = String(req.userId || '').trim();
+          if (conflictUserId !== currentUserId) {
+            return res.status(409).json({ error: 'shop_name_already_in_use', message: 'That shop name is already in use by another seller.' });
+          }
+        }
+      }
+    }
+
     const result = await db.collection('sellers').updateOne(
       buildSellerLookupQueryByUserId(req.userId),
       { $set: updates }
@@ -7395,17 +7440,29 @@ app.post('/api/sellers/recover-missing', verifyToken, async function(req, res) {
 
       if (!user) continue;
 
+      const now = new Date();
+      const complimentaryEndsAt = new Date(now.getTime());
+      complimentaryEndsAt.setUTCFullYear(complimentaryEndsAt.getUTCFullYear() + 100);
+      const manualSubscriptionId = 'manual_free_tier_grant_' + sellerId + '_' + now.toISOString().slice(0, 10).replace(/-/g, '');
       await db.collection('sellers').insertOne({
         userId: sellerId,
         accountType: 'individual',
         shopName: resolveSellerName(user),
         shopDescription: 'Shop',
-        joinDate: new Date(),
+        joinDate: now,
         rating: 5,
         totalSales: 0,
         isVerified: false,
-        tier: 'starter',
-        createdAt: new Date()
+        tier: 'pro',
+        proSubscriptionId: manualSubscriptionId,
+        proSubscriptionStatus: 'complimentary_active',
+        proSubscriptionProvider: 'free_tier_grant',
+        proSubscriptionCancelAtPeriodEnd: false,
+        proGrandfatheredPricing: true,
+        proTierDowngraded: false,
+        proComplimentaryGrantedAt: now,
+        proComplimentaryEndsAt: complimentaryEndsAt,
+        createdAt: now
       });
 
       await db.collection('users').updateOne(
@@ -9281,17 +9338,30 @@ async function recoverMissingSellers() {
 
       const accountType = BUSINESS_SELLER_IDS.has(sellerId) ? 'business' : 'individual';
 
+      const now = new Date();
+      const complimentaryEndsAt = new Date(now.getTime());
+      complimentaryEndsAt.setUTCFullYear(complimentaryEndsAt.getUTCFullYear() + 100);
+      const manualSubscriptionId = 'manual_free_tier_grant_' + sellerId + '_' + now.toISOString().slice(0, 10).replace(/-/g, '');
+
       await db.collection('sellers').insertOne({
         userId: sellerId,
         accountType,
         shopName: resolveSellerName(user),
         shopDescription: 'Shop',
-        joinDate: new Date(),
+        joinDate: now,
         rating: 5,
         totalSales: 0,
         isVerified: false,
-        tier: 'starter',
-        createdAt: new Date()
+        tier: 'pro',
+        proSubscriptionId: manualSubscriptionId,
+        proSubscriptionStatus: 'complimentary_active',
+        proSubscriptionProvider: 'free_tier_grant',
+        proSubscriptionCancelAtPeriodEnd: false,
+        proGrandfatheredPricing: true,
+        proTierDowngraded: false,
+        proComplimentaryGrantedAt: now,
+        proComplimentaryEndsAt: complimentaryEndsAt,
+        createdAt: now
       });
 
       await db.collection('users').updateOne(
@@ -9732,6 +9802,7 @@ async function normalizeSellerUserIdsAndRestoreSellerFlagsOnce() {
 
 async function restoreBobSellerProfileOnce() {
   if (!mongoConnected) return;
+  // Keep original migration key for backward compatibility (was already run)
   const migrationKey = 'restore_bob_seller_profile_2026_06_11';
   try {
     const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
@@ -9776,51 +9847,8 @@ async function restoreBobSellerProfileOnce() {
     let usersRestored = 0;
     for (const userId of bobUserIds) {
       if (!ObjectId.isValid(userId)) continue;
-      const user = await db.collection('users').findOne(
-        { _id: new ObjectId(userId) },
-        { projection: { username: 1, firstName: 1, lastName: 1, email: 1 } }
-      );
-      if (!user) continue;
-      const seller = await findSellerByUserIdWithRepair(userId);
-      const normalizedEmail = normalizeEmail(user.email);
-      const resolvedName = String(((user.firstName || '') + ' ' + (user.lastName || '')).trim() || user.username || 'Bob').trim();
-      const resolvedShopName = String(user.username || 'bob').trim();
-      const resolveNonEmptyString = function(value, fallback) {
-        const normalized = String(value || '').trim();
-        return normalized || fallback;
-      };
-
-      const sellerUpdate = {
-        userId: userId,
-        accountType: resolveNonEmptyString(seller && seller.accountType, 'individual').slice(0, 20),
-        shopName: resolveNonEmptyString(seller && seller.shopName, resolvedShopName).slice(0, 200),
-        shopDescription: resolveNonEmptyString(seller && seller.shopDescription, 'Trusted Zorexium seller profile.').slice(0, 2000),
-        businessEmail: resolveNonEmptyString(seller && seller.businessEmail, normalizedEmail).slice(0, 200),
-        phoneNumber: resolveNonEmptyString(seller && seller.phoneNumber, '+10000000000').slice(0, 30),
-        businessAddress: resolveNonEmptyString(seller && seller.businessAddress, '123 Seller Lane').slice(0, 200),
-        businessCity: resolveNonEmptyString(seller && seller.businessCity, 'San Diego').slice(0, 100),
-        businessState: resolveNonEmptyString(seller && seller.businessState, 'CA').slice(0, 100),
-        businessZip: resolveNonEmptyString(seller && seller.businessZip, '92101').slice(0, 20),
-        personalName: resolveNonEmptyString(seller && seller.personalName, resolvedName).slice(0, 200),
-        personalEmail: resolveNonEmptyString(seller && seller.personalEmail, normalizedEmail).slice(0, 200),
-        shippingAddress: resolveNonEmptyString(seller && seller.shippingAddress, '123 Seller Lane').slice(0, 200),
-        shippingCity: resolveNonEmptyString(seller && seller.shippingCity, 'San Diego').slice(0, 100),
-        shippingState: resolveNonEmptyString(seller && seller.shippingState, 'CA').slice(0, 100),
-        shippingZip: resolveNonEmptyString(seller && seller.shippingZip, '92101').slice(0, 20),
-        joinDate: seller && seller.joinDate ? seller.joinDate : now,
-        rating: seller && typeof seller.rating === 'number' ? seller.rating : 5,
-        totalSales: seller && typeof seller.totalSales === 'number' ? seller.totalSales : 0,
-        isVerified: seller && typeof seller.isVerified === 'boolean' ? seller.isVerified : false,
-        tier: normalizeSellerTier(seller && seller.tier ? seller.tier : 'starter'),
-        updatedAt: now
-      };
-      await db.collection('sellers').updateOne(
-        buildSellerLookupQueryByUserId(userId),
-        { $set: sellerUpdate, $setOnInsert: { createdAt: now } },
-        { upsert: true }
-      );
-      sellersRestored++;
-
+      const ensured = await ensureComplimentaryProSellerForUser(userId);
+      if (ensured && ensured.seller) sellersRestored++;
       const userResult = await db.collection('users').updateOne(
         { _id: new ObjectId(userId) },
         { $set: { isSeller: true, updatedAt: now } }
@@ -9840,6 +9868,85 @@ async function restoreBobSellerProfileOnce() {
     console.log(`✅ Bob seller restore migration complete: ${sellersRestored} seller profile(s), ${usersRestored} user flag(s) restored`);
   } catch (err) {
     console.error('⚠️  Bob seller restore migration error:', err.message);
+  }
+}
+
+async function restoreBobSellerProfileV2Once() {
+  if (!mongoConnected) return;
+  // v2: uses ensureComplimentaryProSellerForUser to guarantee Pro tier restoration
+  const migrationKey = 'restore_bob_seller_profile_2026_06_12_v2';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const now = new Date();
+    const bobUsers = await db.collection('users').find(
+      {
+        $or: [
+          { username: { $regex: /^bob$/i } },
+          { firstName: { $regex: /^bob$/i } },
+          { email: { $regex: /^bob@.+/i } }
+        ]
+      },
+      { projection: { _id: 1, username: 1, firstName: 1, lastName: 1, email: 1 } }
+    ).toArray();
+    const bobUserIds = new Set(
+      bobUsers
+        .map(function(user) { return normalizeUserIdString(user && user._id); })
+        .filter(Boolean)
+    );
+
+    const bobSellers = await db.collection('sellers').find(
+      {
+        $or: [
+          ...(bobUserIds.size > 0 ? [{ userId: { $in: Array.from(bobUserIds) } }] : []),
+          { sellerUsername: { $regex: /^bob$/i } },
+          { sellerName: { $regex: /^bob$/i } },
+          { shopName: { $regex: /\bbob\b/i } },
+          { businessEmail: { $regex: /^bob@.+/i } },
+          { personalEmail: { $regex: /^bob@.+/i } }
+        ]
+      },
+      { projection: { userId: 1 } }
+    ).toArray();
+    bobSellers.forEach(function(seller) {
+      const userId = normalizeUserIdString(seller && seller.userId);
+      if (userId) bobUserIds.add(userId);
+    });
+
+    let sellersRestored = 0;
+    let usersRestored = 0;
+    for (const userId of bobUserIds) {
+      if (!ObjectId.isValid(userId)) continue;
+      try {
+        const ensured = await ensureComplimentaryProSellerForUser(userId);
+        if (ensured && ensured.seller) sellersRestored++;
+      } catch (sellerErr) {
+        console.error('⚠️  Bob v2 restore: ensureComplimentaryProSellerForUser failed for', userId, sellerErr.message);
+      }
+      try {
+        const userResult = await db.collection('users').updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { isSeller: true, updatedAt: now } }
+        );
+        if (userResult.modifiedCount > 0) usersRestored++;
+      } catch (userErr) {
+        console.error('⚠️  Bob v2 restore: user flag update failed for', userId, userErr.message);
+      }
+    }
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: now,
+      summary: {
+        matchedUsers: bobUserIds.size,
+        sellersRestored: sellersRestored,
+        usersRestored: usersRestored
+      }
+    });
+    console.log(`✅ Bob seller restore v2 migration complete: ${sellersRestored} seller profile(s) with Pro tier, ${usersRestored} user flag(s) restored`);
+  } catch (err) {
+    console.error('⚠️  Bob seller restore v2 migration error:', err.message);
   }
 }
 
@@ -10560,6 +10667,48 @@ async function grantAllUsersProSellerTierOnce() {
   }
 }
 
+async function ensureAllUsersHaveProSellerProfileOnce() {
+  // v2 safeguard: Uses ensureComplimentaryProSellerForUser to guarantee every user has a Pro seller profile.
+  // Runs once per deployment (key includes date). Re-run by updating the key date if needed.
+  if (!mongoConnected) return;
+  const migrationKey = 'ensure_all_users_pro_seller_2026_06_12_v2';
+  try {
+    const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
+    if (existing) return;
+
+    const now = new Date();
+    const allUsers = await db.collection('users').find({}, { projection: { _id: 1 } }).toArray();
+    let ensured = 0;
+    let failed = 0;
+    for (const user of allUsers) {
+      const userId = String(user._id);
+      if (!ObjectId.isValid(userId)) continue;
+      try {
+        const result = await ensureComplimentaryProSellerForUser(userId);
+        if (result && result.seller) {
+          ensured++;
+          await db.collection('users').updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { isSeller: true, updatedAt: now } }
+          ).catch(function() {});
+        }
+      } catch (err) {
+        failed++;
+        console.error('⚠️  ensureAllUsersHaveProSellerProfileOnce: failed for user ' + userId + ':', err.message);
+      }
+    }
+
+    await db.collection('runtimeMigrations').insertOne({
+      key: migrationKey,
+      createdAt: now,
+      summary: { totalUsers: allUsers.length, ensured, failed }
+    });
+    console.log(`✅ ensureAllUsersHaveProSellerProfileOnce: ${ensured} user(s) ensured Pro seller, ${failed} failed`);
+  } catch (err) {
+    console.error('⚠️  ensureAllUsersHaveProSellerProfileOnce error:', err.message);
+  }
+}
+
 async function start() {
   console.log('🚀 Starting server...');
   try {
@@ -10573,7 +10722,9 @@ async function start() {
       await grantChristianLartigueProSellerTierForeverOnce();
       await normalizeSellerUserIdsAndRestoreSellerFlagsOnce();
       await restoreBobSellerProfileOnce();
+      await restoreBobSellerProfileV2Once();
       await grantAllUsersProSellerTierOnce();
+      await ensureAllUsersHaveProSellerProfileOnce();
       await ensurePayoutIndexes();
       await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();

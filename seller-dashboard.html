@@ -2000,7 +2000,19 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('Save failed');
+      if (!res.ok) {
+        var errData = {};
+        try { errData = await res.json(); } catch (_) {}
+        var errMsg = errData.message || '';
+        if (!errMsg) {
+          if (errData.error === 'shop_name_already_in_use') {
+            errMsg = 'That shop name is already in use by another seller. Please choose a different name.';
+          } else {
+            errMsg = 'Failed to save settings. Please try again.';
+          }
+        }
+        throw new Error(errMsg);
+      }
       sellerData.shopName = payload.shopName;
       sellerData.shopDescription = payload.shopDescription;
       sellerData.logoUrl = payload.logoUrl;
