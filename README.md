@@ -90,7 +90,7 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 
 - Buyer checkout uses Stripe Checkout with embedded UI (`ui_mode: embedded_page`) in `checkout.html`.
 - Seller payout onboarding uses Stripe Connect Express.
-- Seller payout release is instant upon shipment confirmation (`/api/orders/:orderId/ship`) — there is no hold period for Starter or Pro sellers. A Stripe transfer is created immediately when the seller marks the order as shipped and their account is verified.
+- Seller payout release follows a hold window after shipment confirmation: **7 days for Starter** sellers and **5 days for Pro** sellers. A Stripe transfer is created automatically by the sweep once the hold expires and the seller's account is verified.
 - Stripe transfers always use the platform's available Stripe balance, and deferred retry metadata is recorded when that balance is temporarily insufficient.
 - Internal payout lifecycle fields now distinguish transfer dispatch from downstream bank settlement (`payoutLifecycleStatus` vs `payoutBankSettlementStatus`).
 - Automatic payout sweeps now re-check `pending_hold`, `ready_to_pay`, onboarding-blocked rows, and `paid` rows missing Stripe transfer evidence so eligible Stripe transfers are attempted continuously after hold windows expire.
@@ -112,7 +112,7 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 |------|-------------|-------|
 | 1. Customer pays | Stripe Checkout session completes; order written to `orders` collection with `status: 'completed'` | `server.js` Stripe webhook / `completeStripeCheckoutOrder` |
 | 2. Seller ships | `POST /api/orders/:orderId/ship` sets `shippingStatus: 'shipped'` + `shippedAt`; immediately calls `sendStripeSellerPayout` to create a `pending_hold` payout row | `server.js:5101` |
-| 3. Hold enforced | `buildPayoutSnapshot` computes `payoutReleaseAt = shippedAt + holdDays`; Starter = **0 days**, Pro = **0 days** (instant payout for all sellers) | `server.js:2595-2596`, `getSellerHoldDaysByTier` |
+| 3. Hold enforced | `buildPayoutSnapshot` computes `payoutReleaseAt = shippedAt + holdDays`; Starter = **7 days**, Pro = **5 days** | `server.js`, `getSellerHoldDaysByTier` |
 | 4. Automatic sweep | `runAutomaticStripePayoutSweep` runs every **15 minutes**; picks up `pending_hold`, `ready_to_pay`, `blocked_onboarding` rows | `server.js:8993`, `setInterval` at startup |
 | 5. Stripe transfer | When hold has expired and seller account is verified: `stripe.transfers.create({ destination: 'acct_...' })` | `server.js:3508-3520` |
 | 6. Result persisted | `stripeTransferId`, `paidAt`, `payoutLifecycleStatus: 'transfer_sent'`, and `payoutBankSettlementStatus` written to `payouts` collection | `server.js:3523-3538` |
