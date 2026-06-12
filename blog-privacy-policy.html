@@ -362,11 +362,8 @@
         }
         var sellHardwareLink = document.getElementById('sellHardwareLink');
         if(sellHardwareLink && loggedIn){
-            ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller')
-                .then(function(r){ return r.ok ? r.json() : {isSeller:false}; })
-                .then(function(data){ if(data.isSeller) sellHardwareLink.href = 'seller-dashboard.html'; })
-                .catch(function(){});
-        }
+                sellHardwareLink.href = 'seller-dashboard.html';
+            }
         try{
             if(loggedIn){
                 ZrxSession.fetch(BACKEND_URL + '/api/cart', { credentials: 'include' })
