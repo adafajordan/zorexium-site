@@ -394,6 +394,104 @@ async function findSellerByUserIdWithRepair(userId, options) {
   return seller;
 }
 
+function buildComplimentaryProSubscriptionId(userId, now) {
+  const normalizedUserId = normalizeUserIdString(userId);
+  const stamp = new Date(now || Date.now()).toISOString().slice(0, 10).replace(/-/g, '');
+  return 'manual_free_tier_grant_' + normalizedUserId + '_' + stamp;
+}
+
+async function ensureComplimentaryProSellerForUser(userId) {
+  const normalizedUserId = normalizeUserIdString(userId);
+  if (!mongoConnected || !normalizedUserId || !ObjectId.isValid(normalizedUserId)) {
+    return { ensured: false, seller: null, reason: 'invalid_user_id' };
+  }
+
+  const user = await db.collection('users').findOne(
+    { _id: new ObjectId(normalizedUserId) },
+    { projection: { _id: 1, email: 1, firstName: 1, lastName: 1 } }
+  );
+  if (!user) return { ensured: false, seller: null, reason: 'user_not_found' };
+
+  const now = new Date();
+  const complimentaryEndsAt = new Date(now.getTime());
+  complimentaryEndsAt.setUTCFullYear(complimentaryEndsAt.getUTCFullYear() + 100);
+  const resolvedEmail = normalizeEmail(user.email) || 'noreply@zorexium.com';
+  const resolvedName = ((user.firstName || '') + ' ' + (user.lastName || '')).trim() || resolvedEmail.split('@')[0];
+  const manualSubscriptionId = buildComplimentaryProSubscriptionId(normalizedUserId, now);
+  const query = buildSellerLookupQueryByUserId(normalizedUserId) || { userId: normalizedUserId };
+  const existingSeller = await db.collection('sellers').findOne(query, {
+    projection: {
+      _id: 1,
+      proSubscriptionId: 1,
+      proComplimentaryGrantedAt: 1,
+      proComplimentaryEndsAt: 1
+    }
+  });
+
+  const updates = {
+    tier: 'pro',
+    proSubscriptionStatus: 'complimentary_active',
+    proSubscriptionProvider: 'free_tier_grant',
+    proSubscriptionCancelAtPeriodEnd: false,
+    proGrandfatheredPricing: true,
+    proTierDowngraded: false,
+    updatedAt: now
+  };
+  if (!existingSeller || !String(existingSeller.proSubscriptionId || '').trim()) {
+    updates.proSubscriptionId = manualSubscriptionId;
+  }
+  if (!existingSeller || !existingSeller.proComplimentaryGrantedAt) {
+    updates.proComplimentaryGrantedAt = now;
+  }
+  if (!existingSeller || !existingSeller.proComplimentaryEndsAt) {
+    updates.proComplimentaryEndsAt = complimentaryEndsAt;
+  }
+
+  await db.collection('sellers').updateOne(
+    query,
+    {
+      $set: updates,
+      $setOnInsert: {
+        userId: normalizedUserId,
+        accountType: 'individual',
+        shopName: (resolvedName + "'s Shop").slice(0, 200),
+        shopDescription: 'Welcome to my shop!',
+        businessEmail: resolvedEmail,
+        phoneNumber: '+10000000000',
+        businessAddress: '123 Seller Lane',
+        businessCity: 'San Diego',
+        businessState: 'CA',
+        businessZip: '92101',
+        personalName: resolvedName.slice(0, 200),
+        personalEmail: resolvedEmail,
+        shippingAddress: '123 Seller Lane',
+        shippingCity: 'San Diego',
+        shippingState: 'CA',
+        shippingZip: '92101',
+        joinDate: now,
+        rating: 5,
+        totalSales: 0,
+        isVerified: false,
+        createdAt: now
+      },
+      $unset: {
+        proTierDowngradedAt: '',
+        proTierDowngradeScheduledFor: '',
+        proSubscriptionCancellationScheduledAt: ''
+      }
+    },
+    { upsert: true }
+  );
+
+  await db.collection('users').updateOne(
+    { _id: user._id },
+    { $set: { isSeller: true, updatedAt: now } }
+  );
+
+  const seller = await findSellerByUserIdWithRepair(normalizedUserId);
+  return { ensured: true, seller: seller, reason: '' };
+}
+
 async function hasSuccessfulPurchaseForFreeShipping(userId, candidateEmails) {
   const normalizedEmails = collectNormalizedPurchaseEmails.apply(null, candidateEmails || []);
   const identityFilter = buildSuccessfulPurchaseIdentityFilter(userId, normalizedEmails);
@@ -1666,7 +1764,10 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
     const resolvedStatus = (status && validStatuses.includes(status)) ? status : 'pending';
 
     // Enforce Starter tier listing limit (max active listings)
-    const seller = await findSellerByUserIdWithRepair(req.userId);
+    const ensuredSellerState = await ensureComplimentaryProSellerForUser(req.userId);
+    const seller = ensuredSellerState && ensuredSellerState.seller
+      ? ensuredSellerState.seller
+      : await findSellerByUserIdWithRepair(req.userId);
     if (seller && (seller.tier === 'starter' || !seller.tier)) {
       const activeCount = await db.collection('products').countDocuments({
         sellerId: req.userId,
@@ -4150,35 +4251,10 @@ app.get('/api/sellers/pro-plan', async function(req, res) {
 app.post('/api/stripe/pro-subscription/session', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    ensureStripeConfigured();
-    const seller = await findSellerByUserIdWithRepair(
-      req.userId,
-      { projection: { userId: 1, tier: 1, proSubscriptionId: 1, proGrandfatheredPricing: 1 } }
-    );
-    const mode = String(req.body && req.body.mode ? req.body.mode : 'signup').trim().toLowerCase();
-    const monthlyPriceUsd = getProSellerMonthlyPriceUsdForSeller(seller);
-    if (seller && seller.tier === 'pro' && mode === 'upgrade') {
-      return res.status(409).json({ error: 'Already on Pro tier' });
-    }
-    const successBase = mode === 'upgrade'
-      ? makeAbsoluteUrl('/seller-dashboard.html?tierUpgrade=success')
-      : makeAbsoluteUrl('/seller-signup.html?proCheckout=success');
-    const cancelBase = mode === 'upgrade'
-      ? makeAbsoluteUrl('/seller-dashboard.html?tierUpgrade=cancelled')
-      : makeAbsoluteUrl('/seller-signup.html?proCheckout=cancelled');
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      line_items: getStripeProSellerCheckoutLineItems(monthlyPriceUsd),
-      success_url: successBase + '&session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: cancelBase,
-      metadata: {
-        userId: String(req.userId),
-        flow: mode === 'upgrade' ? 'pro_upgrade' : 'pro_signup',
-        proMonthlyPriceUsd: monthlyPriceUsd,
-        proGrandfatheredPricing: hasGrandfatheredProSellerPricing(seller) ? 'true' : 'false'
-      }
+    await ensureComplimentaryProSellerForUser(req.userId);
+    return res.status(409).json({
+      error: 'All users are already registered as Pro sellers. Stripe Pro subscription checkout is disabled.'
     });
-    res.json({ sessionId: session.id, checkoutUrl: session.url });
   } catch (error) {
     console.error('Error creating Stripe Pro subscription session:', error);
     res.status(500).json({ error: error.message });
@@ -4220,91 +4296,13 @@ app.post('/api/sellers/subscription/confirm', publicApiRateLimit, verifyToken, a
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const existing = await findSellerByUserIdWithRepair(req.userId);
-    if (existing) return res.status(400).json({ error: 'Seller profile already exists' });
-
-    const { subscriptionId, accountType, shopName, shopDescription, businessEmail, phoneNumber,
-      businessAddress, businessCity, businessState, businessZip,
-      personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip } = req.body;
-
-    if (!subscriptionId || typeof subscriptionId !== 'string' || subscriptionId.length > 128) {
-      return res.status(400).json({ error: 'subscriptionId is required' });
-    }
-    if (!accountType || !shopName) {
-      return res.status(400).json({ error: 'accountType and shopName are required' });
-    }
-
-    const subscription = await verifyStripeProSellerSubscription(subscriptionId);
-
-    const seller = {
-      userId: req.userId,
-      accountType: String(accountType).slice(0, 20),
-      shopName: String(shopName).slice(0, 200),
-      shopDescription: String(shopDescription || '').slice(0, 2000),
-      businessEmail: String(businessEmail || '').slice(0, 200),
-      phoneNumber: String(phoneNumber || '').slice(0, 30),
-      businessAddress: String(businessAddress || '').slice(0, 200),
-      businessCity: String(businessCity || '').slice(0, 100),
-      businessState: String(businessState || '').slice(0, 100),
-      businessZip: String(businessZip || '').slice(0, 20),
-      personalName: String(personalName || '').slice(0, 200),
-      personalEmail: String(personalEmail || '').slice(0, 200),
-      shippingAddress: String(shippingAddress || '').slice(0, 200),
-      shippingCity: String(shippingCity || '').slice(0, 100),
-      shippingState: String(shippingState || '').slice(0, 100),
-      shippingZip: String(shippingZip || '').slice(0, 20),
-      joinDate: new Date(),
-      rating: 5,
-      totalSales: 0,
-      isVerified: false,
-      tier: 'pro',
-      proSubscriptionId: subscriptionId,
-      proSubscriptionStatus: String(subscription && subscription.status ? subscription.status : 'active'),
-      proSubscriptionProvider: 'stripe',
-      proGrandfatheredPricing: false,
-      createdAt: new Date()
-    };
-
-    const result = await db.collection('sellers').insertOne(seller);
-
-    await db.collection('users').updateOne(
-      { _id: new ObjectId(req.userId) },
-      { $set: { isSeller: true, updatedAt: new Date() } }
-    );
-
-    try {
-      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1, firstName: 1 } });
-      const to = normalizeEmail(user && user.email);
-      if (to) {
-        await sendEventEmailSafe(
-          to,
-          'Welcome to Zorexium Sellers',
-          `<p>Welcome${user && user.firstName ? ', ' + user.firstName : ''}! Your seller profile is now active.</p><p>Thanks for joining the Zorexium seller community.</p>`,
-          '/seller-dashboard.html'
-        );
-        await sendEventEmailSafe(
-          to,
-          'Thanks for purchasing Pro Seller status',
-          `<p>Your Pro Seller subscription is active.</p><p>Pro Seller fees: <strong>5%</strong> platform fee per sale and <strong>$${escapeHtml(PRO_SELLER_MONTHLY_PRICE_USD)}/month</strong> subscription for new subscriptions.</p>`,
-          '/seller-dashboard.html#tier'
-        );
-      }
-      await sendAdminNotificationSafe(
-        'New seller signup',
-        `<p>A user signed up to become a seller.</p>`
-          + `<p><strong>Tier:</strong> pro</p>`
-          + `<p><strong>Shop name:</strong> ${escapeHtml(String(seller.shopName || 'N/A'))}</p>`
-          + `<p><strong>Account type:</strong> ${escapeHtml(String(seller.accountType || 'N/A'))}</p>`
-          + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
-          + `<p><strong>User email:</strong> ${escapeHtml(String(to || 'N/A'))}</p>`
-          + `<p><strong>Subscription ID:</strong> ${escapeHtml(String(subscriptionId))}</p>`,
-        '/seller-dashboard.html'
-      );
-    } catch (mailErr) {
-      console.error('Failed to send Pro seller signup emails:', mailErr.message);
-    }
-
-    res.status(201).json({ ...seller, _id: result.insertedId });
+    const ensured = await ensureComplimentaryProSellerForUser(req.userId);
+    if (!ensured || !ensured.seller) return res.status(404).json({ error: 'User not found' });
+    res.status(200).json({
+      ...sanitizeSellerForClient(ensured.seller),
+      alreadyRegistered: true,
+      message: 'All users are already registered as Pro sellers.'
+    });
   } catch (error) {
     console.error('Error confirming Pro Seller subscription:', error);
     res.status(500).json({ error: error.message });
@@ -6959,8 +6957,9 @@ app.post('/api/auth/change-password', authRateLimit, verifyToken, async function
 app.get('/api/user/is-seller', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const seller = await findSellerByUserIdWithRepair(req.userId);
-    res.json({ isSeller: !!seller });
+    const ensured = await ensureComplimentaryProSellerForUser(req.userId);
+    const seller = ensured && ensured.seller ? ensured.seller : null;
+    res.json({ isSeller: !!seller, tier: seller ? normalizeSellerTier(seller.tier) : 'starter' });
   } catch (error) {
     console.error('Error checking seller status:', error);
     res.status(500).json({ error: error.message });
@@ -6974,86 +6973,13 @@ app.post('/api/sellers', publicApiRateLimit, verifyToken, async function(req, re
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const existing = await findSellerByUserIdWithRepair(req.userId);
-    if (existing) return res.status(400).json({ error: 'Seller profile already exists' });
-
-    const {
-      accountType, shopName, shopDescription, businessEmail, phoneNumber,
-      businessAddress, businessCity, businessState, businessZip,
-      personalName, personalEmail, shippingAddress, shippingCity, shippingState, shippingZip,
-      tier
-    } = req.body;
-
-    if (!accountType || !shopName) {
-      return res.status(400).json({ error: 'accountType and shopName are required' });
-    }
-
-    const resolvedTier = (tier && VALID_SELLER_TIERS.includes(String(tier).toLowerCase())) ? String(tier).toLowerCase() : 'starter';
-
-    // Pro tier requires payment via /api/sellers/subscription/confirm
-    if (resolvedTier === 'pro') {
-      return res.status(400).json({ error: 'Pro Seller registration requires a Stripe subscription. Please use the subscription signup flow.' });
-    }
-
-    const seller = {
-      userId: req.userId,
-      accountType: String(accountType).slice(0, 20),
-      shopName: String(shopName).slice(0, 200),
-      shopDescription: String(shopDescription || '').slice(0, 2000),
-      businessEmail: String(businessEmail || '').slice(0, 200),
-      phoneNumber: String(phoneNumber || '').slice(0, 30),
-      businessAddress: String(businessAddress || '').slice(0, 200),
-      businessCity: String(businessCity || '').slice(0, 100),
-      businessState: String(businessState || '').slice(0, 100),
-      businessZip: String(businessZip || '').slice(0, 20),
-      personalName: String(personalName || '').slice(0, 200),
-      personalEmail: String(personalEmail || '').slice(0, 200),
-      shippingAddress: String(shippingAddress || '').slice(0, 200),
-      shippingCity: String(shippingCity || '').slice(0, 100),
-      shippingState: String(shippingState || '').slice(0, 100),
-      shippingZip: String(shippingZip || '').slice(0, 20),
-      joinDate: new Date(),
-      rating: 5,
-      totalSales: 0,
-      isVerified: false,
-      tier: resolvedTier,
-      createdAt: new Date()
-    };
-
-    const result = await db.collection('sellers').insertOne(seller);
-
-    // Mark user as seller
-    await db.collection('users').updateOne(
-      { _id: new ObjectId(req.userId) },
-      { $set: { isSeller: true, updatedAt: new Date() } }
-    );
-
-    try {
-      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1, firstName: 1 } });
-      const to = normalizeEmail(user && user.email);
-      if (to) {
-        await sendEventEmailSafe(
-          to,
-          'Welcome to Zorexium Sellers',
-          `<p>Welcome aboard${user && user.firstName ? ', ' + user.firstName : ''}! Your seller profile is now active.</p><p>You can start listing items and managing sales from your seller dashboard.</p>`,
-          '/seller-dashboard.html'
-        );
-      }
-      await sendAdminNotificationSafe(
-        'New seller signup',
-        `<p>A user signed up to become a seller.</p>`
-          + `<p><strong>Tier:</strong> starter</p>`
-          + `<p><strong>Shop name:</strong> ${escapeHtml(String(seller.shopName || 'N/A'))}</p>`
-          + `<p><strong>Account type:</strong> ${escapeHtml(String(seller.accountType || 'N/A'))}</p>`
-          + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
-          + `<p><strong>User email:</strong> ${escapeHtml(String(to || 'N/A'))}</p>`,
-        '/seller-dashboard.html'
-      );
-    } catch (mailErr) {
-      console.error('Failed to send seller welcome email:', mailErr.message);
-    }
-
-    res.status(201).json({ ...seller, _id: result.insertedId });
+    const ensured = await ensureComplimentaryProSellerForUser(req.userId);
+    if (!ensured || !ensured.seller) return res.status(404).json({ error: 'User not found' });
+    res.status(200).json({
+      ...sanitizeSellerForClient(ensured.seller),
+      alreadyRegistered: true,
+      message: 'All users are already registered as Pro sellers.'
+    });
   } catch (error) {
     console.error('Error creating seller:', error);
     res.status(500).json({ error: error.message });
@@ -7065,7 +6991,8 @@ app.get('/api/sellers/me', verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
 
   try {
-    const seller = await findSellerByUserIdWithRepair(req.userId);
+    const ensured = await ensureComplimentaryProSellerForUser(req.userId);
+    const seller = ensured && ensured.seller ? ensured.seller : null;
     if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
     const safeSeller = sanitizeSellerForClient(seller);
     safeSeller.proSubscriptionMonthlyPriceUsd = getProSellerMonthlyPriceUsdForSeller(seller);
@@ -7101,16 +7028,14 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
   if (req.body.showContactEmail !== undefined) {
     updates.showContactEmail = Boolean(req.body.showContactEmail);
   }
-  if (req.body.tier !== undefined) {
-    const newTier = String(req.body.tier).toLowerCase();
-    if (VALID_SELLER_TIERS.includes(newTier)) updates.tier = newTier;
-  }
+  updates.tier = 'pro';
   // Allow sellers to dismiss the downgrade notification
   if (req.body.proTierDowngraded === false) {
     updates.proTierDowngraded = false;
   }
 
   try {
+    await ensureComplimentaryProSellerForUser(req.userId);
     const result = await db.collection('sellers').updateOne(
       buildSellerLookupQueryByUserId(req.userId),
       { $set: updates }
@@ -7126,7 +7051,8 @@ app.put('/api/sellers/me', verifyToken, async function(req, res) {
 
 async function getOrCreateStripeConnectAccountForSeller(userId) {
   ensureStripeConfigured();
-  const seller = await findSellerByUserIdWithRepair(userId);
+  const ensured = await ensureComplimentaryProSellerForUser(userId);
+  const seller = ensured && ensured.seller ? ensured.seller : null;
   if (!seller) return { error: 'Seller profile not found' };
 
   let accountId = String(seller && seller.stripeAccountId ? seller.stripeAccountId : '').trim();
@@ -7166,7 +7092,8 @@ async function getOrCreateStripeConnectAccountForSeller(userId) {
 
 async function getStripeConnectStatusForSeller(userId) {
   ensureStripeConfigured();
-  const seller = await findSellerByUserIdWithRepair(userId);
+  const ensured = await ensureComplimentaryProSellerForUser(userId);
+  const seller = ensured && ensured.seller ? ensured.seller : null;
   if (!seller) return { error: 'Seller profile not found' };
   const accountId = String(seller && seller.stripeAccountId ? seller.stripeAccountId : '').trim();
   if (!accountId) {
@@ -7391,13 +7318,25 @@ app.post('/api/sellers/me/payout-account/verify', publicApiRateLimit, verifyToke
 app.post('/api/sellers/assign-starter-tier', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
+    const now = new Date();
     const result = await db.collection('sellers').updateMany(
-      { tier: { $exists: false } },
-      { $set: { tier: 'starter', updatedAt: new Date() } }
+      { tier: { $ne: 'pro' } },
+      {
+        $set: {
+          tier: 'pro',
+          proSubscriptionStatus: 'complimentary_active',
+          proSubscriptionProvider: 'free_tier_grant',
+          proSubscriptionCancelAtPeriodEnd: false,
+          proGrandfatheredPricing: true,
+          proTierDowngraded: false,
+          updatedAt: now
+        },
+        $unset: { proTierDowngradedAt: 1, proTierDowngradeScheduledFor: 1, proSubscriptionCancellationScheduledAt: 1 }
+      }
     );
-    res.json({ updated: result.modifiedCount, message: `Assigned starter tier to ${result.modifiedCount} sellers.` });
+    res.json({ updated: result.modifiedCount, message: `Ensured Pro tier for ${result.modifiedCount} sellers.` });
   } catch (error) {
-    console.error('Error assigning starter tier:', error);
+    console.error('Error ensuring Pro tier:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -7406,24 +7345,13 @@ app.post('/api/sellers/assign-starter-tier', publicApiRateLimit, verifyToken, as
 app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const seller = await findSellerByUserIdWithRepair(req.userId);
-    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
-    if (seller.tier === 'pro') return res.status(400).json({ error: 'Already on Pro tier' });
-
-    const { subscriptionId } = req.body;
-    if (!subscriptionId || typeof subscriptionId !== 'string' || subscriptionId.length > 128) {
-      return res.status(400).json({ error: 'subscriptionId is required' });
-    }
-
-    const activation = await activateProSellerTierForUser(req.userId, subscriptionId, {
-      triggerSource: 'seller_upgrade_endpoint',
-      flow: 'pro_upgrade',
-      sendNotifications: true
+    const ensured = await ensureComplimentaryProSellerForUser(req.userId);
+    if (!ensured || !ensured.seller) return res.status(404).json({ error: 'Seller profile not found' });
+    res.json({
+      ...sanitizeSellerForClient(ensured.seller),
+      alreadyRegistered: true,
+      message: 'All users already have Pro seller access.'
     });
-    if (!activation.activated && activation.reason === 'seller_profile_not_found') {
-      return res.status(404).json({ error: 'Seller profile not found' });
-    }
-    res.json(activation.seller);
   } catch (error) {
     console.error('Error upgrading seller to Pro:', error);
     res.status(500).json({ error: error.message });
@@ -7434,97 +7362,13 @@ app.post('/api/sellers/upgrade-to-pro', publicApiRateLimit, verifyToken, async f
 app.post('/api/sellers/downgrade-to-starter', publicApiRateLimit, verifyToken, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   try {
-    const seller = await findSellerByUserIdWithRepair(req.userId);
-    if (!seller) return res.status(404).json({ error: 'Seller profile not found' });
-    if (seller.tier === 'starter') return res.status(400).json({ error: 'Already on Starter tier' });
-
-    const subscriptionId = String(seller && seller.proSubscriptionId ? seller.proSubscriptionId : '').trim();
-    const now = new Date();
-    let effectiveDowngradeAt = null;
-    let subscriptionStatus = normalizeStripeSubscriptionStatus(seller && seller.proSubscriptionStatus ? seller.proSubscriptionStatus : 'active') || 'active';
-    let cancelAtPeriodEndScheduled = false;
-
-    if (subscriptionId && stripe && STRIPE_SECRET_KEY) {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const stripeStatus = normalizeStripeSubscriptionStatus(subscription && subscription.status ? subscription.status : subscriptionStatus);
-      const currentPeriodEnd = toSafeDateFromUnixSeconds(subscription && subscription.current_period_end ? subscription.current_period_end : null);
-      subscriptionStatus = stripeStatus || subscriptionStatus;
-
-      if (isEndedStripeSubscriptionStatus(stripeStatus)) {
-        effectiveDowngradeAt = now;
-      } else {
-        const updatedSubscription = (subscription && subscription.cancel_at_period_end === true)
-          ? subscription
-          : await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
-        const scheduledPeriodEnd = toSafeDateFromUnixSeconds(updatedSubscription && updatedSubscription.current_period_end ? updatedSubscription.current_period_end : null);
-        effectiveDowngradeAt = scheduledPeriodEnd || currentPeriodEnd || now;
-        subscriptionStatus = normalizeStripeSubscriptionStatus(updatedSubscription && updatedSubscription.status ? updatedSubscription.status : stripeStatus) || subscriptionStatus;
-        cancelAtPeriodEndScheduled = true;
-      }
-    } else {
-      effectiveDowngradeAt = now;
-    }
-
-    if (cancelAtPeriodEndScheduled && effectiveDowngradeAt && effectiveDowngradeAt.getTime() > now.getTime()) {
-      await db.collection('sellers').updateOne(
-        buildSellerLookupQueryByUserId(req.userId),
-        {
-          $set: {
-            proSubscriptionStatus: subscriptionStatus || 'active',
-            proSubscriptionCancelAtPeriodEnd: true,
-            proGrandfatheredPricing: true,
-            proTierDowngradeScheduledFor: effectiveDowngradeAt,
-            proSubscriptionCancellationScheduledAt: now,
-            updatedAt: now
-          },
-          $unset: { proTierDowngradedAt: 1 }
-        }
-      );
-      const scheduled = await findSellerByUserIdWithRepair(req.userId);
-      const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
-      await sendAdminNotificationSafe(
-        'Pro seller downgrade scheduled',
-        `<p>A seller requested downgrade from Pro to Starter at period end.</p>`
-          + `<p><strong>Shop name:</strong> ${escapeHtml(String((scheduled && scheduled.shopName) || 'N/A'))}</p>`
-          + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
-          + `<p><strong>User email:</strong> ${escapeHtml(String(normalizeEmail(user && user.email) || 'N/A'))}</p>`
-          + `<p><strong>Effective date:</strong> ${escapeHtml(effectiveDowngradeAt.toISOString())}</p>`,
-        '/seller-dashboard.html#tier'
-      );
-      return res.json({ ...scheduled, downgradeScheduled: true, downgradeEffectiveAt: effectiveDowngradeAt });
-    }
-
-    await db.collection('sellers').updateOne(
-      buildSellerLookupQueryByUserId(req.userId),
-      {
-        $set: {
-          tier: 'starter',
-          proTierDowngraded: true,
-          proGrandfatheredPricing: true,
-          proTierDowngradedAt: now,
-          updatedAt: now
-        },
-        $unset: {
-          proSubscriptionId: 1,
-          proSubscriptionStatus: 1,
-          proSubscriptionProvider: 1,
-          proSubscriptionCancelAtPeriodEnd: 1,
-          proTierDowngradeScheduledFor: 1,
-          proSubscriptionCancellationScheduledAt: 1
-        }
-      }
-    );
-    const updated = await findSellerByUserIdWithRepair(req.userId);
-    const user = await db.collection('users').findOne({ _id: new ObjectId(req.userId) }, { projection: { email: 1 } });
-    await sendAdminNotificationSafe(
-      'Pro seller subscription cancelled',
-      `<p>A seller downgraded from Pro to Starter.</p>`
-        + `<p><strong>Shop name:</strong> ${escapeHtml(String((updated && updated.shopName) || 'N/A'))}</p>`
-        + `<p><strong>User ID:</strong> ${escapeHtml(String(req.userId || 'N/A'))}</p>`
-        + `<p><strong>User email:</strong> ${escapeHtml(String(normalizeEmail(user && user.email) || 'N/A'))}</p>`,
-      '/seller-dashboard.html#tier'
-    );
-    res.json({ ...updated, downgradeScheduled: false, downgradeEffectiveAt: now });
+    const ensured = await ensureComplimentaryProSellerForUser(req.userId);
+    if (!ensured || !ensured.seller) return res.status(404).json({ error: 'Seller profile not found' });
+    res.json({
+      ...sanitizeSellerForClient(ensured.seller),
+      downgradeDisabled: true,
+      message: 'All users are already on Pro tier. Downgrade is disabled.'
+    });
   } catch (error) {
     console.error('Error downgrading seller to Starter:', error);
     res.status(500).json({ error: error.message });
