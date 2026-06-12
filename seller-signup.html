@@ -742,6 +742,18 @@
     return true;
   }
 
+  async function redirectIfSellerAlreadyActive() {
+    if (!ZrxSession.isLoggedIn()) return;
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller', { credentials: 'include' });
+      const data = await res.json().catch(function() { return { isSeller: false }; });
+      if (res.ok && data && data.isSeller) {
+        ZrxNotify.showNotification('Your complimentary Pro Seller account is already active. Redirecting to dashboard.', 'success');
+        window.location.href = 'seller-dashboard.html';
+      }
+    } catch (_) {}
+  }
+
   async function handleSellerSignup(e) {
     e.preventDefault();
 
@@ -937,6 +949,7 @@
     r.addEventListener('change', updateTierLabels);
   });
   updateTierLabels();
+  redirectIfSellerAlreadyActive();
   verifyStripeProCheckoutIfReturned();
 
   // Preselect seller type from URL param if provided (e.g., ?type=business)
