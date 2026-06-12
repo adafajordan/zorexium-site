@@ -1510,7 +1510,7 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
     sendEventEmailSafe(
       normalizedEmail,
       'Your Pro Seller account is active',
-      `<p>Welcome${firstName ? ', ' + firstName : ''}!</p><p>Your <strong>Pro Seller</strong> account has been automatically activated. You can start listing items and managing sales from your <a href="/seller-dashboard.html">seller dashboard</a>.</p><p>Pro Seller benefits: <strong>5% platform fee</strong> per sale and a <strong>2-day payout hold</strong>.</p>`,
+      `<p>Welcome${firstName ? ', ' + firstName : ''}!</p><p>Your <strong>Pro Seller</strong> account has been automatically activated. You can start listing items and managing sales from your <a href="/seller-dashboard.html">seller dashboard</a>.</p><p>Pro Seller benefits: <strong>5% platform fee</strong> per sale and a <strong>5-day payout hold</strong>.</p>`,
       '/seller-dashboard.html'
     );
     sendAdminNotificationSafe(
@@ -2247,7 +2247,7 @@ const STARTER_SELLER_PAYOUT_RATE = 0.90;
 const PRO_SELLER_PAYOUT_RATE = 0.95;
 const SELLER_AFFILIATE_BONUS_RATE = 0.05;
 const STANDARD_SELLER_HOLD_DAYS = 7;
-const PRO_SELLER_HOLD_DAYS = 2;
+const PRO_SELLER_HOLD_DAYS = 5;
 const ADAFA_IMMEDIATE_PAYOUT_MIN_USD = 1.79;
 const ADAFA_IMMEDIATE_PAYOUT_MAX_USD = 1.81;
 const ADAFA_RETROACTIVE_TARGET_PRODUCT_ID = 'gjnb';

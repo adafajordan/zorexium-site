@@ -33,7 +33,7 @@ Automatic payout sweep runs every 15 minutes
   (runAutomaticStripePayoutSweep  server.js:8993)
   Picks up: pending_hold, ready_to_pay, blocked_onboarding rows
   ↓
-Hold window expires (Starter: 0 days, Pro: 0 days — instant payout for all sellers)
+Hold window expires (Starter: 7 days, Pro: 5 days after shipment confirmation)
   buildPayoutSnapshot returns status: 'ready_to_pay'
   ↓
 Seller Stripe account verified (payoutVerified: true, stripeAccountId: 'acct_...')
@@ -62,9 +62,11 @@ Transfer result persisted to 'payouts' collection:
 | Seller tier | Hold after shipment confirmation | Net payout rate |
 |-------------|----------------------------------|-----------------|
 | Starter     | **7 days**                       | 90% of item subtotal |
-| Pro         | **2 days**                       | 95% of item subtotal |
+| Pro         | **5 days**                       | 95% of item subtotal |
 
 Shipping fees and sales tax are retained by the platform.
+
+**Affiliate commission bonus:** When a buyer purchases a seller's product through that seller's affiliate link, the seller earns an additional **5% of item subtotal** as an affiliate bonus. This affiliate commission is bundled into the same payout row as the base seller payout and follows the **identical hold schedule** (7 days Starter, 5 days Pro). There is no separate payout pipeline for the affiliate bonus — it is included in the single transfer amount sent to the seller's connected Stripe account.
 
 ---
 
@@ -137,7 +139,7 @@ A seller can only receive a Stripe transfer if ALL of the following are true:
   "sweepActive": true,
   "payoutTimingRules": {
     "starterHoldDays": 7,
-    "proHoldDays": 2,
+    "proHoldDays": 5,
     "starterPayoutRate": 0.9,
     "proPayoutRate": 0.95,
     "sweepIntervalMinutes": 15
