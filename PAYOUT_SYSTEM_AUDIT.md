@@ -61,8 +61,8 @@ Transfer result persisted to 'payouts' collection:
 
 | Seller tier | Hold after shipment confirmation | Net payout rate |
 |-------------|----------------------------------|-----------------|
-| Starter     | **0 days (instant)**             | 90% of item subtotal |
-| Pro         | **0 days (instant)**             | 95% of item subtotal |
+| Starter     | **7 days**                       | 90% of item subtotal |
+| Pro         | **2 days**                       | 95% of item subtotal |
 
 Shipping fees and sales tax are retained by the platform.
 
@@ -136,7 +136,7 @@ A seller can only receive a Stripe transfer if ALL of the following are true:
   "stripeConfigured": true,
   "sweepActive": true,
   "payoutTimingRules": {
-    "starterHoldDays": 5,
+    "starterHoldDays": 7,
     "proHoldDays": 2,
     "starterPayoutRate": 0.9,
     "proPayoutRate": 0.95,
