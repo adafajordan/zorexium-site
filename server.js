@@ -1823,12 +1823,21 @@ function stripHtmlTags(value) {
 }
 
 function normalizeShopifyStoreDomain(storeDomain) {
-  let normalized = String(storeDomain || '').trim().toLowerCase();
-  normalized = normalized.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
-  if (!normalized) return '';
-  if (!/^[a-z0-9.-]+$/.test(normalized)) return '';
-  if (!normalized.includes('.')) normalized += '.myshopify.com';
-  return normalized;
+  let input = String(storeDomain || '').trim().toLowerCase();
+  if (input.startsWith('https://')) input = input.slice('https://'.length);
+  if (input.startsWith('http://')) input = input.slice('http://'.length);
+  const slashIndex = input.indexOf('/');
+  if (slashIndex !== -1) input = input.slice(0, slashIndex);
+  const colonIndex = input.indexOf(':');
+  if (colonIndex !== -1) input = input.slice(0, colonIndex);
+  if (!input) return '';
+
+  let handle = input;
+  if (handle.endsWith('.myshopify.com')) {
+    handle = handle.slice(0, -'.myshopify.com'.length);
+  }
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(handle)) return '';
+  return handle + '.myshopify.com';
 }
 
 async function fetchShopifyProducts(storeDomain, accessToken, limit) {
