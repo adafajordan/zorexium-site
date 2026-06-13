@@ -573,32 +573,19 @@
         <div id="tab-imports" class="dash-tab space-y-5">
           <div class="bg-white border border-gray-200 rounded-xl p-5">
             <h2 class="text-lg font-semibold text-gray-900">Product Imports</h2>
-            <p class="text-sm text-gray-500 mt-1">Bring existing listings into Zorexium from CSV files or directly from Shopify. Imported products are created under your seller account and immediately available in your product dashboard.</p>
+            <p class="text-sm text-gray-500 mt-1">Bring existing listings into Zorexium via CSV file upload. Imported products are created under your seller account and immediately available in your product dashboard.</p>
           </div>
 
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-            <div class="bg-white border border-gray-200 rounded-xl p-5">
-              <h3 class="text-base font-semibold text-gray-900 mb-1"><i class="fas fa-file-csv text-cyan-600 mr-2"></i>CSV Import</h3>
-              <p class="text-sm text-gray-500 mb-3">Upload a CSV file with <strong>name</strong>, <strong>price</strong>, and <strong>category</strong> columns. Existing listings with matching SKU/GTIN are updated.</p>
-              <div class="flex flex-wrap items-center gap-3 mb-4">
-                <a id="importTemplateLink" href="#" class="text-sm font-semibold text-cyan-600 hover:text-cyan-700" target="_blank" rel="noopener noreferrer"><i class="fas fa-download mr-1"></i>Download CSV template</a>
-              </div>
-              <form id="csvImportForm" class="space-y-3">
-                <input id="csvImportFile" type="file" accept=".csv,text/csv" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
-                <button id="csvImportButton" type="submit" class="btn-primary text-sm"><i class="fas fa-upload"></i> Import CSV Listings</button>
-              </form>
+          <div class="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 class="text-base font-semibold text-gray-900 mb-1"><i class="fas fa-file-csv text-cyan-600 mr-2"></i>CSV Import</h3>
+            <p class="text-sm text-gray-500 mb-3">Upload a CSV file with <strong>name</strong>, <strong>price</strong>, and <strong>category</strong> columns. Existing listings with matching SKU/GTIN are updated. Download the template to see all supported columns.</p>
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+              <a id="importTemplateLink" href="#" class="text-sm font-semibold text-cyan-600 hover:text-cyan-700" target="_blank" rel="noopener noreferrer"><i class="fas fa-download mr-1"></i>Download CSV template</a>
             </div>
-
-            <div class="bg-white border border-gray-200 rounded-xl p-5">
-              <h3 class="text-base font-semibold text-gray-900 mb-1"><i class="fab fa-shopify text-green-600 mr-2"></i>Shopify Import</h3>
-              <p class="text-sm text-gray-500 mb-3">Connect with your Shopify store domain and Admin API access token to pull live product data into your Zorexium listings.</p>
-              <form id="shopifyImportForm" class="space-y-3">
-                <input id="shopifyStoreDomain" type="text" placeholder="your-store.myshopify.com" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
-                <input id="shopifyAccessToken" type="password" placeholder="Shopify Admin API access token" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
-                <button id="shopifyImportButton" type="submit" class="btn-primary text-sm"><i class="fas fa-cloud-download-alt"></i> Import from Shopify</button>
-              </form>
-              <p class="text-xs text-gray-400 mt-3">Your token is used only to perform the import request.</p>
-            </div>
+            <form id="csvImportForm" class="space-y-3">
+              <input id="csvImportFile" type="file" accept=".csv,text/csv" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+              <button id="csvImportButton" type="submit" class="btn-primary text-sm"><i class="fas fa-upload"></i> Import CSV Listings</button>
+            </form>
           </div>
 
           <div id="importStatusBanner" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
@@ -1530,38 +1517,6 @@
       });
     }
 
-    var shopifyForm = document.getElementById('shopifyImportForm');
-    if (shopifyForm && !shopifyForm.dataset.bound) {
-      shopifyForm.dataset.bound = '1';
-      shopifyForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        var domainInput = document.getElementById('shopifyStoreDomain');
-        var tokenInput = document.getElementById('shopifyAccessToken');
-        var button = document.getElementById('shopifyImportButton');
-        var domain = domainInput ? domainInput.value.trim() : '';
-        var token = tokenInput ? tokenInput.value.trim() : '';
-        if (!domain || !token) {
-          setImportStatus('Store domain and access token are required for Shopify import.', 'error');
-          return;
-        }
-        try {
-          button.disabled = true;
-          setImportStatus('Importing products from Shopify…', 'warning');
-          var result = await submitShopifyImport(domain, token);
-          _lastImportResult = result;
-          renderImportResult(_lastImportResult);
-          setImportStatus('Shopify import completed: ' + (result.outcome || 'success') + '.', result.outcome === 'failed' ? 'error' : (result.outcome === 'partial' ? 'warning' : 'success'));
-          _importHistoryLoaded = false;
-          await loadImportHistory(true);
-          await refreshSellerProductsFromApi();
-          if (tokenInput) tokenInput.value = '';
-        } catch (err) {
-          setImportStatus(err.message || 'Shopify import failed.', 'error');
-        } finally {
-          button.disabled = false;
-        }
-      });
-    }
     renderImportResult(_lastImportResult);
   }
 
@@ -1870,18 +1825,6 @@
     });
     const result = await response.json().catch(function() { return {}; });
     if (!response.ok) throw new Error(result.error || 'CSV import failed');
-    return result;
-  }
-
-  async function submitShopifyImport(storeDomain, accessToken) {
-    const response = await ZrxSession.fetch(BACKEND_URL + '/api/products/imports/shopify', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ storeDomain: storeDomain, accessToken: accessToken })
-    });
-    const result = await response.json().catch(function() { return {}; });
-    if (!response.ok) throw new Error(result.error || 'Shopify import failed');
     return result;
   }
 
