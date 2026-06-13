@@ -368,6 +368,9 @@
             <i class="fas fa-box w-4 text-center text-cyan-500"></i> Products
             <span id="productsBadge" class="ml-auto bg-gray-100 text-gray-600 text-xs font-semibold px-2 py-0.5 rounded-full">0</span>
           </button>
+          <button onclick="switchTab('imports')" id="nav-imports" class="dash-nav-item w-full text-left">
+            <i class="fas fa-file-import w-4 text-center text-cyan-500"></i> Product Imports
+          </button>
           <button onclick="switchTab('orders')" id="nav-orders" class="dash-nav-item w-full text-left">
             <i class="fas fa-shopping-bag w-4 text-center text-cyan-500"></i> Orders
             <span id="ordersBadge" class="ml-auto bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full hidden">0</span>
@@ -458,6 +461,10 @@
               <button onclick="switchTab('orders')" class="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50 transition-colors text-center">
                 <i class="fas fa-shopping-bag text-orange-500 text-2xl"></i>
                 <span class="text-xs font-medium text-gray-700">View Orders</span>
+              </button>
+              <button onclick="switchTab('imports')" class="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50 transition-colors text-center">
+                <i class="fas fa-file-import text-purple-500 text-2xl"></i>
+                <span class="text-xs font-medium text-gray-700">Import Listings</span>
               </button>
               <a href="seller-payouts.html" class="flex flex-col items-center gap-2 p-4 rounded-lg border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50 transition-colors text-center">
                 <i class="fas fa-wallet text-green-500 text-2xl"></i>
@@ -559,6 +566,51 @@
                 <p class="text-gray-500">Loading products…</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- ── Imports Tab ── -->
+        <div id="tab-imports" class="dash-tab space-y-5">
+          <div class="bg-white border border-gray-200 rounded-xl p-5">
+            <h2 class="text-lg font-semibold text-gray-900">Product Imports</h2>
+            <p class="text-sm text-gray-500 mt-1">Bring existing listings into Zorexium from CSV files or directly from Shopify. Imported products are created under your seller account and immediately available in your product dashboard.</p>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div class="bg-white border border-gray-200 rounded-xl p-5">
+              <h3 class="text-base font-semibold text-gray-900 mb-1"><i class="fas fa-file-csv text-cyan-600 mr-2"></i>CSV Import</h3>
+              <p class="text-sm text-gray-500 mb-3">Upload a CSV file with <strong>name</strong>, <strong>price</strong>, and <strong>category</strong> columns. Existing listings with matching SKU/GTIN are updated.</p>
+              <div class="flex flex-wrap items-center gap-3 mb-4">
+                <a id="importTemplateLink" href="#" class="text-sm font-semibold text-cyan-600 hover:text-cyan-700" target="_blank" rel="noopener noreferrer"><i class="fas fa-download mr-1"></i>Download CSV template</a>
+              </div>
+              <form id="csvImportForm" class="space-y-3">
+                <input id="csvImportFile" type="file" accept=".csv,text/csv" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                <button id="csvImportButton" type="submit" class="btn-primary text-sm"><i class="fas fa-upload"></i> Import CSV Listings</button>
+              </form>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-xl p-5">
+              <h3 class="text-base font-semibold text-gray-900 mb-1"><i class="fab fa-shopify text-green-600 mr-2"></i>Shopify Import</h3>
+              <p class="text-sm text-gray-500 mb-3">Connect with your Shopify store domain and Admin API access token to pull live product data into your Zorexium listings.</p>
+              <form id="shopifyImportForm" class="space-y-3">
+                <input id="shopifyStoreDomain" type="text" placeholder="your-store.myshopify.com" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                <input id="shopifyAccessToken" type="password" placeholder="Shopify Admin API access token" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" required>
+                <button id="shopifyImportButton" type="submit" class="btn-primary text-sm"><i class="fas fa-cloud-download-alt"></i> Import from Shopify</button>
+              </form>
+              <p class="text-xs text-gray-400 mt-3">Your token is used only to perform the import request.</p>
+            </div>
+          </div>
+
+          <div id="importStatusBanner" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 class="text-base font-semibold text-gray-900 mb-3">Latest Import Result</h3>
+            <div id="latestImportResult" class="text-sm text-gray-500">Run an import to view created, updated, and failed rows.</div>
+          </div>
+
+          <div class="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 class="text-base font-semibold text-gray-900 mb-3">Import History</h3>
+            <div id="importHistoryList" class="text-sm text-gray-500">Loading import history…</div>
           </div>
         </div>
 
@@ -927,6 +979,8 @@
   let _allOrders = [];
   let _payoutReadiness = { availableAmount: 0, blockedAmount: 0, loaded: false };
   let _affiliateData = { summary: null, products: [], recentOrders: [], loaded: false };
+  let _lastImportResult = null;
+  let _importHistoryLoaded = false;
 
   // ── Tab Navigation ────────────────────────────────────────────────────────────
   function switchTab(name) {
@@ -947,6 +1001,7 @@
     }
     if (name === 'payouts') loadPayouts();
     if (name === 'affiliate') loadAffiliateDashboard();
+    if (name === 'imports') loadImportHistory();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -1417,17 +1472,7 @@
 
       if (_userId) {
         try {
-          const prodRes = await ZrxSession.fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(_userId));
-          if (prodRes.ok) {
-            const bp = await prodRes.json();
-            if (Array.isArray(bp)) {
-              sellerData.products = bp.map(function(p) {
-                return { id: p._id ? String(p._id) : (p.id || ''), name: p.name || '', description: p.description || '',
-                  price: p.price || 0, category: p.category || '', condition: p.condition || 'new',
-                  image: p.image || '', specs: p.specifications || {}, status: p.status || 'active' };
-              });
-            }
-          }
+          await refreshSellerProductsFromApi();
         } catch (prodErr) {
           console.warn('Could not load products:', prodErr);
         }
@@ -1448,6 +1493,76 @@
       var nextQuery = params.toString();
       window.history.replaceState({}, document.title, window.location.pathname + (nextQuery ? ('?' + nextQuery) : '') + window.location.hash);
     }
+    if (window.location.hash === '#imports') {
+      switchTab('imports');
+    }
+    var templateLink = document.getElementById('importTemplateLink');
+    if (templateLink) templateLink.href = BACKEND_URL + '/api/products/imports/template.csv';
+
+    var csvForm = document.getElementById('csvImportForm');
+    if (csvForm && !csvForm.dataset.bound) {
+      csvForm.dataset.bound = '1';
+      csvForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        var fileInput = document.getElementById('csvImportFile');
+        var button = document.getElementById('csvImportButton');
+        var file = fileInput && fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+        if (!file) {
+          setImportStatus('Please choose a CSV file to import.', 'error');
+          return;
+        }
+        try {
+          button.disabled = true;
+          setImportStatus('Importing CSV listings…', 'warning');
+          var result = await submitCsvImport(file);
+          _lastImportResult = result;
+          renderImportResult(_lastImportResult);
+          setImportStatus('CSV import completed: ' + (result.outcome || 'success') + '.', result.outcome === 'failed' ? 'error' : (result.outcome === 'partial' ? 'warning' : 'success'));
+          _importHistoryLoaded = false;
+          await loadImportHistory(true);
+          await refreshSellerProductsFromApi();
+          if (fileInput) fileInput.value = '';
+        } catch (err) {
+          setImportStatus(err.message || 'CSV import failed.', 'error');
+        } finally {
+          button.disabled = false;
+        }
+      });
+    }
+
+    var shopifyForm = document.getElementById('shopifyImportForm');
+    if (shopifyForm && !shopifyForm.dataset.bound) {
+      shopifyForm.dataset.bound = '1';
+      shopifyForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        var domainInput = document.getElementById('shopifyStoreDomain');
+        var tokenInput = document.getElementById('shopifyAccessToken');
+        var button = document.getElementById('shopifyImportButton');
+        var domain = domainInput ? domainInput.value.trim() : '';
+        var token = tokenInput ? tokenInput.value.trim() : '';
+        if (!domain || !token) {
+          setImportStatus('Store domain and access token are required for Shopify import.', 'error');
+          return;
+        }
+        try {
+          button.disabled = true;
+          setImportStatus('Importing products from Shopify…', 'warning');
+          var result = await submitShopifyImport(domain, token);
+          _lastImportResult = result;
+          renderImportResult(_lastImportResult);
+          setImportStatus('Shopify import completed: ' + (result.outcome || 'success') + '.', result.outcome === 'failed' ? 'error' : (result.outcome === 'partial' ? 'warning' : 'success'));
+          _importHistoryLoaded = false;
+          await loadImportHistory(true);
+          await refreshSellerProductsFromApi();
+          if (tokenInput) tokenInput.value = '';
+        } catch (err) {
+          setImportStatus(err.message || 'Shopify import failed.', 'error');
+        } finally {
+          button.disabled = false;
+        }
+      });
+    }
+    renderImportResult(_lastImportResult);
   }
 
   // ── Dashboard Setup ────────────────────────────────────────────────────────────
@@ -1638,6 +1753,136 @@
         ZrxNotify.showNotification('Failed to update product status. Please try again.', 'error');
       });
     });
+  }
+
+  // ── Product Imports ─────────────────────────────────────────────────────────────
+  function setImportStatus(message, state) {
+    var banner = document.getElementById('importStatusBanner');
+    if (!banner) return;
+    if (!message) {
+      banner.classList.add('hidden');
+      banner.textContent = '';
+      return;
+    }
+    var cls = 'border-gray-200 bg-gray-50 text-gray-700';
+    if (state === 'success') cls = 'border-green-200 bg-green-50 text-green-700';
+    if (state === 'error') cls = 'border-red-200 bg-red-50 text-red-700';
+    if (state === 'warning') cls = 'border-amber-200 bg-amber-50 text-amber-700';
+    banner.className = 'rounded-xl border px-4 py-3 text-sm ' + cls;
+    banner.textContent = message;
+  }
+
+  function renderImportResult(data) {
+    var el = document.getElementById('latestImportResult');
+    if (!el) return;
+    if (!data || !data.summary) {
+      el.innerHTML = '<p class="text-sm text-gray-500">Run an import to view created, updated, and failed rows.</p>';
+      return;
+    }
+    var summary = data.summary;
+    var rows = Array.isArray(data.results) ? data.results.slice(0, 20) : [];
+    el.innerHTML = '<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">'
+      + '<div class="bg-gray-50 border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500 uppercase">Rows</p><p class="text-lg font-semibold text-gray-900">' + escHtml(String(summary.totalRows || 0)) + '</p></div>'
+      + '<div class="bg-green-50 border border-green-200 rounded-lg p-3"><p class="text-xs text-green-700 uppercase">Created</p><p class="text-lg font-semibold text-green-700">' + escHtml(String(summary.created || 0)) + '</p></div>'
+      + '<div class="bg-cyan-50 border border-cyan-200 rounded-lg p-3"><p class="text-xs text-cyan-700 uppercase">Updated</p><p class="text-lg font-semibold text-cyan-700">' + escHtml(String(summary.updated || 0)) + '</p></div>'
+      + '<div class="bg-red-50 border border-red-200 rounded-lg p-3"><p class="text-xs text-red-700 uppercase">Failed</p><p class="text-lg font-semibold text-red-700">' + escHtml(String(summary.failed || 0)) + '</p></div>'
+      + '<div class="bg-gray-50 border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500 uppercase">Outcome</p><p class="text-sm font-semibold text-gray-900 mt-1">' + escHtml(String(data.outcome || 'success')) + '</p></div>'
+      + '</div>';
+    if (!rows.length) return;
+    el.innerHTML += '<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left border-b border-gray-100">'
+      + '<th class="py-2 pr-3 text-gray-500 font-semibold">Row</th>'
+      + '<th class="py-2 pr-3 text-gray-500 font-semibold">Status</th>'
+      + '<th class="py-2 pr-3 text-gray-500 font-semibold">Product</th>'
+      + '<th class="py-2 text-gray-500 font-semibold">Message</th>'
+      + '</tr></thead><tbody>'
+      + rows.map(function(item) {
+        var status = String(item.status || '').toLowerCase();
+        var badgeCls = status === 'created' ? 'bg-green-100 text-green-700'
+          : status === 'updated' ? 'bg-cyan-100 text-cyan-700'
+          : 'bg-red-100 text-red-700';
+        return '<tr class="border-b border-gray-50">'
+          + '<td class="py-2 pr-3 text-gray-500">' + escHtml(String(item.rowNumber || '—')) + '</td>'
+          + '<td class="py-2 pr-3"><span class="text-xs px-2 py-0.5 rounded-full ' + badgeCls + '">' + escHtml(String(item.status || '')) + '</span></td>'
+          + '<td class="py-2 pr-3 text-gray-700">' + escHtml(String(item.productName || '')) + '</td>'
+          + '<td class="py-2 text-gray-500">' + escHtml(String(item.message || '')) + '</td>'
+          + '</tr>';
+      }).join('')
+      + '</tbody></table></div>';
+  }
+
+  async function refreshSellerProductsFromApi() {
+    if (!_userId) return;
+    const prodRes = await ZrxSession.fetch(BACKEND_URL + '/api/products/seller/' + encodeURIComponent(_userId));
+    if (!prodRes.ok) throw new Error('Failed to refresh listings');
+    const bp = await prodRes.json();
+    sellerData.products = Array.isArray(bp) ? bp.map(function(p) {
+      return { id: p._id ? String(p._id) : (p.id || ''), name: p.name || '', description: p.description || '',
+        price: p.price || 0, category: p.category || '', condition: p.condition || 'new',
+        image: p.image || '', specs: p.specifications || {}, status: p.status || 'active', gtin: p.gtin || '', model: p.model || '' };
+    }) : [];
+    document.getElementById('totalProducts').textContent = sellerData.products.length;
+    document.getElementById('productsBadge').textContent = sellerData.products.length;
+    loadProducts();
+    renderRecentProducts();
+  }
+
+  async function loadImportHistory(forceReload) {
+    if (_importHistoryLoaded && !forceReload) return;
+    var el = document.getElementById('importHistoryList');
+    if (el) el.innerHTML = '<p class="text-sm text-gray-500">Loading import history…</p>';
+    try {
+      const res = await ZrxSession.fetch(BACKEND_URL + '/api/products/imports/history?limit=10', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to load import history');
+      const history = await res.json();
+      _importHistoryLoaded = true;
+      if (!Array.isArray(history) || !history.length) {
+        if (el) el.innerHTML = '<p class="text-sm text-gray-500">No imports yet. Your completed imports will appear here.</p>';
+        return;
+      }
+      if (el) {
+        el.innerHTML = history.map(function(item) {
+          var summary = item.summary || {};
+          var outcome = String(item.outcome || '').toLowerCase();
+          var badgeCls = outcome === 'success' ? 'bg-green-100 text-green-700'
+            : outcome === 'partial' ? 'bg-amber-100 text-amber-700'
+            : 'bg-red-100 text-red-700';
+          return '<div class="border border-gray-200 rounded-lg p-3 mb-2">'
+            + '<div class="flex flex-wrap items-center justify-between gap-2">'
+            + '<p class="text-sm font-semibold text-gray-900">' + escHtml(String(item.importType || 'Import').toUpperCase()) + ' import</p>'
+            + '<span class="text-xs px-2 py-0.5 rounded-full ' + badgeCls + '">' + escHtml(String(item.outcome || 'unknown')) + '</span>'
+            + '</div>'
+            + '<p class="text-xs text-gray-500 mt-1">' + fmtDate(item.createdAt) + ' · Created ' + escHtml(String(summary.created || 0)) + ', Updated ' + escHtml(String(summary.updated || 0)) + ', Failed ' + escHtml(String(summary.failed || 0)) + '</p>'
+            + '</div>';
+        }).join('');
+      }
+    } catch (err) {
+      if (el) el.innerHTML = '<p class="text-sm text-red-600">Could not load import history.</p>';
+    }
+  }
+
+  async function submitCsvImport(file) {
+    const data = new FormData();
+    data.append('file', file);
+    const response = await ZrxSession.fetch(BACKEND_URL + '/api/products/imports/csv', {
+      method: 'POST',
+      credentials: 'include',
+      body: data
+    });
+    const result = await response.json().catch(function() { return {}; });
+    if (!response.ok) throw new Error(result.error || 'CSV import failed');
+    return result;
+  }
+
+  async function submitShopifyImport(storeDomain, accessToken) {
+    const response = await ZrxSession.fetch(BACKEND_URL + '/api/products/imports/shopify', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storeDomain: storeDomain, accessToken: accessToken })
+    });
+    const result = await response.json().catch(function() { return {}; });
+    if (!response.ok) throw new Error(result.error || 'Shopify import failed');
+    return result;
   }
 
   // ── Orders ─────────────────────────────────────────────────────────────────────

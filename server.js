@@ -106,6 +106,9 @@ const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_POST_IMAGE_COUNT = 10;
 // Max video size accepted by the multipart upload endpoint (100 MB).
 const MAX_POST_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
+const MAX_PRODUCT_IMPORT_CSV_BYTES = 5 * 1024 * 1024;
+const MAX_PRODUCT_IMPORT_ROWS = 1000;
+const SHOPIFY_ADMIN_API_VERSION = '2024-01';
 
 // Multer instance for in-memory video uploads.
 const videoUpload = multer({
@@ -118,6 +121,11 @@ const videoUpload = multer({
       cb(new Error('Only video files are allowed'));
     }
   }
+});
+
+const csvImportUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_PRODUCT_IMPORT_CSV_BYTES }
 });
 
 // Backend origin used to build absolute video URLs returned to clients.
@@ -1720,6 +1728,532 @@ app.post('/api/auth/otc-login', authRateLimit, async function(req, res) {
 });
 
 // ── PRODUCTS ────────────────────────────────────────────────────────────────────
+
+const PRODUCT_IMPORT_REQUIRED_COLUMNS = ['name', 'price', 'category'];
+const PRODUCT_IMPORT_VALID_STATUSES = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft', 'inactive'];
+const PRODUCT_IMPORT_SHOPIFY_STATUS_MAP = {
+  active: 'active',
+  draft: 'draft',
+  archived: 'inactive'
+};
+
+function normalizeProductImportHeader(value) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function parseCsvRows(csvText) {
+  const rows = [];
+  let currentRow = [];
+  let currentValue = '';
+  let inQuotes = false;
+  for (let i = 0; i < csvText.length; i += 1) {
+    const char = csvText[i];
+    const next = csvText[i + 1];
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        currentValue += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (!inQuotes && (char === ',' || char === '\n' || char === '\r')) {
+      currentRow.push(currentValue);
+      currentValue = '';
+      if (char === ',') continue;
+      if (char === '\r' && next === '\n') i += 1;
+      rows.push(currentRow);
+      currentRow = [];
+      continue;
+    }
+    currentValue += char;
+  }
+  if (currentValue.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentValue);
+    rows.push(currentRow);
+  }
+  return rows;
+}
+
+function buildImportRowsFromCsv(csvText) {
+  const rows = parseCsvRows(String(csvText || ''));
+  if (!rows.length) return { headers: [], importRows: [] };
+  const headerRow = rows[0].map(normalizeProductImportHeader);
+  const requiredMissing = PRODUCT_IMPORT_REQUIRED_COLUMNS.filter(function(required) {
+    return !headerRow.includes(required);
+  });
+  if (requiredMissing.length > 0) {
+    return { headers: headerRow, importRows: [], requiredMissing };
+  }
+  const importRows = rows.slice(1).map(function(row, index) {
+    const normalized = {};
+    headerRow.forEach(function(header, headerIndex) {
+      if (!header) return;
+      normalized[header] = (row[headerIndex] || '').trim();
+    });
+    return { rowNumber: index + 2, values: normalized };
+  }).filter(function(entry) {
+    const values = entry.values;
+    return Object.keys(values).some(function(key) { return String(values[key] || '').trim() !== ''; });
+  });
+  return { headers: headerRow, importRows: importRows };
+}
+
+function normalizeImportedProductStatus(statusValue, fallbackStatus) {
+  const normalizedStatus = String(statusValue || '').trim().toLowerCase();
+  if (PRODUCT_IMPORT_VALID_STATUSES.includes(normalizedStatus)) return normalizedStatus;
+  return fallbackStatus || 'active';
+}
+
+function normalizeImportNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeImportInteger(value, fallbackValue) {
+  if (value === null || value === undefined || value === '') return fallbackValue;
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallbackValue;
+}
+
+function stripHtmlTags(value) {
+  return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizeShopifyStoreDomain(storeDomain) {
+  let input = String(storeDomain || '').trim().toLowerCase();
+  if (input.startsWith('https://')) input = input.slice('https://'.length);
+  if (input.startsWith('http://')) input = input.slice('http://'.length);
+  const slashIndex = input.indexOf('/');
+  if (slashIndex !== -1) input = input.slice(0, slashIndex);
+  const colonIndex = input.indexOf(':');
+  if (colonIndex !== -1) input = input.slice(0, colonIndex);
+  if (!input) return '';
+
+  let handle = input;
+  if (handle.endsWith('.myshopify.com')) {
+    handle = handle.slice(0, -'.myshopify.com'.length);
+  }
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(handle)) return '';
+  return handle + '.myshopify.com';
+}
+
+async function fetchShopifyProducts(storeDomain, accessToken, limit) {
+  const controller = new AbortController();
+  const timeout = setTimeout(function() { controller.abort(); }, 15000);
+  try {
+    const safeLimit = Math.min(250, Math.max(1, parseInt(limit, 10) || 100));
+    const endpoint = 'https://' + storeDomain + '/admin/api/' + SHOPIFY_ADMIN_API_VERSION + '/products.json?limit=' + safeLimit;
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Accept': 'application/json'
+      },
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      const bodyText = await response.text().catch(function() { return ''; });
+      return {
+        ok: false,
+        error: 'Shopify API request failed (' + response.status + '). ' + (bodyText || 'Check store domain and access token.')
+      };
+    }
+    const data = await response.json();
+    return {
+      ok: true,
+      products: Array.isArray(data && data.products) ? data.products : []
+    };
+  } catch (error) {
+    const message = error && error.name === 'AbortError'
+      ? 'Shopify request timed out. Please try again.'
+      : (error && error.message ? error.message : 'Failed to fetch Shopify products');
+    return { ok: false, error: message };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildImportRowsFromShopifyProducts(shopifyProducts) {
+  const importRows = [];
+  let nextRowNumber = 2;
+  (Array.isArray(shopifyProducts) ? shopifyProducts : []).forEach(function(product) {
+    const baseName = String(product && product.title ? product.title : '').trim();
+    const baseDescription = stripHtmlTags(product && product.body_html ? product.body_html : '');
+    const baseBrand = String(product && product.vendor ? product.vendor : '').trim();
+    const baseCategory = String(product && product.product_type ? product.product_type : '').trim() || 'General';
+    const status = normalizeImportedProductStatus(
+      PRODUCT_IMPORT_SHOPIFY_STATUS_MAP[String(product && product.status ? product.status : '').toLowerCase()] || '',
+      'active'
+    );
+    const imageUrl = product && product.image && product.image.src ? String(product.image.src).trim() : '';
+    const variants = Array.isArray(product && product.variants) && product.variants.length > 0
+      ? product.variants
+      : [null];
+    variants.forEach(function(variant) {
+      const variantTitle = String(variant && variant.title ? variant.title : '').trim();
+      const listingName = variantTitle && variantTitle.toLowerCase() !== 'default title'
+        ? (baseName + ' - ' + variantTitle).trim()
+        : baseName;
+      importRows.push({
+        rowNumber: nextRowNumber++,
+        values: {
+          name: listingName,
+          description: baseDescription,
+          category: baseCategory,
+          brand: baseBrand,
+          image: imageUrl,
+          condition: 'new',
+          status: status,
+          price: variant && variant.price != null ? String(variant.price) : '',
+          originalprice: variant && variant.compare_at_price != null ? String(variant.compare_at_price) : '',
+          quantity: variant && variant.inventory_quantity != null ? String(variant.inventory_quantity) : '',
+          sku: variant && variant.sku ? String(variant.sku).trim() : '',
+          gtin: variant && variant.barcode ? String(variant.barcode).trim() : '',
+          externalsource: 'shopify',
+          externalid: variant && variant.id ? String(variant.id) : (product && product.id ? String(product.id) : '')
+        }
+      });
+    });
+  });
+  return importRows;
+}
+
+async function resolveSellerImportIdentity(userId) {
+  const ensuredSellerState = await ensureComplimentaryProSellerForUser(userId);
+  const seller = ensuredSellerState && ensuredSellerState.seller
+    ? ensuredSellerState.seller
+    : await findSellerByUserIdWithRepair(userId);
+  if (!seller) return null;
+  const sellerName = String(seller.shopName || seller.sellerName || seller.sellerUsername || '').trim();
+  const sellerUsername = String(seller.sellerUsername || '').trim();
+  return {
+    seller: seller,
+    sellerName: sellerName || null,
+    sellerUsername: sellerUsername || null
+  };
+}
+
+function buildImportLookupQuery(userId, payload) {
+  const clauses = [{ sellerId: userId }];
+  if (ObjectId.isValid(userId)) clauses.push({ sellerId: new ObjectId(userId) });
+  const sellerMatch = clauses.length === 1 ? clauses[0] : { $or: clauses };
+  if (payload.externalSource && payload.externalId) {
+    return {
+      $and: [
+        sellerMatch,
+        { externalSource: payload.externalSource, externalId: payload.externalId }
+      ]
+    };
+  }
+  if (payload.sku) {
+    return { $and: [sellerMatch, { sku: payload.sku }] };
+  }
+  if (payload.gtin) {
+    return { $and: [sellerMatch, { gtin: payload.gtin }] };
+  }
+  return null;
+}
+
+async function importProductsForSeller(params) {
+  const sellerId = params.sellerId;
+  const rows = Array.isArray(params.rows) ? params.rows : [];
+  const sellerName = params.sellerName || null;
+  const sellerUsername = params.sellerUsername || null;
+  const source = params.source || 'csv';
+  const totalRows = rows.length;
+  const summary = {
+    totalRows: totalRows,
+    processedRows: 0,
+    created: 0,
+    updated: 0,
+    failed: 0,
+    skipped: 0
+  };
+  const results = [];
+
+  let remainingStarterSlots = null;
+  if (params.isStarterTier) {
+    const activeCount = await db.collection('products').countDocuments({
+      sellerId: sellerId,
+      status: { $in: ['active', 'approved', 'pending'] }
+    });
+    remainingStarterSlots = Math.max(0, STARTER_LISTING_LIMIT - activeCount);
+  }
+
+  for (const entry of rows) {
+    const rowNumber = entry.rowNumber;
+    const values = entry.values || {};
+    const productName = String(values.name || '').trim();
+    const category = String(values.category || '').trim();
+    const price = normalizeImportNumber(values.price);
+    if (!productName || !category || price === null || price < 0) {
+      summary.failed += 1;
+      results.push({
+        rowNumber: rowNumber,
+        status: 'failed',
+        productName: productName || '(missing name)',
+        message: 'Each row needs valid name, price, and category values.'
+      });
+      continue;
+    }
+
+    const payload = {
+      name: productName,
+      category: category,
+      description: String(values.description || '').trim(),
+      shortDescription: String(values.shortdescription || '').trim(),
+      image: String(values.image || '').trim(),
+      condition: String(values.condition || 'new').trim() || 'new',
+      brand: String(values.brand || '').trim(),
+      model: String(values.model || '').trim(),
+      productType: String(values.producttype || '').trim(),
+      subcategory: String(values.subcategory || '').trim(),
+      tags: String(values.tags || '').trim(),
+      sku: String(values.sku || '').trim(),
+      gtin: String(values.gtin || '').trim(),
+      price: price,
+      salePrice: normalizeImportNumber(values.saleprice),
+      originalPrice: normalizeImportNumber(values.originalprice),
+      quantity: normalizeImportInteger(values.quantity, 0),
+      minQty: normalizeImportInteger(values.minqty, 1),
+      maxQty: normalizeImportInteger(values.maxqty, null),
+      lowStockThreshold: normalizeImportInteger(values.lowstockthreshold, null),
+      status: normalizeImportedProductStatus(values.status, 'active'),
+      externalSource: String(values.externalsource || source || '').trim().toLowerCase(),
+      externalId: String(values.externalid || '').trim()
+    };
+
+    const lookupQuery = buildImportLookupQuery(sellerId, payload);
+    let existingProduct = null;
+    if (lookupQuery) {
+      existingProduct = await db.collection('products').findOne(lookupQuery, { projection: { _id: 1, createdAt: 1 } });
+    }
+
+    if (!existingProduct && params.isStarterTier && remainingStarterSlots !== null && remainingStarterSlots <= 0) {
+      summary.failed += 1;
+      results.push({
+        rowNumber: rowNumber,
+        status: 'failed',
+        productName: payload.name,
+        message: 'Starter tier listing limit reached. Upgrade to Pro to import more products.'
+      });
+      continue;
+    }
+
+    const now = new Date();
+    const productDoc = {
+      name: payload.name,
+      price: payload.price,
+      salePrice: payload.salePrice,
+      originalPrice: payload.originalPrice,
+      category: payload.category,
+      subcategory: payload.subcategory,
+      description: payload.description,
+      shortDescription: payload.shortDescription,
+      image: payload.image,
+      images: payload.image ? [payload.image] : [],
+      condition: payload.condition,
+      specifications: {},
+      brand: payload.brand,
+      model: payload.model,
+      productType: payload.productType,
+      tags: payload.tags,
+      attributes: [],
+      variations: [],
+      sku: payload.sku,
+      gtin: payload.gtin,
+      quantity: payload.quantity,
+      minQty: payload.minQty,
+      maxQty: payload.maxQty,
+      lowStockThreshold: payload.lowStockThreshold,
+      trackInventory: true,
+      shipping: {},
+      features: [],
+      videoUrl: '',
+      documents: [],
+      compliance: {},
+      sellerId: sellerId,
+      sellerName: sellerName,
+      sellerUsername: sellerUsername,
+      status: payload.status,
+      externalSource: payload.externalSource || null,
+      externalId: payload.externalId || null
+    };
+
+    if (existingProduct) {
+      await db.collection('products').updateOne(
+        { _id: existingProduct._id },
+        { $set: { ...productDoc, updatedAt: now } }
+      );
+      summary.updated += 1;
+      summary.processedRows += 1;
+      results.push({
+        rowNumber: rowNumber,
+        status: 'updated',
+        productName: payload.name,
+        productId: String(existingProduct._id),
+        message: 'Updated existing listing.'
+      });
+      continue;
+    }
+
+    const insertResult = await db.collection('products').insertOne({
+      ...productDoc,
+      rating: null,
+      reviewCount: 0,
+      createdAt: now
+    });
+    if (remainingStarterSlots !== null) remainingStarterSlots -= 1;
+    summary.created += 1;
+    summary.processedRows += 1;
+    results.push({
+      rowNumber: rowNumber,
+      status: 'created',
+      productName: payload.name,
+      productId: String(insertResult.insertedId),
+      message: 'Created new listing.'
+    });
+  }
+
+  const outcome = summary.failed > 0
+    ? (summary.processedRows > 0 ? 'partial' : 'failed')
+    : 'success';
+  return { outcome: outcome, summary: summary, results: results };
+}
+
+async function saveImportHistory(sellerId, importType, source, context, result) {
+  const historyDoc = {
+    sellerId: sellerId,
+    importType: importType,
+    source: source,
+    context: context || {},
+    outcome: result.outcome,
+    summary: result.summary,
+    results: (Array.isArray(result.results) ? result.results : []).slice(0, 200),
+    createdAt: new Date()
+  };
+  const insertResult = await db.collection('productImports').insertOne(historyDoc);
+  return { ...historyDoc, _id: insertResult.insertedId };
+}
+
+app.get('/api/products/imports/template.csv', publicApiRateLimit, verifyToken, async function(req, res) {
+  const template = [
+    'name,price,category,description,image,condition,brand,model,productType,subcategory,tags,sku,gtin,quantity,status,salePrice,originalPrice',
+    '"Sample GPU","399.99","Graphics Cards","High-performance GPU listing","https://example.com/image.jpg","new","NVIDIA","RTX 4070","GPU","Desktop Components","gaming,pc","SKU-4070","0123456789012","5","active","379.99","429.99"'
+  ].join('\n');
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="zorexium-product-import-template.csv"');
+  res.status(200).send(template);
+});
+
+app.get('/api/products/imports/history', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const history = await db.collection('productImports')
+      .find({ sellerId: req.userId })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .toArray();
+    res.json(history);
+  } catch (error) {
+    console.error('Failed to load import history:', error);
+    res.status(500).json({ error: 'Failed to load import history' });
+  }
+});
+
+app.post('/api/products/imports/csv', publicApiRateLimit, verifyToken, function(req, res, next) {
+  csvImportUpload.single('file')(req, res, function(err) {
+    if (!err) return next();
+    if (err && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'CSV file is too large. Maximum size is 5 MB.' });
+    }
+    return res.status(400).json({ error: err.message || 'Invalid CSV upload payload' });
+  });
+}, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const identity = await resolveSellerImportIdentity(req.userId);
+    if (!identity) return res.status(403).json({ error: 'Seller account not found for import' });
+    const csvText = req.file
+      ? req.file.buffer.toString('utf8')
+      : String(req.body && req.body.csvText ? req.body.csvText : '');
+    if (!csvText.trim()) return res.status(400).json({ error: 'CSV content is required' });
+    const { importRows, requiredMissing } = buildImportRowsFromCsv(csvText);
+    if (requiredMissing && requiredMissing.length > 0) {
+      return res.status(400).json({ error: 'Missing required CSV columns: ' + requiredMissing.join(', ') });
+    }
+    if (!importRows.length) return res.status(400).json({ error: 'No non-empty product rows were found in the CSV.' });
+    if (importRows.length > MAX_PRODUCT_IMPORT_ROWS) {
+      return res.status(400).json({ error: 'CSV contains too many rows. Maximum is ' + MAX_PRODUCT_IMPORT_ROWS + ' rows per import.' });
+    }
+    const importResult = await importProductsForSeller({
+      sellerId: req.userId,
+      sellerName: identity.sellerName,
+      sellerUsername: identity.sellerUsername,
+      isStarterTier: String(identity.seller.tier || '').toLowerCase() === 'starter',
+      source: 'csv',
+      rows: importRows
+    });
+    const historyEntry = await saveImportHistory(
+      req.userId,
+      'csv',
+      'csv_upload',
+      { fileName: req.file ? req.file.originalname : null },
+      importResult
+    );
+    res.status(200).json({ importId: historyEntry._id, ...importResult });
+  } catch (error) {
+    console.error('CSV import failed:', error);
+    res.status(500).json({ error: 'CSV import failed: ' + (error && error.message ? error.message : 'Unexpected error') });
+  }
+});
+
+app.post('/api/products/imports/shopify', publicApiRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const identity = await resolveSellerImportIdentity(req.userId);
+    if (!identity) return res.status(403).json({ error: 'Seller account not found for import' });
+    const storeDomain = normalizeShopifyStoreDomain(req.body && req.body.storeDomain);
+    const accessToken = String(req.body && req.body.accessToken ? req.body.accessToken : '').trim();
+    if (!storeDomain || !accessToken) {
+      return res.status(400).json({ error: 'storeDomain and accessToken are required for Shopify import.' });
+    }
+    const fetchResult = await fetchShopifyProducts(storeDomain, accessToken, req.body && req.body.limit);
+    if (!fetchResult.ok) {
+      return res.status(400).json({ error: fetchResult.error || 'Failed to fetch Shopify products' });
+    }
+    const importRows = buildImportRowsFromShopifyProducts(fetchResult.products);
+    if (!importRows.length) {
+      return res.status(400).json({ error: 'No importable Shopify products were returned.' });
+    }
+    if (importRows.length > MAX_PRODUCT_IMPORT_ROWS) {
+      return res.status(400).json({ error: 'Shopify payload is too large. Maximum is ' + MAX_PRODUCT_IMPORT_ROWS + ' listings per import.' });
+    }
+    const importResult = await importProductsForSeller({
+      sellerId: req.userId,
+      sellerName: identity.sellerName,
+      sellerUsername: identity.sellerUsername,
+      isStarterTier: String(identity.seller.tier || '').toLowerCase() === 'starter',
+      source: 'shopify',
+      rows: importRows
+    });
+    const historyEntry = await saveImportHistory(
+      req.userId,
+      'shopify',
+      'shopify_api',
+      { storeDomain: storeDomain, fetchedProducts: fetchResult.products.length },
+      importResult
+    );
+    res.status(200).json({ importId: historyEntry._id, ...importResult });
+  } catch (error) {
+    console.error('Shopify import failed:', error);
+    res.status(500).json({ error: 'Shopify import failed: ' + (error && error.message ? error.message : 'Unexpected error') });
+  }
+});
 
 app.get('/api/products', publicApiRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
