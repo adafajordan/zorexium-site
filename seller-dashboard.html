@@ -579,7 +579,7 @@
           <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
             <div class="bg-white border border-gray-200 rounded-xl p-5">
               <h3 class="text-base font-semibold text-gray-900 mb-1"><i class="fas fa-file-csv text-cyan-600 mr-2"></i>CSV Import</h3>
-              <p class="text-sm text-gray-500 mb-3">Upload a CSV file with <strong>name</strong>, <strong>price</strong>, and <strong>category</strong> columns. Existing listings with matching SKU/GTIN are updated.</p>
+              <p class="text-sm text-gray-500 mb-3">Upload a CSV file with <strong>name</strong>, <strong>price</strong>, and <strong>category</strong> columns. Existing listings with matching SKU/GTIN are updated. Download the template to see all supported columns.</p>
               <div class="flex flex-wrap items-center gap-3 mb-4">
                 <a id="importTemplateLink" href="#" class="text-sm font-semibold text-cyan-600 hover:text-cyan-700" target="_blank" rel="noopener noreferrer"><i class="fas fa-download mr-1"></i>Download CSV template</a>
               </div>
@@ -1562,6 +1562,7 @@
         }
       });
     }
+
     renderImportResult(_lastImportResult);
   }
 
