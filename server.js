@@ -108,7 +108,6 @@ const MAX_POST_IMAGE_COUNT = 10;
 const MAX_POST_VIDEO_SIZE_BYTES = 100 * 1024 * 1024;
 const MAX_PRODUCT_IMPORT_CSV_BYTES = 5 * 1024 * 1024;
 const MAX_PRODUCT_IMPORT_ROWS = 1000;
-const SHOPIFY_ADMIN_API_VERSION = '2024-01';
 
 // Multer instance for in-memory video uploads.
 const videoUpload = multer({
@@ -1731,11 +1730,6 @@ app.post('/api/auth/otc-login', authRateLimit, async function(req, res) {
 
 const PRODUCT_IMPORT_REQUIRED_COLUMNS = ['name', 'price', 'category'];
 const PRODUCT_IMPORT_VALID_STATUSES = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft', 'inactive'];
-const PRODUCT_IMPORT_SHOPIFY_STATUS_MAP = {
-  active: 'active',
-  draft: 'draft',
-  archived: 'inactive'
-};
 
 function normalizeProductImportHeader(value) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1820,105 +1814,6 @@ function normalizeImportInteger(value, fallbackValue) {
 
 function stripHtmlTags(value) {
   return String(value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-function normalizeShopifyStoreDomain(storeDomain) {
-  let input = String(storeDomain || '').trim().toLowerCase();
-  if (input.startsWith('https://')) input = input.slice('https://'.length);
-  if (input.startsWith('http://')) input = input.slice('http://'.length);
-  const slashIndex = input.indexOf('/');
-  if (slashIndex !== -1) input = input.slice(0, slashIndex);
-  const colonIndex = input.indexOf(':');
-  if (colonIndex !== -1) input = input.slice(0, colonIndex);
-  if (!input) return '';
-
-  let handle = input;
-  if (handle.endsWith('.myshopify.com')) {
-    handle = handle.slice(0, -'.myshopify.com'.length);
-  }
-  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(handle)) return '';
-  return handle + '.myshopify.com';
-}
-
-async function fetchShopifyProducts(storeDomain, accessToken, limit) {
-  const controller = new AbortController();
-  const timeout = setTimeout(function() { controller.abort(); }, 15000);
-  try {
-    const safeLimit = Math.min(250, Math.max(1, parseInt(limit, 10) || 100));
-    const endpoint = 'https://' + storeDomain + '/admin/api/' + SHOPIFY_ADMIN_API_VERSION + '/products.json?limit=' + safeLimit;
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Accept': 'application/json'
-      },
-      signal: controller.signal
-    });
-    if (!response.ok) {
-      const bodyText = await response.text().catch(function() { return ''; });
-      return {
-        ok: false,
-        error: 'Shopify API request failed (' + response.status + '). ' + (bodyText || 'Check store domain and access token.')
-      };
-    }
-    const data = await response.json();
-    return {
-      ok: true,
-      products: Array.isArray(data && data.products) ? data.products : []
-    };
-  } catch (error) {
-    const message = error && error.name === 'AbortError'
-      ? 'Shopify request timed out. Please try again.'
-      : (error && error.message ? error.message : 'Failed to fetch Shopify products');
-    return { ok: false, error: message };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function buildImportRowsFromShopifyProducts(shopifyProducts) {
-  const importRows = [];
-  let nextRowNumber = 2;
-  (Array.isArray(shopifyProducts) ? shopifyProducts : []).forEach(function(product) {
-    const baseName = String(product && product.title ? product.title : '').trim();
-    const baseDescription = stripHtmlTags(product && product.body_html ? product.body_html : '');
-    const baseBrand = String(product && product.vendor ? product.vendor : '').trim();
-    const baseCategory = String(product && product.product_type ? product.product_type : '').trim() || 'General';
-    const status = normalizeImportedProductStatus(
-      PRODUCT_IMPORT_SHOPIFY_STATUS_MAP[String(product && product.status ? product.status : '').toLowerCase()] || '',
-      'active'
-    );
-    const imageUrl = product && product.image && product.image.src ? String(product.image.src).trim() : '';
-    const variants = Array.isArray(product && product.variants) && product.variants.length > 0
-      ? product.variants
-      : [null];
-    variants.forEach(function(variant) {
-      const variantTitle = String(variant && variant.title ? variant.title : '').trim();
-      const listingName = variantTitle && variantTitle.toLowerCase() !== 'default title'
-        ? (baseName + ' - ' + variantTitle).trim()
-        : baseName;
-      importRows.push({
-        rowNumber: nextRowNumber++,
-        values: {
-          name: listingName,
-          description: baseDescription,
-          category: baseCategory,
-          brand: baseBrand,
-          image: imageUrl,
-          condition: 'new',
-          status: status,
-          price: variant && variant.price != null ? String(variant.price) : '',
-          originalprice: variant && variant.compare_at_price != null ? String(variant.compare_at_price) : '',
-          quantity: variant && variant.inventory_quantity != null ? String(variant.inventory_quantity) : '',
-          sku: variant && variant.sku ? String(variant.sku).trim() : '',
-          gtin: variant && variant.barcode ? String(variant.barcode).trim() : '',
-          externalsource: 'shopify',
-          externalid: variant && variant.id ? String(variant.id) : (product && product.id ? String(product.id) : '')
-        }
-      });
-    });
-  });
-  return importRows;
 }
 
 async function resolveSellerImportIdentity(userId) {
@@ -2209,49 +2104,6 @@ app.post('/api/products/imports/csv', publicApiRateLimit, verifyToken, function(
   } catch (error) {
     console.error('CSV import failed:', error);
     res.status(500).json({ error: 'CSV import failed: ' + (error && error.message ? error.message : 'Unexpected error') });
-  }
-});
-
-app.post('/api/products/imports/shopify', publicApiRateLimit, verifyToken, async function(req, res) {
-  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  try {
-    const identity = await resolveSellerImportIdentity(req.userId);
-    if (!identity) return res.status(403).json({ error: 'Seller account not found for import' });
-    const storeDomain = normalizeShopifyStoreDomain(req.body && req.body.storeDomain);
-    const accessToken = String(req.body && req.body.accessToken ? req.body.accessToken : '').trim();
-    if (!storeDomain || !accessToken) {
-      return res.status(400).json({ error: 'storeDomain and accessToken are required for Shopify import.' });
-    }
-    const fetchResult = await fetchShopifyProducts(storeDomain, accessToken, req.body && req.body.limit);
-    if (!fetchResult.ok) {
-      return res.status(400).json({ error: fetchResult.error || 'Failed to fetch Shopify products' });
-    }
-    const importRows = buildImportRowsFromShopifyProducts(fetchResult.products);
-    if (!importRows.length) {
-      return res.status(400).json({ error: 'No importable Shopify products were returned.' });
-    }
-    if (importRows.length > MAX_PRODUCT_IMPORT_ROWS) {
-      return res.status(400).json({ error: 'Shopify payload is too large. Maximum is ' + MAX_PRODUCT_IMPORT_ROWS + ' listings per import.' });
-    }
-    const importResult = await importProductsForSeller({
-      sellerId: req.userId,
-      sellerName: identity.sellerName,
-      sellerUsername: identity.sellerUsername,
-      isStarterTier: String(identity.seller.tier || '').toLowerCase() === 'starter',
-      source: 'shopify',
-      rows: importRows
-    });
-    const historyEntry = await saveImportHistory(
-      req.userId,
-      'shopify',
-      'shopify_api',
-      { storeDomain: storeDomain, fetchedProducts: fetchResult.products.length },
-      importResult
-    );
-    res.status(200).json({ importId: historyEntry._id, ...importResult });
-  } catch (error) {
-    console.error('Shopify import failed:', error);
-    res.status(500).json({ error: 'Shopify import failed: ' + (error && error.message ? error.message : 'Unexpected error') });
   }
 });
 
