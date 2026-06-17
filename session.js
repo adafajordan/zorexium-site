@@ -221,12 +221,11 @@
     return sections;
   }
 
-  function renderFooterLinkList(links, small) {
+  function renderFooterLinkList(links) {
     if (!Array.isArray(links) || links.length === 0) return '';
-    var cls = small ? 'space-y-1.5 text-xs' : 'space-y-2 text-sm';
-    return '<ul class="' + cls + '">'
+    return '<ul class="space-y-2.5 text-sm text-gray-600">'
       + links.map(function(link) {
-        return '<li><a class="hover:text-white transition-colors" href="'
+        return '<li><a class="hover:text-cyan-600 transition-colors" href="'
           + escapeFooterHtml(link.href) + '">'
           + escapeFooterHtml(link.label) + '</a></li>';
       }).join('')
@@ -275,20 +274,20 @@
 
     navColsHtml = allNavSections.map(function(section) {
       return '<div>'
-        + '<h3 class="text-white font-semibold text-sm uppercase tracking-wider mb-4">' + escapeFooterHtml(section.title) + '</h3>'
+        + '<h3 class="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-600 mb-3">' + escapeFooterHtml(section.title) + '</h3>'
         + renderFooterLinkList(section.links)
         + '</div>';
     }).join('');
 
     var footerHtml = ''
-      + '<footer id="sitewideFooter" class="bg-gray-900 text-gray-300 mt-auto">'
-      + '  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12">'
-      + '    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">'
+      + '<footer id="sitewideFooter" class="bg-gray-50 border-t border-gray-200 mt-auto">'
+      + '  <div class="w-full px-8 sm:px-12 lg:px-16 pt-16 pb-4">'
+      + '    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 lg:gap-10">'
       + navColsHtml
       + '    </div>'
       + '  </div>'
-      + '  <div class="border-t border-gray-700">'
-      + '    <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-4 text-center">'
+      + '  <div class="border-t border-gray-200">'
+      + '    <div class="w-full px-8 sm:px-12 lg:px-16 py-4">'
       + '      <p class="text-gray-500 text-sm">&copy; 2026 Zorexium. All rights reserved.</p>'
       + '    </div>'
       + '  </div>'
