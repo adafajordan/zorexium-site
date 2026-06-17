@@ -131,7 +131,7 @@
 
   function sanitizeFooterHref(value) {
     var raw = String(value || '').trim();
-    if (!raw || raw === '#' || raw.indexOf('javascript:') === 0) return '';
+    if (!raw || raw === '#') return '';
     try {
       var url = new URL(raw, window.location.href);
       if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
