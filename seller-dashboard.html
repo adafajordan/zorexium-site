@@ -1063,7 +1063,7 @@
     var tier = String(order && order.sellerTier ? order.sellerTier : 'starter').toLowerCase();
     var payoutRate = Number.isFinite(explicitPayoutRate) && explicitPayoutRate > 0 && explicitPayoutRate <= 1
       ? explicitPayoutRate
-      : (tier === 'pro' ? 0.95 : 0.90);
+      : (tier === 'pro' ? 1 : 0.90);
     return parseFloat((getSellerOrderGross(order) * payoutRate).toFixed(2));
   }
 

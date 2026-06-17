@@ -1517,7 +1517,7 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
     sendEventEmailSafe(
       normalizedEmail,
       'Your Pro Seller account is active',
-      `<p>Welcome${firstName ? ', ' + firstName : ''}!</p><p>Your <strong>Pro Seller</strong> account has been automatically activated. You can start listing items and managing sales from your <a href="/seller-dashboard.html">seller dashboard</a>.</p><p>Pro Seller benefits: <strong>5% platform fee</strong> per sale and a <strong>5-day payout hold</strong>.</p>`,
+      `<p>Welcome${firstName ? ', ' + firstName : ''}!</p><p>Your <strong>Pro Seller</strong> account has been automatically activated. You can start listing items and managing sales from your <a href="/seller-dashboard.html">seller dashboard</a>.</p><p>Pro Seller benefits: <strong>100% of item subtotal</strong> per sale and a <strong>5-day payout hold</strong>.</p>`,
       '/seller-dashboard.html'
     );
     sendAdminNotificationSafe(
@@ -2630,7 +2630,7 @@ const PRO_SELLER_GRANDFATHERED_MONTHLY_PRICE_USD = '1.00';
 const DEFAULT_SHIPPING_FLAT_USD = 10.99;
 const DEFAULT_SALES_TAX_RATE = 0.10;
 const STARTER_SELLER_PAYOUT_RATE = 0.90;
-const PRO_SELLER_PAYOUT_RATE = 0.95;
+const PRO_SELLER_PAYOUT_RATE = 1.00;
 const SELLER_AFFILIATE_BONUS_RATE = 0.05;
 const STANDARD_SELLER_HOLD_DAYS = 7;
 const PRO_SELLER_HOLD_DAYS = 5;
@@ -4546,7 +4546,7 @@ function formatStripeAmountUsd(amountCents) {
 function getProSellerBenefitsHtml() {
   return '<ul>'
     + '<li><strong>Unlimited active listings</strong> so you can scale your shop without starter caps.</li>'
-    + '<li><strong>Lower platform fees</strong> (5% platform fee vs 10% on Starter).</li>'
+    + '<li><strong>100% of item subtotal</strong> on every sale (Starter sellers keep 90%).</li>'
     + '<li><strong>Pro Seller tier status</strong> on your dashboard and seller account.</li>'
     + '</ul>';
 }
