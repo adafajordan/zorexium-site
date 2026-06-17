@@ -221,11 +221,12 @@
     return sections;
   }
 
-  function renderFooterLinkList(links) {
+  function renderFooterLinkList(links, small) {
     if (!Array.isArray(links) || links.length === 0) return '';
-    return '<ul class="space-y-2 text-sm text-gray-600">'
+    var cls = small ? 'space-y-1.5 text-xs' : 'space-y-2 text-sm';
+    return '<ul class="' + cls + '">'
       + links.map(function(link) {
-        return '<li><a class="hover:text-cyan-600 transition-colors" href="'
+        return '<li><a class="hover:text-white transition-colors" href="'
           + escapeFooterHtml(link.href) + '">'
           + escapeFooterHtml(link.label) + '</a></li>';
       }).join('')
@@ -271,50 +272,48 @@
 
     if (quickLinks.length === 0 && communitySections.length === 0 && accountSections.length === 0 && marketplaceSections.length === 0) return;
 
+    var marketplaceHtml = '';
+    if (marketplaceSections.length > 0) {
+      marketplaceHtml = ''
+        + '  <div class="border-b border-gray-800">'
+        + '    <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10">'
+        + '      <h3 class="text-white font-semibold text-sm uppercase tracking-wider mb-6">Shop by Category</h3>'
+        + '      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">'
+        + marketplaceSections.map(function(section) {
+            return '<div>'
+              + '<h4 class="text-cyan-400 font-semibold text-xs uppercase tracking-wider mb-3">' + escapeFooterHtml(section.title) + '</h4>'
+              + renderFooterLinkList(section.links, true)
+              + '</div>';
+          }).join('')
+        + '      </div>'
+        + '    </div>'
+        + '  </div>';
+    }
+
+    var navColsHtml = '';
+    var allNavSections = [];
+    if (quickLinks.length > 0) allNavSections.push({ title: 'Quick Links', links: quickLinks });
+    accountSections.forEach(function(s) { allNavSections.push(s); });
+    communitySections.forEach(function(s) { allNavSections.push(s); });
+
+    navColsHtml = allNavSections.map(function(section) {
+      return '<div>'
+        + '<h3 class="text-white font-semibold text-sm uppercase tracking-wider mb-4">' + escapeFooterHtml(section.title) + '</h3>'
+        + renderFooterLinkList(section.links)
+        + '</div>';
+    }).join('');
+
     var footerHtml = ''
-      + '<footer id="sitewideFooter" class="bg-gray-50 border-t border-gray-200 mt-auto">'
-      + '  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10">'
-      + '    <div class="grid gap-10 xl:grid-cols-[minmax(0,1.1fr),minmax(0,1.9fr)]">'
-      + '      <div>'
-      + '        <div class="flex items-center gap-3 mb-4">'
-      + '          <div class="text-cyan-400 text-3xl"><i class="fas fa-microchip"></i></div>'
-      + '          <div><span class="text-cyan-400 font-bold text-2xl tracking-wide leading-none">ZOREXIUM</span></div>'
-      + '        </div>'
-      + '        <p class="text-sm text-gray-500 leading-6 max-w-md">Browse the marketplace, explore community resources, and manage your seller account from one place.</p>'
-      + '        <div class="mt-5">'
-      + '          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-600 mb-3">Quick Links</p>'
-      +            renderFooterLinkList(quickLinks)
-      + '        </div>'
-      + '      </div>'
-      + '      <div class="grid gap-8 md:grid-cols-2">'
-      + accountSections.map(function(section) {
-          return '<div>'
-            + '<p class="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-600 mb-3">' + escapeFooterHtml(section.title) + '</p>'
-            + renderFooterLinkList(section.links)
-            + '</div>';
-        }).join('')
-      + communitySections.map(function(section) {
-          return '<div>'
-            + '<p class="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-600 mb-3">' + escapeFooterHtml(section.title) + '</p>'
-            + renderFooterLinkList(section.links)
-            + '</div>';
-        }).join('')
-      + '      </div>'
+      + '<footer id="sitewideFooter" class="bg-gray-900 text-gray-300 mt-auto">'
+      + marketplaceHtml
+      + '  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12">'
+      + '    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">'
+      + navColsHtml
       + '    </div>'
-      + '    <div class="mt-10 pt-8 border-t border-gray-200">'
-      + '      <p class="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-600 mb-4">Marketplace</p>'
-      + '      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">'
-      + marketplaceSections.map(function(section) {
-          return '<div>'
-            + '<p class="text-sm font-semibold text-gray-900 mb-3">' + escapeFooterHtml(section.title) + '</p>'
-            + renderFooterLinkList(section.links)
-            + '</div>';
-        }).join('')
-      + '      </div>'
-      + '    </div>'
-      + '    <div class="mt-10 pt-6 border-t border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">'
-      + '      <p class="text-sm text-gray-500">&copy; 2026 Zorexium. All rights reserved.</p>'
-      + '      <p class="text-sm text-gray-500">Navigation mirrors the current site header for fast access across every page.</p>'
+      + '  </div>'
+      + '  <div class="border-t border-gray-700">'
+      + '    <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-4 text-center">'
+      + '      <p class="text-gray-500 text-sm">&copy; 2026 Zorexium. All rights reserved.</p>'
       + '    </div>'
       + '  </div>'
       + '</footer>';
