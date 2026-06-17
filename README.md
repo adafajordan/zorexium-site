@@ -94,7 +94,7 @@ For normal sign-in UX, users remain on the frontend domain and are no longer exp
 - Stripe transfers always use the platform's available Stripe balance, and deferred retry metadata is recorded when that balance is temporarily insufficient.
 - Internal payout lifecycle fields now distinguish transfer dispatch from downstream bank settlement (`payoutLifecycleStatus` vs `payoutBankSettlementStatus`).
 - Automatic payout sweeps now re-check `pending_hold`, `ready_to_pay`, onboarding-blocked rows, and `paid` rows missing Stripe transfer evidence so eligible Stripe transfers are attempted continuously after hold windows expire.
-- Seller payout share is subtotal-only: Starter receives 90%, Pro receives 95% (shipping and tax stay with the platform).
+- Seller payout share is subtotal-only: Starter receives 90%, Pro receives 100% (shipping and tax stay with the platform).
 - Completed purchase automation now runs consistently for both PayPal capture and Stripe webhook flows: order sync, inventory sync/inactivation, payout readiness, and buyer/seller/admin purchase emails.
 - A startup migration repairs the historical `steve` → `adafa` May 14, 2026 flow (including paid Stripe sessions left in `pendingOrders`), and admins can rerun legacy repair with `POST /api/admin/orders/repair-legacy`.
 - Admins can review/rerun the retroactive adafa payout audit for product `gjnb` via `GET /api/admin/payouts/audit/adafa-gjnb` (use `?rerun=true` to force a fresh audit + transfer attempt).
