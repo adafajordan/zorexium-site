@@ -265,30 +265,7 @@
       mergeFooterSections(accountSections, section);
     });
 
-    var marketplaceSections = collectDropdownSections(
-      document.getElementById('marketplaceDropdown'),
-      getDropdownTitle(document.getElementById('marketplaceDropdown'), 'Marketplace')
-    );
-
-    if (quickLinks.length === 0 && communitySections.length === 0 && accountSections.length === 0 && marketplaceSections.length === 0) return;
-
-    var marketplaceHtml = '';
-    if (marketplaceSections.length > 0) {
-      marketplaceHtml = ''
-        + '  <div class="border-b border-gray-800">'
-        + '    <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10">'
-        + '      <h3 class="text-white font-semibold text-sm uppercase tracking-wider mb-6">Shop by Category</h3>'
-        + '      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">'
-        + marketplaceSections.map(function(section) {
-            return '<div>'
-              + '<h4 class="text-cyan-400 font-semibold text-xs uppercase tracking-wider mb-3">' + escapeFooterHtml(section.title) + '</h4>'
-              + renderFooterLinkList(section.links, true)
-              + '</div>';
-          }).join('')
-        + '      </div>'
-        + '    </div>'
-        + '  </div>';
-    }
+    if (quickLinks.length === 0 && communitySections.length === 0 && accountSections.length === 0) return;
 
     var navColsHtml = '';
     var allNavSections = [];
@@ -305,7 +282,6 @@
 
     var footerHtml = ''
       + '<footer id="sitewideFooter" class="bg-gray-900 text-gray-300 mt-auto">'
-      + marketplaceHtml
       + '  <div class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12">'
       + '    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">'
       + navColsHtml
