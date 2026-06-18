@@ -1096,7 +1096,14 @@
             var PRODUCTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
             function applyProducts(all) {
-                window._allHomeProducts = all;
+                // Sort professional listings first, then by recency
+                var sorted = all.slice().sort(function(a, b) {
+                    var aPro = (a.listingType === 'professional') ? 1 : 0;
+                    var bPro = (b.listingType === 'professional') ? 1 : 0;
+                    if (bPro !== aPro) return bPro - aPro;
+                    return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+                });
+                window._allHomeProducts = sorted;
                 var params = new URLSearchParams(window.location.search);
                 var cat = params.get('category');
                 var sub = params.get('sub');

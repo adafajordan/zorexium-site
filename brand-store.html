@@ -664,6 +664,13 @@
       const data = await res.json();
       const products = Array.isArray(data) ? data : [];
       allProducts = products.filter(isPubliclyVisibleProduct);
+      // Sort professional listings first
+      allProducts.sort(function(a, b) {
+        var aPro = (a.listingType === 'professional') ? 1 : 0;
+        var bPro = (b.listingType === 'professional') ? 1 : 0;
+        if (bPro !== aPro) return bPro - aPro;
+        return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      });
 
       // If page title is still generic and we now have products, derive seller name
       if ((brandName === 'Brand' || !brandName) && allProducts.length > 0) {

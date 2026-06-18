@@ -1539,21 +1539,30 @@ app.post('/api/auth/login', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
   
   try {
-    const { email, password } = req.body;
-    const normalizedEmail = normalizeEmail(email);
+    const { email: identifier, password } = req.body;
     
-    if (!normalizedEmail || !password) {
-      return res.status(400).json({ error: 'Email and password required' });
+    if (!identifier || !password) {
+      return res.status(400).json({ error: 'Email/username and password required' });
     }
-    
-    const user = await db.collection('users').findOne({ email: normalizedEmail });
+
+    // Support login by username (no '@' means it's likely a username, not an email)
+    let user;
+    const looksLikeEmail = String(identifier).includes('@');
+    if (looksLikeEmail) {
+      const normalizedEmail = normalizeEmail(identifier);
+      if (!normalizedEmail) return res.status(400).json({ error: 'Email/username and password required' });
+      user = await db.collection('users').findOne({ email: normalizedEmail });
+    } else {
+      user = await db.collection('users').findOne({ username: identifier.trim() });
+    }
+
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email/username or password' });
     }
     
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email/username or password' });
     }
     
     const token = jwt.sign(
@@ -1647,17 +1656,25 @@ app.post('/api/auth/logout', authRateLimit, function(req, res) {
 // POST /api/auth/otc-request – generate and email a one-time login code
 app.post('/api/auth/otc-request', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  const { email } = req.body;
-  if (!email || typeof email !== 'string' || email.length > 254) {
-    return res.status(400).json({ error: 'Valid email is required' });
+  const { email: identifier } = req.body;
+  if (!identifier || typeof identifier !== 'string' || identifier.length > 254) {
+    return res.status(400).json({ error: 'Valid email or username is required' });
   }
-  const normalizedEmail = email.trim().toLowerCase();
   try {
-    const user = await db.collection('users').findOne({ email: normalizedEmail });
-    // Always respond with success to prevent email enumeration
-    if (!user) {
-      return res.json({ message: 'If that email is registered, a one-time code will be sent.' });
+    // Support username lookup for OTC
+    let user;
+    const looksLikeEmail = identifier.includes('@');
+    if (looksLikeEmail) {
+      const normalizedEmail = identifier.trim().toLowerCase();
+      user = await db.collection('users').findOne({ email: normalizedEmail });
+    } else {
+      user = await db.collection('users').findOne({ username: identifier.trim() });
     }
+    // Always respond with success to prevent enumeration
+    if (!user) {
+      return res.json({ message: 'If that account exists, a one-time code will be sent.' });
+    }
+    const normalizedEmail = user.email;
     // Generate a 6-digit numeric OTC (valid for 30 minutes) using cryptographically secure random.
     // Each request issues a fresh single-use code.
     const otcCode = String(crypto.randomInt(100000, 1000000));
@@ -1678,7 +1695,7 @@ app.post('/api/auth/otc-request', authRateLimit, async function(req, res) {
     } catch (mailErr) {
       console.error('Failed to send OTC email:', mailErr.message);
     }
-    res.json({ message: 'If that email is registered, a one-time code will be sent.' });
+    res.json({ message: 'If that account exists, a one-time code will be sent.' });
   } catch (error) {
     console.error('Error in otc-request:', error);
     res.status(500).json({ error: error.message });
@@ -1688,17 +1705,28 @@ app.post('/api/auth/otc-request', authRateLimit, async function(req, res) {
 // POST /api/auth/otc-login – verify OTC and issue JWT
 app.post('/api/auth/otc-login', authRateLimit, async function(req, res) {
   if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
-  const { email, code } = req.body;
-  if (!email || !code) {
-    return res.status(400).json({ error: 'email and code are required' });
+  const { email: identifier, code } = req.body;
+  if (!identifier || !code) {
+    return res.status(400).json({ error: 'email/username and code are required' });
   }
-  const normalizedEmail = (typeof email === 'string' ? email : '').trim().toLowerCase();
   try {
-    const user = await db.collection('users').findOne({
-      email: normalizedEmail,
-      otcCode: String(code).trim(),
-      otcExpiry: { $gt: new Date() }
-    });
+    // Support username lookup for OTC verification
+    let user;
+    const looksLikeEmail = String(identifier).includes('@');
+    if (looksLikeEmail) {
+      const normalizedEmail = (typeof identifier === 'string' ? identifier : '').trim().toLowerCase();
+      user = await db.collection('users').findOne({
+        email: normalizedEmail,
+        otcCode: String(code).trim(),
+        otcExpiry: { $gt: new Date() }
+      });
+    } else {
+      user = await db.collection('users').findOne({
+        username: identifier.trim(),
+        otcCode: String(code).trim(),
+        otcExpiry: { $gt: new Date() }
+      });
+    }
     if (!user) {
       return res.status(401).json({ error: 'Invalid or expired code' });
     }
@@ -2150,6 +2178,13 @@ app.get('/api/products', publicApiRateLimit, async function(req, res) {
     }
     const products = await db.collection('products').find(query).toArray();
     const decoratedProducts = await decorateProductsWithSellerTierBenefits(products);
+    // Sort professional listings first, then by creation date descending
+    decoratedProducts.sort(function(a, b) {
+      const aPro = (a.listingType === 'professional') ? 1 : 0;
+      const bPro = (b.listingType === 'professional') ? 1 : 0;
+      if (bPro !== aPro) return bPro - aPro;
+      return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+    });
     res.json(decoratedProducts);
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -2167,7 +2202,7 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
       brand, model, productType, subcategory, tags, attributes, variations,
       images, sku, gtin, salePrice, originalPrice, quantity, minQty, maxQty,
       lowStockThreshold, trackInventory, shipping, shortDescription, features,
-      videoUrl, documents, compliance, status
+      videoUrl, documents, compliance, status, listingType
     } = req.body;
 
     if (!name || price === undefined || price === null || !category) {
@@ -2270,6 +2305,7 @@ app.post('/api/products', publicApiRateLimit, verifyToken, async function(req, r
       sellerName: resolvedSellerName || null,
       sellerUsername: resolvedSellerUsername || null,
       status: resolvedStatus,
+      listingType: (listingType === 'basic' || listingType === 'professional') ? listingType : 'professional',
       createdAt: new Date()
     };
 
@@ -2346,6 +2382,13 @@ app.get('/api/products/seller/:sellerId', publicApiRateLimit, async function(req
     }
 
     const decoratedProducts = await decorateProductsWithSellerTierBenefits(products);
+    // Sort professional listings first
+    decoratedProducts.sort(function(a, b) {
+      const aPro = (a.listingType === 'professional') ? 1 : 0;
+      const bPro = (b.listingType === 'professional') ? 1 : 0;
+      if (bPro !== aPro) return bPro - aPro;
+      return (b.createdAt ? new Date(b.createdAt).getTime() : 0) - (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+    });
     res.json(decoratedProducts);
   } catch (error) {
     console.error('Error fetching seller products:', error);
@@ -2441,7 +2484,7 @@ app.put('/api/products/:id', publicApiRateLimit, verifyToken, async function(req
       brand, model, productType, subcategory, tags, attributes, variations,
       images, sku, gtin, salePrice, originalPrice, quantity, minQty, maxQty,
       lowStockThreshold, trackInventory, shipping, shortDescription, features,
-      videoUrl, documents, compliance
+      videoUrl, documents, compliance, listingType
     } = req.body;
 
     const updates = {};
@@ -2496,6 +2539,9 @@ app.put('/api/products/:id', publicApiRateLimit, verifyToken, async function(req
     if (videoUrl !== undefined) updates.videoUrl = videoUrl;
     if (documents !== undefined) updates.documents = Array.isArray(documents) ? documents : [];
     if (compliance !== undefined) updates.compliance = compliance;
+    if (listingType !== undefined && (listingType === 'basic' || listingType === 'professional')) {
+      updates.listingType = listingType;
+    }
     if (status !== undefined) {
       const validStatuses = ['pending', 'active', 'approved', 'rejected', 'sold', 'draft', 'inactive'];
       if (!validStatuses.includes(status)) {
