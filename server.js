@@ -887,7 +887,7 @@ function buildCookieHeader(name, value, options) {
   return str;
 }
 
-var COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
+var COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 var isProduction = process.env.NODE_ENV === 'production';
 var AUTH_COOKIE_SAME_SITE = isProduction ? 'None' : 'Lax';
 var AUTH_COOKIE_SECURE = isProduction;
@@ -1201,7 +1201,7 @@ async function finalizeGoogleLogin(req, res, user) {
   const token = jwt.sign(
     { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '30d' }
   );
 
   setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
@@ -1502,7 +1502,7 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
     const token = jwt.sign(
       { userId: newUserId, email: normalizedEmail, isAdmin: false },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     setAuthCookies(res, token, normalizedEmail, firstName || normalizedEmail, newUserId);
@@ -1559,7 +1559,7 @@ app.post('/api/auth/login', authRateLimit, async function(req, res) {
     const token = jwt.sign(
       { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
@@ -1610,6 +1610,27 @@ app.get('/api/auth/session', authRateLimit, verifyToken, async function(req, res
     );
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ userId: req.userId, email: req.userEmail, firstName: user.firstName, lastName: user.lastName });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/auth/refresh – issue a fresh 30-day token if the current token is still valid
+app.post('/api/auth/refresh', authRateLimit, verifyToken, async function(req, res) {
+  if (!mongoConnected) return res.status(503).json({ error: 'Database unavailable' });
+  try {
+    const user = await db.collection('users').findOne(
+      { _id: new ObjectId(req.userId) },
+      { projection: { _id: 1, email: 1, firstName: 1, isAdmin: 1 } }
+    );
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    const newToken = jwt.sign(
+      { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+    setAuthCookies(res, newToken, user.email, user.firstName || user.email, user._id.toString());
+    res.json({ token: newToken, userId: user._id.toString(), email: user.email });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1689,7 +1710,7 @@ app.post('/api/auth/otc-login', authRateLimit, async function(req, res) {
     const token = jwt.sign(
       { userId: user._id.toString(), email: user.email, isAdmin: user.isAdmin === true },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
     setAuthCookies(res, token, user.email, user.firstName || user.email, user._id.toString());
     const deviceFingerprint = buildDeviceFingerprint(req);
@@ -11054,10 +11075,10 @@ async function grantAllUsersProSellerTierOnce() {
 }
 
 async function ensureAllUsersHaveProSellerProfileOnce() {
-  // v2 safeguard: Uses ensureComplimentaryProSellerForUser to guarantee every user has a Pro seller profile.
+  // v3 safeguard: Uses ensureComplimentaryProSellerForUser to guarantee every user has a Pro seller profile.
   // Runs once per deployment (key includes date). Re-run by updating the key date if needed.
   if (!mongoConnected) return;
-  const migrationKey = 'ensure_all_users_pro_seller_2026_06_12_v2';
+  const migrationKey = 'ensure_all_users_pro_seller_2026_06_18_v3';
   try {
     const existing = await db.collection('runtimeMigrations').findOne({ key: migrationKey });
     if (existing) return;
@@ -11095,6 +11116,32 @@ async function ensureAllUsersHaveProSellerProfileOnce() {
   }
 }
 
+// Lightweight repair that runs on every startup: find users without seller profiles and create them.
+// Unlike the one-time migrations, this catches users registered between deploys.
+async function repairMissingSellerProfilesOnStartup() {
+  if (!mongoConnected) return;
+  try {
+    const allUsers = await db.collection('users').find({}, { projection: { _id: 1 } }).toArray();
+    const existingSellers = await db.collection('sellers').find({}, { projection: { userId: 1 } }).toArray();
+    const existingSellerUserIds = new Set(existingSellers.map(function(s) { return String(s.userId || ''); }));
+    const usersWithoutSeller = allUsers.filter(function(u) { return !existingSellerUserIds.has(String(u._id)); });
+    if (usersWithoutSeller.length === 0) return;
+    console.log(`🔧 repairMissingSellerProfilesOnStartup: ${usersWithoutSeller.length} user(s) missing seller profile, repairing...`);
+    let repaired = 0;
+    for (const user of usersWithoutSeller) {
+      const userId = String(user._id);
+      if (!ObjectId.isValid(userId)) continue;
+      try {
+        const result = await ensureComplimentaryProSellerForUser(userId);
+        if (result && result.seller) repaired++;
+      } catch (_) {}
+    }
+    console.log(`✅ repairMissingSellerProfilesOnStartup: ${repaired} profile(s) repaired`);
+  } catch (err) {
+    console.error('⚠️  repairMissingSellerProfilesOnStartup error:', err.message);
+  }
+}
+
 async function start() {
   console.log('🚀 Starting server...');
   try {
@@ -11111,6 +11158,7 @@ async function start() {
       await restoreBobSellerProfileV2Once();
       await grantAllUsersProSellerTierOnce();
       await ensureAllUsersHaveProSellerProfileOnce();
+      await repairMissingSellerProfilesOnStartup();
       await ensurePayoutIndexes();
       await cleanupLegacyNonStripePayoutDestinationsOnce();
       await runRetroactiveLegacyOrderRepairMigration();

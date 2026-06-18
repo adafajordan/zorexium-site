@@ -1432,6 +1432,9 @@
   }
 
   function dashboardLoginRedirect() {
+    // Clear any stale auth state so the next login starts fresh
+    try { localStorage.removeItem('authToken'); } catch (_) {}
+    try { localStorage.removeItem('_zrx_user'); } catch (_) {}
     window.location.href = 'login-register.html?next=%2Fseller-dashboard.html';
   }
 
@@ -1442,13 +1445,49 @@
   }
 
   async function ensureDashboardSession() {
-    if (ZrxSession.isLoggedIn()) return true;
-    try {
-      var sessionRes = await ZrxSession.fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
-      return sessionRes.ok;
-    } catch (_) {
-      return false;
+    // If we have local credentials, try to refresh the token to keep the session alive
+    // and to catch stale/expired tokens in localStorage before hitting seller APIs.
+    if (ZrxSession.isLoggedIn()) {
+      try {
+        var refreshRes = await ZrxSession.fetch(BACKEND_URL + '/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (refreshRes.ok) {
+          // Update localStorage with the fresh token
+          try {
+            var refreshData = await refreshRes.json();
+            if (refreshData && refreshData.token) {
+              localStorage.setItem('authToken', refreshData.token);
+            }
+          } catch (_) {}
+          return true;
+        }
+        // Server explicitly rejected the token (expired/invalid) - session is gone
+        if (refreshRes.status === 401 || refreshRes.status === 403) return false;
+        // Transient server error - trust local state and proceed
+        return true;
+      } catch (_) {
+        // Network error - trust local state and proceed
+        return true;
+      }
     }
+
+    // No local credentials - try server session check via cookies (with retries for cold-start)
+    var attempts = 0;
+    while (attempts < 3) {
+      attempts += 1;
+      try {
+        var sessionRes = await ZrxSession.fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
+        if (sessionRes.ok) return true;
+        if (sessionRes.status === 401 || sessionRes.status === 403) return false;
+        // Server error - retry
+        if (attempts < 3) await dashboardWait(800 * attempts);
+      } catch (_) {
+        if (attempts < 3) await dashboardWait(800 * attempts);
+      }
+    }
+    return false;
   }
 
   async function loadSellerProfileForDashboard() {
