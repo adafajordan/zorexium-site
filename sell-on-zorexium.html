@@ -844,15 +844,24 @@
                     });
                 } else {
                     ZrxSession.fetch(BACKEND_URL + '/api/user/is-seller', { credentials: 'include' })
-                        .then(function(r){ return r.ok ? r.json() : { isSeller: false }; })
+                        .then(function(r){
+                            if (r.ok) return r.json();
+                            if (r.status === 401 || r.status === 403 || r.status === 404) return { isSeller: false };
+                            return { isSeller: null };
+                        })
                         .then(function(data){
-                            var isSeller = !!(data && data.isSeller);
+                            var isSeller = data && data.isSeller === true;
+                            if (data && data.isSeller == null) isSeller = true;
                             sellerSignupCtas.forEach(function(cta){
                                 var tier = cta.getAttribute('data-tier') || '';
                                 cta.setAttribute('href', getSellerSignupTarget(tier, isSeller, true));
                             });
                         })
-                        .catch(function(){});
+                        .catch(function(){
+                            sellerSignupCtas.forEach(function(cta){
+                                cta.setAttribute('href', 'seller-dashboard.html');
+                            });
+                        });
                 }
             }
         })();
