@@ -1431,24 +1431,74 @@
     if (hint) hint.textContent = 'Connect and verify your Stripe Express account to receive payout transfers.';
   }
 
+  function dashboardLoginRedirect() {
+    window.location.href = 'login-register.html?next=%2Fseller-dashboard.html';
+  }
+
+  function dashboardWait(ms) {
+    return new Promise(function(resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  async function ensureDashboardSession() {
+    if (ZrxSession.isLoggedIn()) return true;
+    try {
+      var sessionRes = await ZrxSession.fetch(BACKEND_URL + '/api/auth/session', { credentials: 'include' });
+      return sessionRes.ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function loadSellerProfileForDashboard() {
+    var attempts = 0;
+    while (attempts < 3) {
+      attempts += 1;
+      try {
+        var sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', { credentials: 'include' });
+        if (sellerRes.ok) return { status: 'ok', response: sellerRes };
+        if (sellerRes.status === 401 || sellerRes.status === 403) return { status: 'unauthorized' };
+        if (sellerRes.status === 404) return { status: 'missing' };
+        if (attempts < 3 && (sellerRes.status === 429 || sellerRes.status >= 500 || sellerRes.status === 0)) {
+          await dashboardWait(250 * attempts);
+          continue;
+        }
+        return { status: 'error' };
+      } catch (_) {
+        if (attempts < 3) {
+          await dashboardWait(250 * attempts);
+          continue;
+        }
+        return { status: 'error' };
+      }
+    }
+    return { status: 'error' };
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────────
   async function init() {
-    if (!ZrxSession.isLoggedIn()) {
-      window.location.href = 'seller-signup.html';
+    if (!(await ensureDashboardSession())) {
+      dashboardLoginRedirect();
       return;
     }
 
     try {
-      let sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', { credentials: 'include' });
-      if (!sellerRes.ok) {
+      var sellerProfileResult = await loadSellerProfileForDashboard();
+      if (sellerProfileResult.status === 'missing') {
         await ZrxSession.fetch(BACKEND_URL + '/api/sellers', {
           method: 'POST',
           credentials: 'include'
         }).catch(function() {});
-        sellerRes = await ZrxSession.fetch(BACKEND_URL + '/api/sellers/me', { credentials: 'include' });
+        sellerProfileResult = await loadSellerProfileForDashboard();
       }
-      if (!sellerRes.ok) { window.location.href = 'seller-signup.html'; return; }
-      sellerData = await sellerRes.json();
+      if (sellerProfileResult.status === 'unauthorized') { dashboardLoginRedirect(); return; }
+      if (sellerProfileResult.status === 'missing') { window.location.href = 'seller-signup.html'; return; }
+      if (sellerProfileResult.status !== 'ok' || !sellerProfileResult.response) {
+        ZrxNotify.showNotification('We could not confirm your seller access right now. Please refresh and try again.', 'error');
+        return;
+      }
+      sellerData = await sellerProfileResult.response.json();
       await syncStripeConnectStatus();
       await verifyDashStripeUpgradeIfReturned();
       sellerData.products = [];
