@@ -327,6 +327,12 @@ function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
+function normalizeUsername(value) {
+  return typeof value === 'string'
+    ? value.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30)
+    : '';
+}
+
 function escapeRegex(value) {
   return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -1423,7 +1429,7 @@ app.post('/api/auth/register', authRateLimit, async function(req, res) {
     }
 
     // Normalize and validate username if provided
-    const normalizedUsername = String(username || '').trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '').slice(0, 30);
+    const normalizedUsername = normalizeUsername(username);
     
     const existingUser = await db.collection('users').findOne({ email: normalizedEmail });
     if (existingUser) {
@@ -1553,7 +1559,9 @@ app.post('/api/auth/login', authRateLimit, async function(req, res) {
       if (!normalizedEmail) return res.status(400).json({ error: 'Email/username and password required' });
       user = await db.collection('users').findOne({ email: normalizedEmail });
     } else {
-      user = await db.collection('users').findOne({ username: identifier.trim() });
+      const normalizedUsername = normalizeUsername(identifier);
+      if (!normalizedUsername) return res.status(400).json({ error: 'Email/username and password required' });
+      user = await db.collection('users').findOne({ username: normalizedUsername });
     }
 
     if (!user) {
@@ -1665,10 +1673,13 @@ app.post('/api/auth/otc-request', authRateLimit, async function(req, res) {
     let user;
     const looksLikeEmail = identifier.includes('@');
     if (looksLikeEmail) {
-      const normalizedEmail = identifier.trim().toLowerCase();
+      const normalizedEmail = normalizeEmail(identifier);
       user = await db.collection('users').findOne({ email: normalizedEmail });
     } else {
-      user = await db.collection('users').findOne({ username: identifier.trim() });
+      const normalizedUsername = normalizeUsername(identifier);
+      user = normalizedUsername
+        ? await db.collection('users').findOne({ username: normalizedUsername })
+        : null;
     }
     // Always respond with success to prevent enumeration
     if (!user) {
@@ -1714,15 +1725,19 @@ app.post('/api/auth/otc-login', authRateLimit, async function(req, res) {
     let user;
     const looksLikeEmail = String(identifier).includes('@');
     if (looksLikeEmail) {
-      const normalizedEmail = (typeof identifier === 'string' ? identifier : '').trim().toLowerCase();
+      const normalizedEmail = normalizeEmail(identifier);
       user = await db.collection('users').findOne({
         email: normalizedEmail,
         otcCode: String(code).trim(),
         otcExpiry: { $gt: new Date() }
       });
     } else {
+      const normalizedUsername = normalizeUsername(identifier);
+      if (!normalizedUsername) {
+        return res.status(401).json({ error: 'Invalid or expired code' });
+      }
       user = await db.collection('users').findOne({
-        username: identifier.trim(),
+        username: normalizedUsername,
         otcCode: String(code).trim(),
         otcExpiry: { $gt: new Date() }
       });
