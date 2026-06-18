@@ -419,11 +419,11 @@
             <span id="lrLoginErrorMsg">Invalid email or password.</span>
           </div>
 
-          <!-- Step 1: Email entry -->
+          <!-- Step 1: Email/username entry -->
           <div id="lrStepEmail" class="space-y-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input id="lrLoginEmail" type="email" placeholder="you@example.com" class="lr-input" autocomplete="email"
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email or Username</label>
+              <input id="lrLoginEmail" type="text" placeholder="you@example.com or your username" class="lr-input" autocomplete="username"
                 onkeypress="if(event.key==='Enter') lrContinueWithEmail()">
             </div>
             <button onclick="lrContinueWithEmail()" class="lr-btn-primary">
@@ -452,7 +452,7 @@
             <button onclick="lrDoLogin()" class="lr-btn-primary">
               Sign In
             </button>
-            <button onclick="lrBackToEmail()" class="w-full text-sm text-cyan-600 hover:text-cyan-700 text-center mt-1">← Use a different email</button>
+            <button onclick="lrBackToEmail()" class="w-full text-sm text-cyan-600 hover:text-cyan-700 text-center mt-1">← Use a different email or username</button>
           </div>
 
           <!-- Step 2b: One-time code entry (shown after requesting OTC) -->
@@ -468,7 +468,7 @@
             <button onclick="lrDoOTCLogin()" class="lr-btn-primary">
               Sign In
             </button>
-            <button onclick="lrBackToEmail()" class="w-full text-sm text-cyan-600 hover:text-cyan-700 text-center mt-1">← Use a different email</button>
+            <button onclick="lrBackToEmail()" class="w-full text-sm text-cyan-600 hover:text-cyan-700 text-center mt-1">← Use a different email or username</button>
           </div>
 
           <p class="text-center text-sm text-gray-500 mt-5">
@@ -611,7 +611,7 @@
     var errMsg = document.getElementById('lrLoginErrorMsg');
     errEl.classList.add('hidden');
     if (!email) {
-      errMsg.textContent = 'Please enter your email address.';
+      errMsg.textContent = 'Please enter your email or username.';
       errEl.classList.remove('hidden');
       return;
     }
@@ -625,7 +625,7 @@
     var errMsg = document.getElementById('lrLoginErrorMsg');
     errEl.classList.add('hidden');
     if (!email) {
-      errMsg.textContent = 'Please enter your email address.';
+      errMsg.textContent = 'Please enter your email or username.';
       errEl.classList.remove('hidden');
       return;
     }
@@ -708,7 +708,7 @@
     var errMsg = document.getElementById('lrLoginErrorMsg');
     errEl.classList.add('hidden');
     if (!email || !password) {
-      errMsg.textContent = 'Please enter your email and password.';
+      errMsg.textContent = 'Please enter your email/username and password.';
       errEl.classList.remove('hidden');
       return;
     }
@@ -721,7 +721,7 @@
       });
       var data = await res.json();
       if (!res.ok) {
-        errMsg.textContent = data.error || 'Invalid email or password.';
+        errMsg.textContent = data.error || 'Invalid email/username or password.';
         errEl.classList.remove('hidden');
         return;
       }
